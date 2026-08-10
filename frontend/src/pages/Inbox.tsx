@@ -2,8 +2,17 @@ import { useState } from "react";
 import {
   useInboxItems,
   useCreateInboxItem,
-  useClassifyInboxItem,
+  useProcessInboxItem,
 } from "../api/inbox";
+
+const TARGET_LABELS: Record<string, string> = {
+  task: "Zadanie",
+  project: "Projekt",
+  transaction: "Transakcja",
+  reference: "Ref.",
+  document: "Dokument",
+  decision: "Decyzja",
+};
 
 export function Inbox() {
   const [filter, setFilter] = useState<"unprocessed" | "processed" | "all">("unprocessed");
@@ -14,7 +23,7 @@ export function Inbox() {
     processed !== undefined ? { processed } : undefined
   );
   const createItem = useCreateInboxItem();
-  const classifyItem = useClassifyInboxItem();
+  const processItem = useProcessInboxItem();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +32,10 @@ export function Inbox() {
       { content: content.trim() },
       { onSuccess: () => setContent("") }
     );
+  };
+
+  const handleProcess = (id: string, target_type: string) => {
+    processItem.mutate({ id, target_type: target_type as any });
   };
 
   const unprocessed = items?.filter((i) => !i.is_processed) || [];
@@ -91,12 +104,20 @@ export function Inbox() {
               }`}
             >
               <p className="text-white text-sm mb-2">{item.content}</p>
-              {item.agent_suggestion && !item.is_processed && (
+              {item.agent_suggestion?.suggested_type && !item.is_processed && (
                 <div className="mb-3 p-3 rounded-lg bg-advisor-500/10 border border-advisor-500/20">
                   <p className="text-xs text-advisor-400 font-medium mb-1">
                     Sugestia asystenta
                   </p>
-                  <p className="text-sm text-gray-300">{item.agent_suggestion}</p>
+                  <p className="text-sm text-gray-300">
+                    {item.agent_suggestion.suggested_type === "task"
+                      ? "Proponuję utworzyć zadanie"
+                      : item.agent_suggestion.suggested_type === "transaction"
+                        ? "Wygląda na transakcję"
+                        : item.agent_suggestion.suggested_type === "project"
+                          ? "Może to być projekt"
+                          : `Sugestia: ${item.agent_suggestion.suggested_type}`}
+                  </p>
                 </div>
               )}
               <div className="flex items-center justify-between">
@@ -114,25 +135,19 @@ export function Inbox() {
                       (type) => (
                         <button
                           key={type}
-                          onClick={() => classifyItem.mutate({ id: item.id, type })}
-                          disabled={classifyItem.isPending}
-                          className="px-3 py-1 text-xs rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
+                          onClick={() => handleProcess(item.id, type)}
+                          disabled={processItem.isPending}
+                          className="px-3 py-1 text-xs rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors disabled:opacity-50"
                         >
-                          {type === "task"
-                            ? "→ Zadanie"
-                            : type === "project"
-                              ? "→ Projekt"
-                              : type === "transaction"
-                                ? "→ Transakcja"
-                                : "→ Ref."}
+                          → {TARGET_LABELS[type]}
                         </button>
                       )
                     )}
                   </div>
                 )}
-                {item.is_processed && item.classified_type && (
+                {item.is_processed && item.target_type && (
                   <span className="text-xs px-2 py-0.5 rounded bg-gray-800 text-gray-400">
-                    {item.classified_type}
+                    {TARGET_LABELS[item.target_type] || item.target_type}
                   </span>
                 )}
               </div>

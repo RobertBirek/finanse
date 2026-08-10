@@ -4,7 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.inbox.models import InboxItem
-from app.inbox.schemas import InboxItemCreate, InboxItemUpdate
+from app.inbox.schemas import InboxItemCreate, InboxItemUpdate, ProcessInboxItem
+from app.work.models import Task as WorkTask
+from app.work.schemas import TaskCreate
 
 
 async def create_inbox_item(db: AsyncSession, user_id: uuid.UUID, data: InboxItemCreate) -> InboxItem:
@@ -84,3 +86,37 @@ async def classify_inbox_item(db: AsyncSession, user_id: uuid.UUID, item_id: uui
     item.agent_suggestion = {"suggested_type": suggested_type, "confidence": "low"}
     await db.flush()
     return item
+
+
+async def process_inbox_item(
+    db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID, data: ProcessInboxItem
+) -> tuple[InboxItem, WorkTask | None]:
+    """Process an inbox item: create the target entity and mark as processed."""
+    item = await get_inbox_item(db, user_id, item_id)
+    if item is None:
+        raise ValueError(f"InboxItem {item_id} not found")
+    if item.is_processed:
+        raise ValueError("Inbox item already processed")
+
+    created_entity = None
+
+    if data.target_type == "task":
+        task = WorkTask(
+            user_id=user_id,
+            title=item.content,
+            source="inbox",
+        )
+        db.add(task)
+        await db.flush()
+        item.target_id = task.id
+        created_entity = task
+
+    item.target_type = data.target_type
+    item.is_processed = True
+    item.classified_by = "human"
+    await db.flush()
+    await db.refresh(item)
+    if created_entity:
+        await db.refresh(created_entity)
+
+    return item, created_entity

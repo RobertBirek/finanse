@@ -1,20 +1,28 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.identity.models import User
 from app.identity.router import get_current_user
-from app.inbox.schemas import InboxItemCreate, InboxItemResponse, InboxItemUpdate
+from app.inbox.schemas import (
+    InboxItemCreate,
+    InboxItemResponse,
+    InboxItemUpdate,
+    ProcessInboxItem,
+)
 from app.inbox.service import (
     classify_inbox_item,
     create_inbox_item,
     delete_inbox_item,
     get_inbox_item,
     get_inbox_items,
+    process_inbox_item,
     update_inbox_item,
 )
+from app.work.schemas import TaskResponse
 
 router = APIRouter()
 
@@ -85,3 +93,25 @@ async def classify_item(
         return await classify_inbox_item(db, current_user.id, item_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+class ProcessResponse(BaseModel):
+    inbox_item: InboxItemResponse
+    created_task: TaskResponse | None = None
+
+
+@router.post("/items/{item_id}/process", response_model=ProcessResponse)
+async def process_item(
+    item_id: uuid.UUID,
+    data: ProcessInboxItem,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        inbox_item, created_entity = await process_inbox_item(db, current_user.id, item_id, data)
+        return {
+            "inbox_item": inbox_item,
+            "created_task": created_entity,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

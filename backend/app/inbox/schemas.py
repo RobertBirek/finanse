@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +16,10 @@ class InboxItemUpdate(BaseModel):
     is_processed: bool | None = None
 
 
+class ProcessInboxItem(BaseModel):
+    target_type: str = Field(pattern=r"^(task|project|transaction|document|decision|reference)$")
+
+
 class InboxItemResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
@@ -26,7 +29,7 @@ class InboxItemResponse(BaseModel):
     target_id: uuid.UUID | None
     is_processed: bool
     classified_by: str | None
-    agent_suggestion: dict[str, Any] | None
+    agent_suggestion: dict | None
     created_at: datetime
     updated_at: datetime
 

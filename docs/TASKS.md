@@ -9,10 +9,11 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 ## Iteracja 1 — Pierwszy Vertical Slice (MVP)
 
 ### Inbox → Task
-- [ ] Backend: endpoint `POST /api/inbox/{id}/classify` do klasyfikacji inbox_item w task
-- [ ] Frontend: Inbox page ładuje listę inbox_items z API
-- [ ] Frontend: przycisk "Utwórz zadanie" tworzy task i oznacza inbox_item jako processed
-- [ ] Frontend: pokaż historię (processed items)
+- [x] Backend: endpoint `POST /api/inbox/{id}/process` — tworzy task z inbox_item
+- [x] Frontend: Inbox page ładuje listę inbox_items z API
+- [x] Frontend: przycisk "Utwórz zadanie" tworzy task i oznacza inbox_item jako processed
+- [x] Frontend: pokaż historię (processed items)
+- [x] E2E: Playwright test — wpisz w Inbox → utwórz zadanie → task w API
 
 ### Dzisiaj z live danymi
 - [ ] Frontend: Today ładuje taski z API (due_date=today lub status=in_progress)
