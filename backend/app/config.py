@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://finanse:finanse@localhost:5432/finanse"
     REDIS_URL: str = "redis://localhost:6379/0"
     SECRET_KEY: str = "change-me-in-production-use-a-real-secret-key"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
     OPENAI_API_KEY: str = ""
     CORS_ORIGINS: str = "http://localhost:5173"
     ENVIRONMENT: str = "development"

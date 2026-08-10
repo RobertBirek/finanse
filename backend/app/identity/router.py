@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.config import settings
 from app.identity.schemas import TokenResponse, UserCreate, UserLogin, UserResponse
 from app.identity.service import (
     authenticate,
@@ -18,7 +19,7 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 COOKIE_NAME = "advisor_session"
-COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days
+COOKIE_MAX_AGE = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 
 async def get_current_user(
@@ -54,8 +55,8 @@ async def register(data: UserCreate, response: Response, db: AsyncSession = Depe
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=False,  # set True in production with HTTPS
-        samesite="lax",
+        secure=settings.ENVIRONMENT == "production",
+        samesite="strict",
         max_age=COOKIE_MAX_AGE,
     )
 
@@ -74,8 +75,8 @@ async def login(data: UserLogin, response: Response, db: AsyncSession = Depends(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=False,
-        samesite="lax",
+        secure=settings.ENVIRONMENT == "production",
+        samesite="strict",
         max_age=COOKIE_MAX_AGE,
     )
 
