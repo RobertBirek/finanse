@@ -1,19 +1,68 @@
-from fastapi import APIRouter, Depends
+import uuid
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
 from app.identity.models import User
 from app.identity.router import get_current_user
-from app.advisor.schemas import ChatRequest, ChatResponse
+from app.advisor.schemas import (
+    ChatRequest,
+    MessageResponse,
+    ConversationResponse,
+    SendMessageRequest,
+)
+from app.advisor.service import (
+    get_user_conversations,
+    get_conversation_messages,
+    send_message,
+)
 
 router = APIRouter()
 
 
-@router.post("/chat")
-async def chat(
-    data: ChatRequest,
+@router.get("/conversations", response_model=list[ConversationResponse])
+async def list_conversations(
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    return {
-        "message": "Advisor chat endpoint — stub. OpenAI integration coming soon.",
-        "user_message": data.message,
-        "conversation_id": str(data.conversation_id) if data.conversation_id else None,
-    }
+    return await get_user_conversations(db, current_user.id)
+
+
+@router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
+async def get_conversation_endpoint(
+    conversation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    conv = await get_user_conversations(db, current_user.id)
+    for c in conv:
+        if c.id == conversation_id:
+            return c
+    raise HTTPException(status_code=404, detail="Conversation not found")
+
+
+@router.get("/conversations/{conversation_id}/messages", response_model=list[MessageResponse])
+async def list_messages(
+    conversation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_conversation_messages(db, current_user.id, conversation_id)
+
+
+@router.post("/messages", response_model=MessageResponse)
+async def send_message_endpoint(
+    data: SendMessageRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await send_message(
+            db,
+            current_user.id,
+            data.conversation_id,
+            data.content,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

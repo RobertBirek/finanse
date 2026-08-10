@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production-use-a-real-secret-key"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
     OPENAI_API_KEY: str = ""
+    LLM_API_KEY: str = ""
+    LLM_BASE_URL: str = "https://api.deepseek.com"
+    LLM_MODEL: str = "deepseek-v4-pro"
     CORS_ORIGINS: str = "http://localhost:5173"
     ENVIRONMENT: str = "development"
     STIRLING_PDF_URL: str = "http://stirling-pdf:8080"

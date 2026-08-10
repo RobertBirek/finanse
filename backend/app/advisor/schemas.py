@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +9,12 @@ class ChatRequest(BaseModel):
     conversation_id: uuid.UUID | None = None
 
 
-class ChatResponse(BaseModel):
+class SendMessageRequest(BaseModel):
+    conversation_id: uuid.UUID | None = None
+    content: str = Field(min_length=1)
+
+
+class MessageResponse(BaseModel):
     id: uuid.UUID
     conversation_id: uuid.UUID
     role: str

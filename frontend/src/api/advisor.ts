@@ -3,6 +3,7 @@ import api from "../lib/api";
 
 export interface Conversation {
   id: string;
+  user_id: string;
   title: string;
   created_at: string;
   updated_at: string;
@@ -26,17 +27,6 @@ export function useConversations() {
   });
 }
 
-export function useConversation(id: string | null) {
-  return useQuery({
-    queryKey: ["advisor", "conversations", id],
-    queryFn: async () => {
-      const { data } = await api.get<Conversation>(`/advisor/conversations/${id}`);
-      return data;
-    },
-    enabled: !!id,
-  });
-}
-
 export function useMessages(conversationId: string | null) {
   return useQuery({
     queryKey: ["advisor", "messages", conversationId],
@@ -54,20 +44,20 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      conversationId,
+      conversation_id,
       content,
     }: {
-      conversationId: string | null;
+      conversation_id: string | null;
       content: string;
     }) => {
       const { data } = await api.post<Message>("/advisor/messages", {
-        conversation_id: conversationId,
+        conversation_id,
         content,
       });
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["advisor", "messages"] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["advisor", "messages", data.conversation_id] });
       queryClient.invalidateQueries({ queryKey: ["advisor", "conversations"] });
     },
   });
