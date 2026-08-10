@@ -16,11 +16,11 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] E2E: Playwright test — wpisz w Inbox → utwórz zadanie → task w API
 
 ### Dzisiaj z live danymi
-- [ ] Frontend: Today ładuje taski z API (due_date=today lub status=in_progress)
-- [ ] Frontend: Today ładuje time_blocki z API
-- [ ] Frontend: Today ładuje financial_summary z API
-- [ ] Backend: endpoint `GET /api/work/tasks?due_date=today` 
-- [ ] Backend: endpoint `GET /api/finance/summary`
+- [x] Frontend: Today ładuje taski z API (status=todo,in_progress)
+- [x] Frontend: Today ładuje time_blocki z API (start_time/end_time)
+- [x] Frontend: Today ładuje financial_summary z API
+- [x] Backend: comma-separated status filter (status=todo,in_progress)
+- [x] E2E: tasks from Inbox visible on Today with 'Inbox' badge
 
 ### Finanse CRUD
 - [ ] Frontend: Finances page ładuje listę kont z API
