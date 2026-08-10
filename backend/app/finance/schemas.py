@@ -106,7 +106,7 @@ class TransactionUpdate(BaseModel):
 class TransactionResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
-    transaction_date: dt.date
+    transaction_date: dt.date = Field(validation_alias="date")
     description: str
     type: str
     is_pending: bool

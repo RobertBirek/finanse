@@ -8,6 +8,14 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.config import settings
 from app.database import Base
 
+import app.identity.models  # noqa: F401 — required for Alembic autogenerate
+import app.finance.models  # noqa: F401
+import app.work.models  # noqa: F401
+import app.inbox.models  # noqa: F401
+import app.advisor.models  # noqa: F401
+import app.documents.models  # noqa: F401
+import app.audit.models  # noqa: F401
+
 config = context.config
 
 if config.config_file_name is not None:

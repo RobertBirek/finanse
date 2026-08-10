@@ -1,3 +1,5 @@
+import json
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
@@ -10,9 +12,15 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production-use-a-real-secret-key"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     OPENAI_API_KEY: str = ""
-    CORS_ORIGINS: List[str] = ["http://localhost:5173"]
+    CORS_ORIGINS: str = "http://localhost:5173"
     ENVIRONMENT: str = "development"
     STIRLING_PDF_URL: str = "http://stirling-pdf:8080"
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        if self.CORS_ORIGINS.startswith("["):
+            return json.loads(self.CORS_ORIGINS)
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
 
 settings = Settings()
