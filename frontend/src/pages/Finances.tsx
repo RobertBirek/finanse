@@ -173,7 +173,7 @@ export function Finances() {
                 <div>
                   <p className="text-sm text-gray-200">{tx.description}</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(tx.date).toLocaleDateString("pl-PL")} · {tx.type}
+                    {new Date(tx.transaction_date).toLocaleDateString("pl-PL")} · {tx.type}
                     {tx.is_pending && " · Oczekuje"}
                   </p>
                 </div>

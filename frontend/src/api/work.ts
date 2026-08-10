@@ -5,32 +5,41 @@ export interface Project {
   id: string;
   name: string;
   description: string | null;
-  status: "active" | "on_hold" | "completed" | "archived";
+  status: "active" | "on_hold" | "completed" | "cancelled";
   deadline: string | null;
+  color: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface Task {
   id: string;
+  user_id: string;
   project_id: string | null;
   title: string;
   description: string | null;
-  status: "todo" | "in_progress" | "done" | "blocked";
+  status: "todo" | "in_progress" | "done" | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
   due_date: string | null;
-  estimated_hours: number | null;
+  estimated_minutes: number | null;
+  actual_minutes: number | null;
+  completed_at: string | null;
+  source: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface TimeBlock {
   id: string;
+  user_id: string;
   task_id: string | null;
   project_id: string | null;
   title: string;
   start_time: string;
   end_time: string;
-  is_completed: boolean;
+  block_type: "deep_work" | "shallow" | "meeting" | "break";
+  created_at: string;
+  updated_at: string;
 }
 
 export function useProjects(params?: { status?: string }) {
@@ -57,11 +66,7 @@ export function useProject(id: string | null) {
 export function useCreateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (project: {
-      name: string;
-      description?: string;
-      deadline?: string;
-    }) => {
+    mutationFn: async (project: { name: string; description?: string; status?: string; deadline?: string; color?: string }) => {
       const { data } = await api.post<Project>("/work/projects", project);
       return data;
     },
@@ -106,6 +111,7 @@ export function useCreateTask() {
       description?: string;
       priority?: string;
       due_date?: string;
+      estimated_minutes?: number;
     }) => {
       const { data } = await api.post<Task>("/work/tasks", task);
       return data;
@@ -127,26 +133,30 @@ export function useUpdateTask() {
       title?: string;
       status?: string;
       priority?: string;
+      project_id?: string;
       due_date?: string;
+      estimated_minutes?: number;
+      actual_minutes?: number;
     }) => {
       const { data } = await api.patch<Task>(`/work/tasks/${id}`, task);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["work", "tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["work", "projects"] });
     },
   });
 }
 
 export function useTimeBlocks(params?: {
-  date?: string;
+  start_time?: string;
+  end_time?: string;
+  task_id?: string;
   project_id?: string;
 }) {
   return useQuery({
-    queryKey: ["work", "timeblocks", params],
+    queryKey: ["work", "time_blocks", params],
     queryFn: async () => {
-      const { data } = await api.get<TimeBlock[]>("/work/timeblocks", { params });
+      const { data } = await api.get<TimeBlock[]>("/work/time-blocks", { params });
       return data;
     },
   });
@@ -158,15 +168,16 @@ export function useCreateTimeBlock() {
     mutationFn: async (block: {
       task_id?: string;
       project_id?: string;
-      title: string;
+      title?: string;
       start_time: string;
       end_time: string;
+      block_type?: string;
     }) => {
-      const { data } = await api.post<TimeBlock>("/work/timeblocks", block);
+      const { data } = await api.post<TimeBlock>("/work/time-blocks", block);
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["work", "timeblocks"] });
+      queryClient.invalidateQueries({ queryKey: ["work", "time_blocks"] });
     },
   });
 }

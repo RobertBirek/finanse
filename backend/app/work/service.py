@@ -77,7 +77,12 @@ async def get_tasks(
     if project_id:
         stmt = stmt.where(Task.project_id == project_id)
     if status:
-        stmt = stmt.where(Task.status == status)
+        statuses = [s.strip() for s in status.split(",")]
+        if len(statuses) == 1:
+            stmt = stmt.where(Task.status == statuses[0])
+        else:
+            from sqlalchemy import or_
+            stmt = stmt.where(or_(*[Task.status == s for s in statuses]))
     stmt = stmt.order_by(Task.priority.desc(), Task.due_date.asc().nullslast()).limit(limit).offset(offset)
     result = await db.execute(stmt)
     return list(result.scalars().all())

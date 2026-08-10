@@ -154,7 +154,7 @@ export function ProjectDetail() {
                     <div key={tx.id} className="text-sm">
                       <p className="text-gray-300">{tx.description}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(tx.date).toLocaleDateString("pl-PL")} — {tx.type}
+                        {new Date(tx.transaction_date).toLocaleDateString("pl-PL")} — {tx.type}
                       </p>
                     </div>
                   ))}

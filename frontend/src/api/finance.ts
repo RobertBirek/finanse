@@ -32,7 +32,7 @@ export interface Posting {
 
 export interface Transaction {
   id: string;
-  date: string;
+  transaction_date: string;
   description: string;
   type: "income" | "expense" | "transfer" | "exchange";
   is_pending: boolean;

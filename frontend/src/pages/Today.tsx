@@ -4,11 +4,16 @@ import { useTasks, useCreateTask, useUpdateTask, useTimeBlocks } from "../api/wo
 import { useFinancialSummary } from "../api/finance";
 
 const todayStr = new Date().toISOString().split("T")[0];
+const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
 export function Today() {
   const user = useAuthStore((s) => s.user);
-  const { data: tasks } = useTasks({ due_date: todayStr });
-  const { data: timeBlocks } = useTimeBlocks({ date: todayStr });
+  // Fetch all active tasks: todo + in_progress
+  const { data: tasks } = useTasks({ status: "todo,in_progress" });
+  const { data: timeBlocks } = useTimeBlocks({
+    start_time: todayStr,
+    end_time: tomorrowStr,
+  });
   const { data: summary } = useFinancialSummary();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -24,7 +29,7 @@ export function Today() {
     );
   };
 
-  const activeTasks = tasks?.filter((t) => t.status !== "done") || [];
+  const activeTasks = tasks?.filter((t) => t.status !== "done" && t.status !== "cancelled") || [];
   const todayBlocks = timeBlocks || [];
 
   const greet = () => {
@@ -43,7 +48,7 @@ export function Today() {
       {/* Quick stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="card">
-          <p className="text-sm text-gray-400">Zadania na dziś</p>
+          <p className="text-sm text-gray-400">Aktywne zadania</p>
           <p className="text-2xl font-bold text-white mt-1">
             {activeTasks.length}
           </p>
@@ -83,7 +88,12 @@ export function Today() {
         <div className="card">
           <h2 className="text-lg font-semibold text-white mb-4">Zadania</h2>
           {activeTasks.length === 0 ? (
-            <p className="text-gray-500 text-sm">Brak zadań na dziś</p>
+            <div className="text-center py-8">
+              <p className="text-gray-500">Brak zadań</p>
+              <p className="text-gray-600 text-sm mt-1">
+                Dodaj zadanie powyżej lub przez Inbox
+              </p>
+            </div>
           ) : (
             <div className="space-y-2">
               {activeTasks.map((task) => (
@@ -98,6 +108,11 @@ export function Today() {
                     className="w-5 h-5 rounded-full border-2 border-gray-600 hover:border-advisor-500 flex-shrink-0 transition-colors"
                   />
                   <span className="flex-1 text-sm text-gray-200">{task.title}</span>
+                  {task.source === "inbox" && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-advisor-900/50 text-advisor-400">
+                      Inbox
+                    </span>
+                  )}
                   {task.priority === "high" || task.priority === "urgent" ? (
                     <span className="text-xs px-2 py-0.5 rounded bg-red-900/50 text-red-400">
                       {task.priority === "urgent" ? "Pilne" : "Ważne"}
@@ -113,7 +128,12 @@ export function Today() {
         <div className="card">
           <h2 className="text-lg font-semibold text-white mb-4">Dzisiejszy plan</h2>
           {todayBlocks.length === 0 ? (
-            <p className="text-gray-500 text-sm">Brak zaplanowanych bloków</p>
+            <div className="text-center py-8">
+              <p className="text-gray-500">Brak zaplanowanych bloków</p>
+              <p className="text-gray-600 text-sm mt-1">
+                Zaplanuj bloki w kalendarzu
+              </p>
+            </div>
           ) : (
             <div className="space-y-2">
               {todayBlocks.map((block) => (
