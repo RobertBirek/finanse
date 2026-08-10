@@ -23,10 +23,11 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] E2E: tasks from Inbox visible on Today with 'Inbox' badge
 
 ### Finanse CRUD
-- [ ] Frontend: Finances page ładuje listę kont z API
-- [ ] Frontend: formularz tworzenia konta (nazwa, typ, waluta)
-- [ ] Frontend: lista transakcji z API
-- [ ] Frontend: formularz uproszczony transakcji (backend pilnuje double-entry)
+- [x] Frontend: Finances page ładuje listę kont z saldami z API
+- [x] Frontend: formularz tworzenia konta (nazwa, typ, waluta)
+- [x] Frontend: lista transakcji z API
+- [x] Frontend: formularz transakcji
+- [x] Backend: balance_pln computed from postings per account
 
 ### Doradca
 - [ ] Backend: integracja OpenAI API
