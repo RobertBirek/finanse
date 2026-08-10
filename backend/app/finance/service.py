@@ -108,7 +108,7 @@ async def create_transaction(
 
     txn = FinancialTransaction(
         user_id=user_id,
-        date=data.date or date.today(),
+        date=data.transaction_date or date.today(),
         description=data.description,
         type=data.type,
         is_pending=data.is_pending,

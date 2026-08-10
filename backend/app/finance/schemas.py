@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+import datetime as dt
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -16,7 +16,7 @@ class AccountUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     type: str | None = Field(default=None, pattern=r"^(checking|savings|cash|credit|investment)$")
     is_active: bool | None = None
-    closed_at: date | None = None
+    closed_at: dt.date | None = None
 
 
 class AccountResponse(BaseModel):
@@ -26,10 +26,10 @@ class AccountResponse(BaseModel):
     type: str
     currency: str
     is_active: bool
-    opened_at: date
-    closed_at: date | None
-    created_at: datetime
-    updated_at: datetime
+    opened_at: dt.date
+    closed_at: dt.date | None
+    created_at: dt.datetime
+    updated_at: dt.datetime
 
     model_config = {"from_attributes": True}
 
@@ -52,8 +52,8 @@ class CategoryResponse(BaseModel):
     name: str
     parent_id: uuid.UUID | None
     type: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: dt.datetime
+    updated_at: dt.datetime
 
     model_config = {"from_attributes": True}
 
@@ -80,14 +80,14 @@ class PostingResponse(BaseModel):
     fx_rate: float
     fx_rate_source: str
     direction: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: dt.datetime
+    updated_at: dt.datetime
 
     model_config = {"from_attributes": True}
 
 
 class TransactionCreate(BaseModel):
-    date: date | None = None
+    transaction_date: dt.date | None = None
     description: str = Field(min_length=1)
     type: str = Field(pattern=r"^(income|expense|transfer|exchange)$")
     is_pending: bool = False
@@ -97,7 +97,7 @@ class TransactionCreate(BaseModel):
 
 
 class TransactionUpdate(BaseModel):
-    date: date | None = None
+    transaction_date: dt.date | None = None
     description: str | None = None
     is_pending: bool | None = None
     project_id: uuid.UUID | None = None
@@ -106,7 +106,7 @@ class TransactionUpdate(BaseModel):
 class TransactionResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
-    date: date
+    transaction_date: dt.date
     description: str
     type: str
     is_pending: bool
@@ -114,8 +114,8 @@ class TransactionResponse(BaseModel):
     created_by: str
     source: str
     postings: List[PostingResponse]
-    created_at: datetime
-    updated_at: datetime
+    created_at: dt.datetime
+    updated_at: dt.datetime
 
     model_config = {"from_attributes": True}
 
