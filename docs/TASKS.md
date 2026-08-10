@@ -30,9 +30,13 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Backend: balance_pln computed from postings per account
 
 ### Doradca
-- [ ] Backend: integracja OpenAI API
-- [ ] Backend: implementacja `get_financial_summary` tool
-- [ ] Frontend: chat UI (wysyłanie wiadomości, wyświetlanie odpowiedzi)
+- [x] Backend: integracja DeepSeek API (v4-pro)
+- [x] Backend: chat endpoint POST /api/advisor/messages
+- [x] Backend: conversation listing + message history
+- [x] Frontend: chat UI z live odpowiedziami DeepSeek
+- [x] Frontend: tworzenie nowej konwersacji + pamięć kontekstu
+- [x] System prompt: polski doradca (czas, pieniądze, projekty)
+- [x] E2E: DeepSeek odpowiada po polsku, pamięta kontekst rozmowy
 
 ---
 
