@@ -26,6 +26,7 @@ class AccountResponse(BaseModel):
     type: str
     currency: str
     is_active: bool
+    balance_pln: int = 0
     opened_at: dt.date
     closed_at: dt.date | None
     created_at: dt.datetime

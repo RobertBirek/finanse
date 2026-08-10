@@ -21,6 +21,10 @@ class Account(Base):
 
     postings: Mapped[list["Posting"]] = relationship("Posting", back_populates="account", cascade="all, delete-orphan")
 
+    @property
+    def balance_pln(self) -> int:
+        return getattr(self, "_balance", 0)
+
 
 class Category(Base):
     __tablename__ = "categories"

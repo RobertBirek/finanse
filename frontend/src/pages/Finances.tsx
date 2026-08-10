@@ -5,7 +5,6 @@ import {
   useTransactions,
   useCreateTransaction,
   useFinancialSummary,
-  useCategories,
 } from "../api/finance";
 
 interface PostingForm {
@@ -14,13 +13,27 @@ interface PostingForm {
   direction: "debit" | "credit";
 }
 
+const SUGGESTED_ACCOUNTS = [
+  { name: "ING PLN", type: "checking" },
+  { name: "Revolut PLN", type: "checking" },
+  { name: "Revolut EUR", type: "checking" },
+  { name: "Gotówka PLN", type: "cash" },
+  { name: "Oszczędności", type: "savings" },
+];
+
 export function Finances() {
   const { data: accounts } = useAccounts();
+  const createAccount = useCreateAccount();
   const { data: transactions, isLoading: txLoading } = useTransactions({ limit: 50 });
   const { data: summary } = useFinancialSummary();
   const createTx = useCreateTransaction();
 
   const [showTxForm, setShowTxForm] = useState(false);
+  const [showAccountForm, setShowAccountForm] = useState(false);
+  const [newAccountName, setNewAccountName] = useState("");
+  const [newAccountType, setNewAccountType] = useState("checking");
+  const [newAccountCurrency, setNewAccountCurrency] = useState("PLN");
+
   const [txDesc, setTxDesc] = useState("");
   const [txType, setTxType] = useState("expense");
   const [postings, setPostings] = useState<PostingForm[]>([
@@ -28,10 +41,19 @@ export function Finances() {
     { account_id: "", source_amount: "", direction: "credit" },
   ]);
 
-  const totalBalance = accounts?.reduce(
-    (sum, a) => sum + 0 /* server calculated */,
-    0
-  ) || 0;
+  const handleCreateAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAccountName.trim()) return;
+    createAccount.mutate(
+      { name: newAccountName.trim(), type: newAccountType, currency: newAccountCurrency },
+      {
+        onSuccess: () => {
+          setNewAccountName("");
+          setShowAccountForm(false);
+        },
+      }
+    );
+  };
 
   const handleTxSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,9 +105,14 @@ export function Finances() {
     <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Finanse</h1>
-        <button onClick={() => setShowTxForm(true)} className="btn-primary">
-          + Nowa transakcja
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowAccountForm(true)} className="btn-secondary">
+            + Konto
+          </button>
+          <button onClick={() => setShowTxForm(true)} className="btn-primary">
+            + Transakcja
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -125,31 +152,40 @@ export function Finances() {
       {/* Accounts list */}
       <div className="card mb-6">
         <h2 className="text-lg font-semibold text-white mb-4">Konta</h2>
-        <div className="space-y-3">
-          {accounts?.map((account) => (
-            <div
-              key={account.id}
-              className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    account.is_active ? "bg-green-400" : "bg-gray-600"
-                  }`}
-                />
-                <div>
-                  <p className="text-sm font-medium text-white">{account.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {account.type} · {account.currency}
-                  </p>
+        {accounts?.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Brak kont</p>
+            <p className="text-gray-600 text-sm mt-1">
+              Dodaj pierwsze konto, aby rozpocząć
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {accounts?.map((account) => (
+              <div
+                key={account.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      account.is_active ? "bg-green-400" : "bg-gray-600"
+                    }`}
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-white">{account.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {account.type} · {account.currency}
+                    </p>
+                  </div>
                 </div>
+                <p className={`text-sm font-mono font-medium ${(account.balance_pln ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  {formatPLN(account.balance_pln ?? 0)} {account.currency}
+                </p>
               </div>
-              <p className="text-sm font-mono text-gray-300">
-                — {account.currency}
-              </p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent transactions */}
@@ -162,7 +198,12 @@ export function Finances() {
             <div className="w-6 h-6 border-2 border-advisor-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : transactions?.length === 0 ? (
-          <p className="text-gray-500 text-sm">Brak transakcji</p>
+          <div className="text-center py-8">
+            <p className="text-gray-500">Brak transakcji</p>
+            <p className="text-gray-600 text-sm mt-1">
+              Dodaj pierwszą transakcję
+            </p>
+          </div>
         ) : (
           <div className="space-y-2">
             {transactions?.map((tx) => (
@@ -198,6 +239,91 @@ export function Finances() {
         )}
       </div>
 
+      {/* Account creation modal */}
+      {showAccountForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="card w-full max-w-sm">
+            <h2 className="text-lg font-semibold text-white mb-4">Nowe konto</h2>
+            <form onSubmit={handleCreateAccount} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Nazwa</label>
+                <input
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  className="input"
+                  placeholder="np. ING PLN"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Typ</label>
+                <select
+                  value={newAccountType}
+                  onChange={(e) => setNewAccountType(e.target.value)}
+                  className="input"
+                >
+                  <option value="checking">Konto bieżące</option>
+                  <option value="savings">Oszczędnościowe</option>
+                  <option value="cash">Gotówka</option>
+                  <option value="credit">Karta kredytowa</option>
+                  <option value="investment">Inwestycyjne</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Waluta</label>
+                <select
+                  value={newAccountCurrency}
+                  onChange={(e) => setNewAccountCurrency(e.target.value)}
+                  className="input"
+                >
+                  <option value="PLN">PLN</option>
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <div className="text-xs text-gray-600">
+                <p className="mb-1">Szybki wybór:</p>
+                <div className="flex flex-wrap gap-1">
+                  {SUGGESTED_ACCOUNTS.map((acc) => (
+                    <button
+                      key={acc.name}
+                      type="button"
+                      onClick={() => {
+                        setNewAccountName(acc.name);
+                        setNewAccountType(acc.type);
+                        setNewAccountCurrency(
+                          acc.name.includes("EUR") ? "EUR" : "PLN"
+                        );
+                      }}
+                      className="px-2 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 text-gray-400"
+                    >
+                      {acc.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAccountForm(false)}
+                  className="btn-secondary"
+                >
+                  Anuluj
+                </button>
+                <button
+                  type="submit"
+                  disabled={createAccount.isPending || !newAccountName.trim()}
+                  className="btn-primary"
+                >
+                  {createAccount.isPending ? "..." : "Dodaj"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Transaction form modal */}
       {showTxForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -213,6 +339,7 @@ export function Finances() {
                   onChange={(e) => setTxDesc(e.target.value)}
                   className="input"
                   required
+                  autoFocus
                 />
               </div>
               <div>
@@ -233,7 +360,7 @@ export function Finances() {
                 <div key={i} className="p-3 rounded-lg bg-gray-800/50 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500 w-16">
-                      {p.direction === "debit" ? "DEBIT" : "CREDIT"}
+                      {i === 0 ? "Z konta" : "Na konto/kategorię"}
                     </span>
                     <select
                       value={p.direction}
@@ -242,8 +369,8 @@ export function Finances() {
                       }
                       className="input text-xs w-24"
                     >
-                      <option value="debit">Przychód</option>
-                      <option value="credit">Wydatek</option>
+                      <option value="debit">DEBIT</option>
+                      <option value="credit">CREDIT</option>
                     </select>
                   </div>
                   <select

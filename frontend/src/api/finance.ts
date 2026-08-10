@@ -7,6 +7,7 @@ export interface Account {
   type: string;
   currency: string;
   is_active: boolean;
+  balance_pln: number;
   opened_at: string;
   closed_at: string | null;
 }

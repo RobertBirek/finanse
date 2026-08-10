@@ -25,10 +25,35 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCrea
 
 
 async def get_accounts(db: AsyncSession, user_id: uuid.UUID) -> list[Account]:
-    result = await db.execute(
-        select(Account).where(Account.user_id == user_id).order_by(Account.name)
+    """Get accounts with computed balance (credits - debits in PLN)."""
+    from sqlalchemy import case
+
+    balance_subq = (
+        select(
+            Posting.account_id,
+            func.sum(
+                case(
+                    (Posting.direction == "credit", Posting.base_amount_pln),
+                    else_=-Posting.base_amount_pln,
+                )
+            ).label("balance"),
+        )
+        .group_by(Posting.account_id)
+        .subquery()
     )
-    return list(result.scalars().all())
+
+    result = await db.execute(
+        select(Account, func.coalesce(balance_subq.c.balance, 0))
+        .outerjoin(balance_subq, Account.id == balance_subq.c.account_id)
+        .where(Account.user_id == user_id)
+        .order_by(Account.name)
+    )
+    rows = result.all()
+    accounts = []
+    for account, balance in rows:
+        account._balance = int(balance)
+        accounts.append(account)
+    return accounts
 
 
 async def get_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID) -> Account | None:
