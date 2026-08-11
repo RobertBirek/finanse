@@ -11,6 +11,7 @@ import { ProjectDetail } from "./pages/ProjectDetail";
 import { Calendar } from "./pages/Calendar";
 import { Finances } from "./pages/Finances";
 import { Advisor } from "./pages/Advisor";
+import { Documents } from "./pages/Documents";
 import { Settings } from "./pages/Settings";
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/finances" element={<Finances />} />
           <Route path="/advisor" element={<Advisor />} />
+          <Route path="/documents" element={<Documents />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/today" replace />} />
