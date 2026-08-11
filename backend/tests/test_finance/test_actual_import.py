@@ -451,3 +451,61 @@ class TestActualParserTransactions:
             assert txn["postings"][2]["direction"] == "credit"
             assert txn["postings"][2]["source_amount"] == 5000
             os.unlink(db_path)
+
+
+import pytest
+from unittest.mock import AsyncMock, patch
+from datetime import date
+
+
+class TestNbpRates:
+    @pytest.mark.asyncio
+    async def test_fetches_eur_rate(self):
+        from app.finance.nbp_rates import NbpRateProvider
+        from unittest.mock import MagicMock
+
+        provider = NbpRateProvider()
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "code": "EUR",
+            "rates": [{"mid": 4.30, "effectiveDate": "2026-07-15"}]
+        }
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            rate = await provider.get_rate("EUR", date(2026, 7, 15))
+            assert rate == 4.30
+
+    @pytest.mark.asyncio
+    async def test_caches_same_day(self):
+        from app.finance.nbp_rates import NbpRateProvider
+        from unittest.mock import MagicMock
+
+        provider = NbpRateProvider()
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "code": "EUR",
+            "rates": [{"mid": 4.30, "effectiveDate": "2026-07-15"}]
+        }
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            rate1 = await provider.get_rate("EUR", date(2026, 7, 15))
+            rate2 = await provider.get_rate("EUR", date(2026, 7, 15))
+            assert rate1 == rate2 == 4.30
+            assert mock_get.call_count == 1  # cached
+
+    @pytest.mark.asyncio
+    async def test_pln_always_one(self):
+        from app.finance.nbp_rates import NbpRateProvider
+
+        provider = NbpRateProvider()
+        rate = await provider.get_rate("PLN", date(2026, 7, 15))
+        assert rate == 1.0
+
+    def test_calculate_base_amount(self):
+        from app.finance.nbp_rates import NbpRateProvider
+
+        provider = NbpRateProvider()
+        assert provider.calculate_base_amount(100, 4.30) == 430
+        assert provider.calculate_base_amount(50, 4.2678) == 213  # round to int
