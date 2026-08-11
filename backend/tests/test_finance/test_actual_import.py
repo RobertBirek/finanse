@@ -279,8 +279,8 @@ class TestActualParserTransactions:
         inserts = [
             "INSERT INTO accounts VALUES ('acc_ing', 'ING', 0, 0, 0)",
             "INSERT INTO accounts VALUES ('acc_cash', 'Gotowka', 0, 0, 0)",
-            "INSERT INTO transactions VALUES ('tx_a', 0, 0, NULL, 'acc_ing', NULL, -10000, NULL, NULL, 20260701, 'link_1', 0)",
-            "INSERT INTO transactions VALUES ('tx_b', 0, 0, NULL, 'acc_cash', NULL, 10000, NULL, NULL, 20260701, 'link_1', 0)",
+            "INSERT INTO transactions VALUES ('tx_a', 0, 0, NULL, 'acc_ing', NULL, -10000, NULL, NULL, 20260701, 'tx_b', 0)",
+            "INSERT INTO transactions VALUES ('tx_b', 0, 0, NULL, 'acc_cash', NULL, 10000, NULL, NULL, 20260701, 'tx_a', 0)",
         ]
         db_path = _make_actual_db(schema, inserts)
 
@@ -290,7 +290,7 @@ class TestActualParserTransactions:
                 assert len(result) == 1
                 txn = result[0]
                 assert txn["type"] == "transfer"
-                assert txn["description"] == "Transfer: ING → Gotowka"
+                assert txn["description"] == "Transfer: ING -> Gotowka"
                 assert len(txn["postings"]) == 2
                 assert txn["postings"][0]["account_actual_id"] == "acc_ing"
                 assert txn["postings"][0]["direction"] == "credit"
@@ -313,24 +313,21 @@ class TestActualParserTransactions:
         inserts = [
             "INSERT INTO accounts VALUES ('acc_ing', 'ING', 0, 0, 0)",
             "INSERT INTO accounts VALUES ('acc_cash', 'Gotowka', 0, 0, 0)",
-            # 3 rows with same transferred_id — unpaired
-            "INSERT INTO transactions VALUES ('tx_a', 0, 0, NULL, 'acc_ing', NULL, -5000, NULL, NULL, 20260701, 'link_bad', 0)",
-            "INSERT INTO transactions VALUES ('tx_b', 0, 0, NULL, 'acc_cash', NULL, 5000, NULL, NULL, 20260701, 'link_bad', 0)",
-            "INSERT INTO transactions VALUES ('tx_c', 0, 0, NULL, 'acc_ing', NULL, -2000, NULL, NULL, 20260701, 'link_bad', 0)",
-            # Both rows positive — mismatched signs
-            "INSERT INTO transactions VALUES ('tx_d', 0, 0, NULL, 'acc_ing', NULL, 3000, NULL, NULL, 20260701, 'link_both_pos', 0)",
-            "INSERT INTO transactions VALUES ('tx_e', 0, 0, NULL, 'acc_cash', NULL, 3000, NULL, NULL, 20260701, 'link_both_pos', 0)",
+            # Mismatched amounts: tx_c sends 10000 but tx_d receives only 5000
+            "INSERT INTO transactions VALUES ('tx_c', 0, 0, NULL, 'acc_ing', NULL, -10000, NULL, NULL, 20260701, 'tx_d', 0)",
+            "INSERT INTO transactions VALUES ('tx_d', 0, 0, NULL, 'acc_cash', NULL, 5000, NULL, NULL, 20260701, 'tx_c', 0)",
+            # Orphan row: transferred_id points to non-existent row
+            "INSERT INTO transactions VALUES ('tx_e', 0, 0, NULL, 'acc_ing', NULL, -3000, NULL, NULL, 20260701, 'tx_nonexist', 0)",
         ]
         db_path = _make_actual_db(schema, inserts)
 
         try:
             with ActualParser(db_path) as parser:
                 result = parser.get_transfers()
-                assert len(result) == 0
+                assert len(result) == 1
                 warnings = parser.get_warnings()
-                assert len(warnings) == 2
-                assert any("link_bad" in w and "3 rows" in w for w in warnings)
-                assert any("link_both_pos" in w and "both rows same sign" in w for w in warnings)
+                assert len(warnings) == 1
+                assert any("mismatch" in w.lower() for w in warnings)
         finally:
             os.unlink(db_path)
 

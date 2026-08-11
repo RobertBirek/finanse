@@ -220,78 +220,74 @@ class ActualParser:
 
 
     def get_transfers(self) -> list[TransactionDict]:
-        acct_currency = self._get_account_currency_map()
-
+        """Reconstruct transfer transactions from paired transfer_id rows (mutual reference)."""
         acct_rows = self._conn.execute(
             "SELECT id, name FROM accounts WHERE tombstone=0 AND closed=0"
         ).fetchall()
         acct_names = {r["id"]: r["name"] for r in acct_rows}
 
-        txn_table = self._txn_table
+        table = self._txn_table
         col_acct = self._txn_col_acct
-        col_transfer_id = self._txn_col_transfer_id
         col_is_parent = self._txn_col_is_parent
         col_is_child = self._txn_col_is_child
 
-        # Use params=? for values, .format() for column/table names
-        rows = self._conn.execute(
-            "SELECT id, {acct}, amount, date, {transfer_id} "
-            "FROM {table} "
-            "WHERE tombstone=0 AND {is_parent}=0 AND {is_child}=0 AND {transfer_id} IS NOT NULL "
-            "ORDER BY {transfer_id}, amount".format(
-                acct=col_acct, table=txn_table, transfer_id=col_transfer_id,
-                is_parent=col_is_parent, is_child=col_is_child
-            )
-        ).fetchall()
-
-        pairs: dict[str, list[sqlite3.Row]] = {}
-        for r in rows:
-            tid = r[col_transfer_id]
-            if tid not in pairs:
-                pairs[tid] = []
-            pairs[tid].append(r)
+        # Self-join: find pairs where t1.transfer_id = t2.id
+        # Use t1.id < t2.id to avoid duplicates
+        query = (
+            f"SELECT t1.id as id1, t1.{col_acct} as acct1, t1.amount as amount1, t1.date as date1, "
+            f"       t2.id as id2, t2.{col_acct} as acct2, t2.amount as amount2 "
+            f"FROM {table} t1 "
+            f"JOIN {table} t2 ON t1.{self._txn_col_transfer_id} = t2.id "
+            f"WHERE t1.tombstone = 0 AND t1.{col_is_parent} = 0 AND t1.{col_is_child} = 0 "
+            f"  AND t1.{self._txn_col_transfer_id} IS NOT NULL "
+            f"  AND t2.tombstone = 0 AND t2.{col_is_parent} = 0 AND t2.{col_is_child} = 0 "
+            f"  AND t1.id < t2.id "
+            f"ORDER BY t1.date, t1.id"
+        )
+        rows = self._conn.execute(query).fetchall()
 
         result = []
-        for tid, pair in pairs.items():
-            if len(pair) != 2:
-                self._warnings.append(f"Skipping transfer {tid}: {len(pair)} rows (expected 2)")
-                continue
+        for r in rows:
+            # Determine source (negative) and destination (positive)
+            if r["amount1"] < 0:
+                source_acct, source_amount = r["acct1"], abs(r["amount1"])
+                dest_acct, dest_amount = r["acct2"], abs(r["amount2"])
+            else:
+                source_acct, source_amount = r["acct2"], abs(r["amount2"])
+                dest_acct, dest_amount = r["acct1"], abs(r["amount1"])
 
-            source_row = pair[0] if pair[0]["amount"] < 0 else pair[1]
-            dest_row = pair[1] if pair[1]["amount"] > 0 else pair[0]
+            source_name = acct_names.get(source_acct, "?")
+            dest_name = acct_names.get(dest_acct, "?")
 
-            if source_row["amount"] >= 0 or dest_row["amount"] <= 0:
-                self._warnings.append(f"Skipping transfer {tid}: both rows same sign")
-                continue
-
-            abs_amount = abs(source_row["amount"])
-            source_acct_id = source_row[col_acct]
-            dest_acct_id = dest_row[col_acct]
-            source_name = acct_names.get(source_acct_id, "?")
-            dest_name = acct_names.get(dest_acct_id, "?")
+            # Verify amounts match
+            if source_amount != dest_amount:
+                self._warnings.append(
+                    f"Transfer amounts mismatch for pair ({r['id1'][:8]}.../{r['id2'][:8]}...): "
+                    f"{source_amount} vs {dest_amount}"
+                )
 
             postings: list[PostingDict] = [
                 {
-                    "account_actual_id": source_acct_id,
+                    "account_actual_id": source_acct,
                     "category_actual_id": None,
-                    "source_amount": abs_amount,
-                    "source_currency": acct_currency.get(source_acct_id, "PLN"),
+                    "source_amount": source_amount,
+                    "source_currency": "PLN",
                     "direction": "credit",
                 },
                 {
-                    "account_actual_id": dest_acct_id,
+                    "account_actual_id": dest_acct,
                     "category_actual_id": None,
-                    "source_amount": abs_amount,
-                    "source_currency": acct_currency.get(dest_acct_id, "PLN"),
+                    "source_amount": source_amount,
+                    "source_currency": "PLN",
                     "direction": "debit",
                 },
             ]
 
             result.append({
-                "actual_id": tid,
+                "actual_id": r["id1"],  # use first ID as reference
                 "type": "transfer",
-                "date": self._parse_date(source_row["date"]),
-                "description": f"Transfer: {source_name} → {dest_name}",
+                "date": self._parse_date(r["date1"]),
+                "description": f"Transfer: {source_name} -> {dest_name}",
                 "postings": postings,
             })
 
