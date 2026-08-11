@@ -14,11 +14,22 @@ class SendMessageRequest(BaseModel):
     content: str = Field(min_length=1)
 
 
+class ToolExecutionResponse(BaseModel):
+    id: uuid.UUID
+    tool_name: str
+    arguments: dict | None = None
+    result: dict | None = None
+    status: str
+    model_config = {"from_attributes": True}
+
+
 class MessageResponse(BaseModel):
     id: uuid.UUID
     conversation_id: uuid.UUID
     role: str
-    content: str
+    content: str | None = None
+    tool_calls: list[dict] | None = None
+    tool_executions: list[ToolExecutionResponse] | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

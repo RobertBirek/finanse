@@ -58,7 +58,7 @@ async def send_message_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        return await send_message(
+        assistant_msg = await send_message(
             db,
             current_user.id,
             data.conversation_id,
@@ -66,3 +66,14 @@ async def send_message_endpoint(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    from sqlalchemy import select as sa_select
+    from sqlalchemy.orm import selectinload
+    from app.advisor.models import Message as MsgModel
+    result = await db.execute(
+        sa_select(MsgModel).options(
+            selectinload(MsgModel.tool_executions)
+        ).where(MsgModel.id == assistant_msg.id)
+    )
+    assistant_msg = result.scalar_one()
+    return MessageResponse.model_validate(assistant_msg)

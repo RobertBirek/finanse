@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime, timezone
 
@@ -6,14 +7,25 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.advisor.models import Conversation, Message
+from app.advisor.models import Conversation, Message, ToolExecution
+from app.advisor.tools.registry import get_openai_tools, get_tool_by_name
 
 SYSTEM_PROMPT = """Jesteś osobistym doradcą. Pomagasz użytkownikowi zarządzać czasem, pieniędzmi i projektami.
 
+Masz dostęp do narzędzi, które pozwalają Ci odczytywać dane użytkownika:
+- get_accounts — lista kont z saldami
+- get_financial_summary — podsumowanie finansowe za bieżący miesiąc
+- get_transactions — lista transakcji (filtruj po type: income/expense/transfer)
+- get_today_schedule — dzisiejszy kalendarz (time blocki) i zadania
+- get_tasks — lista zadań (filtruj po status, project_id)
+- get_projects — lista projektów z ich statusami
+
 Zasady:
 - Odpowiadasz po polsku, zwięźle i konkretnie
-- Jeśli nie znasz odpowiedzi, mów o tym wprost
-- Nie wymyślasz danych finansowych — jeśli potrzebujesz konkretnych liczb, powiedz że nie masz do nich dostępu
+- ZAWSZE używasz narzędzi gdy użytkownik pyta o dane ze swojego konta
+- Nigdy nie wymyślasz liczb — pobierasz je przez narzędzia
+- Formatujesz kwoty czytelnie: "1 234,56 PLN" (nie "123456")
+- Gdy użytkownik prosi o podsumowanie, użyj get_financial_summary
 - Sugerujesz działania, ale nie podejmujesz decyzji za użytkownika
 - Jesteś pomocny, ale nie nachalny"""
 
@@ -64,13 +76,15 @@ async def create_conversation(db: AsyncSession, user_id: uuid.UUID) -> Conversat
     return conv
 
 
+MAX_TOOL_ITERATIONS = 3
+
+
 async def send_message(
     db: AsyncSession,
     user_id: uuid.UUID,
     conversation_id: uuid.UUID | None,
     content: str,
 ) -> Message:
-    # Get or create conversation
     if conversation_id:
         conv = await get_conversation(db, user_id, conversation_id)
         if conv is None:
@@ -80,43 +94,130 @@ async def send_message(
         conv = await create_conversation(db, user_id)
         conversation_id = conv.id
 
-    # Save user message
-    user_msg = Message(
-        conversation_id=conversation_id, role="user", content=content
-    )
+    user_msg = Message(conversation_id=conversation_id, role="user", content=content)
     db.add(user_msg)
     await db.flush()
 
-    # Get chat history
     history = await get_conversation_messages(db, user_id, conversation_id)
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for msg in history:
-        messages.append({"role": msg.role, "content": msg.content})
+        if msg.role == "tool":
+            continue
+        entry: dict = {"role": msg.role, "content": msg.content}
+        if msg.tool_calls:
+            entry["tool_calls"] = msg.tool_calls
+        messages.append(entry)
 
-    # Call DeepSeek
     client = _get_llm_client()
-    try:
-        response = await client.chat.completions.create(
-            model=settings.LLM_MODEL,
-            messages=messages,
-            temperature=0.7,
-            max_tokens=1024,
-        )
-        assistant_content = response.choices[0].message.content or ""
-    except Exception as e:
-        assistant_content = f"Przepraszam, wystąpił błąd połączenia z asystentem. Spróbuj ponownie później. ({str(e)[:100]})"
+    tools = get_openai_tools()
 
-    # Save assistant message
+    for iteration in range(MAX_TOOL_ITERATIONS):
+        try:
+            response = await client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto",
+                temperature=0.7,
+                max_tokens=1024,
+            )
+        except Exception as e:
+            assistant_msg = Message(
+                conversation_id=conversation_id,
+                role="assistant",
+                content=f"Przepraszam, wystąpił błąd: {str(e)[:200]}",
+            )
+            db.add(assistant_msg)
+            await db.flush()
+            return assistant_msg
+
+        choice = response.choices[0]
+        llm_message = choice.message
+
+        if not llm_message.tool_calls:
+            assistant_msg = Message(
+                conversation_id=conversation_id,
+                role="assistant",
+                content=llm_message.content or "",
+            )
+            db.add(assistant_msg)
+            await db.flush()
+            _update_conversation_title(conv, content, len(history))
+            return assistant_msg
+
+        raw_tool_calls = [
+            {
+                "id": tc.id,
+                "type": "function",
+                "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+            }
+            for tc in llm_message.tool_calls
+        ]
+        assistant_msg = Message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=llm_message.content,
+            tool_calls=raw_tool_calls,
+        )
+        db.add(assistant_msg)
+        await db.flush()
+
+        messages.append({
+            "role": "assistant",
+            "content": llm_message.content,
+            "tool_calls": raw_tool_calls,
+        })
+
+        for tc in llm_message.tool_calls:
+            tool_name = tc.function.name
+            tool = get_tool_by_name(tool_name)
+
+            try:
+                arguments = json.loads(tc.function.arguments)
+            except json.JSONDecodeError:
+                arguments = {}
+
+            if tool is None:
+                result = {"error": f"Unknown tool: {tool_name}"}
+                status_val = "error"
+            else:
+                try:
+                    result = await tool.executor(db, str(user_id), **arguments)
+                    status_val = "completed"
+                except Exception as e:
+                    result = {"error": str(e)}
+                    status_val = "error"
+
+            tool_exec = ToolExecution(
+                message_id=assistant_msg.id,
+                tool_name=tool_name,
+                arguments=arguments,
+                result=result,
+                status=status_val,
+                autonomy_level=tool.autonomy_level,
+            )
+            db.add(tool_exec)
+
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": json.dumps(result, ensure_ascii=False, default=str),
+            })
+
+        await db.flush()
+
     assistant_msg = Message(
-        conversation_id=conversation_id, role="assistant", content=assistant_content
+        conversation_id=conversation_id,
+        role="assistant",
+        content="Przetworzyłem dane. Czy potrzebujesz dodatkowych informacji?",
     )
     db.add(assistant_msg)
-
-    # Update conversation title from first message
-    if conv.title == "Nowa rozmowa" and len(history) <= 1:
-        title = content[:60] + ("..." if len(content) > 60 else "")
-        conv.title = title
-
+    _update_conversation_title(conv, content, len(history))
     await db.flush()
-
     return assistant_msg
+
+
+def _update_conversation_title(conv: Conversation, first_message: str, history_length: int):
+    if conv.title == "Nowa rozmowa" and history_length <= 1:
+        title = first_message[:60] + ("..." if len(first_message) > 60 else "")
+        conv.title = title
