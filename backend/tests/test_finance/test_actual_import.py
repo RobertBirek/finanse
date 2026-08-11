@@ -509,3 +509,18 @@ class TestNbpRates:
         provider = NbpRateProvider()
         assert provider.calculate_base_amount(100, 4.30) == 430
         assert provider.calculate_base_amount(50, 4.2678) == 213  # round to int
+
+    @pytest.mark.asyncio
+    async def test_error_returns_zero_and_not_cached(self):
+        from app.finance.nbp_rates import NbpRateProvider
+
+        provider = NbpRateProvider()
+        mock_response = AsyncMock()
+        mock_response.raise_for_status.side_effect = RuntimeError("network error")
+
+        with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
+            rate = await provider.get_rate("USD", date(2026, 7, 15))
+            assert rate == 0.0
+            rate2 = await provider.get_rate("USD", date(2026, 7, 15))
+            assert rate2 == 0.0
+            assert mock_get.call_count == 2

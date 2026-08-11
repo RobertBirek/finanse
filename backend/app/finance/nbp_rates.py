@@ -1,6 +1,9 @@
+import logging
 from datetime import date
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 NBP_API_BASE = "https://api.nbp.pl/api/exchangerates/rates/A"
@@ -34,8 +37,8 @@ class NbpRateProvider:
             rate = float(data["rates"][0]["mid"])
             self._cache[cache_key] = rate
             return rate
-        except Exception:
-            self._cache[cache_key] = 0.0
+        except Exception as e:
+            logger.warning("NBP rate unavailable: %s on %s: %s", currency, rate_date, e)
             return 0.0
 
     def calculate_base_amount(self, source_amount: int, fx_rate: float) -> int:
