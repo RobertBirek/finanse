@@ -18,6 +18,7 @@ class Document(Base):
     sha256_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     storage_path: Mapped[str] = mapped_column(String(1000), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending")
 
     text: Mapped["DocumentText | None"] = relationship("DocumentText", back_populates="document", uselist=False, cascade="all, delete-orphan")
 
