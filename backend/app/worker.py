@@ -14,6 +14,7 @@ from app.documents.schemas import DocumentStatus
 REDIS_SETTINGS = RedisSettings(host="redis", port=6379, database=1)
 STIRLING_OCR_URL = f"{settings.STIRLING_PDF_URL}/api/v1/misc/ocr-pdf"
 STIRLING_IMG_TO_PDF_URL = f"{settings.STIRLING_PDF_URL}/api/v1/convert/img/pdf"
+STIRLING_PDF_TO_TEXT_URL = f"{settings.STIRLING_PDF_URL}/api/v1/convert/pdf/txt"
 
 
 async def enqueue_process_document(document_id: str):
@@ -30,13 +31,23 @@ async def _convert_image_to_pdf(client: httpx.AsyncClient, file_path: str) -> by
         return response.content
 
 
-async def _ocr_pdf(client: httpx.AsyncClient, file_path: str) -> str:
+async def _ocr_pdf(client: httpx.AsyncClient, file_path: str) -> bytes:
+    """Run OCR on PDF, return searchable PDF bytes."""
     with open(file_path, "rb") as f:
         files = {"fileInput": f}
-        data = {"languages": "pol,eng", "ocrType": "skip-text", "sidecar": "true"}
+        data = {"languages": "pol,eng", "ocrType": "skip-text"}
         response = await client.post(STIRLING_OCR_URL, files=files, data=data)
         response.raise_for_status()
-        return response.text
+        return response.content
+
+
+async def _pdf_to_text(client: httpx.AsyncClient, pdf_content: bytes) -> str:
+    """Extract text from PDF content."""
+    files = {"fileInput": ("output.pdf", pdf_content, "application/pdf")}
+    response = await client.post(STIRLING_PDF_TO_TEXT_URL, files=files)
+    if response.status_code != 200:
+        return f"[Text extraction failed: HTTP {response.status_code}]"
+    return response.text
 
 
 async def process_document(ctx, document_id: str) -> None:
@@ -58,12 +69,16 @@ async def process_document(ctx, document_id: str) -> None:
             async with httpx.AsyncClient(timeout=120.0) as client:
                 ocr_file = str(file_path)
                 if doc.mime_type and doc.mime_type.startswith("image/"):
-                    pdf_content = await _convert_image_to_pdf(client, ocr_file)
-                    pdf_path = file_path.parent / f"{doc.sha256_hash}.pdf"
-                    pdf_path.write_bytes(pdf_content)
-                    ocr_file = str(pdf_path)
+                    pdf_bytes = await _convert_image_to_pdf(client, ocr_file)
+                else:
+                    with open(ocr_file, "rb") as f:
+                        pdf_bytes = f.read()
 
-                text = await _ocr_pdf(client, ocr_file)
+                # Step 1: OCR → searchable PDF
+                ocr_pdf = await _ocr_pdf(client, ocr_file)
+
+                # Step 2: PDF → text
+                text = await _pdf_to_text(client, ocr_pdf)
 
             await service.save_extracted_text(db, doc_id, text, ocr_engine="stirling")
             await service.update_document_status(db, doc_id, DocumentStatus.DONE)
