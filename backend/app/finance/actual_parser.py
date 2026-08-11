@@ -40,6 +40,11 @@ class ActualParser:
         self._conn.row_factory = sqlite3.Row
         self._warnings: list[str] = []
 
+        tables = self._conn.execute(
+            "SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name='v_transactions'"
+        ).fetchall()
+        self._use_view = len(tables) > 0
+
     def __enter__(self):
         return self
 
@@ -52,6 +57,30 @@ class ActualParser:
 
     def close(self):
         self._conn.close()
+
+    @property
+    def _txn_table(self) -> str:
+        return "v_transactions" if self._use_view else "transactions"
+
+    @property
+    def _txn_col_acct(self) -> str:
+        return "account" if self._use_view else "acct"
+
+    @property
+    def _txn_col_transfer_id(self) -> str:
+        return "transfer_id" if self._use_view else "transferred_id"
+
+    @property
+    def _txn_col_is_parent(self) -> str:
+        return "is_parent" if self._use_view else "isParent"
+
+    @property
+    def _txn_col_is_child(self) -> str:
+        return "is_child" if self._use_view else "isChild"
+
+    @property
+    def _txn_col_parent_id(self) -> str:
+        return "parent_id"
 
     def _detect_currency(self, name: str | None) -> str:
         if not name:
@@ -98,18 +127,36 @@ class ActualParser:
     def get_transactions(self) -> list[TransactionDict]:
         acct_currency = self._get_account_currency_map()
 
-        payee_rows = self._conn.execute(
-            "SELECT pm.id AS mapping_id, p.name FROM payee_mapping pm "
-            "JOIN payees p ON p.id = pm.payeeId"
-        ).fetchall()
-        payee_map = {r["mapping_id"]: r["name"] for r in payee_rows}
+        txn_table = self._txn_table
+        col_acct = self._txn_col_acct
+        col_transfer_id = self._txn_col_transfer_id
+        col_is_parent = self._txn_col_is_parent
+        col_is_child = self._txn_col_is_child
 
-        rows = self._conn.execute(
-            "SELECT id, acct, category, amount, description, notes, date "
-            "FROM transactions "
-            "WHERE tombstone=0 AND isParent=0 AND isChild=0 AND transferred_id IS NULL "
-            "ORDER BY date, id"
-        ).fetchall()
+        if self._use_view:
+            rows = self._conn.execute(
+                "SELECT id, account, category, amount, payee, notes, date "
+                "FROM {} "
+                "WHERE tombstone=0 AND {}={} AND {}={} AND {} IS NULL "
+                "ORDER BY date, id".format(
+                    txn_table, col_is_parent, 0, col_is_child, 0, col_transfer_id
+                )
+            ).fetchall()
+        else:
+            payee_rows = self._conn.execute(
+                "SELECT pm.id AS mapping_id, p.name FROM payee_mapping pm "
+                "JOIN payees p ON p.id = pm.payeeId"
+            ).fetchall()
+            payee_map = {r["mapping_id"]: r["name"] for r in payee_rows}
+
+            rows = self._conn.execute(
+                "SELECT id, acct, category, amount, description, notes, date "
+                "FROM {} "
+                "WHERE tombstone=0 AND {}={} AND {}={} AND {} IS NULL "
+                "ORDER BY date, id".format(
+                    txn_table, col_is_parent, 0, col_is_child, 0, col_transfer_id
+                )
+            ).fetchall()
 
         result = []
         for r in rows:
@@ -128,24 +175,32 @@ class ActualParser:
                 posting1_direction = "debit"
                 posting2_direction = "credit"
 
-            payee_name = payee_map.get(r["description"], "") if r["description"] else ""
-            desc_parts = [payee_name] if payee_name else []
-            if r["notes"]:
-                desc_parts.append(r["notes"])
-            description = " — ".join(desc_parts) if desc_parts else "(no description)"
+            if self._use_view:
+                payee_name = r["payee"] or ""
+                desc_parts = [payee_name] if payee_name else []
+                if r["notes"]:
+                    desc_parts.append(r["notes"])
+                description = " — ".join(desc_parts) if desc_parts else "(no description)"
+            else:
+                payee_name = payee_map.get(r["description"], "") if r["description"] else ""
+                desc_parts = [payee_name] if payee_name else []
+                if r["notes"]:
+                    desc_parts.append(r["notes"])
+                description = " — ".join(desc_parts) if desc_parts else "(no description)"
 
-            currency = acct_currency.get(r["acct"], "PLN")
+            account_actual_id = r[col_acct]
+            currency = acct_currency.get(account_actual_id, "PLN")
 
             postings: list[PostingDict] = [
                 {
-                    "account_actual_id": r["acct"],
+                    "account_actual_id": account_actual_id,
                     "category_actual_id": None,
                     "source_amount": abs_amount,
                     "source_currency": currency,
                     "direction": posting1_direction,
                 },
                 {
-                    "account_actual_id": r["acct"],
+                    "account_actual_id": account_actual_id,
                     "category_actual_id": r["category"],
                     "source_amount": abs_amount,
                     "source_currency": currency,
@@ -172,16 +227,26 @@ class ActualParser:
         ).fetchall()
         acct_names = {r["id"]: r["name"] for r in acct_rows}
 
+        txn_table = self._txn_table
+        col_acct = self._txn_col_acct
+        col_transfer_id = self._txn_col_transfer_id
+        col_is_parent = self._txn_col_is_parent
+        col_is_child = self._txn_col_is_child
+
+        # Use params=? for values, .format() for column/table names
         rows = self._conn.execute(
-            "SELECT id, acct, amount, date, transferred_id "
-            "FROM transactions "
-            "WHERE tombstone=0 AND isParent=0 AND isChild=0 AND transferred_id IS NOT NULL "
-            "ORDER BY transferred_id, amount"
+            "SELECT id, {acct}, amount, date, {transfer_id} "
+            "FROM {table} "
+            "WHERE tombstone=0 AND {is_parent}=0 AND {is_child}=0 AND {transfer_id} IS NOT NULL "
+            "ORDER BY {transfer_id}, amount".format(
+                acct=col_acct, table=txn_table, transfer_id=col_transfer_id,
+                is_parent=col_is_parent, is_child=col_is_child
+            )
         ).fetchall()
 
         pairs: dict[str, list[sqlite3.Row]] = {}
         for r in rows:
-            tid = r["transferred_id"]
+            tid = r[col_transfer_id]
             if tid not in pairs:
                 pairs[tid] = []
             pairs[tid].append(r)
@@ -200,22 +265,24 @@ class ActualParser:
                 continue
 
             abs_amount = abs(source_row["amount"])
-            source_name = acct_names.get(source_row["acct"], "?")
-            dest_name = acct_names.get(dest_row["acct"], "?")
+            source_acct_id = source_row[col_acct]
+            dest_acct_id = dest_row[col_acct]
+            source_name = acct_names.get(source_acct_id, "?")
+            dest_name = acct_names.get(dest_acct_id, "?")
 
             postings: list[PostingDict] = [
                 {
-                    "account_actual_id": source_row["acct"],
+                    "account_actual_id": source_acct_id,
                     "category_actual_id": None,
                     "source_amount": abs_amount,
-                    "source_currency": acct_currency.get(source_row["acct"], "PLN"),
+                    "source_currency": acct_currency.get(source_acct_id, "PLN"),
                     "direction": "credit",
                 },
                 {
-                    "account_actual_id": dest_row["acct"],
+                    "account_actual_id": dest_acct_id,
                     "category_actual_id": None,
                     "source_amount": abs_amount,
-                    "source_currency": acct_currency.get(dest_row["acct"], "PLN"),
+                    "source_currency": acct_currency.get(dest_acct_id, "PLN"),
                     "direction": "debit",
                 },
             ]
@@ -233,9 +300,17 @@ class ActualParser:
     def get_splits(self) -> list[TransactionDict]:
         acct_currency = self._get_account_currency_map()
 
+        txn_table = self._txn_table
+        col_acct = self._txn_col_acct
+        col_is_parent = self._txn_col_is_parent
+        col_is_child = self._txn_col_is_child
+        col_parent_id = self._txn_col_parent_id
+
         parents = self._conn.execute(
-            "SELECT id, acct, amount, date FROM transactions "
-            "WHERE tombstone=0 AND isParent=1 AND isChild=0"
+            "SELECT id, {acct}, amount, date FROM {table} "
+            "WHERE tombstone=0 AND {is_parent}=1 AND {is_child}=0".format(
+                acct=col_acct, table=txn_table, is_parent=col_is_parent, is_child=col_is_child
+            )
         ).fetchall()
 
         if not parents:
@@ -244,16 +319,19 @@ class ActualParser:
         parent_ids = [p["id"] for p in parents]
         placeholders = ",".join("?" for _ in parent_ids)
         children = self._conn.execute(
-            f"SELECT id, parent_id, acct, category, amount "
-            f"FROM transactions "
-            f"WHERE tombstone=0 AND isChild=1 AND parent_id IN ({placeholders}) "
-            f"ORDER BY parent_id, amount",
+            "SELECT id, {parent_id}, {acct}, category, amount "
+            "FROM {table} "
+            "WHERE tombstone=0 AND {is_child}=1 AND {parent_id} IN ({placeholders}) "
+            "ORDER BY {parent_id}, amount".format(
+                parent_id=col_parent_id, acct=col_acct, table=txn_table,
+                is_child=col_is_child, placeholders=placeholders
+            ),
             parent_ids,
         ).fetchall()
 
         children_by_parent: dict[str, list[sqlite3.Row]] = {}
         for c in children:
-            pid = c["parent_id"]
+            pid = c[col_parent_id]
             if pid not in children_by_parent:
                 children_by_parent[pid] = []
             children_by_parent[pid].append(c)
@@ -282,22 +360,24 @@ class ActualParser:
                 posting1_direction = "debit"
                 children_direction = "credit"
 
+            parent_acct_id = p[col_acct]
             postings: list[PostingDict] = [
                 {
-                    "account_actual_id": p["acct"],
+                    "account_actual_id": parent_acct_id,
                     "category_actual_id": None,
                     "source_amount": abs_parent_amount,
-                    "source_currency": acct_currency.get(p["acct"], "PLN"),
+                    "source_currency": acct_currency.get(parent_acct_id, "PLN"),
                     "direction": posting1_direction,
                 }
             ]
 
             for c in child_list:
+                child_acct_id = c[col_acct]
                 postings.append({
-                    "account_actual_id": c["acct"],
+                    "account_actual_id": child_acct_id,
                     "category_actual_id": c["category"],
                     "source_amount": abs(c["amount"]),
-                    "source_currency": acct_currency.get(c["acct"], "PLN"),
+                    "source_currency": acct_currency.get(child_acct_id, "PLN"),
                     "direction": children_direction,
                 })
 

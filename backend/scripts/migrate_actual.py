@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 
 async def extract_sqlite(blob_path: Path) -> Path:
     """Extract db.sqlite from Actual encrypted ZIP blob."""
-    extract_dir = blob_path.parent / "extracted"
-    extract_dir.mkdir(exist_ok=True)
+    import tempfile
+    extract_dir = Path(tempfile.mkdtemp(prefix="actual_extract_"))
     with zipfile.ZipFile(blob_path, "r") as zf:
         zf.extractall(extract_dir)
     sqlite_path = extract_dir / "db.sqlite"
@@ -210,7 +210,7 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
         )
         print(report)
 
-        output_dir = Path("scripts/output")
+        output_dir = Path(tempfile.gettempdir()) / "actual_migration"
         output_dir.mkdir(exist_ok=True)
         (output_dir / "migration_report.txt").write_text(report)
         (output_dir / "migration_log.json").write_text(json.dumps({
@@ -282,7 +282,7 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
         report = generate_report(stats, errors, warnings, mapping)
         print(report)
 
-        output_dir = Path("scripts/output")
+        output_dir = Path(tempfile.gettempdir()) / "actual_migration"
         output_dir.mkdir(exist_ok=True)
         (output_dir / "migration_report.txt").write_text(report)
         (output_dir / "migration_log.json").write_text(json.dumps({
