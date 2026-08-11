@@ -2,6 +2,7 @@ import sqlite3
 import re
 from datetime import date
 from pathlib import Path
+from sqlite3 import Row
 from typing import TypedDict
 
 
@@ -38,6 +39,7 @@ class ActualParser:
     def __init__(self, db_path: Path | str):
         self._conn = sqlite3.connect(str(db_path))
         self._conn.row_factory = sqlite3.Row
+        self._warnings: list[str] = []
 
     def __enter__(self):
         return self
@@ -45,6 +47,9 @@ class ActualParser:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
         return False
+
+    def get_warnings(self) -> list[str]:
+        return self._warnings
 
     def close(self):
         self._conn.close()
@@ -152,7 +157,7 @@ class ActualParser:
 
     def get_transfers(self) -> list[TransactionDict]:
         acct_rows = self._conn.execute(
-            "SELECT id, name FROM accounts"
+            "SELECT id, name FROM accounts WHERE tombstone=0 AND closed=0"
         ).fetchall()
         acct_names = {r["id"]: r["name"] for r in acct_rows}
 
@@ -163,7 +168,7 @@ class ActualParser:
             "ORDER BY transferred_id, amount"
         ).fetchall()
 
-        pairs: dict[str, list] = {}
+        pairs: dict[str, list[Row]] = {}
         for r in rows:
             tid = r["transferred_id"]
             if tid not in pairs:
@@ -173,12 +178,14 @@ class ActualParser:
         result = []
         for tid, pair in pairs.items():
             if len(pair) != 2:
+                self._warnings.append(f"Skipping transfer {tid}: {len(pair)} rows (expected 2)")
                 continue
 
             source_row = pair[0] if pair[0]["amount"] < 0 else pair[1]
             dest_row = pair[1] if pair[1]["amount"] > 0 else pair[0]
 
             if source_row["amount"] >= 0 or dest_row["amount"] <= 0:
+                self._warnings.append(f"Skipping transfer {tid}: both rows same sign")
                 continue
 
             abs_amount = abs(source_row["amount"])

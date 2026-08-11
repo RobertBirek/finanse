@@ -300,3 +300,36 @@ class TestActualParserTransactions:
                 assert txn["postings"][1]["source_amount"] == 10000
         finally:
             os.unlink(db_path)
+
+    def test_transfer_with_warnings(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc_ing', 'ING', 0, 0, 0)",
+            "INSERT INTO accounts VALUES ('acc_cash', 'Gotowka', 0, 0, 0)",
+            # 3 rows with same transferred_id — unpaired
+            "INSERT INTO transactions VALUES ('tx_a', 0, 0, NULL, 'acc_ing', NULL, -5000, NULL, NULL, 20260701, 'link_bad', 0)",
+            "INSERT INTO transactions VALUES ('tx_b', 0, 0, NULL, 'acc_cash', NULL, 5000, NULL, NULL, 20260701, 'link_bad', 0)",
+            "INSERT INTO transactions VALUES ('tx_c', 0, 0, NULL, 'acc_ing', NULL, -2000, NULL, NULL, 20260701, 'link_bad', 0)",
+            # Both rows positive — mismatched signs
+            "INSERT INTO transactions VALUES ('tx_d', 0, 0, NULL, 'acc_ing', NULL, 3000, NULL, NULL, 20260701, 'link_both_pos', 0)",
+            "INSERT INTO transactions VALUES ('tx_e', 0, 0, NULL, 'acc_cash', NULL, 3000, NULL, NULL, 20260701, 'link_both_pos', 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                result = parser.get_transfers()
+                assert len(result) == 0
+                warnings = parser.get_warnings()
+                assert len(warnings) == 2
+                assert any("link_bad" in w and "3 rows" in w for w in warnings)
+                assert any("link_both_pos" in w and "both rows same sign" in w for w in warnings)
+        finally:
+            os.unlink(db_path)
