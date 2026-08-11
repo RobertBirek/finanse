@@ -84,6 +84,21 @@ async def process_document(ctx, document_id: str) -> None:
             await service.update_document_status(db, doc_id, DocumentStatus.DONE)
             await db.commit()
 
+            # Step 3: Extract financial data via OpenAI
+            try:
+                from app.documents.extractor import extract_financial_data, create_inbox_from_document
+                data = await extract_financial_data(text)
+                if data.get("detected"):
+                    await create_inbox_from_document(db, doc.user_id, doc.id, doc.original_name, data)
+                    # Reload doc after potential state change
+                    result = await db.execute(select(Document).where(Document.id == doc_id))
+                    doc = result.scalar_one_or_none()
+                    if doc and doc.status == DocumentStatus.DONE:
+                        doc.status = DocumentStatus.DONE  # keep done
+                    await db.commit()
+            except Exception:
+                pass  # Extraction is optional — don't fail OCR for it
+
         except Exception as e:
             await service.save_extracted_text(db, doc_id, f'{{"error": "{str(e)}"}}', ocr_engine="stirling")
             await service.update_document_status(db, doc_id, DocumentStatus.ERROR)
