@@ -14,6 +14,7 @@ import asyncio
 import json
 import logging
 import sys
+import tempfile
 import uuid
 import zipfile
 from datetime import date
@@ -35,7 +36,6 @@ logger = logging.getLogger(__name__)
 
 async def extract_sqlite(blob_path: Path) -> Path:
     """Extract db.sqlite from Actual encrypted ZIP blob."""
-    import tempfile
     extract_dir = Path(tempfile.mkdtemp(prefix="actual_extract_"))
     with zipfile.ZipFile(blob_path, "r") as zf:
         zf.extractall(extract_dir)

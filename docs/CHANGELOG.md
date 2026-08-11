@@ -5,6 +5,22 @@ Wszystkie istotne zmiany w projekcie.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-08-11
+
+### Added
+- **Import z Actual Budget**: skrypt CLI `scripts/migrate_actual.py`
+  - Parser Actual SQLite (konta, kategorie, transakcje, transfery, splity)
+  - Provider kursów NBP z cache (EUR, USD)
+  - Double-entry invariant zachowany — 800 transakcji zaimportowanych (0 błędów)
+  - Idempotentność przez `[actual:{uuid}]` prefix w description
+  - Tryb `--dry-run` do walidacji przed zapisem
+  - Raporty `migration_report.txt` + `migration_log.json`
+- **22 testy** dla importu (unit + integracyjne)
+
+### Changed
+- Actual Budget dane zaimportowane do PA (15 kont, 46 kategorii, 800 transakcji)
+- Backend ma dostępne narzędzia importu w `scripts/`
+
 ## [0.1.0] — 2026-08-10
 
 ### Added

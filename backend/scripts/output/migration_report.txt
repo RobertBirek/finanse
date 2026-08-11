@@ -1,0 +1,24 @@
+============================================================
+Actual Budget -> Personal Advisor -- Migration Report
+============================================================
+
+Accounts imported:    15
+Categories imported:  46
+Transactions:         734 (simple)
+Transfers:            66
+Splits:               0
+Total written:        800
+Skipped (duplicate):  0
+Errors:               0
+
+Warnings:
+  [W] NBP rate unavailable: USD on 2026-05-30
+  [W] NBP rate unavailable: USD on 2026-05-30
+  [W] NBP rate unavailable: USD on 2026-06-14
+  [W] NBP rate unavailable: USD on 2026-06-14
+  [W] NBP rate unavailable: USD on 2026-06-14
+  [W] NBP rate unavailable: USD on 2026-06-14
+  [W] NBP rate unavailable: USD on 2026-06-21
+  [W] NBP rate unavailable: USD on 2026-06-21
+
+============================================================

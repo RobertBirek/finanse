@@ -43,9 +43,12 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 ## Iteracja 2 — Dokumenty i Import
 
 ### Import z Actual
-- [ ] Skrypt migracyjny Actual → Personal Advisor
-- [ ] Mapowanie kont, kategorii, transakcji
-- [ ] Zachowanie double-entry invariant
+- [x] Skrypt migracyjny Actual → Personal Advisor
+- [x] Mapowanie kont, kategorii, transakcji
+- [x] Zachowanie double-entry invariant (0 błędów na 800 transakcji)
+- [x] Transfery wewnętrzne (66 par)
+- [x] Kursy walut NBP (EUR/USD)
+- [x] Migracja produkcyjna wykonana (2026-08-11)
 
 ### Stirling PDF + OCR
 - [ ] Worker async (Redis + ARQ)

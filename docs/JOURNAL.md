@@ -4,6 +4,60 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
 
+## 2026-08-11 — Sesja 2: Import z Actual Budget
+
+### Cel sesji
+Zaimplementować skrypt migracyjny Actual Budget → Personal Advisor i wykonać migrację produkcyjną.
+
+### Co zrobiono
+
+**ActualParser (`backend/app/finance/actual_parser.py`, 321 linii):**
+- Odczyt kont (z filtrem tombstone/closed, detekcja waluty po nazwie)
+- Odczyt kategorii (is_income → income/expense)
+- Rekonstrukcja transakcji: simple (expense/income), transfery (self-join po transfer_id), splity (parent/child)
+- Adaptacja do rzeczywistego schematu Actual: `v_transactions` (widok) vs `transactions` (tabela)
+- Transfery: Actual używa wzajemnych referencji (A.transfer_id → B.id, B.transfer_id → A.id), nie wspólnego link ID
+
+**NbpRateProvider (`backend/app/finance/nbp_rates.py`, 52 linie):**
+- Async HTTP do NBP API (tabela A: EUR, USD)
+- Cache per (waluta, data)
+- Błędy NIE cache'owane (retry przy ponownej próbie)
+- `calculate_base_amount()`: source_amount × fx_rate → zaokrąglone do groszy
+
+**Skrypt CLI (`backend/scripts/migrate_actual.py`, 325 linii):**
+- 4 fazy: extract SQLite → parse → resolve IDs → write
+- Idempotentność: `description LIKE '[actual:{uuid}]%'`
+- `--dry-run` / `--execute`
+- Raport + log JSON
+
+**Migracja produkcyjna:**
+- 15 kont, 46 kategorii, 800 transakcji (734 simple + 66 transferów)
+- 0 błędów, 1600 postingów (2 na transakcję, double-entry invariant zachowany)
+- 8 ostrzeżeń NBP: USD w weekendy (niedziele: 2026-05-30, 2026-06-14, 2026-06-21)
+- 0 split transactions w danych Actual
+
+### Decyzje techniczne
+
+1. **v_transactions zamiast transactions** — Actual używa widoku który już rozwiązuje payee i używa innych nazw kolumn (`account`, `transfer_id`). Parser wykrywa dostępność widoku i adaptuje zapytania.
+
+2. **Transfery przez self-join** — W `v_transactions`, `transfer_id` wskazuje na ID drugiej transakcji (mutual reference), nie wspólny identyfikator. Rozwiązanie: `JOIN v_transactions t2 ON t1.transfer_id = t2.id WHERE t1.id < t2.id`.
+
+3. **Ekstrakcja ZIP do /tmp** — Wolumen Actual montowany jako read-only, więc ekstrakcja ZIP musi iść do tymczasowego katalogu (`tempfile.mkdtemp`).
+
+4. **NBP błędy niecache'owane** — Przy 404 (weekend/holiday) rate = 0.0 ale nie zapisujemy w cache, więc ponowna próba może zadziałać.
+
+### Znane problemy
+
+- **3 daty USD bez kursu NBP**: 2026-05-30, 2026-06-14, 2026-06-21 (niedziele). Transakcje z Revolut USD w te dni mają `base_amount_pln = source_amount`, `fx_rate_source = 'nbp_error'`. Do ręcznej korekty po migracji.
+
+- **Split transactions nie występują** w danych Actual użytkownika. Kod parsera jest gotowy ale nieprzetestowany na rzeczywistych danych.
+
+### Następna sesja
+1. Stirling PDF + OCR pipeline (Iteracja 2)
+2. Worker async (Redis + ARQ)
+
+---
+
 ## 2026-08-10 — Sesja 1: Fundament + Deployment
 
 ### Cel sesji
