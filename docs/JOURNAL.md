@@ -4,6 +4,41 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
 
+## 2026-08-12 — Sesja 3: Doradca z narzędziami
+
+### Cel sesji
+Podłączyć istniejące narzędzia (finanse, work) do Doradcy przez OpenAI function calling.
+
+### Co zrobiono
+
+**Tool Registry (`advisor/tools/registry.py`):**
+- 6 narzędzi tylko-do-odczytu (autonomy level 0)
+- Każde z OpenAI function schema + async executor
+- Narzędzia: get_accounts, get_financial_summary, get_transactions, get_today_schedule, get_tasks, get_projects
+
+**Tool Calling Loop (`advisor/service.py`):**
+- Przepisane `send_message` — pętla tool calling (max 3 iteracje)
+- LLM → tool_call → execute → result → LLM → odpowiedź
+- Tool executions zapisywane w DB (model ToolExecution)
+- System prompt zawiera opisy narzędzi
+
+**Frontend (`Advisor.tsx`):**
+- ToolCallBanner — expandable bannery między wiadomościami
+- Pokazuje nazwę narzędzia, status (✓/✗), wynik (JSON)
+
+### Decyzje techniczne
+
+1. **Tylko poziom 0** — narzędzia obserwacyjne. Mutacje (create_transaction, create_task) na później.
+2. **Tool registry jako osobny moduł** — czyste oddzielenie definicji narzędzi od pętli wywołań.
+3. **Eager loading tool_executions** — selectinload w obu endpointach (send_message + list_messages) dla poprawnego zwracania relacji.
+
+### Znane problemy
+
+- Brak testów jednostkowych dla tool calling loop (trudne do mockowania DeepSeek API)
+- Tool call bannery nie aktualizują się w czasie rzeczywistym — widoczne dopiero po przeładowaniu konwersacji
+
+---
+
 ## 2026-08-11 — Sesja 2: Import z Actual + Stirling OCR
 
 ### Cel sesji
