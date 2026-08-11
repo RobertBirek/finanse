@@ -104,6 +104,9 @@ class ActualParser:
             amount = r["amount"]
             abs_amount = abs(amount)
 
+            if amount == 0:
+                continue
+
             if amount < 0:
                 txn_type = "expense"
                 posting1_direction = "credit"
@@ -139,7 +142,7 @@ class ActualParser:
             result.append({
                 "actual_id": r["id"],
                 "type": txn_type,
-                "date": _parse_date(r["date"]),
+                "date": self._parse_date(r["date"]),
                 "description": description,
                 "postings": postings,
             })
@@ -147,6 +150,11 @@ class ActualParser:
         return result
 
 
-def _parse_date(actual_date: int) -> date:
-    s = str(actual_date)
-    return date(int(s[:4]), int(s[4:6]), int(s[6:8]))
+    @staticmethod
+    def _parse_date(actual_date: int | None) -> date:
+        if not actual_date:
+            return date(1970, 1, 1)
+        s = str(actual_date)
+        if len(s) != 8:
+            return date(1970, 1, 1)
+        return date(int(s[:4]), int(s[4:6]), int(s[6:8]))

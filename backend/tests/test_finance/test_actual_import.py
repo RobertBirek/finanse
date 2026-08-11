@@ -167,6 +167,7 @@ class TestActualParserTransactions:
                 txn = result[0]
                 assert txn["type"] == "expense"
                 assert str(txn["date"]) == "2026-07-15"
+                assert str(txn["date"]) != "1970-01-01"
                 assert "Biedronka" in txn["description"]
                 assert txn["postings"][0]["account_actual_id"] == "acc1"
                 assert txn["postings"][0]["direction"] == "credit"
@@ -208,5 +209,60 @@ class TestActualParserTransactions:
                 assert txn["postings"][0]["direction"] == "debit"
                 assert txn["postings"][1]["direction"] == "credit"
                 assert txn["postings"][0]["source_amount"] == 500000
+        finally:
+            os.unlink(db_path)
+
+    def test_skips_zero_amount(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+            "INSERT INTO categories VALUES ('cat1', 'Jedzenie', 0, 'g1', 0)",
+            "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'cat1', 0, NULL, NULL, 20260715, NULL, 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                result = parser.get_transactions()
+                assert len(result) == 0
+        finally:
+            os.unlink(db_path)
+
+    def test_unmatched_payee(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+            "INSERT INTO categories VALUES ('cat1', 'Jedzenie', 0, 'g1', 0)",
+            # no payee_mapping row for 'missing_pm'
+            "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'cat1', -5000, 'missing_pm', NULL, 20260715, NULL, 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                result = parser.get_transactions()
+                assert len(result) == 1
+                txn = result[0]
+                assert txn["description"] == "(no description)"
         finally:
             os.unlink(db_path)
