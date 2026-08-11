@@ -488,6 +488,8 @@ class TestActualParserTransactions:
         os.unlink(db_path)
 
 
+import uuid as _uuid
+
 import pytest
 from unittest.mock import AsyncMock, patch
 from datetime import date
@@ -559,3 +561,132 @@ class TestNbpRates:
             rate2 = await provider.get_rate("USD", date(2026, 7, 15))
             assert rate2 == 0.0
             assert mock_get.call_count == 2
+
+
+class TestFxEnrichment:
+    @pytest.mark.asyncio
+    async def test_enriches_eur_postings_with_nbp_rate(self):
+        from app.finance.nbp_rates import NbpRateProvider
+        from unittest.mock import MagicMock
+
+        provider = NbpRateProvider()
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "code": "EUR",
+            "rates": [{"mid": 4.2856, "effectiveDate": "2026-07-15"}]
+        }
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            base_amount = provider.calculate_base_amount(
+                500, await provider.get_rate("EUR", date(2026, 7, 15))
+            )
+            assert base_amount == 2143  # 5.00 * 4.2856 = 21.428 -> round to 2143 groszy
+
+    @pytest.mark.asyncio
+    async def test_pln_postings_unchanged(self):
+        from app.finance.nbp_rates import NbpRateProvider
+
+        provider = NbpRateProvider()
+        rate = await provider.get_rate("PLN", date(2026, 7, 15))
+        base_amount = provider.calculate_base_amount(10000, rate)
+        assert rate == 1.0
+        assert base_amount == 10000
+
+
+class TestMigrationPipeline:
+    @pytest.mark.asyncio
+    async def test_full_pipeline_dry_run(self, db_session):
+        """Full pipeline with synthetic data, writes to test DB."""
+        from app.finance.schemas import AccountCreate, CategoryCreate, PostingCreate, TransactionCreate
+        from app.finance.service import create_account, create_category, create_transaction, get_transactions
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+            "INSERT INTO accounts VALUES ('acc2', 'Gotowka', 0, 0, 0)",
+            "INSERT INTO categories VALUES ('cat1', 'Jedzenie', 0, 'g1', 0)",
+            "INSERT INTO categories VALUES ('cat2', 'Pensja', 1, 'g2', 0)",
+            "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'cat1', -5000, NULL, 'Biedronka', 20260701, NULL, 0)",
+            "INSERT INTO transactions VALUES ('tx2', 0, 0, NULL, 'acc1', 'cat2', 500000, NULL, 'Wyplata', 20260701, NULL, 0)",
+            "INSERT INTO transactions VALUES ('tx_a', 0, 0, NULL, 'acc1', NULL, -20000, NULL, NULL, 20260701, 'link1', 0)",
+            "INSERT INTO transactions VALUES ('tx_b', 0, 0, NULL, 'acc2', NULL, 20000, NULL, NULL, 20260701, 'link1', 0)",
+            "INSERT INTO transactions VALUES ('parent1', 1, 0, NULL, 'acc1', NULL, -10000, NULL, NULL, 20260701, NULL, 0)",
+            "INSERT INTO transactions VALUES ('child1', 0, 1, 'parent1', 'acc1', 'cat1', -6000, NULL, NULL, 20260701, NULL, 0)",
+            "INSERT INTO transactions VALUES ('child2', 0, 1, 'parent1', 'acc1', 'cat1', -4000, NULL, NULL, 20260701, NULL, 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        parser = ActualParser(db_path)
+        accounts = parser.get_accounts()
+        categories = parser.get_categories()
+        transactions = parser.get_transactions()
+        transfers = parser.get_transfers()
+        splits = parser.get_splits()
+
+        assert len(accounts) == 2
+        assert len(categories) == 2
+        assert len(transactions) == 2
+        assert len(transfers) == 1
+        assert len(splits) == 1
+
+        all_txns = transactions + transfers + splits
+        for txn in all_txns:
+            total = 0
+            for p in txn["postings"]:
+                signed = p["source_amount"] if p["direction"] == "debit" else -p["source_amount"]
+                total += signed
+            assert total == 0, f"Transaction {txn['actual_id']} not balanced: {total}"
+
+        user_id = _uuid.uuid4()
+        acct_map = {}
+        for a in accounts:
+            pa_a = await create_account(db_session, user_id, AccountCreate(
+                name=a["name"], type=a["type"], currency=a["currency"],
+            ))
+            acct_map[a["actual_id"]] = pa_a.id
+
+        cat_map = {}
+        for c in categories:
+            pa_c = await create_category(db_session, user_id, CategoryCreate(
+                name=c["name"], type=c["type"],
+            ))
+            cat_map[c["actual_id"]] = pa_c.id
+
+        written = 0
+        for txn in all_txns:
+            postings = []
+            for p in txn["postings"]:
+                postings.append(PostingCreate(
+                    account_id=acct_map[p["account_actual_id"]],
+                    category_id=cat_map.get(p.get("category_actual_id")) if p.get("category_actual_id") else None,
+                    source_amount=p["source_amount"],
+                    source_currency=p["source_currency"],
+                    base_amount_pln=p["source_amount"],
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction=p["direction"],
+                ))
+            await create_transaction(db_session, user_id, TransactionCreate(
+                transaction_date=txn["date"],
+                description=f"[actual:{txn['actual_id']}] {txn['description']}",
+                type=txn["type"],
+                source="actual",
+                postings=postings,
+            ))
+            written += 1
+
+        assert written == 5
+
+        db_txns = await get_transactions(db_session, user_id, limit=100)
+        assert len(db_txns) == 5
+
+        os.unlink(db_path)
