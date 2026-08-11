@@ -452,6 +452,41 @@ class TestActualParserTransactions:
             assert txn["postings"][2]["source_amount"] == 5000
             os.unlink(db_path)
 
+    def test_uses_account_currency_in_postings(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('rev_eu', 'Revolut EUR', 0, 0, 0)",
+            "INSERT INTO accounts VALUES ('rev_pln', 'Revolut PLN', 0, 0, 0)",
+            "INSERT INTO categories VALUES ('cat1', 'Zakupy', 0, 'g1', 0)",
+            "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'rev_eu', 'cat1', -500, NULL, NULL, 20260715, NULL, 0)",
+            "INSERT INTO transactions VALUES ('tx2', 0, 0, NULL, 'rev_pln', 'cat1', -10000, NULL, NULL, 20260715, NULL, 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        with ActualParser(db_path) as parser:
+            accounts = parser.get_accounts()
+            eu_acc = next(a for a in accounts if a["name"] == "Revolut EUR")
+            pln_acc = next(a for a in accounts if a["name"] == "Revolut PLN")
+            assert eu_acc["currency"] == "EUR"
+            assert pln_acc["currency"] == "PLN"
+
+            txns = parser.get_transactions()
+            eu_txn = next(t for t in txns if t["actual_id"] == "tx1")
+            pln_txn = next(t for t in txns if t["actual_id"] == "tx2")
+            assert eu_txn["postings"][0]["source_currency"] == "EUR"
+            assert pln_txn["postings"][0]["source_currency"] == "PLN"
+        os.unlink(db_path)
+
 
 import pytest
 from unittest.mock import AsyncMock, patch

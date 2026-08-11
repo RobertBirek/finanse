@@ -62,6 +62,12 @@ class ActualParser:
             return "USD"
         return "PLN"
 
+    def _get_account_currency_map(self) -> dict[str, str]:
+        rows = self._conn.execute(
+            "SELECT id, name FROM accounts WHERE tombstone=0 AND closed=0"
+        ).fetchall()
+        return {r["id"]: self._detect_currency(r["name"]) for r in rows}
+
     def get_accounts(self) -> list[AccountDict]:
         rows = self._conn.execute(
             "SELECT id, name, offbudget FROM accounts WHERE tombstone=0 AND closed=0 ORDER BY name"
@@ -90,6 +96,8 @@ class ActualParser:
         ]
 
     def get_transactions(self) -> list[TransactionDict]:
+        acct_currency = self._get_account_currency_map()
+
         payee_rows = self._conn.execute(
             "SELECT pm.id AS mapping_id, p.name FROM payee_mapping pm "
             "JOIN payees p ON p.id = pm.payeeId"
@@ -126,19 +134,21 @@ class ActualParser:
                 desc_parts.append(r["notes"])
             description = " — ".join(desc_parts) if desc_parts else "(no description)"
 
+            currency = acct_currency.get(r["acct"], "PLN")
+
             postings: list[PostingDict] = [
                 {
                     "account_actual_id": r["acct"],
                     "category_actual_id": None,
                     "source_amount": abs_amount,
-                    "source_currency": "PLN",
+                    "source_currency": currency,
                     "direction": posting1_direction,
                 },
                 {
                     "account_actual_id": r["acct"],
                     "category_actual_id": r["category"],
                     "source_amount": abs_amount,
-                    "source_currency": "PLN",
+                    "source_currency": currency,
                     "direction": posting2_direction,
                 },
             ]
@@ -155,6 +165,8 @@ class ActualParser:
 
 
     def get_transfers(self) -> list[TransactionDict]:
+        acct_currency = self._get_account_currency_map()
+
         acct_rows = self._conn.execute(
             "SELECT id, name FROM accounts WHERE tombstone=0 AND closed=0"
         ).fetchall()
@@ -196,14 +208,14 @@ class ActualParser:
                     "account_actual_id": source_row["acct"],
                     "category_actual_id": None,
                     "source_amount": abs_amount,
-                    "source_currency": "PLN",
+                    "source_currency": acct_currency.get(source_row["acct"], "PLN"),
                     "direction": "credit",
                 },
                 {
                     "account_actual_id": dest_row["acct"],
                     "category_actual_id": None,
                     "source_amount": abs_amount,
-                    "source_currency": "PLN",
+                    "source_currency": acct_currency.get(dest_row["acct"], "PLN"),
                     "direction": "debit",
                 },
             ]
@@ -219,6 +231,8 @@ class ActualParser:
         return result
 
     def get_splits(self) -> list[TransactionDict]:
+        acct_currency = self._get_account_currency_map()
+
         parents = self._conn.execute(
             "SELECT id, acct, amount, date FROM transactions "
             "WHERE tombstone=0 AND isParent=1 AND isChild=0"
@@ -273,7 +287,7 @@ class ActualParser:
                     "account_actual_id": p["acct"],
                     "category_actual_id": None,
                     "source_amount": abs_parent_amount,
-                    "source_currency": "PLN",
+                    "source_currency": acct_currency.get(p["acct"], "PLN"),
                     "direction": posting1_direction,
                 }
             ]
@@ -283,7 +297,7 @@ class ActualParser:
                     "account_actual_id": c["acct"],
                     "category_actual_id": c["category"],
                     "source_amount": abs(c["amount"]),
-                    "source_currency": "PLN",
+                    "source_currency": acct_currency.get(c["acct"], "PLN"),
                     "direction": children_direction,
                 })
 
