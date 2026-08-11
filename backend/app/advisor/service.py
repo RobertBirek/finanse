@@ -20,6 +20,11 @@ Masz dostęp do narzędzi, które pozwalają Ci odczytywać dane użytkownika:
 - get_tasks — lista zadań (filtruj po status, project_id)
 - get_projects — lista projektów z ich statusami
 
+Masz też dostęp do narzędzi mutujących (wymagają potwierdzenia użytkownika):
+- create_task — tworzy nowe zadanie (title, priority, due_date, project_id)
+- create_time_block — tworzy blok czasu (title, start_time, end_time, block_type)
+- create_transaction — tworzy transakcję (type, amount w groszach, currency, description, account_name, category_name)
+
 Zasady:
 - Odpowiadasz po polsku, zwięźle i konkretnie
 - ZAWSZE używasz narzędzi gdy użytkownik pyta o dane ze swojego konta
@@ -27,7 +32,9 @@ Zasady:
 - Formatujesz kwoty czytelnie: "1 234,56 PLN" (nie "123456")
 - Gdy użytkownik prosi o podsumowanie, użyj get_financial_summary
 - Sugerujesz działania, ale nie podejmujesz decyzji za użytkownika
-- Jesteś pomocny, ale nie nachalny"""
+- Jesteś pomocny, ale nie nachalny
+- Gdy użytkownik prosi o utworzenie czegoś (zadania, bloku, transakcji), ZAWSZE użyj odpowiedniego narzędzia mutującego
+- Kwoty w transakcjach podajesz w groszach (50 PLN = 5000)"""
 
 
 def _get_llm_client() -> AsyncOpenAI:
@@ -182,6 +189,9 @@ async def send_message(
             if tool is None:
                 result = {"error": f"Unknown tool: {tool_name}"}
                 status_val = "error"
+            elif tool.autonomy_level >= 2:
+                result = {**arguments, "tool": tool_name}
+                status_val = "pending_confirmation"
             else:
                 try:
                     result = await tool.executor(db, str(user_id), **arguments)
@@ -196,17 +206,21 @@ async def send_message(
                 arguments=arguments,
                 result=result,
                 status=status_val,
-                autonomy_level=tool.autonomy_level,
+                autonomy_level=tool.autonomy_level if tool else 0,
             )
             db.add(tool_exec)
 
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc.id,
-                "content": json.dumps(result, ensure_ascii=False, default=str),
+                "content": json.dumps(result, ensure_ascii=False, default=str) if status_val != "pending_confirmation" else "⏳ Oczekuje na zatwierdzenie przez użytkownika.",
             })
 
         await db.flush()
+
+        if "pending_confirmation" in [te.status for te in assistant_msg.tool_executions]:
+            _update_conversation_title(conv, content, len(history))
+            return assistant_msg
 
     assistant_msg = Message(
         conversation_id=conversation_id,

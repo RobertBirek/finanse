@@ -158,6 +158,123 @@ async def _execute_get_projects(db: AsyncSession, user_id: str, **kwargs) -> dic
     }
 
 
+async def _execute_create_task(db: AsyncSession, user_id: str, **kwargs) -> dict:
+    from app.work.service import create_task
+    from app.work.schemas import TaskCreate
+    from datetime import date
+    import uuid as _uuid
+
+    title = kwargs.get("title", "Nowe zadanie")
+    priority = kwargs.get("priority", "medium")
+    due_date_str = kwargs.get("due_date")
+    due_date = date.fromisoformat(due_date_str) if due_date_str else None
+    project_id = _uuid.UUID(kwargs["project_id"]) if kwargs.get("project_id") else None
+
+    data = TaskCreate(
+        title=title,
+        priority=priority,
+        due_date=due_date,
+        project_id=project_id,
+        source="advisor",
+    )
+    task = await create_task(db, _uuid.UUID(user_id), data)
+    return {"id": str(task.id), "title": task.title, "status": task.status, "priority": task.priority}
+
+
+async def _execute_create_time_block(db: AsyncSession, user_id: str, **kwargs) -> dict:
+    from app.work.service import create_time_block
+    from app.work.schemas import TimeBlockCreate
+    from datetime import datetime
+    import uuid as _uuid
+
+    title = kwargs.get("title", "Nowy blok")
+    start_str = kwargs.get("start_time")
+    end_str = kwargs.get("end_time")
+    block_type = kwargs.get("block_type", "shallow")
+
+    start_time = datetime.fromisoformat(start_str) if start_str else datetime.now()
+    end_time = datetime.fromisoformat(end_str) if end_str else datetime.now()
+
+    data = TimeBlockCreate(
+        title=title,
+        start_time=start_time,
+        end_time=end_time,
+        block_type=block_type,
+    )
+    block = await create_time_block(db, _uuid.UUID(user_id), data)
+    return {"id": str(block.id), "title": block.title, "start_time": str(block.start_time), "end_time": str(block.end_time)}
+
+
+async def _execute_create_transaction(db: AsyncSession, user_id: str, **kwargs) -> dict:
+    from app.finance.service import create_transaction, get_accounts, get_categories
+    from app.finance.schemas import TransactionCreate, PostingCreate
+    import uuid as _uuid
+
+    uid = _uuid.UUID(user_id)
+    txn_type = kwargs.get("type", "expense")
+    amount = kwargs.get("amount", 0)
+    currency = kwargs.get("currency", "PLN")
+    description = kwargs.get("description", "Nowa transakcja")
+    account_name = kwargs.get("account_name", "")
+    category_name = kwargs.get("category_name", "")
+
+    accounts = await get_accounts(db, uid)
+    account_id = None
+    for a in accounts:
+        if a.name.lower() == account_name.lower() or not account_name:
+            account_id = a.id
+            break
+
+    if not account_id and accounts:
+        account_id = accounts[0].id
+
+    if not account_id:
+        return {"error": "No accounts found"}
+
+    categories = await get_categories(db, uid)
+    category_id = None
+    for c in categories:
+        if c.type == txn_type and (c.name.lower() == category_name.lower() or not category_name):
+            category_id = c.id
+            break
+
+    if not category_id and categories:
+        matching = [c for c in categories if c.type == txn_type]
+        if matching:
+            category_id = matching[0].id
+
+    try:
+        txn = await create_transaction(db, uid, TransactionCreate(
+            description=f"[AI] {description}",
+            type=txn_type,
+            source="advisor",
+            postings=[
+                PostingCreate(
+                    account_id=account_id,
+                    source_amount=amount,
+                    source_currency=currency,
+                    base_amount_pln=amount,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="credit" if txn_type == "expense" else "debit",
+                ),
+                PostingCreate(
+                    account_id=account_id,
+                    category_id=category_id,
+                    source_amount=amount,
+                    source_currency=currency,
+                    base_amount_pln=amount,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="debit" if txn_type == "expense" else "credit",
+                ),
+            ],
+        ))
+        return {"id": str(txn.id), "type": txn.type, "description": txn.description, "date": str(txn.date)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ============================================================
 # Registry
 # ============================================================
@@ -212,6 +329,56 @@ TOOLS = [
         description="Pobiera listę wszystkich projektów użytkownika z ich statusami.",
         parameters={"type": "object", "properties": {}, "required": []},
         executor=_execute_get_projects,
+    ),
+    Tool(
+        name="create_task",
+        description="Tworzy nowe zadanie. Wymaga potwierdzenia użytkownika.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "Tytuł zadania"},
+                "priority": {"type": "string", "enum": ["low", "medium", "high", "urgent"], "description": "Priorytet"},
+                "due_date": {"type": "string", "description": "Termin w formacie YYYY-MM-DD"},
+                "project_id": {"type": "string", "description": "UUID projektu (opcjonalnie)"},
+            },
+            "required": ["title"],
+        },
+        executor=_execute_create_task,
+        autonomy_level=2,
+    ),
+    Tool(
+        name="create_time_block",
+        description="Tworzy nowy blok czasu w kalendarzu. Wymaga potwierdzenia użytkownika.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "Tytuł bloku"},
+                "start_time": {"type": "string", "description": "Czas startu ISO format"},
+                "end_time": {"type": "string", "description": "Czas końca ISO format"},
+                "block_type": {"type": "string", "enum": ["deep_work", "shallow", "meeting", "break"], "description": "Typ bloku"},
+            },
+            "required": ["title", "start_time", "end_time"],
+        },
+        executor=_execute_create_time_block,
+        autonomy_level=2,
+    ),
+    Tool(
+        name="create_transaction",
+        description="Tworzy nową transakcję finansową (wydatek lub przychód). Wymaga potwierdzenia użytkownika.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "type": {"type": "string", "enum": ["expense", "income"], "description": "Typ transakcji"},
+                "amount": {"type": "integer", "description": "Kwota w groszach/centach (np. 50 PLN = 5000)"},
+                "currency": {"type": "string", "enum": ["PLN", "EUR", "USD"], "description": "Waluta"},
+                "description": {"type": "string", "description": "Opis transakcji"},
+                "account_name": {"type": "string", "description": "Nazwa konta (np. ING, Gotowka)"},
+                "category_name": {"type": "string", "description": "Nazwa kategorii (np. Jedzenie, Transport)"},
+            },
+            "required": ["type", "amount", "description"],
+        },
+        executor=_execute_create_transaction,
+        autonomy_level=2,
     ),
 ]
 

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.identity.models import User
 from app.identity.router import get_current_user
+from app.advisor.models import Conversation, Message, ToolExecution
 from app.advisor.schemas import (
     ChatRequest,
     MessageResponse,
@@ -77,3 +78,76 @@ async def send_message_endpoint(
     )
     assistant_msg = result.scalar_one()
     return MessageResponse.model_validate(assistant_msg)
+
+
+@router.post("/tool-executions/{execution_id}/confirm", response_model=MessageResponse)
+async def confirm_tool_execution(
+    execution_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import select as sa_select
+    from sqlalchemy.orm import selectinload
+    from app.advisor.tools.registry import get_tool_by_name
+    import json as _json
+
+    result = await db.execute(
+        sa_select(ToolExecution).options(selectinload(ToolExecution.message)).where(ToolExecution.id == execution_id)
+    )
+    te = result.scalar_one_or_none()
+    if te is None or te.message.conversation.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Tool execution not found")
+
+    tool = get_tool_by_name(te.tool_name)
+    if tool is None:
+        raise HTTPException(status_code=404, detail="Unknown tool")
+
+    try:
+        exec_result = await tool.executor(db, str(current_user.id), **(te.arguments or {}))
+        te.result = exec_result
+        te.status = "completed"
+        te.policy_check_passed = True
+
+        from app.audit.service import log_event
+        await log_event(db, current_user.id, "tool_execution", str(te.id), "confirm",
+                       old_state={"status": "pending_confirmation"},
+                       new_state={"status": "completed", "result": exec_result},
+                       performed_by="human")
+    except Exception as e:
+        te.result = {"error": str(e)}
+        te.status = "error"
+
+    await db.flush()
+
+    result = await db.execute(
+        sa_select(Message).options(selectinload(Message.tool_executions)).where(Message.id == te.message_id)
+    )
+    return result.scalar_one()
+
+
+@router.post("/tool-executions/{execution_id}/deny")
+async def deny_tool_execution(
+    execution_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import select as sa_select
+    from app.audit.service import log_event
+
+    result = await db.execute(
+        sa_select(ToolExecution).where(ToolExecution.id == execution_id)
+    )
+    te = result.scalar_one_or_none()
+    if te is None:
+        raise HTTPException(status_code=404, detail="Tool execution not found")
+
+    te.status = "denied"
+    te.result = {"message": "Odrzucone przez użytkownika"}
+
+    await log_event(db, current_user.id, "tool_execution", str(te.id), "deny",
+                   old_state={"status": "pending_confirmation"},
+                   new_state={"status": "denied"},
+                   performed_by="human")
+
+    await db.flush()
+    return {"status": "denied"}

@@ -3,6 +3,8 @@ import {
   useConversations,
   useMessages,
   useSendMessage,
+  useConfirmToolExecution,
+  useDenyToolExecution,
   type Message,
 } from "../api/advisor";
 
@@ -29,11 +31,43 @@ function ToolCallBanner({ message }: { message: Message }) {
               <pre className="mt-2 text-xs text-gray-400 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">
                 {JSON.stringify(te.result, null, 2)}
               </pre>
+              {te.status === "pending_confirmation" && (
+                <div className="flex gap-2 mt-2">
+                  <ConfirmButton executionId={te.id} />
+                  <DenyButton executionId={te.id} />
+                </div>
+              )}
             </div>
           )}
         </div>
       ))}
     </div>
+  );
+}
+
+function ConfirmButton({ executionId }: { executionId: string }) {
+  const confirm = useConfirmToolExecution();
+  return (
+    <button
+      onClick={() => confirm.mutate(executionId)}
+      disabled={confirm.isPending}
+      className="px-3 py-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs rounded font-medium"
+    >
+      {confirm.isPending ? "..." : "Zatwierdź"}
+    </button>
+  );
+}
+
+function DenyButton({ executionId }: { executionId: string }) {
+  const deny = useDenyToolExecution();
+  return (
+    <button
+      onClick={() => deny.mutate(executionId)}
+      disabled={deny.isPending}
+      className="px-3 py-1 bg-red-600/50 hover:bg-red-500 disabled:opacity-50 text-red-200 text-xs rounded"
+    >
+      Odrzuć
+    </button>
   );
 }
 

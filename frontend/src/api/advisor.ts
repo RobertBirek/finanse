@@ -76,3 +76,31 @@ export function useSendMessage() {
     },
   });
 }
+
+export function useConfirmToolExecution() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (executionId: string) => {
+      const { data } = await api.post(`/advisor/tool-executions/${executionId}/confirm`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["advisor", "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["advisor", "conversations"] });
+    },
+  });
+}
+
+export function useDenyToolExecution() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (executionId: string) => {
+      const { data } = await api.post(`/advisor/tool-executions/${executionId}/deny`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["advisor", "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["advisor", "conversations"] });
+    },
+  });
+}
