@@ -4,7 +4,7 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
 
-## 2026-08-11 — Sesja 2: Import z Actual Budget
+## 2026-08-11 — Sesja 2: Import z Actual + Stirling OCR
 
 ### Cel sesji
 Zaimplementować skrypt migracyjny Actual Budget → Personal Advisor i wykonać migrację produkcyjną.

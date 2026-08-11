@@ -51,8 +51,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Migracja produkcyjna wykonana (2026-08-11)
 
 ### Stirling PDF + OCR
-- [ ] Worker async (Redis + ARQ)
-- [ ] Pipeline: upload → SHA-256 → Stirling → OCR → tekst
+- [x] Worker async (Redis + ARQ)
+- [x] Pipeline: upload → SHA-256 → Stirling → OCR → tekst
 - [ ] Ekstrakcja danych przez OpenAI
 - [ ] Zatwierdzenie przez użytkownika
 
