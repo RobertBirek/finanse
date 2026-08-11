@@ -58,11 +58,13 @@ async def get_conversation(
 async def get_conversation_messages(
     db: AsyncSession, user_id: uuid.UUID, conversation_id: uuid.UUID
 ) -> list[Message]:
+    from sqlalchemy.orm import selectinload
     conv = await get_conversation(db, user_id, conversation_id)
     if conv is None:
         return []
     result = await db.execute(
         select(Message)
+        .options(selectinload(Message.tool_executions))
         .where(Message.conversation_id == conversation_id)
         .order_by(Message.created_at.asc())
     )
