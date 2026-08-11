@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import date
+import re
 from pathlib import Path
 from typing import TypedDict
 
@@ -22,17 +22,28 @@ class ActualParser:
         self._conn = sqlite3.connect(str(db_path))
         self._conn.row_factory = sqlite3.Row
 
-    def _detect_currency(self, name: str) -> str:
-        name_lower = name.lower()
-        if "eu" in name_lower or "eur" in name_lower:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
+    def close(self):
+        self._conn.close()
+
+    def _detect_currency(self, name: str | None) -> str:
+        if not name:
+            return "PLN"
+        if re.search(r"\beur\b", name, re.IGNORECASE):
             return "EUR"
-        if "usd" in name_lower:
+        if re.search(r"\busd\b", name, re.IGNORECASE):
             return "USD"
         return "PLN"
 
     def get_accounts(self) -> list[AccountDict]:
         rows = self._conn.execute(
-            "SELECT id, name, offbudget FROM accounts WHERE tombstone=0 AND closed=0"
+            "SELECT id, name, offbudget FROM accounts WHERE tombstone=0 AND closed=0 ORDER BY name"
         ).fetchall()
         return [
             {
@@ -46,7 +57,7 @@ class ActualParser:
 
     def get_categories(self) -> list[CategoryDict]:
         rows = self._conn.execute(
-            "SELECT id, name, is_income FROM categories WHERE tombstone=0"
+            "SELECT id, name, is_income FROM categories WHERE tombstone=0 ORDER BY name"
         ).fetchall()
         return [
             {
