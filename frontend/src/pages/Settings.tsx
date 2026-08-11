@@ -84,7 +84,7 @@ export function Settings() {
             O aplikacji
           </h2>
           <div className="text-sm text-gray-400 space-y-1">
-            <p>Personal Advisor v0.1.0</p>
+            <p>Personal Advisor v0.2.0</p>
             <p>Osobisty system operacyjny do zarządzania czasem i pieniędzmi</p>
           </div>
         </div>

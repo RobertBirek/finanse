@@ -34,6 +34,7 @@ Podłączyć istniejące narzędzia (finanse, work) do Doradcy przez OpenAI func
 
 ### Znane problemy
 
+- ~~Frontend nie ładuje danych z API~~ — NAPRAWIONE. Wszystkie strony (Today, Inbox, Projects, Calendar, Finances, Advisor, Documents, Settings) używają TanStack Query i ładują dane poprawnie.
 - Brak testów jednostkowych dla tool calling loop (trudne do mockowania DeepSeek API)
 - Tool call bannery nie aktualizują się w czasie rzeczywistym — widoczne dopiero po przeładowaniu konwersacji
 
@@ -137,7 +138,7 @@ Zbudować fundament Personal Advisor i wdrożyć na produkcję.
 
 ### Znane problemy
 
-- **Frontend nie ładuje danych z API**: komponenty renderują UI ale nie używają TanStack Query hooks do pobierania danych. Ekran Today jest pusty, Finanse nie pokazują kont. Do naprawienia w następnej sesji.
+- ~~Frontend nie ładuje danych z API~~ — NAPRAWIONE w iteracjach 1-2.
 
 - **Brak importu danych z Actual**: Actual działa na finanse.vps.birek.online ale nie ma jeszcze skryptu migracyjnego. Zaplanowane na Iterację 2.
 
