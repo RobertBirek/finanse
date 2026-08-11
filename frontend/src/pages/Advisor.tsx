@@ -3,7 +3,39 @@ import {
   useConversations,
   useMessages,
   useSendMessage,
+  type Message,
 } from "../api/advisor";
+
+function ToolCallBanner({ message }: { message: Message }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!message.tool_executions?.length) return null;
+
+  return (
+    <div className="my-2 mx-4">
+      {message.tool_executions.map((te) => (
+        <div key={te.id} className="bg-gray-800/50 border border-gray-700 rounded-lg text-sm">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            <svg className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`} fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+            </svg>
+            <span className="text-advisor-400">🔧 {te.tool_name}</span>
+            <span className={te.status === "completed" ? "text-green-400" : "text-red-400"}>●</span>
+          </button>
+          {expanded && (
+            <div className="px-3 pb-3 border-t border-gray-700/50">
+              <pre className="mt-2 text-xs text-gray-400 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">
+                {JSON.stringify(te.result, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Advisor() {
   const [input, setInput] = useState("");
@@ -125,19 +157,23 @@ export function Advisor() {
           )}
 
           {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
+            <div key={msg.id}>
               <div
-                className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
-                  msg.role === "user"
-                    ? "bg-advisor-500 text-white"
-                    : "bg-gray-800 text-gray-200"
-                }`}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <div
+                  className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
+                    msg.role === "user"
+                      ? "bg-advisor-500 text-white"
+                      : "bg-gray-800 text-gray-200"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                </div>
               </div>
+              {msg.role === "assistant" && msg.tool_calls && msg.tool_calls.length > 0 && (
+                <ToolCallBanner message={msg} />
+              )}
             </div>
           ))}
 

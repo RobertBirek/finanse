@@ -9,11 +9,25 @@ export interface Conversation {
   updated_at: string;
 }
 
+export interface ToolExecution {
+  id: string;
+  tool_name: string;
+  arguments: Record<string, unknown> | null;
+  result: Record<string, unknown> | null;
+  status: string;
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
   role: "user" | "assistant";
   content: string;
+  tool_calls?: Array<{
+    id: string;
+    type: string;
+    function: { name: string; arguments: string };
+  }> | null;
+  tool_executions?: ToolExecution[] | null;
   created_at: string;
 }
 
