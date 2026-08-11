@@ -219,6 +219,70 @@ class ActualParser:
 
         return result
 
+    def get_splits(self) -> list[TransactionDict]:
+        parents = self._conn.execute(
+            "SELECT id, acct, amount, date FROM transactions "
+            "WHERE tombstone=0 AND isParent=1 AND isChild=0"
+        ).fetchall()
+
+        if not parents:
+            return []
+
+        parent_ids = [p["id"] for p in parents]
+        placeholders = ",".join("?" for _ in parent_ids)
+        children = self._conn.execute(
+            f"SELECT id, parent_id, acct, category, amount "
+            f"FROM transactions "
+            f"WHERE tombstone=0 AND isChild=1 AND parent_id IN ({placeholders}) "
+            f"ORDER BY parent_id, amount",
+            parent_ids,
+        ).fetchall()
+
+        children_by_parent: dict[str, list[sqlite3.Row]] = {}
+        for c in children:
+            pid = c["parent_id"]
+            if pid not in children_by_parent:
+                children_by_parent[pid] = []
+            children_by_parent[pid].append(c)
+
+        result = []
+        for p in parents:
+            pid = p["id"]
+            child_list = children_by_parent.get(pid, [])
+            if not child_list:
+                self._warnings.append(f"Skipping split {pid}: no children found")
+                continue
+
+            abs_parent_amount = abs(p["amount"])
+            postings: list[PostingDict] = [
+                {
+                    "account_actual_id": p["acct"],
+                    "category_actual_id": None,
+                    "source_amount": abs_parent_amount,
+                    "source_currency": "PLN",
+                    "direction": "credit",
+                }
+            ]
+
+            for c in child_list:
+                postings.append({
+                    "account_actual_id": c["acct"],
+                    "category_actual_id": c["category"],
+                    "source_amount": abs(c["amount"]),
+                    "source_currency": "PLN",
+                    "direction": "debit",
+                })
+
+            result.append({
+                "actual_id": pid,
+                "type": "expense",
+                "date": self._parse_date(p["date"]),
+                "description": f"Split transaction ({len(child_list)} parts)",
+                "postings": postings,
+            })
+
+        return result
+
     @staticmethod
     def _parse_date(actual_date: int | None) -> date:
         if not actual_date:

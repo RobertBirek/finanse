@@ -333,3 +333,49 @@ class TestActualParserTransactions:
                 assert any("link_both_pos" in w and "both rows same sign" in w for w in warnings)
         finally:
             os.unlink(db_path)
+
+    def test_reconstructs_split_transaction(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+            "INSERT INTO categories VALUES ('cat1', 'Jedzenie', 0, 'g1', 0)",
+            "INSERT INTO categories VALUES ('cat2', 'Chemia', 0, 'g1', 0)",
+            # Parent: Biedronka, suma
+            "INSERT INTO transactions VALUES ('parent1', 1, 0, NULL, 'acc1', NULL, -8000, NULL, NULL, 20260715, NULL, 0)",
+            # Child 1: -5000, Jedzenie
+            "INSERT INTO transactions VALUES ('child1', 0, 1, 'parent1', 'acc1', 'cat1', -5000, NULL, NULL, 20260715, NULL, 0)",
+            # Child 2: -3000, Chemia
+            "INSERT INTO transactions VALUES ('child2', 0, 1, 'parent1', 'acc1', 'cat2', -3000, NULL, NULL, 20260715, NULL, 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        with ActualParser(db_path) as parser:
+            result = parser.get_splits()
+            assert len(result) == 1
+            txn = result[0]
+            assert txn["type"] == "expense"
+            assert len(txn["postings"]) == 3  # 1 credit + 2 debits
+            # First posting: credit on account for total
+            assert txn["postings"][0]["account_actual_id"] == "acc1"
+            assert txn["postings"][0]["direction"] == "credit"
+            assert txn["postings"][0]["source_amount"] == 8000
+            assert txn["postings"][0]["category_actual_id"] is None
+            # Second: debit for Jedzenie
+            assert txn["postings"][1]["account_actual_id"] == "acc1"
+            assert txn["postings"][1]["category_actual_id"] == "cat1"
+            assert txn["postings"][1]["direction"] == "debit"
+            assert txn["postings"][1]["source_amount"] == 5000
+            # Third: debit for Chemia
+            assert txn["postings"][2]["account_actual_id"] == "acc1"
+            assert txn["postings"][2]["category_actual_id"] == "cat2"
+            assert txn["postings"][2]["direction"] == "debit"
+            assert txn["postings"][2]["source_amount"] == 3000
+            os.unlink(db_path)
