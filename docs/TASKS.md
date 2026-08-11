@@ -53,8 +53,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 ### Stirling PDF + OCR
 - [x] Worker async (Redis + ARQ)
 - [x] Pipeline: upload → SHA-256 → Stirling → OCR → tekst
-- [ ] Ekstrakcja danych przez OpenAI
-- [ ] Zatwierdzenie przez użytkownika
+- [x] Ekstrakcja danych przez OpenAI → inbox item
+- [x] Zatwierdzenie przez użytkownika (Inbox → Utwórz transakcję)
 
 ---
 
