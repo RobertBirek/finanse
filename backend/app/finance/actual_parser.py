@@ -150,6 +150,68 @@ class ActualParser:
         return result
 
 
+    def get_transfers(self) -> list[TransactionDict]:
+        acct_rows = self._conn.execute(
+            "SELECT id, name FROM accounts"
+        ).fetchall()
+        acct_names = {r["id"]: r["name"] for r in acct_rows}
+
+        rows = self._conn.execute(
+            "SELECT id, acct, amount, date, transferred_id "
+            "FROM transactions "
+            "WHERE tombstone=0 AND isParent=0 AND isChild=0 AND transferred_id IS NOT NULL "
+            "ORDER BY transferred_id, amount"
+        ).fetchall()
+
+        pairs: dict[str, list] = {}
+        for r in rows:
+            tid = r["transferred_id"]
+            if tid not in pairs:
+                pairs[tid] = []
+            pairs[tid].append(r)
+
+        result = []
+        for tid, pair in pairs.items():
+            if len(pair) != 2:
+                continue
+
+            source_row = pair[0] if pair[0]["amount"] < 0 else pair[1]
+            dest_row = pair[1] if pair[1]["amount"] > 0 else pair[0]
+
+            if source_row["amount"] >= 0 or dest_row["amount"] <= 0:
+                continue
+
+            abs_amount = abs(source_row["amount"])
+            source_name = acct_names.get(source_row["acct"], "?")
+            dest_name = acct_names.get(dest_row["acct"], "?")
+
+            postings: list[PostingDict] = [
+                {
+                    "account_actual_id": source_row["acct"],
+                    "category_actual_id": None,
+                    "source_amount": abs_amount,
+                    "source_currency": "PLN",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": dest_row["acct"],
+                    "category_actual_id": None,
+                    "source_amount": abs_amount,
+                    "source_currency": "PLN",
+                    "direction": "debit",
+                },
+            ]
+
+            result.append({
+                "actual_id": tid,
+                "type": "transfer",
+                "date": self._parse_date(source_row["date"]),
+                "description": f"Transfer: {source_name} → {dest_name}",
+                "postings": postings,
+            })
+
+        return result
+
     @staticmethod
     def _parse_date(actual_date: int | None) -> date:
         if not actual_date:

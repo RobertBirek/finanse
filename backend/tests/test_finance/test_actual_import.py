@@ -266,3 +266,37 @@ class TestActualParserTransactions:
                 assert txn["description"] == "(no description)"
         finally:
             os.unlink(db_path)
+
+    def test_reconstructs_transfer(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc_ing', 'ING', 0, 0, 0)",
+            "INSERT INTO accounts VALUES ('acc_cash', 'Gotowka', 0, 0, 0)",
+            "INSERT INTO transactions VALUES ('tx_a', 0, 0, NULL, 'acc_ing', NULL, -10000, NULL, NULL, 20260701, 'link_1', 0)",
+            "INSERT INTO transactions VALUES ('tx_b', 0, 0, NULL, 'acc_cash', NULL, 10000, NULL, NULL, 20260701, 'link_1', 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                result = parser.get_transfers()
+                assert len(result) == 1
+                txn = result[0]
+                assert txn["type"] == "transfer"
+                assert txn["description"] == "Transfer: ING → Gotowka"
+                assert len(txn["postings"]) == 2
+                assert txn["postings"][0]["account_actual_id"] == "acc_ing"
+                assert txn["postings"][0]["direction"] == "credit"
+                assert txn["postings"][0]["source_amount"] == 10000
+                assert txn["postings"][1]["account_actual_id"] == "acc_cash"
+                assert txn["postings"][1]["direction"] == "debit"
+                assert txn["postings"][1]["source_amount"] == 10000
+        finally:
+            os.unlink(db_path)
