@@ -379,3 +379,75 @@ class TestActualParserTransactions:
             assert txn["postings"][2]["direction"] == "debit"
             assert txn["postings"][2]["source_amount"] == 3000
             os.unlink(db_path)
+
+    def test_split_with_orphaned_parent(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+            "INSERT INTO categories VALUES ('cat1', 'Jedzenie', 0, 'g1', 0)",
+            # Parent with no children
+            "INSERT INTO transactions VALUES ('parent1', 1, 0, NULL, 'acc1', NULL, -8000, NULL, NULL, 20260715, NULL, 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        with ActualParser(db_path) as parser:
+            result = parser.get_splits()
+            assert len(result) == 0
+            warnings = parser.get_warnings()
+            assert len(warnings) == 1
+            assert "no children found" in warnings[0]
+            os.unlink(db_path)
+
+    def test_reconstructs_income_split_transaction(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+            "INSERT INTO categories VALUES ('cat1', 'Pensja', 1, 'g2', 0)",
+            "INSERT INTO categories VALUES ('cat2', 'Freelance', 1, 'g2', 0)",
+            # Parent: 80 PLN income
+            "INSERT INTO transactions VALUES ('parent1', 1, 0, NULL, 'acc1', NULL, 8000, NULL, NULL, 20260715, NULL, 0)",
+            # Child 1: 5000, Pensja
+            "INSERT INTO transactions VALUES ('child1', 0, 1, 'parent1', 'acc1', 'cat1', 5000, NULL, NULL, 20260715, NULL, 0)",
+            # Child 2: 3000, Freelance
+            "INSERT INTO transactions VALUES ('child2', 0, 1, 'parent1', 'acc1', 'cat2', 3000, NULL, NULL, 20260715, NULL, 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        with ActualParser(db_path) as parser:
+            result = parser.get_splits()
+            assert len(result) == 1
+            txn = result[0]
+            assert txn["type"] == "income"
+            assert len(txn["postings"]) == 3  # 1 debit + 2 credits
+            # First posting: debit on account for total
+            assert txn["postings"][0]["account_actual_id"] == "acc1"
+            assert txn["postings"][0]["direction"] == "debit"
+            assert txn["postings"][0]["source_amount"] == 8000
+            assert txn["postings"][0]["category_actual_id"] is None
+            # Second: credit for Freelance (3000 < 5000, ordered by amount)
+            assert txn["postings"][1]["account_actual_id"] == "acc1"
+            assert txn["postings"][1]["category_actual_id"] == "cat2"
+            assert txn["postings"][1]["direction"] == "credit"
+            assert txn["postings"][1]["source_amount"] == 3000
+            # Third: credit for Pensja
+            assert txn["postings"][2]["account_actual_id"] == "acc1"
+            assert txn["postings"][2]["category_actual_id"] == "cat1"
+            assert txn["postings"][2]["direction"] == "credit"
+            assert txn["postings"][2]["source_amount"] == 5000
+            os.unlink(db_path)

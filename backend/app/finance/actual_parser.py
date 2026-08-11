@@ -2,7 +2,6 @@ import sqlite3
 import re
 from datetime import date
 from pathlib import Path
-from sqlite3 import Row
 from typing import TypedDict
 
 
@@ -168,7 +167,7 @@ class ActualParser:
             "ORDER BY transferred_id, amount"
         ).fetchall()
 
-        pairs: dict[str, list[Row]] = {}
+        pairs: dict[str, list[sqlite3.Row]] = {}
         for r in rows:
             tid = r["transferred_id"]
             if tid not in pairs:
@@ -254,13 +253,28 @@ class ActualParser:
                 continue
 
             abs_parent_amount = abs(p["amount"])
+            child_sum = sum(abs(c["amount"]) for c in child_list)
+            if child_sum != abs_parent_amount:
+                self._warnings.append(
+                    f"Split {pid}: children sum ({child_sum}) != parent amount ({abs_parent_amount})"
+                )
+
+            if p["amount"] < 0:
+                txn_type = "expense"
+                posting1_direction = "credit"
+                children_direction = "debit"
+            else:
+                txn_type = "income"
+                posting1_direction = "debit"
+                children_direction = "credit"
+
             postings: list[PostingDict] = [
                 {
                     "account_actual_id": p["acct"],
                     "category_actual_id": None,
                     "source_amount": abs_parent_amount,
                     "source_currency": "PLN",
-                    "direction": "credit",
+                    "direction": posting1_direction,
                 }
             ]
 
@@ -270,12 +284,12 @@ class ActualParser:
                     "category_actual_id": c["category"],
                     "source_amount": abs(c["amount"]),
                     "source_currency": "PLN",
-                    "direction": "debit",
+                    "direction": children_direction,
                 })
 
             result.append({
                 "actual_id": pid,
-                "type": "expense",
+                "type": txn_type,
                 "date": self._parse_date(p["date"]),
                 "description": f"Split transaction ({len(child_list)} parts)",
                 "postings": postings,
