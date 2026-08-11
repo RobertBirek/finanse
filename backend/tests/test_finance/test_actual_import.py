@@ -135,3 +135,78 @@ class TestActualParserCategories:
             assert by_id["c2"]["type"] == "income"
         finally:
             os.unlink(db_path)
+
+
+class TestActualParserTransactions:
+    def test_reads_simple_expense(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+            "INSERT INTO accounts VALUES ('acc2', 'Gotowka', 0, 0, 0)",
+            "INSERT INTO categories VALUES ('cat1', 'Jedzenie', 0, 'g1', 0)",
+            "INSERT INTO payees VALUES ('pay1', 'Biedronka')",
+            "INSERT INTO payee_mapping VALUES ('pm1', 'tx1', 'pay1')",
+            "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'cat1', -5000, 'pm1', 'notatka', 20260715, NULL, 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                result = parser.get_transactions()
+                assert len(result) == 1
+                txn = result[0]
+                assert txn["type"] == "expense"
+                assert str(txn["date"]) == "2026-07-15"
+                assert "Biedronka" in txn["description"]
+                assert txn["postings"][0]["account_actual_id"] == "acc1"
+                assert txn["postings"][0]["direction"] == "credit"
+                assert txn["postings"][0]["source_amount"] == 5000
+                assert txn["postings"][1]["account_actual_id"] == "acc1"
+                assert txn["postings"][1]["category_actual_id"] == "cat1"
+                assert txn["postings"][1]["direction"] == "debit"
+                assert txn["postings"][1]["source_amount"] == 5000
+        finally:
+            os.unlink(db_path)
+
+    def test_reads_simple_income(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+            "INSERT INTO categories VALUES ('cat1', 'Pensja', 1, 'g2', 0)",
+            "INSERT INTO payees VALUES ('pay1', 'Pracodawca')",
+            "INSERT INTO payee_mapping VALUES ('pm1', 'tx1', 'pay1')",
+            "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'cat1', 500000, 'pm1', NULL, 20260715, NULL, 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                result = parser.get_transactions()
+                assert len(result) == 1
+                txn = result[0]
+                assert txn["type"] == "income"
+                assert txn["postings"][0]["direction"] == "debit"
+                assert txn["postings"][1]["direction"] == "credit"
+                assert txn["postings"][0]["source_amount"] == 500000
+        finally:
+            os.unlink(db_path)
