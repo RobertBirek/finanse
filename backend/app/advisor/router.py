@@ -113,28 +113,32 @@ async def confirm_tool_execution(
         raise HTTPException(status_code=404, detail="Unknown tool")
 
     try:
-        exec_result = await tool.executor(db, str(current_user.id), **(te.arguments or {}))
-        te.result = exec_result
-        te.status = "completed"
-        te.policy_check_passed = True
+        async with db.begin_nested():
+            exec_result = await tool.executor(db, str(current_user.id), **(te.arguments or {}))
+            te.result = exec_result
+            te.status = "completed"
+            te.policy_check_passed = True
 
-        from app.audit.service import log_event
+            from app.audit.service import log_event
 
-        await log_event(
-            db,
-            current_user.id,
-            "tool_execution",
-            str(te.id),
-            "confirm",
-            old_state={"status": "pending_confirmation"},
-            new_state={"status": "completed", "result": exec_result},
-            performed_by="human",
-        )
+            await log_event(
+                db,
+                current_user.id,
+                "tool_execution",
+                str(te.id),
+                "confirm",
+                old_state={"status": "pending_confirmation"},
+                new_state={"status": "completed", "result": exec_result},
+                performed_by="human",
+            )
     except Exception:
         te.result = {"error": "Nie udało się wykonać narzędzia"}
         te.status = "error"
+        te.policy_check_passed = False
+        await db.flush()
 
-    await db.flush()
+    if te.status == "completed":
+        await db.flush()
 
     result = await db.execute(
         sa_select(Message)

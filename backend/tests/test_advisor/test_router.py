@@ -32,6 +32,17 @@ class FakeSession:
         self.statements.append(statement)
         return FakeResult(self.execution)
 
+    def begin_nested(self):
+        return NoopSavepoint()
+
+
+class NoopSavepoint:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, _exc_type, _exc, _traceback):
+        return False
+
 
 def execution_for(user_id, status="pending_confirmation"):
     conversation = SimpleNamespace(user_id=user_id)
@@ -155,7 +166,13 @@ async def test_deny_returns_not_found_for_missing_execution():
 async def test_confirm_sanitizes_executor_failure(monkeypatch):
     user_id = uuid.uuid4()
     execution = execution_for(user_id)
-    executor = AsyncMock(side_effect=RuntimeError("database password leaked"))
+    session = RollbackSession(execution)
+
+    async def executor(db, _user_id, **_arguments):
+        db.mutations.append("created task")
+        await db.flush()
+        raise RuntimeError("database password leaked")
+
     monkeypatch.setattr(
         "app.advisor.tools.registry.get_tool_by_name",
         lambda _name: SimpleNamespace(executor=executor),
@@ -164,12 +181,70 @@ async def test_confirm_sanitizes_executor_failure(monkeypatch):
     await confirm_tool_execution(
         execution.id,
         SimpleNamespace(id=user_id),
-        FakeSession(execution),
+        session,
     )
 
+    assert session.mutations == []
     assert execution.status == "error"
     assert execution.result == {"error": "Nie udało się wykonać narzędzia"}
     assert "database password" not in str(execution.result)
+
+
+class RollbackSession(FakeSession):
+    def __init__(self, execution):
+        super().__init__(execution)
+        self.mutations = []
+
+    async def flush(self):
+        return None
+
+    def begin_nested(self):
+        return RollbackSavepoint(self)
+
+
+class RollbackSavepoint:
+    def __init__(self, session):
+        self.session = session
+        self.before = []
+
+    async def __aenter__(self):
+        self.before = list(self.session.mutations)
+        return self
+
+    async def __aexit__(self, _exc_type, _exc, _traceback):
+        self.session.mutations[:] = self.before
+        return False
+
+
+@pytest.mark.asyncio
+async def test_confirm_rolls_back_executor_flush_when_audit_fails(monkeypatch):
+    user_id = uuid.uuid4()
+    execution = execution_for(user_id)
+    session = RollbackSession(execution)
+
+    async def executor(db, _user_id, **_arguments):
+        db.mutations.append("created task")
+        await db.flush()
+        return {"id": "task-id"}
+
+    monkeypatch.setattr(
+        "app.advisor.tools.registry.get_tool_by_name",
+        lambda _name: SimpleNamespace(executor=executor),
+    )
+    monkeypatch.setattr(
+        "app.audit.service.log_event",
+        AsyncMock(side_effect=RuntimeError("audit unavailable")),
+    )
+
+    await confirm_tool_execution(
+        execution.id,
+        SimpleNamespace(id=user_id),
+        session,
+    )
+
+    assert session.mutations == []
+    assert execution.status == "error"
+    assert execution.result == {"error": "Nie udało się wykonać narzędzia"}
 
 
 class FakeAdvisorSession:
