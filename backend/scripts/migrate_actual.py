@@ -21,13 +21,14 @@ from datetime import date
 from pathlib import Path
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.database import async_session_factory
 from app.finance.actual_parser import ActualParser
-from app.finance.nbp_rates import NbpRateProvider
 from app.finance.models import FinancialTransaction
+from app.finance.nbp_rates import NbpRateProvider
 from app.finance.schemas import AccountCreate, CategoryCreate, PostingCreate, TransactionCreate
 from app.finance.service import create_account, create_category, create_transaction
 
@@ -46,7 +47,9 @@ async def extract_sqlite(blob_path: Path) -> Path:
 
 
 async def resolve_ids(
-    db, user_id: uuid.UUID, parser: ActualParser,
+    db,
+    user_id: uuid.UUID,
+    parser: ActualParser,
 ) -> tuple[dict[str, uuid.UUID], dict[str, uuid.UUID], dict[str, str]]:
     """Create accounts and categories, return Actual ID -> PA ID mappings."""
     acct_map = {}
@@ -54,16 +57,27 @@ async def resolve_ids(
     acct_currency = {}
 
     for a in parser.get_accounts():
-        pa_acct = await create_account(db, user_id, AccountCreate(
-            name=a["name"], type=a["type"], currency=a["currency"],
-        ))
+        pa_acct = await create_account(
+            db,
+            user_id,
+            AccountCreate(
+                name=a["name"],
+                type=a["type"],
+                currency=a["currency"],
+            ),
+        )
         acct_map[a["actual_id"]] = pa_acct.id
         acct_currency[a["actual_id"]] = a["currency"]
 
     for c in parser.get_categories():
-        pa_cat = await create_category(db, user_id, CategoryCreate(
-            name=c["name"], type=c["type"],
-        ))
+        pa_cat = await create_category(
+            db,
+            user_id,
+            CategoryCreate(
+                name=c["name"],
+                type=c["type"],
+            ),
+        )
         cat_map[c["actual_id"]] = pa_cat.id
 
     return acct_map, cat_map, acct_currency
@@ -92,16 +106,20 @@ def build_pa_postings(
             base_amount = round(p["source_amount"] * fx_rate)
             fx_source = "nbp"
 
-        postings.append(PostingCreate(
-            account_id=acct_map[actual_acct_id],
-            category_id=cat_map.get(p.get("category_actual_id")) if p.get("category_actual_id") else None,
-            source_amount=p["source_amount"],
-            source_currency=currency,
-            base_amount_pln=base_amount,
-            fx_rate=fx_rate,
-            fx_rate_source=fx_source,
-            direction=p["direction"],
-        ))
+        postings.append(
+            PostingCreate(
+                account_id=acct_map[actual_acct_id],
+                category_id=cat_map.get(p.get("category_actual_id"))
+                if p.get("category_actual_id")
+                else None,
+                source_amount=p["source_amount"],
+                source_currency=currency,
+                base_amount_pln=base_amount,
+                fx_rate=fx_rate,
+                fx_rate_source=fx_source,
+                direction=p["direction"],
+            )
+        )
     return postings
 
 
@@ -153,7 +171,10 @@ def generate_report(stats: dict, errors: list[str], warnings: list[str], mapping
 
 
 async def create_opening_balances(
-    db, user_id: uuid.UUID, acct_map: dict[str, uuid.UUID], parser: ActualParser,
+    db,
+    user_id: uuid.UUID,
+    acct_map: dict[str, uuid.UUID],
+    parser: ActualParser,
 ) -> int:
     table = parser._txn_table
     col_acct = parser._txn_col_acct
@@ -184,13 +205,21 @@ async def create_opening_balances(
         if total > 0:
             postings = [
                 PostingCreate(
-                    account_id=pa_id, source_amount=abs_total, source_currency="PLN",
-                    base_amount_pln=abs_total, fx_rate=1.0, fx_rate_source="manual",
+                    account_id=pa_id,
+                    source_amount=abs_total,
+                    source_currency="PLN",
+                    base_amount_pln=abs_total,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
                     direction="debit",
                 ),
                 PostingCreate(
-                    account_id=pa_id, source_amount=abs_total, source_currency="PLN",
-                    base_amount_pln=abs_total, fx_rate=1.0, fx_rate_source="manual",
+                    account_id=pa_id,
+                    source_amount=abs_total,
+                    source_currency="PLN",
+                    base_amount_pln=abs_total,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
                     direction="credit",
                 ),
             ]
@@ -198,29 +227,41 @@ async def create_opening_balances(
         else:
             postings = [
                 PostingCreate(
-                    account_id=pa_id, source_amount=abs_total, source_currency="PLN",
-                    base_amount_pln=abs_total, fx_rate=1.0, fx_rate_source="manual",
+                    account_id=pa_id,
+                    source_amount=abs_total,
+                    source_currency="PLN",
+                    base_amount_pln=abs_total,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
                     direction="credit",
                 ),
                 PostingCreate(
-                    account_id=pa_id, source_amount=abs_total, source_currency="PLN",
-                    base_amount_pln=abs_total, fx_rate=1.0, fx_rate_source="manual",
+                    account_id=pa_id,
+                    source_amount=abs_total,
+                    source_currency="PLN",
+                    base_amount_pln=abs_total,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
                     direction="debit",
                 ),
             ]
             txn_type = "expense"
 
         try:
-            await create_transaction(db, user_id, TransactionCreate(
-                transaction_date=None,
-                description=f"[BO] Bilans otwarcia \u2014 {acct_name}",
-                type=txn_type,
-                source="actual",
-                postings=postings,
-            ))
+            await create_transaction(
+                db,
+                user_id,
+                TransactionCreate(
+                    transaction_date=None,
+                    description=f"[BO] Bilans otwarcia \u2014 {acct_name}",
+                    type=txn_type,
+                    source="actual",
+                    postings=postings,
+                ),
+            )
             written += 1
-        except Exception:
-            pass
+        except (SQLAlchemyError, ValueError, KeyError) as exc:
+            logger.warning("Could not create opening balance for %s: %s", actual_id, exc)
 
     return written
 
@@ -234,9 +275,14 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
     errors: list[str] = []
     warnings: list[str] = []
     stats = {
-        "accounts": 0, "categories": 0,
-        "transactions": 0, "transfers": 0, "splits": 0,
-        "written": 0, "skipped": 0, "errors": 0,
+        "accounts": 0,
+        "categories": 0,
+        "transactions": 0,
+        "transfers": 0,
+        "splits": 0,
+        "written": 0,
+        "skipped": 0,
+        "errors": 0,
     }
     mapping = {"accounts": {}, "categories": {}}
 
@@ -276,19 +322,36 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
                 warnings.append(f"NBP rate unavailable: {currency} on {dt}")
 
         report = generate_report(
-            {"accounts": len(accounts), "categories": len(categories),
-             "transactions": len(simple_txns), "transfers": len(transfers),
-             "splits": len(splits), "written": 0, "skipped": 0, "errors": len(errors)},
-            errors, warnings, mapping,
+            {
+                "accounts": len(accounts),
+                "categories": len(categories),
+                "transactions": len(simple_txns),
+                "transfers": len(transfers),
+                "splits": len(splits),
+                "written": 0,
+                "skipped": 0,
+                "errors": len(errors),
+            },
+            errors,
+            warnings,
+            mapping,
         )
         print(report)
 
         output_dir = Path(tempfile.gettempdir()) / "actual_migration"
         output_dir.mkdir(exist_ok=True)
         (output_dir / "migration_report.txt").write_text(report)
-        (output_dir / "migration_log.json").write_text(json.dumps({
-            "stats": stats, "errors": errors, "warnings": warnings,
-        }, indent=2, default=str))
+        (output_dir / "migration_log.json").write_text(
+            json.dumps(
+                {
+                    "stats": stats,
+                    "errors": errors,
+                    "warnings": warnings,
+                },
+                indent=2,
+                default=str,
+            )
+        )
         print("Report saved to scripts/output/")
         await nbp.close()
         return
@@ -343,15 +406,19 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
                 continue
 
             try:
-                await create_transaction(db, user_id, TransactionCreate(
-                    transaction_date=txn["date"],
-                    description=make_description(txn["actual_id"], txn["description"]),
-                    type=txn["type"],
-                    source="actual",
-                    postings=postings,
-                ))
+                await create_transaction(
+                    db,
+                    user_id,
+                    TransactionCreate(
+                        transaction_date=txn["date"],
+                        description=make_description(txn["actual_id"], txn["description"]),
+                        type=txn["type"],
+                        source="actual",
+                        postings=postings,
+                    ),
+                )
                 stats["written"] += 1
-            except Exception as e:
+            except (SQLAlchemyError, ValueError, KeyError) as e:
                 errors.append(f"Failed to write {txn['actual_id']}: {e}")
                 stats["errors"] += 1
 
@@ -361,10 +428,18 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
         output_dir = Path(tempfile.gettempdir()) / "actual_migration"
         output_dir.mkdir(exist_ok=True)
         (output_dir / "migration_report.txt").write_text(report)
-        (output_dir / "migration_log.json").write_text(json.dumps({
-            "stats": stats, "errors": errors, "warnings": warnings,
-            "mapping": mapping,
-        }, indent=2, default=str))
+        (output_dir / "migration_log.json").write_text(
+            json.dumps(
+                {
+                    "stats": stats,
+                    "errors": errors,
+                    "warnings": warnings,
+                    "mapping": mapping,
+                },
+                indent=2,
+                default=str,
+            )
+        )
         print("Report saved to scripts/output/")
 
         if not dry_run:
@@ -375,9 +450,15 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
 
 async def main():
     parser_args = argparse.ArgumentParser(description="Migrate Actual Budget to Personal Advisor")
-    parser_args.add_argument("--blob-path", required=True, help="Path to Actual blob file (file-*.blob)")
-    parser_args.add_argument("--user-id", required=True, help="PA user UUID to assign imported data to")
-    parser_args.add_argument("--dry-run", action="store_true", help="Validate and report only, no writes")
+    parser_args.add_argument(
+        "--blob-path", required=True, help="Path to Actual blob file (file-*.blob)"
+    )
+    parser_args.add_argument(
+        "--user-id", required=True, help="PA user UUID to assign imported data to"
+    )
+    parser_args.add_argument(
+        "--dry-run", action="store_true", help="Validate and report only, no writes"
+    )
     parser_args.add_argument("--execute", action="store_true", help="Actually write to database")
     args = parser_args.parse_args()
 

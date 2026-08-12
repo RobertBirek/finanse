@@ -67,8 +67,9 @@ async def execute_get_today_schedule(db, user_id: str) -> dict:
 
 
 async def execute_get_tasks(db, user_id: str, project_id: str | None = None, status: str | None = None) -> dict:
-    from app.work.service import get_tasks
     import uuid as uuid_mod
+
+    from app.work.service import get_tasks
     tasks = await get_tasks(
         db, uuid_mod.UUID(user_id),
         project_id=uuid_mod.UUID(project_id) if project_id else None,

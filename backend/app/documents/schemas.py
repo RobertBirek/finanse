@@ -1,6 +1,5 @@
-import uuid
 import datetime as dt
-from typing import Optional
+import uuid
 
 from pydantic import BaseModel
 
@@ -32,8 +31,8 @@ class DocumentTextResponse(BaseModel):
     id: uuid.UUID
     document_id: uuid.UUID
     extracted_text: str
-    ocr_engine: Optional[str] = None
-    extracted_at: Optional[dt.datetime] = None
+    ocr_engine: str | None = None
+    extracted_at: dt.datetime | None = None
     created_at: dt.datetime
 
     model_config = {"from_attributes": True}

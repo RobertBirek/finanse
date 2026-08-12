@@ -1,13 +1,9 @@
 import asyncio
-import uuid
-from datetime import date, datetime, timezone
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from app.config import settings
 
 TEST_DATABASE_URL = "postgresql+asyncpg://finanse:finanse@localhost:5432/finanse_test"
 
@@ -40,8 +36,8 @@ async def db_session():
 
 @pytest_asyncio.fixture(scope="function")
 async def async_client(db_session):
-    from app.main import app
     from app.database import get_db
+    from app.main import app
 
     async def override_get_db():
         yield db_session

@@ -2,7 +2,8 @@ import hashlib
 import uuid
 
 import pytest
-from app.documents.service import compute_sha256, upload_document, get_documents, get_document
+
+from app.documents.service import compute_sha256, get_document, get_documents, upload_document
 
 
 class TestComputeSha256:

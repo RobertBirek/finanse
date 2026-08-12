@@ -1,7 +1,7 @@
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.work.models import Project, Task, TimeBlock
@@ -29,7 +29,9 @@ async def get_projects(db: AsyncSession, user_id: uuid.UUID) -> list[Project]:
     return list(result.scalars().all())
 
 
-async def get_project(db: AsyncSession, user_id: uuid.UUID, project_id: uuid.UUID) -> Project | None:
+async def get_project(
+    db: AsyncSession, user_id: uuid.UUID, project_id: uuid.UUID
+) -> Project | None:
     result = await db.execute(
         select(Project).where(Project.id == project_id, Project.user_id == user_id)
     )
@@ -82,16 +84,19 @@ async def get_tasks(
             stmt = stmt.where(Task.status == statuses[0])
         else:
             from sqlalchemy import or_
+
             stmt = stmt.where(or_(*[Task.status == s for s in statuses]))
-    stmt = stmt.order_by(Task.priority.desc(), Task.due_date.asc().nullslast()).limit(limit).offset(offset)
+    stmt = (
+        stmt.order_by(Task.priority.desc(), Task.due_date.asc().nullslast())
+        .limit(limit)
+        .offset(offset)
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
 async def get_task(db: AsyncSession, user_id: uuid.UUID, task_id: uuid.UUID) -> Task | None:
-    result = await db.execute(
-        select(Task).where(Task.id == task_id, Task.user_id == user_id)
-    )
+    result = await db.execute(select(Task).where(Task.id == task_id, Task.user_id == user_id))
     return result.scalar_one_or_none()
 
 
@@ -103,7 +108,7 @@ async def update_task(
         return None
     update_data = data.model_dump(exclude_unset=True)
     if "status" in update_data and update_data["status"] == "done" and task.status != "done":
-        task.completed_at = datetime.now(timezone.utc)
+        task.completed_at = datetime.now(UTC)
     for key, value in update_data.items():
         if key == "completed_at":
             continue
@@ -121,7 +126,9 @@ async def delete_task(db: AsyncSession, user_id: uuid.UUID, task_id: uuid.UUID) 
     return True
 
 
-async def create_time_block(db: AsyncSession, user_id: uuid.UUID, data: TimeBlockCreate) -> TimeBlock:
+async def create_time_block(
+    db: AsyncSession, user_id: uuid.UUID, data: TimeBlockCreate
+) -> TimeBlock:
     if data.start_time >= data.end_time:
         raise ValueError("start_time must be before end_time")
     block = TimeBlock(user_id=user_id, **data.model_dump())
@@ -148,7 +155,9 @@ async def get_time_blocks(
     return list(result.scalars().all())
 
 
-async def get_time_block(db: AsyncSession, user_id: uuid.UUID, block_id: uuid.UUID) -> TimeBlock | None:
+async def get_time_block(
+    db: AsyncSession, user_id: uuid.UUID, block_id: uuid.UUID
+) -> TimeBlock | None:
     result = await db.execute(
         select(TimeBlock).where(TimeBlock.id == block_id, TimeBlock.user_id == user_id)
     )
@@ -179,12 +188,10 @@ async def delete_time_block(db: AsyncSession, user_id: uuid.UUID, block_id: uuid
     return True
 
 
-async def get_today_schedule(
-    db: AsyncSession, user_id: uuid.UUID
-) -> dict:
-    today = date.today()
-    start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0, tzinfo=timezone.utc)
-    end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=timezone.utc)
+async def get_today_schedule(db: AsyncSession, user_id: uuid.UUID) -> dict:
+    today = datetime.now(UTC).date()
+    start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0, tzinfo=UTC)
+    end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=UTC)
 
     stmt = (
         select(TimeBlock)
@@ -199,11 +206,13 @@ async def get_today_schedule(
     blocks = list(result.scalars().all())
 
     tasks_today_result = await db.execute(
-        select(Task).where(
+        select(Task)
+        .where(
             Task.user_id == user_id,
             Task.due_date == today,
             Task.status.in_(["todo", "in_progress"]),
-        ).order_by(Task.priority.desc())
+        )
+        .order_by(Task.priority.desc())
     )
     tasks_today = list(tasks_today_result.scalars().all())
 

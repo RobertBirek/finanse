@@ -12,9 +12,8 @@ def _make_actual_db(schema_sql: str, inserts: list[str]) -> Path:
     for stmt in inserts:
         conn.execute(stmt)
     conn.commit()
-    tmp_file = tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False)
-    tmp_path = Path(tmp_file.name)
-    tmp_file.close()
+    with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp_file:
+        tmp_path = Path(tmp_file.name)
     src = sqlite3.connect(str(tmp_path))
     conn.backup(src)
     conn.close()
@@ -486,23 +485,24 @@ class TestActualParserTransactions:
 
 
 import uuid as _uuid
+from datetime import date
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from unittest.mock import AsyncMock, patch
-from datetime import date
 
 
 class TestNbpRates:
     @pytest.mark.asyncio
     async def test_fetches_eur_rate(self):
-        from app.finance.nbp_rates import NbpRateProvider
         from unittest.mock import MagicMock
+
+        from app.finance.nbp_rates import NbpRateProvider
 
         provider = NbpRateProvider()
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "code": "EUR",
-            "rates": [{"mid": 4.30, "effectiveDate": "2026-07-15"}]
+            "rates": [{"mid": 4.30, "effectiveDate": "2026-07-15"}],
         }
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
@@ -512,14 +512,15 @@ class TestNbpRates:
 
     @pytest.mark.asyncio
     async def test_caches_same_day(self):
-        from app.finance.nbp_rates import NbpRateProvider
         from unittest.mock import MagicMock
+
+        from app.finance.nbp_rates import NbpRateProvider
 
         provider = NbpRateProvider()
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "code": "EUR",
-            "rates": [{"mid": 4.30, "effectiveDate": "2026-07-15"}]
+            "rates": [{"mid": 4.30, "effectiveDate": "2026-07-15"}],
         }
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
@@ -563,14 +564,15 @@ class TestNbpRates:
 class TestFxEnrichment:
     @pytest.mark.asyncio
     async def test_enriches_eur_postings_with_nbp_rate(self):
-        from app.finance.nbp_rates import NbpRateProvider
         from unittest.mock import MagicMock
+
+        from app.finance.nbp_rates import NbpRateProvider
 
         provider = NbpRateProvider()
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "code": "EUR",
-            "rates": [{"mid": 4.2856, "effectiveDate": "2026-07-15"}]
+            "rates": [{"mid": 4.2856, "effectiveDate": "2026-07-15"}],
         }
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
@@ -595,8 +597,18 @@ class TestMigrationPipeline:
     @pytest.mark.asyncio
     async def test_full_pipeline_dry_run(self, db_session):
         """Full pipeline with synthetic data, writes to test DB."""
-        from app.finance.schemas import AccountCreate, CategoryCreate, PostingCreate, TransactionCreate
-        from app.finance.service import create_account, create_category, create_transaction, get_transactions
+        from app.finance.schemas import (
+            AccountCreate,
+            CategoryCreate,
+            PostingCreate,
+            TransactionCreate,
+        )
+        from app.finance.service import (
+            create_account,
+            create_category,
+            create_transaction,
+            get_transactions,
+        )
 
         schema = """
         CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
@@ -646,39 +658,58 @@ class TestMigrationPipeline:
         user_id = _uuid.uuid4()
         acct_map = {}
         for a in accounts:
-            pa_a = await create_account(db_session, user_id, AccountCreate(
-                name=a["name"], type=a["type"], currency=a["currency"],
-            ))
+            pa_a = await create_account(
+                db_session,
+                user_id,
+                AccountCreate(
+                    name=a["name"],
+                    type=a["type"],
+                    currency=a["currency"],
+                ),
+            )
             acct_map[a["actual_id"]] = pa_a.id
 
         cat_map = {}
         for c in categories:
-            pa_c = await create_category(db_session, user_id, CategoryCreate(
-                name=c["name"], type=c["type"],
-            ))
+            pa_c = await create_category(
+                db_session,
+                user_id,
+                CategoryCreate(
+                    name=c["name"],
+                    type=c["type"],
+                ),
+            )
             cat_map[c["actual_id"]] = pa_c.id
 
         written = 0
         for txn in all_txns:
             postings = []
             for p in txn["postings"]:
-                postings.append(PostingCreate(
-                    account_id=acct_map[p["account_actual_id"]],
-                    category_id=cat_map.get(p.get("category_actual_id")) if p.get("category_actual_id") else None,
-                    source_amount=p["source_amount"],
-                    source_currency=p["source_currency"],
-                    base_amount_pln=p["source_amount"],
-                    fx_rate=1.0,
-                    fx_rate_source="manual",
-                    direction=p["direction"],
-                ))
-            await create_transaction(db_session, user_id, TransactionCreate(
-                transaction_date=txn["date"],
-                description=f"[actual:{txn['actual_id']}] {txn['description']}",
-                type=txn["type"],
-                source="actual",
-                postings=postings,
-            ))
+                postings.append(
+                    PostingCreate(
+                        account_id=acct_map[p["account_actual_id"]],
+                        category_id=cat_map.get(p.get("category_actual_id"))
+                        if p.get("category_actual_id")
+                        else None,
+                        source_amount=p["source_amount"],
+                        source_currency=p["source_currency"],
+                        base_amount_pln=p["source_amount"],
+                        fx_rate=1.0,
+                        fx_rate_source="manual",
+                        direction=p["direction"],
+                    )
+                )
+            await create_transaction(
+                db_session,
+                user_id,
+                TransactionCreate(
+                    transaction_date=txn["date"],
+                    description=f"[actual:{txn['actual_id']}] {txn['description']}",
+                    type=txn["type"],
+                    source="actual",
+                    postings=postings,
+                ),
+            )
             written += 1
 
         assert written == 5

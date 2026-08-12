@@ -1,14 +1,14 @@
 import json
 import uuid
-from datetime import datetime, timezone
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAIError
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.advisor.models import Conversation, Message, ToolExecution
 from app.advisor.tools.registry import get_openai_tools, get_tool_by_name
+from app.config import settings
 
 SYSTEM_PROMPT = """Jesteś osobistym doradcą. Pomagasz użytkownikowi zarządzać czasem, pieniędzmi i projektami.
 
@@ -66,6 +66,7 @@ async def get_conversation_messages(
     db: AsyncSession, user_id: uuid.UUID, conversation_id: uuid.UUID
 ) -> list[Message]:
     from sqlalchemy.orm import selectinload
+
     conv = await get_conversation(db, user_id, conversation_id)
     if conv is None:
         return []
@@ -130,7 +131,7 @@ async def send_message(
                 temperature=0.7,
                 max_tokens=1024,
             )
-        except Exception as e:
+        except (OpenAIError, SQLAlchemyError, ValueError) as e:
             assistant_msg = Message(
                 conversation_id=conversation_id,
                 role="assistant",
@@ -171,11 +172,13 @@ async def send_message(
         db.add(assistant_msg)
         await db.flush()
 
-        messages.append({
-            "role": "assistant",
-            "content": llm_message.content,
-            "tool_calls": raw_tool_calls,
-        })
+        messages.append(
+            {
+                "role": "assistant",
+                "content": llm_message.content,
+                "tool_calls": raw_tool_calls,
+            }
+        )
 
         for tc in llm_message.tool_calls:
             tool_name = tc.function.name
@@ -196,7 +199,7 @@ async def send_message(
                 try:
                     result = await tool.executor(db, str(user_id), **arguments)
                     status_val = "completed"
-                except Exception as e:
+                except (SQLAlchemyError, ValueError, KeyError) as e:
                     result = {"error": str(e)}
                     status_val = "error"
 
@@ -210,11 +213,15 @@ async def send_message(
             )
             db.add(tool_exec)
 
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tc.id,
-                "content": json.dumps(result, ensure_ascii=False, default=str) if status_val != "pending_confirmation" else "⏳ Oczekuje na zatwierdzenie przez użytkownika.",
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": json.dumps(result, ensure_ascii=False, default=str)
+                    if status_val != "pending_confirmation"
+                    else "⏳ Oczekuje na zatwierdzenie przez użytkownika.",
+                }
+            )
 
         await db.flush()
 

@@ -1,5 +1,5 @@
-import sqlite3
 import re
+import sqlite3
 from datetime import date
 from pathlib import Path
 from typing import TypedDict
@@ -148,11 +148,9 @@ class ActualParser:
 
             rows = self._conn.execute(
                 "SELECT id, account, category, amount, payee, notes, date "
-                "FROM {} "
-                "WHERE tombstone=0 AND {}={} AND {}={} AND {} IS NULL "
-                "ORDER BY date, id".format(
-                    txn_table, col_is_parent, 0, col_is_child, 0, col_transfer_id
-                )
+                f"FROM {txn_table} "
+                f"WHERE tombstone=0 AND {col_is_parent}={0} AND {col_is_child}={0} AND {col_transfer_id} IS NULL "
+                "ORDER BY date, id"
             ).fetchall()
         else:
             payee_rows = self._conn.execute(
@@ -163,11 +161,9 @@ class ActualParser:
 
             rows = self._conn.execute(
                 "SELECT id, acct, category, amount, description, notes, date "
-                "FROM {} "
-                "WHERE tombstone=0 AND {}={} AND {}={} AND {} IS NULL "
-                "ORDER BY date, id".format(
-                    txn_table, col_is_parent, 0, col_is_child, 0, col_transfer_id
-                )
+                f"FROM {txn_table} "
+                f"WHERE tombstone=0 AND {col_is_parent}={0} AND {col_is_child}={0} AND {col_transfer_id} IS NULL "
+                "ORDER BY date, id"
             ).fetchall()
 
         result = []
@@ -320,10 +316,8 @@ class ActualParser:
         col_parent_id = self._txn_col_parent_id
 
         parents = self._conn.execute(
-            "SELECT id, {acct}, amount, date FROM {table} "
-            "WHERE tombstone=0 AND {is_parent}=1 AND {is_child}=0".format(
-                acct=col_acct, table=txn_table, is_parent=col_is_parent, is_child=col_is_child
-            )
+            f"SELECT id, {col_acct}, amount, date FROM {txn_table} "
+            f"WHERE tombstone=0 AND {col_is_parent}=1 AND {col_is_child}=0"
         ).fetchall()
 
         if not parents:
@@ -332,13 +326,10 @@ class ActualParser:
         parent_ids = [p["id"] for p in parents]
         placeholders = ",".join("?" for _ in parent_ids)
         children = self._conn.execute(
-            "SELECT id, {parent_id}, {acct}, category, amount "
-            "FROM {table} "
-            "WHERE tombstone=0 AND {is_child}=1 AND {parent_id} IN ({placeholders}) "
-            "ORDER BY {parent_id}, amount".format(
-                parent_id=col_parent_id, acct=col_acct, table=txn_table,
-                is_child=col_is_child, placeholders=placeholders
-            ),
+            f"SELECT id, {col_parent_id}, {col_acct}, category, amount "
+            f"FROM {txn_table} "
+            f"WHERE tombstone=0 AND {col_is_child}=1 AND {col_parent_id} IN ({placeholders}) "
+            f"ORDER BY {col_parent_id}, amount",
             parent_ids,
         ).fetchall()
 

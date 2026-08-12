@@ -1,14 +1,13 @@
 import hashlib
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.documents.models import Document, DocumentText
 from app.documents.schemas import DocumentStatus
-
 
 UPLOAD_DIR = Path("/app/uploads")
 
@@ -79,7 +78,7 @@ async def save_extracted_text(
         document_id=document_id,
         extracted_text=text,
         ocr_engine=ocr_engine,
-        extracted_at=datetime.now(timezone.utc),
+        extracted_at=datetime.now(UTC),
     )
     db.add(doc_text)
     await db.flush()

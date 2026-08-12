@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.inbox.models import InboxItem
 from app.inbox.schemas import InboxItemCreate, InboxItemUpdate, ProcessInboxItem
 from app.work.models import Task as WorkTask
-from app.work.schemas import TaskCreate
 
 
 async def create_inbox_item(db: AsyncSession, user_id: uuid.UUID, data: InboxItemCreate) -> InboxItem:

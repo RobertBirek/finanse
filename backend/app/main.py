@@ -1,5 +1,5 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,12 +34,12 @@ async def health_check():
     return {"status": "ok", "environment": settings.ENVIRONMENT}
 
 
-from app.identity.router import router as identity_router
-from app.finance.router import router as finance_router
-from app.work.router import router as work_router
-from app.inbox.router import router as inbox_router
 from app.advisor.router import router as advisor_router
 from app.documents.router import router as documents_router
+from app.finance.router import router as finance_router
+from app.identity.router import router as identity_router
+from app.inbox.router import router as inbox_router
+from app.work.router import router as work_router
 
 app.include_router(identity_router, prefix="/api/auth", tags=["identity"])
 app.include_router(finance_router, prefix="/api/finance", tags=["finance"])

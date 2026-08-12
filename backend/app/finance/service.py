@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,7 +56,9 @@ async def get_accounts(db: AsyncSession, user_id: uuid.UUID) -> list[Account]:
     return accounts
 
 
-async def get_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID) -> Account | None:
+async def get_account(
+    db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID
+) -> Account | None:
     result = await db.execute(
         select(Account).where(Account.id == account_id, Account.user_id == user_id)
     )
@@ -120,7 +122,9 @@ def _validate_posting_sum(postings: list, txn_type: str) -> None:
         )
 
     if txn_type in ("income", "expense") and len(postings) < 2:
-        raise ValueError("Income/expense transactions must have at least 2 postings (source + destination)")
+        raise ValueError(
+            "Income/expense transactions must have at least 2 postings (source + destination)"
+        )
 
     if len(postings) < 2:
         raise ValueError("Transactions must have at least 2 postings")
@@ -133,7 +137,7 @@ async def create_transaction(
 
     txn = FinancialTransaction(
         user_id=user_id,
-        date=data.transaction_date or date.today(),
+        date=data.transaction_date or datetime.now(UTC).date(),
         description=data.description,
         type=data.type,
         is_pending=data.is_pending,
@@ -213,7 +217,7 @@ async def update_transaction(
 
 
 async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> FinancialSummary:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_month = now.month
     current_year = now.year
     month_start = date(current_year, current_month, 1)
@@ -241,13 +245,15 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
         total_credits = credit_result.scalar() or 0
         balance = total_debits - total_credits
 
-        account_balances.append({
-            "id": str(account.id),
-            "name": account.name,
-            "type": account.type,
-            "currency": account.currency,
-            "balance_pln": balance,
-        })
+        account_balances.append(
+            {
+                "id": str(account.id),
+                "name": account.name,
+                "type": account.type,
+                "currency": account.currency,
+                "balance_pln": balance,
+            }
+        )
 
     income_result = await db.execute(
         select(func.coalesce(func.sum(Posting.base_amount_pln), 0))

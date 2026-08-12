@@ -1,6 +1,5 @@
-import uuid
 import datetime as dt
-from typing import List, Optional
+import uuid
 
 from pydantic import BaseModel, Field
 
@@ -94,7 +93,7 @@ class TransactionCreate(BaseModel):
     is_pending: bool = False
     project_id: uuid.UUID | None = None
     source: str = Field(default="manual", max_length=50)
-    postings: List[PostingCreate] = Field(min_length=2)
+    postings: list[PostingCreate] = Field(min_length=2)
 
 
 class TransactionUpdate(BaseModel):
@@ -114,7 +113,7 @@ class TransactionResponse(BaseModel):
     project_id: uuid.UUID | None
     created_by: str
     source: str
-    postings: List[PostingResponse]
+    postings: list[PostingResponse]
     created_at: dt.datetime
     updated_at: dt.datetime
 
@@ -122,7 +121,7 @@ class TransactionResponse(BaseModel):
 
 
 class FinancialSummary(BaseModel):
-    accounts: List[dict]
+    accounts: list[dict]
     income_total_pln: int
     expense_total_pln: int
     net_total_pln: int

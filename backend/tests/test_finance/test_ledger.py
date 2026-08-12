@@ -3,11 +3,11 @@
 import uuid
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
-from app.main import app
-from app.finance.service import _validate_posting_sum
 from app.finance.schemas import PostingCreate
+from app.finance.service import _validate_posting_sum
+from app.main import app
 
 
 class TestDoubleEntryInvariant:

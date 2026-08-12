@@ -1,9 +1,10 @@
 """Tests for identity domain."""
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
 from app.main import app
-from app.identity.service import hash_password, verify_password, create_access_token
+
 
 @pytest.fixture
 def auth_service():
@@ -34,8 +35,9 @@ class TestPasswordHashing:
 
 class TestToken:
     def test_create_and_decode_token(self, auth_service):
-        from app.config import settings
         from jose import jwt
+
+        from app.config import settings
         user_id = "test-user-id-123"
         token = auth_service.create_access_token(user_id)
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])

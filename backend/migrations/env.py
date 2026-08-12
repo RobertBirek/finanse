@@ -5,16 +5,15 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import app.advisor.models
+import app.audit.models
+import app.documents.models
+import app.finance.models
+import app.identity.models
+import app.inbox.models
+import app.work.models  # noqa: F401
 from app.config import settings
 from app.database import Base
-
-import app.identity.models  # noqa: F401 — required for Alembic autogenerate
-import app.finance.models  # noqa: F401
-import app.work.models  # noqa: F401
-import app.inbox.models  # noqa: F401
-import app.advisor.models  # noqa: F401
-import app.documents.models  # noqa: F401
-import app.audit.models  # noqa: F401
 
 config = context.config
 

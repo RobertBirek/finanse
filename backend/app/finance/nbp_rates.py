@@ -37,7 +37,7 @@ class NbpRateProvider:
             rate = float(data["rates"][0]["mid"])
             self._cache[cache_key] = rate
             return rate
-        except Exception as e:
+        except (httpx.HTTPError, KeyError, TypeError, ValueError) as e:
             logger.warning("NBP rate unavailable: %s on %s: %s", currency, rate_date, e)
             return 0.0
 
