@@ -1,6 +1,8 @@
 import asyncio
 import os
+import socket
 
+import asyncpg
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -33,6 +35,39 @@ def is_safe_test_database_url(database_url: str) -> bool:
     )
 
 
+def is_connection_unavailable_error(error: BaseException) -> bool:
+    pending = [error]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+
+        if isinstance(
+            current,
+            (
+                ConnectionError,
+                socket.gaierror,
+                TimeoutError,
+                asyncpg.PostgresConnectionError,
+                asyncpg.exceptions.CannotConnectNowError,
+            ),
+        ):
+            return True
+
+        pending.extend(
+            related
+            for related in (
+                getattr(current, "orig", None),
+                current.__cause__,
+                current.__context__,
+            )
+            if related is not None
+        )
+    return False
+
+
 @pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.new_event_loop()
@@ -63,6 +98,8 @@ async def test_database(request):
                 await conn.run_sync(Base.metadata.create_all)
             schema_created = True
         except (OperationalError, OSError) as exc:
+            if not is_connection_unavailable_error(exc):
+                raise
             database_url = make_url(TEST_DATABASE_URL)
             pytest.skip(
                 "PostgreSQL test database unavailable at "

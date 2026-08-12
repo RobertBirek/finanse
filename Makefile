@@ -22,8 +22,12 @@ test:
 test-db-up:
 	docker compose -f $(TEST_COMPOSE) up -d --wait postgres-test
 
-test-integration: test-db-up
-	cd backend && TEST_DATABASE_URL="$(TEST_DATABASE_URL)" $(VENV)/pytest -v -m integration
+test-integration:
+	@trap 'exit_code=$$?; trap - EXIT INT TERM; docker compose -f "$(TEST_COMPOSE)" down; exit $$exit_code' EXIT INT TERM; \
+	docker compose -f "$(TEST_COMPOSE)" up -d --wait postgres-test; \
+	exit_code=$$?; \
+	if [ $$exit_code -ne 0 ]; then exit $$exit_code; fi; \
+	(cd backend && TEST_DATABASE_URL="$(TEST_DATABASE_URL)" $(VENV)/pytest -v -m integration)
 
 lint:
 	cd backend && $(VENV)/ruff check app/ tests/

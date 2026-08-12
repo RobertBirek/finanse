@@ -1,4 +1,12 @@
-from conftest import DEFAULT_TEST_DATABASE_URL, is_safe_test_database_url
+import socket
+
+import asyncpg
+from conftest import (
+    DEFAULT_TEST_DATABASE_URL,
+    is_connection_unavailable_error,
+    is_safe_test_database_url,
+)
+from sqlalchemy.exc import OperationalError
 
 
 def test_default_test_database_url_keeps_approved_fallback():
@@ -27,3 +35,37 @@ def test_remote_test_named_database_is_not_safe_for_schema_cleanup():
 
 def test_malformed_database_url_is_not_safe_for_schema_cleanup():
     assert not is_safe_test_database_url("not-a-database-url")
+
+
+def test_connection_error_is_skippable_when_wrapped_by_sqlalchemy():
+    error = OperationalError(
+        "connect",
+        {},
+        asyncpg.exceptions.ConnectionDoesNotExistError("database unavailable"),
+    )
+    assert is_connection_unavailable_error(error)
+
+
+def test_os_connection_error_is_skippable():
+    assert is_connection_unavailable_error(ConnectionRefusedError("connection refused"))
+
+
+def test_database_not_ready_error_is_skippable():
+    assert is_connection_unavailable_error(asyncpg.exceptions.CannotConnectNowError())
+
+
+def test_permission_os_error_is_not_skippable():
+    assert not is_connection_unavailable_error(PermissionError("permission denied"))
+
+
+def test_dns_error_is_skippable():
+    assert is_connection_unavailable_error(socket.gaierror("name resolution failed"))
+
+
+def test_permission_error_is_not_skippable_when_wrapped_by_sqlalchemy():
+    error = OperationalError(
+        "create schema",
+        {},
+        asyncpg.exceptions.InsufficientPrivilegeError("permission denied"),
+    )
+    assert not is_connection_unavailable_error(error)
