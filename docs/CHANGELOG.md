@@ -7,15 +7,38 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 2026-08-12
 
+### Added
+- Testy pętli tool-calling Advisora: odpowiedź Level 0 po wykonaniu narzędzia, błędny JSON, nieznane narzędzie, błędy executora, limit iteracji oraz oczekiwanie na potwierdzenie Level 2.
+- Testy potwierdzania mutacji: blokada ponownego confirm/deny, izolacja użytkownika, odrzucenie błędnego wyniku oraz rollback częściowej mutacji, gdy executor lub audit log zakończy się błędem.
+- Izolowana baza PostgreSQL do testów integracyjnych na `127.0.0.1:55432`; fixture tworzy i usuwa schemat, a `make test-integration` sprząta kontener i sieć po zakończeniu.
+
 ### Changed
-- **Task 6 — weryfikacja jakościowa**: potwierdzono pełny zestaw testów backendu (`81 passed`) po uruchomieniu izolowanej bazy PostgreSQL oraz testy integracyjne (`15 passed`); frontend Vitest (`4 passed`), typecheck i build również przeszły.
-- Udokumentowano wyniki weryfikacji wszystkich dostępnych ścieżek Makefile bez modyfikowania kodu ani wdrażania zmian.
-- Skonfigurowano ESLint 8 dla frontendu z parserem TypeScript, regułami React Hooks/Refresh i środowiskiem browser/ES2022; lint przechodzi bez ostrzeżeń.
+- **Doradca — bezpieczne mutacje finansowe**: `create_transaction` wymaga jawnego `account_name`, akceptuje wyłącznie dodatnie kwoty całkowite i odrzuca niezgodność waluty konta oraz walutę bez zweryfikowanego kursu FX.
+- **Doradca — atomiczność potwierdzeń**: blokada wiersza chroni przed równoległym potwierdzeniem, a savepoint wycofuje częściowe zapisy executora i audit logu.
+- **Frontend Advisora**: polling aktywnej rozmowy co 2 sekundy działa wyłącznie przy `pending_confirmation`; po rozstrzygnięciu polling się zatrzymuje.
+- Poprawiono lokalne granice dnia i obsługę zmian czasu w harmonogramie, w tym offset DST zależny od konkretnej daty.
+- Dodano konfigurację ESLint 8 z parserem TypeScript, regułami React Hooks/Refresh oraz środowiskiem browser/ES2022.
+
+### Fixed
+- Usunięto 7 błędów frontendowego lintowania.
+- Spłacono backendowy dług Ruff i mypy: `ruff check app/ tests/` oraz `mypy app/` przechodzą.
+- Poprawiono ochronę fixture testowej bazy: schemat można tworzyć i usuwać tylko w lokalnej bazie `finanse_test` na zatwierdzonym porcie; niedostępna baza powoduje pominięcie testów integracyjnych zamiast ingerencji w inną bazę.
+
+### Verified
+- Historia `origin/main..HEAD` obejmuje 26 commitów; wcześniejszy zapis o 17 commitach był nieaktualny.
+- Backend Ruff: PASS, bez błędów.
+- Backend mypy: PASS, `46 source files`, bez błędów.
+- Backend pytest: PASS, `87 passed, 16 skipped, 6 warnings`; testy zależne od niedostępnej lokalnie bazy zostały pominięte.
+- Testy integracyjne z izolowanym PostgreSQL: PASS, `16 passed, 87 deselected, 12 warnings` w świeżonym uruchomieniu. Wcześniejszy zapis tego samego zestawu zawierał `15 passed` przed dołączeniem dodatkowego testu.
+- Frontend: `npm run lint`, `npm run typecheck`, `npm run test` (`1 test file, 4 tests`) oraz `npm run build` przeszły.
+- Weryfikacja nie uruchamiała migracji ani deployu produkcyjnego.
 
 ### Known Limitations
-- `make lint`, `make typecheck`, `make test` i `make test-integration` bez override `VENV` nie startują w tym worktree, ponieważ brakuje `backend/.venv`; uruchomienie z `/opt/finanse/backend/.venv/bin` pozwoliło wykonać testy oraz ujawniło problemy niżej.
-- Backend `ruff` kończy się 20 błędami, a `mypy` 9 błędami.
-- Testy backendu zgłaszają 15 ostrzeżeń deprecacyjnych/runtime; nie blokują testów, ale wymagają osobnego porządku jakościowego.
+- Backend i frontend korzystają w tym worktree z zależności poza repozytorium: backend z `/opt/finanse/backend/.venv`, frontend z lokalnego `node_modules`.
+- Testy zgłaszają ostrzeżenia dotyczące domyślnego scope event loop w `pytest-asyncio`, deprecacji `crypt`/Argon2 i `datetime.utcnow` w zależnościach oraz `RuntimeWarning` w mocku NBP.
+- Trzy historyczne daty USD bez kursu NBP pozostają do ręcznej korekty: 2026-05-30, 2026-06-14 i 2026-06-21.
+- Parser split transactions nie został zweryfikowany na rzeczywistych danych użytkownika.
+- Brak SSE/streamingu dla zmian innych niż polling oczekujących potwierdzeń.
 
 ## [0.3.0] — 2026-08-12
 

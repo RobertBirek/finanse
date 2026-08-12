@@ -8,15 +8,17 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Task 6 — Spłata długu jakościowego (2026-08-12)
 
-- [x] Przejrzano wszystkie 17 commitów Task 1-5 ponad `origin/main` oraz aktualną dokumentację.
+- [x] Przejrzano 26 commitów ponad `origin/main` oraz aktualną dokumentację; wcześniejszy zapis o 17 commitach był nieaktualny.
 - [x] Uruchomiono izolowaną testową bazę PostgreSQL bez dotykania produkcji.
-- [x] Backend: pełny pytest `81 passed`; testy integracyjne `15 passed`.
-- [x] Frontend: Vitest `4 passed`, TypeScript typecheck i Vite production build.
+- [x] Backend: Ruff `app/ tests/` i mypy `app/` przechodzą; pytest `87 passed, 16 skipped, 6 warnings` przy niedostępnej bazie lokalnej.
+- [x] Testy integracyjne: świeże uruchomienie `16 passed, 87 deselected, 12 warnings`; wcześniejszy zapis tego zestawu zawierał `15 passed`.
+- [x] Frontend: ESLint, Vitest `4 passed`, TypeScript typecheck i Vite production build.
+- [x] Dodano testy pętli tool-calling, atomiczności/rollbacku potwierdzeń oraz bezpiecznej walidacji mutacji finansowych.
+- [x] Doradca odświeża oczekujące potwierdzenia pollingiem co 2 sekundy; harmonogram używa lokalnych granic dnia i offsetu DST dla konkretnej daty.
 - [x] Zapisano dokładne wyniki i ograniczenia w CHANGELOG/JOURNAL.
-- [ ] Backend lint/typecheck: pozostaje 20 błędów ruff i 9 błędów mypy.
 - [x] Frontend lint: dodano konfigurację ESLint i usunięto 7 błędów wykrytych w kodzie.
 
-Weryfikacja nie zmienia statusu pozostałego długu jakościowego. Nie wykonano deployu ani migracji produkcyjnej.
+Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, trzy daty USD bez kursu NBP oraz brak rzeczywistych danych split transactions w testach. Nie wykonano deployu ani migracji produkcyjnej.
 
 ## Iteracja 1 — Pierwszy Vertical Slice (MVP)
 
@@ -120,6 +122,6 @@ Weryfikacja nie zmienia statusu pozostałego długu jakościowego. Nie wykonano 
 - [x] Docker Compose + .env + Makefile
 - [x] Repo: github.com/RobertBirek/finanse
 - [x] Dokumentacja: AGENTS.md, PRD.md, DB_SCHEMA.md, 9 ADR-ów
-- [x] Testy: 15 testów (11 unit, 4 integracyjne)
+- [x] Testy początkowego vertical slice'a: 15 testów (11 unit, 4 integracyjne)
 - [x] Agent OpenCode: .opencode/agent/personal-advisor.md
 - [x] CHANGELOG.md, JOURNAL.md, TASKS.md

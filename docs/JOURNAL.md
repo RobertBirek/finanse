@@ -3,6 +3,47 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-12 — Sesja 9: Końcowa jakość projektu
+
+### Cel sesji
+Zamknąć dokumentację po implementacji poprawek jakościowych Advisora, testów oraz konfiguracji frontendu. Nie zmieniać kodu i nie deklarować deployu produkcyjnego.
+
+### Co zrobiono
+- Zweryfikowano 26 commitów `origin/main..HEAD`; wcześniejsza dokumentacja podawała nieaktualną liczbę 17 commitów.
+- Potwierdzono atomiczność potwierdzania mutacji Advisora: blokada wiersza chroni przed równoległym wykonaniem, savepoint wycofuje częściowe zapisy executora, a błąd audit logu nie zostawia mutacji.
+- Potwierdzono bezpieczną walidację `create_transaction`: jawne `account_name`, dodatnia kwota całkowita, zgodna waluta konta oraz odrzucenie niezweryfikowanego FX.
+- Dodano i uruchomiono testy tool-calling loop, błędnych argumentów, nieznanych narzędzi, błędów executorów, limitu iteracji, potwierdzeń Level 2 i rollbacku.
+- Zweryfikowano izolowaną bazę PostgreSQL na `127.0.0.1:55432`; fixture ogranicza operacje schematu do lokalnej bazy `finanse_test`, a `make test-integration` usuwa kontener i sieć po zakończeniu.
+- Potwierdzono polling Advisora co 2 sekundy tylko dla `pending_confirmation` oraz poprawkę lokalnego harmonogramu uwzględniającą granice dnia i DST.
+- Dodano konfigurację ESLint 8 i usunięto 7 błędów lintowania frontendu.
+
+### Weryfikacja
+- `/opt/finanse/backend/.venv/bin/ruff check app/ tests/` — PASS: bez błędów.
+- `/opt/finanse/backend/.venv/bin/mypy app/` — PASS: 46 plików źródłowych, bez błędów; narzędzie wypisało 2 noty o niejawnie typowanych funkcjach.
+- `/opt/finanse/backend/.venv/bin/pytest -v` — PASS: `87 passed, 16 skipped, 6 warnings`; testy wymagające niedostępnej bazy zostały pominięte.
+- `make VENV=/opt/finanse/backend/.venv/bin test-integration` — PASS: `16 passed, 87 deselected, 12 warnings`; kontener i sieć zostały usunięte przez trap Makefile.
+- `npm run lint` — PASS.
+- `npm run typecheck` — PASS.
+- `npm run test` — PASS: 1 plik, 4 testy.
+- `npm run build` — PASS: Vite wygenerował production build.
+
+### Decyzje techniczne
+1. Dokumentacja rozróżnia świeży wynik `16 passed` od wcześniejszego, wymaganego do zachowania w historii wyniku `15 passed`; dodatkowy test zwiększył aktualny zestaw integracyjny.
+2. Niedostępna baza w zwykłym pytest pozostaje ostrzeżeniem środowiskowym, nie powodem do użycia produkcyjnego DSN. Pełny zakres integracyjny uruchomiono wyłącznie na izolowanym PostgreSQL.
+
+### Znane problemy
+- Testy emitują ostrzeżenia o domyślnym scope event loop w `pytest-asyncio`, deprecacjach `crypt`/Argon2 i `datetime.utcnow` w zależnościach oraz `RuntimeWarning` w mocku NBP.
+- Trzy daty USD bez kursu NBP (`2026-05-30`, `2026-06-14`, `2026-06-21`) nadal wymagają ręcznej korekty.
+- Parser split transactions nie został sprawdzony na rzeczywistych danych użytkownika.
+- Polling obsługuje oczekujące potwierdzenia; aplikacja nie ma SSE/streamingu dla pozostałych zmian.
+- Nie wykonano migracji ani deployu produkcyjnego.
+
+### Następna sesja
+1. Osobno uporządkować ostrzeżenia testowe i zależności.
+2. Zweryfikować split transactions na reprezentatywnych danych.
+3. Zaplanować SSE, jeśli aplikacja będzie wymagać aktualizacji bez pollingu.
+
+---
 ## 2026-08-12 — Sesja 8: Konfiguracja ESLint frontendu
 
 ### Cel sesji
@@ -25,7 +66,7 @@ Uzupełnić brakującą konfigurację ESLint i domknąć frontendowy quality gat
 - Pozostawiono `--report-unused-disable-directives` i `--max-warnings 0` ze skryptu npm; nie dodano globalnych disable.
 
 ### Znane problemy
-- Backendowy dług jakościowy z Task 6 pozostaje bez zmian: 20 błędów ruff i 9 błędów mypy.
+- Backendowy dług Ruff/mypy z poprzedniej sesji został spłacony; pozostały ostrzeżenia testowe i zależności opisane w Sesji 9.
 
 ---
 ## 2026-08-12 — Sesja 7: Task 6 — weryfikacja jakościowa
@@ -34,10 +75,10 @@ Uzupełnić brakującą konfigurację ESLint i domknąć frontendowy quality gat
 Przejrzeć historię Task 1-5, wykonać pełną dostępną weryfikację i udokumentować rzeczywisty stan bez zmian w kodzie, deployu ani migracji produkcyjnej.
 
 ### Co zrobiono
-- Przejrzano 17 commitów `origin/main..HEAD` w worktree `quality-advisor` oraz aktualne dokumenty projektu.
+- Przejrzano 17 commitów `origin/main..HEAD` w worktree `quality-advisor` oraz aktualne dokumenty projektu. Liczba była poprawna dla tego wcześniejszego punktu historii; końcowy zakres branchu wyniósł 26 commitów.
 - Uruchomiono izolowany PostgreSQL z `/docker/finanse/compose.test.yaml` na `127.0.0.1:55432`; testowy kontener został posprzątany przez `make test-integration`.
 - Pełny backend pytest: `81 passed, 15 warnings`.
-- Backend testy integracyjne: `15 passed, 66 deselected, 12 warnings`.
+- Backend testy integracyjne: `15 passed, 66 deselected, 12 warnings` w ówczesnym uruchomieniu; późniejszy test zwiększył świeży wynik do 16.
 - Frontend Vitest: `1 test file passed, 4 tests passed`; `npm run typecheck` zakończył się kodem 0; `npm run build` zakończył się kodem 0.
 - Nie zmieniono kodu, nie uruchomiono migracji ani deployu produkcyjnego.
 
@@ -49,10 +90,10 @@ Przejrzeć historię Task 1-5, wykonać pełną dostępną weryfikację i udokum
 - `TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest -v` (w `backend`) — PASS: `81 passed, 15 warnings`.
 - `make VENV=/opt/finanse/backend/.venv/bin test` — PASS: backend `66 passed, 15 skipped`; frontend `4 passed` (uruchomienie równoległe z integracją zatrzymało bazę po zakończeniu integracji).
 - `make VENV=/opt/finanse/backend/.venv/bin test-integration` — PASS: `15 passed, 66 deselected`.
-- `make VENV=/opt/finanse/backend/.venv/bin lint` — FAIL: ruff zgłasza 20 błędów.
-- `make VENV=/opt/finanse/backend/.venv/bin typecheck` — FAIL: mypy zgłasza 9 błędów.
+- `make VENV=/opt/finanse/backend/.venv/bin lint` — FAIL w ówczesnym uruchomieniu: ruff zgłaszał 20 błędów; późniejsze commity spłaciły ten dług.
+- `make VENV=/opt/finanse/backend/.venv/bin typecheck` — FAIL w ówczesnym uruchomieniu: mypy zgłaszał 9 błędów; późniejsze commity spłaciły ten dług.
 - `npm run test` (w `frontend`) — PASS: `1 test file passed, 4 tests passed`.
-- `npm run lint` (w `frontend`) — FAIL: brak konfiguracji ESLint, mimo zainstalowanych zależności.
+- `npm run lint` (w `frontend`) — FAIL w ówczesnym uruchomieniu: brak konfiguracji ESLint, mimo zainstalowanych zależności; konfigurację dodano w Sesji 8.
 - `npm run typecheck` (w `frontend`) — PASS.
 - `npm run build` (w `frontend`) — PASS: Vite wygenerował `dist`.
 
@@ -61,9 +102,9 @@ Przejrzeć historię Task 1-5, wykonać pełną dostępną weryfikację i udokum
 2. Nie naprawiano lint/typecheck: nie było jasnej regresji z Task 1-5 blokującej testy, a polecenie sesji wymagało pozostawienia kodu bez zmian.
 
 ### Znane problemy
-- Ruff: 20 błędów, głównie `BLE001`, `DTZ`, `UP017`, `ASYNC230` i importy.
-- Mypy: 9 błędów w `actual_parser.py`, integracjach typów użytkownika z narzędziami oraz brakujących stubach `jose`/`passlib`.
-- Frontend ESLint: brak pliku konfiguracyjnego; sam pakiet i pluginy są obecne.
+- Ruff: 20 błędów w ówczesnym punkcie historii, później usuniętych.
+- Mypy: 9 błędów w ówczesnym punkcie historii, później usuniętych.
+- Frontend ESLint: brak pliku konfiguracyjnego w ówczesnym punkcie historii; konfigurację dodano w Sesji 8.
 - Pytest: ostrzeżenia dotyczą m.in. scope fixture `pytest-asyncio`, `passlib`/`argon2`, `python-jose`, a także nieoczekiwanego `RuntimeWarning` w teście NBP.
 
 ### Następna sesja
@@ -181,8 +222,8 @@ Dokończyć Iterację 2 (Stirling OCR + ekstrakcja danych), rozszerzyć Doradcę
 
 ### Znane problemy
 
-- Tool call bannery nie aktualizują się w czasie rzeczywistym (widoczne po przeładowaniu) — ~~otwarte~~ częściowo: eager-loading naprawione, streaming nadal brak.
-- Brak testów dla tool calling loop (trudne mockowanie LLM API).
+- Tool call bannery nie mają streamingu SSE; oczekujące potwierdzenia odświeża polling.
+- Testy tool-calling loop dodano w późniejszej części sesji jakościowych.
 - 3 daty USD bez kursu NBP (niedziele: 2026-05-30, 2026-06-14, 2026-06-21) — `base_amount_pln = source_amount`, do ręcznej korekty.
 
 ### Następna sesja
@@ -223,7 +264,7 @@ Podłączyć istniejące narzędzia (finanse, work) do Doradcy przez OpenAI func
 
 - ~~Frontend nie ładuje danych z API~~ — NAPRAWIONE. Wszystkie strony (Today, Inbox, Projects, Calendar, Finances, Advisor, Documents, Settings) używają TanStack Query i ładują dane poprawnie.
 - Brak testów jednostkowych dla tool calling loop (trudne do mockowania DeepSeek API)
-- Tool call bannery nie aktualizują się w czasie rzeczywistym — widoczne dopiero po przeładowaniu konwersacji
+- Tool call bannery nie miały wówczas odświeżania w czasie rzeczywistym; późniejszy polling obejmuje oczekujące potwierdzenia.
 
 ---
 
