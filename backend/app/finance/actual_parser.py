@@ -140,6 +140,12 @@ class ActualParser:
             ).fetchall()
             payee_map = {r["id"]: r["name"] for r in payee_rows}
 
+            # Build category name lookup for fallback descriptions
+            cat_rows = self._conn.execute(
+                "SELECT id, name FROM categories"
+            ).fetchall()
+            cat_map = {r["id"]: r["name"] for r in cat_rows}
+
             rows = self._conn.execute(
                 "SELECT id, account, category, amount, payee, notes, date "
                 "FROM {} "
@@ -187,6 +193,10 @@ class ActualParser:
                 desc_parts = [payee_name] if payee_name else []
                 if r["notes"]:
                     desc_parts.append(r["notes"])
+                if not desc_parts:
+                    # Fallback: use category name
+                    cat_name = cat_map.get(r["category"], "") if r["category"] else ""
+                    desc_parts = [cat_name] if cat_name else []
                 description = " — ".join(desc_parts) if desc_parts else "(no description)"
             else:
                 payee_name = payee_map.get(r["description"], "") if r["description"] else ""
