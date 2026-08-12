@@ -37,6 +37,7 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Frontend: lista kont z saldami, sekcja przychodów/wydatków
 
 ### Fixed
+- **Statusy narzędzi Doradcy**: polling aktywnej rozmowy co 2 s tylko dla `pending_confirmation`, precyzyjne invalidacje po confirm/deny i obsługa błędów w bannerze
 - **Payee resolution** w imporcie z Actual (fallback na kategorię)
 - **Opening balances** poprawnie zapisywane przy migracji
 - **Frontend nie ładował danych z API** — ostatecznie naprawione (wszystkie strony na TanStack Query)

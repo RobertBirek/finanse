@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { isAxiosError } from "axios";
 import {
   useConversations,
   useMessages,
@@ -15,16 +16,33 @@ function ToolCallBanner({ message }: { message: Message }) {
   return (
     <div className="my-2 mx-4">
       {message.tool_executions.map((te) => (
-        <div key={te.id} className="bg-gray-800/50 border border-gray-700 rounded-lg text-sm">
+        <div
+          key={te.id}
+          className="bg-gray-800/50 border border-gray-700 rounded-lg text-sm"
+        >
           <button
             onClick={() => setExpanded(!expanded)}
             className="w-full flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-gray-200 transition-colors"
           >
-            <svg className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`} fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+            <svg
+              className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`}
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                clipRule="evenodd"
+              />
             </svg>
             <span className="text-advisor-400">🔧 {te.tool_name}</span>
-            <span className={te.status === "completed" ? "text-green-400" : "text-red-400"}>●</span>
+            <span
+              className={
+                te.status === "completed" ? "text-green-400" : "text-red-400"
+              }
+            >
+              ●
+            </span>
           </button>
           {expanded && (
             <div className="px-3 pb-3 border-t border-gray-700/50">
@@ -33,8 +51,10 @@ function ToolCallBanner({ message }: { message: Message }) {
               </pre>
               {te.status === "pending_confirmation" && (
                 <div className="flex gap-2 mt-2">
-                  <ConfirmButton executionId={te.id} />
-                  <DenyButton executionId={te.id} />
+                  <ToolExecutionActions
+                    executionId={te.id}
+                    conversationId={message.conversation_id}
+                  />
                 </div>
               )}
             </div>
@@ -45,29 +65,48 @@ function ToolCallBanner({ message }: { message: Message }) {
   );
 }
 
-function ConfirmButton({ executionId }: { executionId: string }) {
-  const confirm = useConfirmToolExecution();
-  return (
-    <button
-      onClick={() => confirm.mutate(executionId)}
-      disabled={confirm.isPending}
-      className="px-3 py-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs rounded font-medium"
-    >
-      {confirm.isPending ? "..." : "Zatwierdź"}
-    </button>
-  );
+function mutationErrorMessage(error: unknown): string {
+  if (isAxiosError(error) && typeof error.response?.data?.detail === "string") {
+    return error.response.data.detail;
+  }
+  return "Nie udało się zmienić statusu narzędzia.";
 }
 
-function DenyButton({ executionId }: { executionId: string }) {
+function ToolExecutionActions({
+  executionId,
+  conversationId,
+}: {
+  executionId: string;
+  conversationId: string;
+}) {
+  const confirm = useConfirmToolExecution();
   const deny = useDenyToolExecution();
+  const isPending = confirm.isPending || deny.isPending;
+  const error = confirm.error || deny.error;
+  const variables = { executionId, conversationId };
+
   return (
-    <button
-      onClick={() => deny.mutate(executionId)}
-      disabled={deny.isPending}
-      className="px-3 py-1 bg-red-600/50 hover:bg-red-500 disabled:opacity-50 text-red-200 text-xs rounded"
-    >
-      Odrzuć
-    </button>
+    <>
+      <button
+        onClick={() => confirm.mutate(variables)}
+        disabled={isPending}
+        className="px-3 py-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs rounded font-medium"
+      >
+        {confirm.isPending ? "..." : "Zatwierdź"}
+      </button>
+      <button
+        onClick={() => deny.mutate(variables)}
+        disabled={isPending}
+        className="px-3 py-1 bg-red-600/50 hover:bg-red-500 disabled:opacity-50 text-red-200 text-xs rounded"
+      >
+        {deny.isPending ? "..." : "Odrzuć"}
+      </button>
+      {error && (
+        <p className="basis-full text-xs text-red-400">
+          {mutationErrorMessage(error)}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -99,7 +138,7 @@ export function Advisor() {
             setActiveId(data.conversation_id);
           }
         },
-      }
+      },
     );
   };
 
@@ -149,12 +188,11 @@ export function Advisor() {
         <div className="px-6 py-4 border-b border-gray-800">
           <h2 className="text-sm font-medium text-gray-300">
             {activeId
-              ? conversations?.find((c) => c.id === activeId)?.title || "Rozmowa"
+              ? conversations?.find((c) => c.id === activeId)?.title ||
+                "Rozmowa"
               : "Nowa rozmowa"}
           </h2>
-          <p className="text-xs text-gray-500">
-            Osobisty asystent AI
-          </p>
+          <p className="text-xs text-gray-500">Osobisty asystent AI</p>
         </div>
 
         {/* Messages */}
@@ -162,14 +200,27 @@ export function Advisor() {
           {messages.length === 0 && !sendMessage.isPending && (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="w-14 h-14 rounded-xl bg-advisor-500 flex items-center justify-center mb-4">
-                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <svg
+                  className="w-7 h-7 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Witaj w Personal Advisor</h3>
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Witaj w Personal Advisor
+              </h3>
               <p className="text-gray-400 text-sm max-w-md mb-6">
-                Twój osobisty asystent do zarządzania czasem, pieniędzmi i projektami.
-                Zadaj pytanie, a Doradca pomoże Ci podjąć dobrą decyzję.
+                Twój osobisty asystent do zarządzania czasem, pieniędzmi i
+                projektami. Zadaj pytanie, a Doradca pomoże Ci podjąć dobrą
+                decyzję.
               </p>
               <div className="grid grid-cols-2 gap-2 max-w-md">
                 {[
@@ -205,9 +256,9 @@ export function Advisor() {
                   <p className="whitespace-pre-wrap">{msg.content}</p>
                 </div>
               </div>
-              {msg.role === "assistant" && msg.tool_calls && msg.tool_calls.length > 0 && (
-                <ToolCallBanner message={msg} />
-              )}
+              {msg.role === "assistant" &&
+                msg.tool_calls &&
+                msg.tool_calls.length > 0 && <ToolCallBanner message={msg} />}
             </div>
           ))}
 
@@ -246,8 +297,18 @@ export function Advisor() {
               {sendMessage.isPending ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
                 </svg>
               )}
             </button>

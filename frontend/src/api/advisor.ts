@@ -17,6 +17,10 @@ export interface ToolExecution {
   status: string;
 }
 
+export interface DenyToolExecutionResult {
+  status: "denied";
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -31,6 +35,24 @@ export interface Message {
   created_at: string;
 }
 
+export function hasPendingConfirmation(
+  messages: Message[] | undefined,
+): boolean {
+  return (
+    messages?.some((message) =>
+      message.tool_executions?.some(
+        (execution) => execution.status === "pending_confirmation",
+      ),
+    ) ?? false
+  );
+}
+
+export function getMessagesRefetchInterval(
+  messages: Message[] | undefined,
+): 2000 | false {
+  return hasPendingConfirmation(messages) ? 2000 : false;
+}
+
 export function useConversations() {
   return useQuery({
     queryKey: ["advisor", "conversations"],
@@ -42,15 +64,17 @@ export function useConversations() {
 }
 
 export function useMessages(conversationId: string | null) {
-  return useQuery({
+  return useQuery<Message[]>({
     queryKey: ["advisor", "messages", conversationId],
     queryFn: async () => {
       const { data } = await api.get<Message[]>(
-        `/advisor/conversations/${conversationId}/messages`
+        `/advisor/conversations/${conversationId}/messages`,
       );
       return data;
     },
     enabled: !!conversationId,
+    refetchInterval: (query) => getMessagesRefetchInterval(query.state.data),
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -71,22 +95,44 @@ export function useSendMessage() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["advisor", "messages", data.conversation_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["advisor", "messages", data.conversation_id],
+      });
       queryClient.invalidateQueries({ queryKey: ["advisor", "conversations"] });
     },
+  });
+}
+
+export interface ToolExecutionMutationVariables {
+  executionId: string;
+  conversationId: string;
+}
+
+function invalidateAdvisorConversation(
+  queryClient: ReturnType<typeof useQueryClient>,
+  conversationId: string,
+) {
+  queryClient.invalidateQueries({
+    queryKey: ["advisor", "messages", conversationId],
+    exact: true,
+  });
+  queryClient.invalidateQueries({
+    queryKey: ["advisor", "conversations"],
+    exact: true,
   });
 }
 
 export function useConfirmToolExecution() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (executionId: string) => {
-      const { data } = await api.post(`/advisor/tool-executions/${executionId}/confirm`);
+    mutationFn: async ({ executionId }: ToolExecutionMutationVariables) => {
+      const { data } = await api.post<Message>(
+        `/advisor/tool-executions/${executionId}/confirm`,
+      );
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["advisor", "messages"] });
-      queryClient.invalidateQueries({ queryKey: ["advisor", "conversations"] });
+    onSuccess: (_data, { conversationId }) => {
+      invalidateAdvisorConversation(queryClient, conversationId);
     },
   });
 }
@@ -94,13 +140,14 @@ export function useConfirmToolExecution() {
 export function useDenyToolExecution() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (executionId: string) => {
-      const { data } = await api.post(`/advisor/tool-executions/${executionId}/deny`);
+    mutationFn: async ({ executionId }: ToolExecutionMutationVariables) => {
+      const { data } = await api.post<DenyToolExecutionResult>(
+        `/advisor/tool-executions/${executionId}/deny`,
+      );
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["advisor", "messages"] });
-      queryClient.invalidateQueries({ queryKey: ["advisor", "conversations"] });
+    onSuccess: (_data, { conversationId }) => {
+      invalidateAdvisorConversation(queryClient, conversationId);
     },
   });
 }

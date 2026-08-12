@@ -3,6 +3,25 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-12 — Sesja 6: Odświeżanie statusów narzędzi Doradcy
+
+### Cel sesji
+Zrealizować Task 5: odświeżać statusy narzędzi oczekujących na potwierdzenie bez SSE.
+
+### Co zrobiono
+- Dodano polling wiadomości aktywnej rozmowy co 2 sekundy wyłącznie dla `pending_confirmation`.
+- Zatrzymano polling dla statusów rozstrzygniętych i braku aktywnej rozmowy; odświeżanie w tle jest wyłączone.
+- Confirm/deny mają typowane wyniki i unieważniają tylko aktywną rozmowę oraz listę rozmów.
+- Banner przekazuje `conversationId`, blokuje oba przyciski podczas mutacji i pokazuje zwięzły błąd bez usuwania bannera.
+- Dodano testy helpera `hasPendingConfirmation` i decyzji o interwale.
+
+### Decyzje techniczne
+1. Użyto `refetchInterval` callbacku TanStack Query v5 oraz `refetchIntervalInBackground: false`; opcja v5 nie nazywa się `refetchInBackground`.
+
+### Znane problemy
+- `npm run lint` nie uruchamia się, ponieważ frontend nie ma konfiguracji ESLint.
+
+---
 
 ## 2026-08-12 — Sesja 5: Konfiguracja opencode pod projekt
 
