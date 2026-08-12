@@ -121,6 +121,23 @@ async def test_create_transaction_rejects_non_pln_without_fx_rate(monkeypatch, c
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("account_currency", ["EUR", "USD"])
+async def test_create_transaction_rejects_pln_for_non_pln_account(monkeypatch, account_currency):
+    result, get_accounts, _, create_transaction = await execute_transaction(
+        monkeypatch,
+        accounts=[account("ING", account_currency)],
+        amount=5000,
+        currency="PLN",
+        account_name="ING",
+        description="Test",
+    )
+
+    assert result == {"error": f"Currency PLN does not match account currency {account_currency}"}
+    get_accounts.assert_awaited_once()
+    create_transaction.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_create_transaction_creates_balanced_pln_postings(monkeypatch):
     selected_account = account("ING")
     result, _, _, create_transaction = await execute_transaction(

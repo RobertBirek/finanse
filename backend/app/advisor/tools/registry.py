@@ -270,13 +270,18 @@ async def _execute_create_transaction(
             return {"error": f"Account '{account_name}' not found"}
         if len(matching_accounts) > 1:
             return {"error": f"Account '{account_name}' is ambiguous"}
-        account_id = matching_accounts[0].id
+        selected_account = matching_accounts[0]
     elif len(accounts) == 1:
-        account_id = accounts[0].id
+        selected_account = accounts[0]
     elif not accounts:
         return {"error": "No accounts found; account_name is required"}
     else:
         return {"error": "account_name is required when multiple accounts exist"}
+
+    account_currency = str(selected_account.currency).upper()
+    if currency != account_currency:
+        return {"error": f"Currency {currency} does not match account currency {account_currency}"}
+    account_id = selected_account.id
 
     categories = await get_categories(db, uid)
     category_id = None
