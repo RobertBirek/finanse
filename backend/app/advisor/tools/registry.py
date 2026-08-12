@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Type for async executor functions: takes db + user_id + kwargs, returns serializable dict
-ToolExecutor = Callable[[AsyncSession, str, ...], Coroutine[Any, Any, dict]]
+ToolExecutor = Callable[..., Coroutine[Any, Any, dict[str, Any]]]
 
 
 class Tool:
@@ -14,7 +14,7 @@ class Tool:
         self,
         name: str,
         description: str,
-        parameters: dict,
+        parameters: dict[str, Any],
         executor: ToolExecutor,
         autonomy_level: int = 0,
     ):
@@ -25,7 +25,7 @@ class Tool:
         self.autonomy_level = autonomy_level
 
     @property
-    def openai_schema(self) -> dict:
+    def openai_schema(self) -> dict[str, Any]:
         return {
             "type": "function",
             "function": {
@@ -41,7 +41,7 @@ class Tool:
 # ============================================================
 
 
-async def _execute_get_accounts(db: AsyncSession, user_id: str, **kwargs) -> dict:
+async def _execute_get_accounts(db: AsyncSession, user_id: str, **kwargs: Any) -> dict[str, Any]:
     import uuid as _uuid
 
     from app.finance.service import get_accounts
@@ -61,7 +61,9 @@ async def _execute_get_accounts(db: AsyncSession, user_id: str, **kwargs) -> dic
     }
 
 
-async def _execute_get_financial_summary(db: AsyncSession, user_id: str, **kwargs) -> dict:
+async def _execute_get_financial_summary(
+    db: AsyncSession, user_id: str, **kwargs: Any
+) -> dict[str, Any]:
     import uuid as _uuid
 
     from app.finance.service import get_financial_summary
@@ -77,7 +79,9 @@ async def _execute_get_financial_summary(db: AsyncSession, user_id: str, **kwarg
     }
 
 
-async def _execute_get_transactions(db: AsyncSession, user_id: str, **kwargs) -> dict:
+async def _execute_get_transactions(
+    db: AsyncSession, user_id: str, **kwargs: Any
+) -> dict[str, Any]:
     import uuid as _uuid
 
     from app.finance.service import get_transactions
@@ -99,12 +103,14 @@ async def _execute_get_transactions(db: AsyncSession, user_id: str, **kwargs) ->
     }
 
 
-async def _execute_get_today_schedule(db: AsyncSession, user_id: str, **kwargs) -> dict:
+async def _execute_get_today_schedule(
+    db: AsyncSession, user_id: str, **kwargs: Any
+) -> dict[str, Any]:
     import uuid as _uuid
 
     from app.work.service import get_today_schedule
 
-    schedule = await get_today_schedule(db, _uuid.UUID(user_id))
+    schedule: dict[str, Any] = await get_today_schedule(db, _uuid.UUID(user_id))
     return {
         "time_blocks": [
             {
@@ -114,7 +120,7 @@ async def _execute_get_today_schedule(db: AsyncSession, user_id: str, **kwargs) 
                 "end_time": b.end_time.isoformat() if b.end_time else None,
                 "block_type": b.block_type,
             }
-            for b in schedule.time_blocks
+            for b in schedule["time_blocks"]
         ],
         "tasks_due": [
             {
@@ -124,12 +130,12 @@ async def _execute_get_today_schedule(db: AsyncSession, user_id: str, **kwargs) 
                 "priority": t.priority,
                 "project_name": getattr(t, "project_name", None),
             }
-            for t in schedule.tasks_due
+            for t in schedule["tasks_due"]
         ],
     }
 
 
-async def _execute_get_tasks(db: AsyncSession, user_id: str, **kwargs) -> dict:
+async def _execute_get_tasks(db: AsyncSession, user_id: str, **kwargs: Any) -> dict[str, Any]:
     import uuid as _uuid
 
     from app.work.service import get_tasks
@@ -155,7 +161,7 @@ async def _execute_get_tasks(db: AsyncSession, user_id: str, **kwargs) -> dict:
     }
 
 
-async def _execute_get_projects(db: AsyncSession, user_id: str, **kwargs) -> dict:
+async def _execute_get_projects(db: AsyncSession, user_id: str, **kwargs: Any) -> dict[str, Any]:
     import uuid as _uuid
 
     from app.work.service import get_projects
@@ -174,7 +180,7 @@ async def _execute_get_projects(db: AsyncSession, user_id: str, **kwargs) -> dic
     }
 
 
-async def _execute_create_task(db: AsyncSession, user_id: str, **kwargs) -> dict:
+async def _execute_create_task(db: AsyncSession, user_id: str, **kwargs: Any) -> dict[str, Any]:
     import uuid as _uuid
     from datetime import date
 
@@ -203,7 +209,9 @@ async def _execute_create_task(db: AsyncSession, user_id: str, **kwargs) -> dict
     }
 
 
-async def _execute_create_time_block(db: AsyncSession, user_id: str, **kwargs) -> dict:
+async def _execute_create_time_block(
+    db: AsyncSession, user_id: str, **kwargs: Any
+) -> dict[str, Any]:
     import uuid as _uuid
     from datetime import datetime
 
@@ -233,7 +241,9 @@ async def _execute_create_time_block(db: AsyncSession, user_id: str, **kwargs) -
     }
 
 
-async def _execute_create_transaction(db: AsyncSession, user_id: str, **kwargs) -> dict:
+async def _execute_create_transaction(
+    db: AsyncSession, user_id: str, **kwargs: Any
+) -> dict[str, Any]:
     import uuid as _uuid
 
     from app.finance.schemas import PostingCreate, TransactionCreate
@@ -464,5 +474,5 @@ def get_tool_by_name(name: str) -> Tool | None:
     return None
 
 
-def get_openai_tools() -> list[dict]:
+def get_openai_tools() -> list[dict[str, Any]]:
     return [tool.openai_schema for tool in TOOLS]

@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.advisor.models import Message, ToolExecution
+from app.advisor.models import Conversation, Message, ToolExecution
 from app.advisor.schemas import (
     ConversationResponse,
     MessageResponse,
@@ -96,12 +96,16 @@ async def confirm_tool_execution(
 
     result = await db.execute(
         sa_select(ToolExecution)
-        .options(selectinload(ToolExecution.message))
-        .where(ToolExecution.id == execution_id)
+        .options(selectinload(ToolExecution.message).selectinload(Message.conversation))
+        .join(ToolExecution.message)
+        .join(Message.conversation)
+        .where(ToolExecution.id == execution_id, Conversation.user_id == current_user.id)
     )
     te = result.scalar_one_or_none()
-    if te is None or te.message.conversation.user_id != current_user.id:
+    if te is None:
         raise HTTPException(status_code=404, detail="Tool execution not found")
+    if te.status != "pending_confirmation":
+        raise HTTPException(status_code=409, detail="Tool execution is no longer pending")
 
     tool = get_tool_by_name(te.tool_name)
     if tool is None:
@@ -125,8 +129,8 @@ async def confirm_tool_execution(
             new_state={"status": "completed", "result": exec_result},
             performed_by="human",
         )
-    except Exception as e:
-        te.result = {"error": str(e)}
+    except Exception:
+        te.result = {"error": "Nie udało się wykonać narzędzia"}
         te.status = "error"
 
     await db.flush()
@@ -146,13 +150,22 @@ async def deny_tool_execution(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     from sqlalchemy import select as sa_select
+    from sqlalchemy.orm import selectinload
 
     from app.audit.service import log_event
 
-    result = await db.execute(sa_select(ToolExecution).where(ToolExecution.id == execution_id))
+    result = await db.execute(
+        sa_select(ToolExecution)
+        .options(selectinload(ToolExecution.message).selectinload(Message.conversation))
+        .join(ToolExecution.message)
+        .join(Message.conversation)
+        .where(ToolExecution.id == execution_id, Conversation.user_id == current_user.id)
+    )
     te = result.scalar_one_or_none()
     if te is None:
         raise HTTPException(status_code=404, detail="Tool execution not found")
+    if te.status != "pending_confirmation":
+        raise HTTPException(status_code=409, detail="Tool execution is no longer pending")
 
     te.status = "denied"
     te.result = {"message": "Odrzucone przez użytkownika"}

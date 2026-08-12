@@ -1,7 +1,9 @@
 import json
 import uuid
+from typing import Any, cast
 
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -108,11 +110,11 @@ async def send_message(
     await db.flush()
 
     history = await get_conversation_messages(db, user_id, conversation_id)
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
     for msg in history:
         if msg.role == "tool":
             continue
-        entry: dict = {"role": msg.role, "content": msg.content}
+        entry: dict[str, Any] = {"role": msg.role, "content": msg.content}
         if msg.tool_calls:
             entry["tool_calls"] = msg.tool_calls
         messages.append(entry)
@@ -120,12 +122,13 @@ async def send_message(
     client = _get_llm_client()
     tools = get_openai_tools()
 
-    for iteration in range(MAX_TOOL_ITERATIONS):
+    pending_confirmation = False
+    for _iteration in range(MAX_TOOL_ITERATIONS):
         try:
             response = await client.chat.completions.create(
                 model=settings.LLM_MODEL,
-                messages=messages,
-                tools=tools,
+                messages=cast(list[ChatCompletionMessageParam], messages),
+                tools=cast(list[ChatCompletionToolParam], tools),
                 tool_choice="auto",
                 temperature=0.7,
                 max_tokens=1024,
@@ -194,6 +197,7 @@ async def send_message(
             elif tool.autonomy_level >= 2:
                 result = {**arguments, "tool": tool_name}
                 status_val = "pending_confirmation"
+                pending_confirmation = True
             else:
                 try:
                     result = await tool.executor(db, str(user_id), **arguments)
@@ -224,7 +228,7 @@ async def send_message(
 
         await db.flush()
 
-        if "pending_confirmation" in [te.status for te in assistant_msg.tool_executions]:
+        if pending_confirmation:
             _update_conversation_title(conv, content, len(history))
             return assistant_msg
 
