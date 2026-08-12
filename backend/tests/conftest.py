@@ -44,6 +44,9 @@ def is_connection_unavailable_error(error: BaseException) -> bool:
             continue
         seen.add(id(current))
 
+        if isinstance(current, OSError) and not isinstance(current, PermissionError):
+            return True
+
         if isinstance(
             current,
             (

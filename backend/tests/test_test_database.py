@@ -50,6 +50,15 @@ def test_os_connection_error_is_skippable():
     assert is_connection_unavailable_error(ConnectionRefusedError("connection refused"))
 
 
+def test_wrapped_os_error_with_connection_refused_contents_is_skippable():
+    error = OperationalError(
+        "connect",
+        {},
+        OSError("Multiple exceptions: ConnectionRefusedError: [Errno 111] connection failed"),
+    )
+    assert is_connection_unavailable_error(error)
+
+
 def test_database_not_ready_error_is_skippable():
     assert is_connection_unavailable_error(asyncpg.exceptions.CannotConnectNowError())
 
