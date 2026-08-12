@@ -1,9 +1,13 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.finance.models import FinancialTransaction, Posting
 from app.finance.schemas import (
     AccountCreate,
     AccountResponse,
@@ -76,6 +80,34 @@ async def update_account_endpoint(
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
     return account
+
+
+@router.get("/accounts/{account_id}/transactions")
+async def get_account_transactions(
+    account_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    account = await get_account(db, current_user.id, account_id)
+    if account is None:
+        return JSONResponse(content={"detail": "Account not found"}, status_code=404)
+
+    result = await db.execute(
+        select(FinancialTransaction)
+        .options(selectinload(FinancialTransaction.postings))
+        .join(Posting, Posting.transaction_id == FinancialTransaction.id)
+        .where(
+            FinancialTransaction.user_id == current_user.id,
+            Posting.account_id == account_id,
+        )
+        .order_by(FinancialTransaction.date.desc(), FinancialTransaction.created_at.desc())
+        .limit(limit).offset(offset)
+    )
+    txns = result.unique().scalars().all()
+
+    return [TransactionResponse.model_validate(t) for t in txns]
 
 
 @router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)

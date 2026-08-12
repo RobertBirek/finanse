@@ -105,6 +105,17 @@ export function useTransactions(params?: { account_id?: string; limit?: number }
   });
 }
 
+export function useAccountTransactions(accountId: string | null, params?: { limit?: number }) {
+  return useQuery({
+    queryKey: ["finance", "accounts", accountId, "transactions", params],
+    queryFn: async () => {
+      const { data } = await api.get<Transaction[]>(`/finance/accounts/${accountId}/transactions`, { params });
+      return data;
+    },
+    enabled: !!accountId,
+  });
+}
+
 export function useCreateTransaction() {
   const queryClient = useQueryClient();
   return useMutation({

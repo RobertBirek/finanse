@@ -134,6 +134,12 @@ class ActualParser:
         col_is_child = self._txn_col_is_child
 
         if self._use_view:
+            # Build payee name lookup (payee column in v_transactions is UUID)
+            payee_rows = self._conn.execute(
+                "SELECT id, name FROM payees"
+            ).fetchall()
+            payee_map = {r["id"]: r["name"] for r in payee_rows}
+
             rows = self._conn.execute(
                 "SELECT id, account, category, amount, payee, notes, date "
                 "FROM {} "
@@ -176,7 +182,8 @@ class ActualParser:
                 posting2_direction = "credit"
 
             if self._use_view:
-                payee_name = r["payee"] or ""
+                payee_uuid = r["payee"] or ""
+                payee_name = payee_map.get(payee_uuid, "") if payee_uuid else ""
                 desc_parts = [payee_name] if payee_name else []
                 if r["notes"]:
                     desc_parts.append(r["notes"])
