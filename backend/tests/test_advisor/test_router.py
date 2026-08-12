@@ -26,6 +26,7 @@ class FakeSession:
         self.user_id = user_id
         self.statements = []
         self.flush = AsyncMock()
+        self.commit = AsyncMock()
         self.add = lambda _value: None
 
     async def execute(self, statement):
@@ -245,6 +246,63 @@ async def test_confirm_rolls_back_executor_flush_when_audit_fails(monkeypatch):
     assert session.mutations == []
     assert execution.status == "error"
     assert execution.result == {"error": "Nie udało się wykonać narzędzia"}
+
+
+@pytest.mark.asyncio
+async def test_confirm_treats_mutating_error_result_as_failure(monkeypatch):
+    user_id = uuid.uuid4()
+    execution = execution_for(user_id)
+    session = RollbackSession(execution)
+    audit = AsyncMock()
+
+    async def executor(db, _user_id, **_arguments):
+        db.mutations.append("created transaction")
+        await db.flush()
+        return {"error": "No accounts found"}
+
+    monkeypatch.setattr(
+        "app.advisor.tools.registry.get_tool_by_name",
+        lambda _name: SimpleNamespace(autonomy_level=2, executor=executor),
+    )
+    monkeypatch.setattr("app.audit.service.log_event", audit)
+
+    await confirm_tool_execution(
+        execution.id,
+        SimpleNamespace(id=user_id),
+        session,
+    )
+
+    assert session.mutations == []
+    assert execution.status == "error"
+    assert execution.result == {"error": "Nie udało się wykonać narzędzia"}
+    audit.assert_not_awaited()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_confirm_preserves_level_zero_error_result_behavior(monkeypatch):
+    user_id = uuid.uuid4()
+    execution = execution_for(user_id)
+    audit = AsyncMock()
+
+    async def read_executor(_db, _user_id, **_arguments):
+        return {"error": "Read failed"}
+
+    monkeypatch.setattr(
+        "app.advisor.tools.registry.get_tool_by_name",
+        lambda _name: SimpleNamespace(autonomy_level=0, executor=read_executor),
+    )
+    monkeypatch.setattr("app.audit.service.log_event", audit)
+
+    await confirm_tool_execution(
+        execution.id,
+        SimpleNamespace(id=user_id),
+        FakeSession(execution),
+    )
+
+    assert execution.status == "completed"
+    assert execution.result == {"error": "Read failed"}
+    audit.assert_awaited_once()
 
 
 class FakeAdvisorSession:

@@ -22,6 +22,10 @@ from app.identity.router import get_current_user
 router = APIRouter()
 
 
+class _MutationResultError(Exception):
+    pass
+
+
 @router.get("/conversations", response_model=list[ConversationResponse])
 async def list_conversations(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -115,6 +119,8 @@ async def confirm_tool_execution(
     try:
         async with db.begin_nested():
             exec_result = await tool.executor(db, str(current_user.id), **(te.arguments or {}))
+            if tool.autonomy_level >= 2 and "error" in exec_result:
+                raise _MutationResultError
             te.result = exec_result
             te.status = "completed"
             te.policy_check_passed = True
