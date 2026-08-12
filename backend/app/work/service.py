@@ -1,6 +1,8 @@
+import os
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, tzinfo
 from datetime import time as dt_time
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +21,23 @@ from app.work.schemas import (
 def _local_today() -> date:
     """Keep schedule dates aligned with the user's local calendar day."""
     return datetime.now(UTC).astimezone().date()
+
+
+def _local_timezone() -> tzinfo:
+    timezone_name = os.environ.get("TZ")
+    if timezone_name:
+        try:
+            return ZoneInfo(timezone_name)
+        except ZoneInfoNotFoundError:
+            pass
+    return datetime.now().astimezone().tzinfo or UTC
+
+
+def _local_day_utc_bounds(local_date: date) -> tuple[datetime, datetime]:
+    timezone = _local_timezone()
+    local_start = datetime.combine(local_date, dt_time.min, tzinfo=timezone)
+    next_local_start = datetime.combine(local_date + date.resolution, dt_time.min, tzinfo=timezone)
+    return local_start.astimezone(UTC), next_local_start.astimezone(UTC)
 
 
 async def create_project(db: AsyncSession, user_id: uuid.UUID, data: ProjectCreate) -> Project:
@@ -195,14 +214,8 @@ async def delete_time_block(db: AsyncSession, user_id: uuid.UUID, block_id: uuid
 
 
 async def get_today_schedule(db: AsyncSession, user_id: uuid.UUID) -> dict:
-    local_now = datetime.now(UTC).astimezone()
-    today = local_now.date()
-    local_start = datetime.combine(today, dt_time.min, tzinfo=local_now.tzinfo)
-    next_local_start = datetime.combine(
-        today + date.resolution, dt_time.min, tzinfo=local_now.tzinfo
-    )
-    start_of_day = local_start.astimezone(UTC)
-    end_of_day = next_local_start.astimezone(UTC)
+    today = _local_today()
+    start_of_day, end_of_day = _local_day_utc_bounds(today)
 
     stmt = (
         select(TimeBlock)

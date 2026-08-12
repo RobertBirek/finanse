@@ -3,7 +3,7 @@
 import os
 import time
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from datetime import time as dt_time
 from zoneinfo import ZoneInfo
 
@@ -11,6 +11,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.work import service as work_service
 from app.work.schemas import TimeBlockCreate
 from app.work.service import create_time_block, get_today_schedule
 
@@ -295,3 +296,37 @@ class TestWorkAPI:
             else:
                 os.environ["TZ"] = previous_tz
             time.tzset()
+
+
+@pytest.mark.parametrize(
+    ("local_date", "expected_start", "expected_end"),
+    [
+        (
+            date(2026, 3, 29),
+            datetime(2026, 3, 28, 23, tzinfo=UTC),
+            datetime(2026, 3, 29, 22, tzinfo=UTC),
+        ),
+        (
+            date(2026, 10, 25),
+            datetime(2026, 10, 24, 22, tzinfo=UTC),
+            datetime(2026, 10, 25, 23, tzinfo=UTC),
+        ),
+    ],
+)
+def test_local_day_utc_bounds_use_date_specific_dst_offset(
+    monkeypatch, local_date, expected_start, expected_end
+):
+    previous_tz = os.environ.get("TZ")
+    monkeypatch.setenv("TZ", "Europe/Warsaw")
+    time.tzset()
+
+    try:
+        bounds_helper = getattr(work_service, "_local_day_utc_bounds", None)
+        assert bounds_helper is not None
+        assert bounds_helper(local_date) == (expected_start, expected_end)
+    finally:
+        if previous_tz is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = previous_tz
+        time.tzset()
