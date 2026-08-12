@@ -9,7 +9,7 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 Zamknąć dokumentację po implementacji poprawek jakościowych Advisora, testów oraz konfiguracji frontendu. Nie zmieniać kodu i nie deklarować deployu produkcyjnego.
 
 ### Co zrobiono
-- Zweryfikowano 27 commitów `f90a4d6..HEAD`; wcześniejsza dokumentacja podawała nieaktualną liczbę 17 commitów.
+- Zweryfikowano 27 commitów `f90a4d6..ab344ad`; wcześniejsza dokumentacja podawała nieaktualną liczbę 17 commitów. Dwa późniejsze corrective docs commits pozostają poza zakresem sesji.
 - Potwierdzono atomiczność potwierdzania mutacji Advisora: blokada wiersza chroni przed równoległym wykonaniem, savepoint wycofuje częściowe zapisy executora, a błąd audit logu nie zostawia mutacji.
 - Potwierdzono bezpieczną walidację `create_transaction`: jawne `account_name`, dodatnia kwota całkowita, zgodna waluta konta oraz odrzucenie niezweryfikowanego FX.
 - Dodano i uruchomiono testy tool-calling loop, błędnych argumentów, nieznanych narzędzi, błędów executorów, limitu iteracji, potwierdzeń Level 2 i rollbacku.

@@ -8,7 +8,7 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Task 6 — Spłata długu jakościowego (2026-08-12)
 
-- [x] Przejrzano 27 commitów od `f90a4d6` oraz aktualną dokumentację; wcześniejszy zapis o 17 commitach był nieaktualny.
+- [x] Przejrzano 27 commitów z zakresu `f90a4d6..ab344ad` oraz aktualną dokumentację; wcześniejszy zapis o 17 commitach był nieaktualny.
 - [x] Uruchomiono izolowaną testową bazę PostgreSQL bez dotykania produkcji.
 - [x] Backend: Ruff `app/ tests/` i mypy `app/` przechodzą; pytest `87 passed, 16 skipped, 6 warnings` przy niedostępnej bazie lokalnej.
 - [x] Testy integracyjne: świeże uruchomienie `16 passed, 87 deselected, 12 warnings`; wcześniejszy zapis tego zestawu zawierał `15 passed`.
