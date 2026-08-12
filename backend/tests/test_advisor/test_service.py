@@ -102,6 +102,7 @@ async def test_level_zero_tool_call_is_followed_by_second_llm_response(monkeypat
 @pytest.mark.parametrize(
     ("call_name", "arguments", "tool", "expected_result", "expected_status"),
     [
+        ("get_accounts", "{", "known", {"ok": True}, "completed"),
         ("get_accounts", "not-json", "known", {"ok": True}, "completed"),
         ("missing_tool", "{}", None, {"error": "Unknown tool: missing_tool"}, "error"),
     ],
