@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, date, datetime
+from datetime import time as dt_time
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -194,16 +195,21 @@ async def delete_time_block(db: AsyncSession, user_id: uuid.UUID, block_id: uuid
 
 
 async def get_today_schedule(db: AsyncSession, user_id: uuid.UUID) -> dict:
-    today = _local_today()
-    start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0, tzinfo=UTC)
-    end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=UTC)
+    local_now = datetime.now(UTC).astimezone()
+    today = local_now.date()
+    local_start = datetime.combine(today, dt_time.min, tzinfo=local_now.tzinfo)
+    next_local_start = datetime.combine(
+        today + date.resolution, dt_time.min, tzinfo=local_now.tzinfo
+    )
+    start_of_day = local_start.astimezone(UTC)
+    end_of_day = next_local_start.astimezone(UTC)
 
     stmt = (
         select(TimeBlock)
         .where(
             TimeBlock.user_id == user_id,
             TimeBlock.start_time >= start_of_day,
-            TimeBlock.start_time <= end_of_day,
+            TimeBlock.start_time < end_of_day,
         )
         .order_by(TimeBlock.start_time)
     )

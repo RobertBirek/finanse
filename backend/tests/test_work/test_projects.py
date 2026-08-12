@@ -1,9 +1,18 @@
 """Tests for work domain."""
 
+import os
+import time
+import uuid
+from datetime import UTC, datetime, timedelta
+from datetime import time as dt_time
+from zoneinfo import ZoneInfo
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.work.schemas import TimeBlockCreate
+from app.work.service import create_time_block, get_today_schedule
 
 
 class TestWorkAPI:
@@ -241,3 +250,48 @@ class TestWorkAPI:
                 },
             )
             assert response.status_code in (400, 422)
+
+    @pytest.mark.asyncio
+    async def test_today_schedule_uses_local_midnight_boundaries(self, db_session, monkeypatch):
+        previous_tz = os.environ.get("TZ")
+        monkeypatch.setenv("TZ", "Europe/Warsaw")
+        time.tzset()
+
+        try:
+            local_zone = ZoneInfo("Europe/Warsaw")
+            local_today = datetime.now(UTC).astimezone(local_zone).date()
+            local_start = datetime.combine(local_today, dt_time.min, tzinfo=local_zone)
+            next_local_start = datetime.combine(
+                local_today + timedelta(days=1), dt_time.min, tzinfo=local_zone
+            )
+            user_id = uuid.uuid4()
+
+            at_local_start = await create_time_block(
+                db_session,
+                user_id,
+                TimeBlockCreate(
+                    title="Local midnight",
+                    start_time=(local_start + timedelta(minutes=30)).astimezone(UTC),
+                    end_time=(local_start + timedelta(hours=1)).astimezone(UTC),
+                ),
+            )
+            after_local_day = await create_time_block(
+                db_session,
+                user_id,
+                TimeBlockCreate(
+                    title="Next local midnight",
+                    start_time=(next_local_start + timedelta(minutes=30)).astimezone(UTC),
+                    end_time=(next_local_start + timedelta(hours=1)).astimezone(UTC),
+                ),
+            )
+
+            schedule = await get_today_schedule(db_session, user_id)
+
+            assert [block.id for block in schedule["time_blocks"]] == [at_local_start.id]
+            assert after_local_day.id not in [block.id for block in schedule["time_blocks"]]
+        finally:
+            if previous_tz is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = previous_tz
+            time.tzset()
