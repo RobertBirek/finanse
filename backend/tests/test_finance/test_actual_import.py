@@ -594,6 +594,8 @@ class TestFxEnrichment:
 
 
 class TestMigrationPipeline:
+    pytestmark = pytest.mark.integration
+
     @pytest.mark.asyncio
     async def test_full_pipeline_dry_run(self, db_session):
         """Full pipeline with synthetic data, writes to test DB."""

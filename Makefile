@@ -1,6 +1,8 @@
-.PHONY: dev dev-backend dev-frontend test lint typecheck migrate migration
+.PHONY: dev dev-backend dev-frontend test test-db-up test-integration lint typecheck migrate migration
 
 VENV = .venv/bin
+TEST_COMPOSE = /docker/finanse/compose.test.yaml
+TEST_DATABASE_URL ?= postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test
 
 dev:
 	@echo "Starting development environment..."
@@ -16,6 +18,12 @@ dev-frontend:
 test:
 	cd backend && $(VENV)/pytest -v
 	cd frontend && npm run test
+
+test-db-up:
+	docker compose -f $(TEST_COMPOSE) up -d --wait postgres-test
+
+test-integration: test-db-up
+	cd backend && TEST_DATABASE_URL="$(TEST_DATABASE_URL)" $(VENV)/pytest -v -m integration
 
 lint:
 	cd backend && $(VENV)/ruff check app/ tests/

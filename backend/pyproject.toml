@@ -38,6 +38,9 @@ include = ["app*", "migrations*"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: tests requiring a PostgreSQL test database",
+]
 
 [tool.ruff]
 line-length = 100
@@ -47,4 +50,3 @@ target-version = "py312"
 explicit_package_bases = true
 mypy_path = "."
 python_version = "3.12"
-

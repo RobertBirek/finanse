@@ -20,9 +20,12 @@ class TestComputeSha256:
 
 class TestDocumentService:
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_upload_creates_document(self, db_session):
         user_id = uuid.uuid4()
-        doc = await upload_document(db_session, user_id, b"%PDF-1.4 test", "test.pdf", "application/pdf")
+        doc = await upload_document(
+            db_session, user_id, b"%PDF-1.4 test", "test.pdf", "application/pdf"
+        )
         assert doc.id is not None
         assert doc.original_name == "test.pdf"
         assert doc.mime_type == "application/pdf"
@@ -30,6 +33,7 @@ class TestDocumentService:
         assert doc.status == "pending"
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_upload_deduplicates_same_hash(self, db_session):
         user_id = uuid.uuid4()
         content = b"same content"
@@ -38,6 +42,7 @@ class TestDocumentService:
         assert doc1.id == doc2.id
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_list_returns_by_user(self, db_session):
         a, b = uuid.uuid4(), uuid.uuid4()
         await upload_document(db_session, a, b"a", "a.pdf", "application/pdf")
@@ -46,6 +51,7 @@ class TestDocumentService:
         assert len(await get_documents(db_session, b)) == 1
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_get_document_by_id(self, db_session):
         user_id = uuid.uuid4()
         doc = await upload_document(db_session, user_id, b"test", "doc.pdf", "application/pdf")
