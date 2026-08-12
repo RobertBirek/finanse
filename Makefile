@@ -2,7 +2,7 @@
 
 VENV = .venv/bin
 TEST_COMPOSE = /docker/finanse/compose.test.yaml
-TEST_DATABASE_URL ?= postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test
+TEST_DATABASE_URL = postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test
 
 dev:
 	@echo "Starting development environment..."

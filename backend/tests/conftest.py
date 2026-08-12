@@ -5,14 +5,32 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.engine import make_url
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import ArgumentError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+DEFAULT_TEST_DATABASE_URL = "postgresql+asyncpg://finanse:finanse@localhost:5432/finanse_test"
+SAFE_TEST_DATABASE_HOSTS = {"localhost", "127.0.0.1"}
+SAFE_TEST_DATABASE_PORTS = {5432, 55432}
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test",
+    DEFAULT_TEST_DATABASE_URL,
 )
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+
+def is_safe_test_database_url(database_url: str) -> bool:
+    try:
+        parsed_url = make_url(database_url)
+    except (ArgumentError, ValueError):
+        return False
+
+    return (
+        parsed_url.drivername == "postgresql+asyncpg"
+        and parsed_url.host in SAFE_TEST_DATABASE_HOSTS
+        and parsed_url.port in SAFE_TEST_DATABASE_PORTS
+        and parsed_url.database == "finanse_test"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -24,16 +42,22 @@ def event_loop():
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def test_database(request):
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-    from app.database import Base
-
     if request.node.get_closest_marker("integration") is None:
-        await engine.dispose()
         yield None
         return
 
+    if not is_safe_test_database_url(TEST_DATABASE_URL):
+        pytest.skip(
+            "Unsafe TEST_DATABASE_URL: integration schema create/drop requires a local "
+            "PostgreSQL database named finanse_test on port 5432 or 55432"
+        )
+
+    from app.database import Base
+
+    engine = None
     schema_created = False
     try:
+        engine = create_async_engine(TEST_DATABASE_URL, echo=False)
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -48,10 +72,13 @@ async def test_database(request):
 
         yield engine
     finally:
-        if schema_created:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.drop_all)
-        await engine.dispose()
+        if engine is not None:
+            try:
+                if schema_created:
+                    async with engine.begin() as conn:
+                        await conn.run_sync(Base.metadata.drop_all)
+            finally:
+                await engine.dispose()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -78,10 +105,11 @@ async def async_client(db_session):
     app.dependency_overrides[get_db] = override_get_db
 
     transport = ASGITransport(app=app, raise_server_exceptions=False)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
-
-    app.dependency_overrides.clear()
+    try:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            yield client
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
