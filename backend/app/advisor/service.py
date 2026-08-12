@@ -168,7 +168,7 @@ async def send_message(
         assistant_msg = Message(
             conversation_id=conversation_id,
             role="assistant",
-            content=llm_message.content,
+            content=llm_message.content or "",
             tool_calls=raw_tool_calls,
         )
         db.add(assistant_msg)

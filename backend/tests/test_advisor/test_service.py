@@ -86,6 +86,12 @@ async def test_level_zero_tool_call_is_followed_by_second_llm_response(monkeypat
         "tool_call_id": "call-1",
         "content": '{"accounts": [{"name": "Konto główne"}]}',
     }
+    assistant_tool_message = next(
+        item
+        for item in db.added
+        if item.__class__.__name__ == "Message" and item.tool_calls is not None
+    )
+    assert assistant_tool_message.content == ""
     executions = [item for item in db.added if item.__class__.__name__ == "ToolExecution"]
     assert len(executions) == 1
     assert executions[0].status == "completed"
@@ -165,6 +171,7 @@ async def test_level_two_tool_call_stays_pending_without_executor_call(monkeypat
 
     result = await advisor_service.send_message(db, uuid.uuid4(), uuid.uuid4(), "Utwórz zadanie")
 
+    assert result.content == ""
     assert result.tool_executions[0].status == "pending_confirmation"
     assert result.tool_executions[0].result == {"title": "Zadanie", "tool": "create_task"}
     executor.assert_not_awaited()
