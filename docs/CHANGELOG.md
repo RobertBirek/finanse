@@ -5,11 +5,6 @@ Wszystkie istotne zmiany w projekcie.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — 2026-08-12
-
-### Added
-- **Testy pętli tool-calling Doradcy**: odpowiedź bez narzędzia, narzędzia Level 0 i Level 2, błędny JSON, nieznane narzędzie, błąd executora oraz limit iteracji.
-
 ## [0.3.0] — 2026-08-12
 
 ### Added

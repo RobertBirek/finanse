@@ -4,30 +4,6 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
 
-## 2026-08-12 — Sesja 6: Testy pętli tool-calling Doradcy
-
-### Cel sesji
-Zaimplementować Task 3 z zatwierdzonego planu: jednostkowe testy serwisu Advisora bez sieci, sekretów i prawdziwego API OpenAI.
-
-### Co zrobiono
-- Dodano `backend/tests/test_advisor/test_service.py` z 7 testami mockującymi odpowiedzi OpenAI.
-- Pokryto odpowiedź plain, Level 0 z drugą odpowiedzią LLM, błędny JSON, nieznane narzędzie, błąd executora, Level 2 pending bez executora oraz `MAX_TOOL_ITERATIONS`.
-- Nie było potrzeby zmiany kodu produkcyjnego Advisora.
-
-### Decyzje techniczne
-- Testy używają kontrolowanego fake'a sesji SQLAlchemy i `AsyncMock`, więc nie wymagają PostgreSQL ani połączenia z OpenAI.
-- Błędy jakościowe istniejące w `app/advisor` pozostawiono poza zakresem Task 3.
-
-### Znane problemy
-- `mypy app/advisor/` nadal zgłasza 6 wcześniejszych błędów w `identity` i narzędziach Advisora.
-- Lint całego `app/advisor` nadal zgłasza 7 wcześniejszych uwag; lint nowych testów przechodzi.
-- Testy emitują istniejące ostrzeżenia `pytest-asyncio` oraz `passlib`.
-
-### Następna sesja
-1. Rozważyć osobną spłatę pozostałych błędów mypy/lintu Advisora.
-
----
-
 ## 2026-08-12 — Sesja 5: Konfiguracja opencode pod projekt
 
 ### Cel sesji
