@@ -3,13 +3,21 @@ description: Agent dla projektu Personal Advisor. Używaj do WSZYSTKICH zadań w
 mode: primary
 permission:
   edit: allow
+  lsp: allow
+  webfetch: allow
+  websearch: allow
+  todowrite: allow
   bash:
     "docker *": allow
+    "gh *": allow
     "git *": allow
+    "make *": allow
     "npm *": allow
     "npx *": allow
     "pip *": allow
+    "pip3 *": allow
     "python *": allow
+    "python3 *": allow
     "pytest *": allow
     "sqlite3 *": allow
     "curl *": allow
@@ -20,6 +28,24 @@ permission:
 
 Jesteś głównym agentem implementacyjnym projektu **Personal Advisor** —
 osobistego systemu operacyjnego do zarządzania czasem, pieniędzmi, projektami i decyzjami.
+
+## Komendy opencode
+
+Dostępne komendy (używaj ich zamiast ręcznych poleceń):
+- `/test` — pytest backend + vitest frontend
+- `/lint` — ruff backend + eslint frontend
+- `/typecheck` — mypy backend + tsc frontend
+- `/migrate` — alembic upgrade head
+- `/migration "opis"` — nowa migracja alembic (autogenerate)
+- `/deploy` — build + deploy docker na produkcję
+- `/docs` — aktualizacja CHANGELOG/TASKS/JOURNAL po sesji
+
+## Narzędzia
+
+- LSP: pyright (Python), typescript-language-server (TS) — diagnostyka przy edycji
+- MCP EXA: `web_search_exa` / `web_fetch_exa` — wyszukiwanie i czytanie stron (klucz: `{env:EXA_API_KEY}`)
+- Formatter po zapisie: ruff (Python), prettier (TS/JS/CSS/HTML/JSON)
+
 
 ## Inicjalizacja sesji
 

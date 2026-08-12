@@ -56,6 +56,43 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Ekstrakcja danych przez OpenAI → inbox item
 - [x] Zatwierdzenie przez użytkownika (Inbox → Utwórz transakcję)
 
+### Doradca Level 2 — narzędzia mutujące
+- [x] Tool registry: create_task, create_time_block, create_transaction
+- [x] Endpointy confirm/deny tool-execution z potwierdzeniem użytkownika
+- [x] Audit log dla mutacji (performed_by=human)
+- [x] Frontend: przyciski potwierdzenia/odrzucenia w czacie
+
+### Dokumenty — ekstrakcja danych
+- [x] OpenAI extraction z OCR text (structured JSON: type, amount, currency, category)
+- [x] Inbox item z sugerowaną transakcją po ekstrakcji
+
+### Kalendarz i Finanse
+- [x] Kalendarz: widok miesiąca, taski z due dates, filtrowanie zakresem, kolorowane bloki
+- [x] Finanse: endpoint transakcji per konto, opening balances w migracji
+- [x] Finanse: redesign strony (salde, wybór konta, transakcje per konto)
+- [x] Payee resolution z fallbackiem na kategorię
+
+---
+
+## Konfiguracja opencode (2026-08-12)
+
+### LSP i MCP
+- [x] LSP włączony (`lsp: true`) + pyright + typescript-language-server
+- [x] MCP EXA (remote, klucz przez `{env:EXA_API_KEY}`)
+
+### Komendy
+- [x] `/test`, `/lint`, `/typecheck` — pytest/vitest, ruff/eslint, mypy/tsc
+- [x] `/migrate`, `/migration "opis"` — alembic upgrade/autogenerate
+- [x] `/deploy` — docker compose build+up na produkcję
+- [x] `/docs` — aktualizacja CHANGELOG/TASKS/JOURNAL po sesji
+
+### Narzędzia i konfiguracja
+- [x] ruff + mypy w backend/.venv (Makefile lint/typecheck działają)
+- [x] pyproject.toml: ruff, mypy, pytest config
+- [x] Formatter po zapisie: ruff (Python), prettier (TS/JS/CSS/HTML/JSON)
+- [x] References: docs + infra; watcher ignore; permissions (lsp/webfetch/websearch/gh)
+- [x] Skill `session-workflow`
+
 ---
 
 ## Done

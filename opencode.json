@@ -3,11 +3,55 @@
   "default_agent": "personal-advisor",
   "instructions": ["AGENTS.md"],
   "shell": "/bin/bash",
+  "lsp": {
+    "typescript": {
+      "command": ["typescript-language-server", "--stdio"]
+    }
+  },
+  "formatter": {
+    "ruff": {
+      "command": ["/opt/finanse/backend/.venv/bin/ruff", "format", "$FILE"]
+    },
+    "prettier": {
+      "command": ["/opt/finanse/frontend/node_modules/.bin/prettier", "--write", "$FILE"],
+      "extensions": [".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".json"]
+    }
+  },
+  "references": {
+    "docs": {
+      "path": "./docs",
+      "description": "Dokumentacja projektu: CHANGELOG, TASKS, JOURNAL, PRD, ADR. Czytaj przed każdą sesją."
+    },
+    "infra": {
+      "path": "/docker/finanse",
+      "description": "Infrastruktura Docker: compose.yaml, konfiguracja serwisów produkcyjnych"
+    }
+  },
+  "watcher": {
+    "ignore": ["node_modules", ".venv", "__pycache__", "*.pyc", ".git", "frontend/dist", "backend/.pytest_cache"]
+  },
+  "mcp": {
+    "exa": {
+      "type": "remote",
+      "url": "https://mcp.exa.ai/mcp",
+      "enabled": true,
+      "oauth": false,
+      "headers": {
+        "x-api-key": "{env:EXA_API_KEY}"
+      }
+    }
+  },
   "permission": {
     "edit": "allow",
+    "lsp": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "todowrite": "allow",
     "bash": {
       "docker *": "allow",
+      "gh *": "allow",
       "git *": "allow",
+      "make *": "allow",
       "npm *": "allow",
       "npx *": "allow",
       "pip3 *": "allow",
@@ -15,7 +59,6 @@
       "pytest *": "allow",
       "sqlite3 /docker/npmplus/*": "allow",
       "curl *": "allow",
-      "make *": "allow",
       "*": "ask"
     },
     "external_directory": {

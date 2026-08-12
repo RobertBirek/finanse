@@ -1,7 +1,7 @@
 {
   "name": "personal-advisor-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -34,6 +34,7 @@
     "eslint-plugin-react-refresh": "^0.4.9",
     "jsdom": "^24.1.1",
     "postcss": "^8.4.40",
+    "prettier": "^3.3.3",
     "tailwindcss": "^3.4.7",
     "typescript": "^5.5.4",
     "vite": "^5.4.0",

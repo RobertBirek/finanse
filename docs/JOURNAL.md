@@ -4,6 +4,105 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
 
+## 2026-08-12 — Sesja 5: Konfiguracja opencode pod projekt
+
+### Cel sesji
+Doposażyć opencode w narzędzia pracy: LSP, MCP EXA, komendy, formatter, skill — oraz naprawić narzędzia dev (lint/typecheck/testy).
+
+### Co zrobiono
+
+**LSP:**
+- `lsp: true` w opencode.json (w opencode 1.18.16 LSP jest domyślnie wyłączony!)
+- Zainstalowano `pyright` 1.1.411 + `typescript-language-server` 5.3.0 (npm global)
+- TypeScript LSP nie startował automatycznie — brak `package.json` w root `/opt/finanse` (built-in wymaga "typescript dependency in project"). Rozwiązanie: jawny override `lsp.typescript.command` — wymaga restartu
+
+**MCP EXA:**
+- Remote endpoint `https://mcp.exa.ai/mcp`, `oauth: false`, header `x-api-key: {env:EXA_API_KEY}` (interpolacja z env, sekret NIE w repo)
+- `EXA_API_KEY` w `~/.bashrc`; zweryfikowano `web_search_exa` end-to-end
+
+**7 komend opencode (`.opencode/command/`):**
+- `/test` (pytest+vitet), `/lint` (ruff+eslint), `/typecheck` (mypy+tsc)
+- `/migrate`, `/migration "opis"` (alembic), `/deploy` (docker), `/docs` (aktualizacja docs)
+
+**Narzędzia dev (naprawa):**
+- `ruff` 0.16.2 + `mypy` 2.3.0 w `backend/.venv` (Makefile lint/typecheck nie działały — narzędzi brakowało)
+- `pyproject.toml`: `[tool.ruff]` (line-length 100), `[tool.mypy]` (explicit_package_bases — błąd "source file found twice"), `[tool.pytest.ini_options]` (pythonpath — `ModuleNotFoundError: app`)
+- Makefile: jawne ścieżki `.venv/bin/` (wcześniej wymagał aktywowanego venv)
+
+**Formatter:** custom ruff (`$FILE`) + prettier (extensions ograniczone do kodu, `.md` wyłączone — chroni docs przed churnem)
+
+**Inne:** references (docs, infra), watcher ignore, permissions (lsp/webfetch/websearch/gh), skill `session-workflow`, agent file zsynchronizowany
+
+### Decyzje techniczne
+
+1. **`lsp: true` w opencode.json** — w 1.18.16 LSP wyłączony domyślnie; `true` włącza wszystkie built-iny, object override dla konkretnych serwerów.
+2. **MCP EXA remote zamiast local npx** — oficjalne zalecenie Exa dla OpenCode; `{env:EXA_API_KEY}` w headers = brak sekretu w repo; `oauth: false` zapobiega auto-detekcji OAuth.
+3. **Custom formatter z jawnymi ścieżkami** — PEP 668 blokuje globalny pip; ścieżki do venv/node_modules zamiast `--break-system-packages`.
+4. **TypeScript LSP wymaga root package.json** — opencode sprawdza zależności w root projektu, nie w podkatalogach; jawny command omija to sprawdzenie.
+
+### Znane problemy
+
+- **TypeScript LSP**: config dodany, wymaga restartu opencode, żeby wystartował.
+- **Dług lintowy**: 210 błędów ruff (projekt nigdy nie był lintowany; 87 auto-fixowalnych).
+- **Błędy typów**: 25 w mypy (7 plików), m.in. "Too few arguments" w `advisor/router.py:106` i `advisor/service.py:197` — możliwe realne bugi.
+- **Testy integracyjne**: wymagają PostgreSQL na `localhost:5432`, a postgres jest tylko na wewnętrznej sieci Docker (port niezpublished) — 10 testów pada, 35 przechodzi.
+
+### Następna sesja
+1. Spłata długu lintowego (ruff --fix) + błędy mypy
+2. Testy tool calling loop (Level 0 + Level 2 z potwierdzeniem)
+3. Dokumentacja testów integracyjnych (DB w Docker)
+
+---
+
+## 2026-08-11/12 — Sesja 4: Dokumenty, ekstrakcja, Level 2, kalendarz, finanse
+
+### Cel sesji
+Dokończyć Iterację 2 (Stirling OCR + ekstrakcja danych), rozszerzyć Doradcę o narzędzia mutujące (Level 2), ulepszyć kalendarz i finanse.
+
+### Co zrobiono
+
+**Stirling PDF + OCR pipeline:**
+- Worker async (Redis + ARQ): upload → SHA-256 → Stirling → OCR → tekst
+- Pipeline dwustopniowy: najpierw OCR dokumentu (poprawka po tym, że jednorazowe OCR nie działało), potem ekstrakcja tekstu
+- `documents/` — service, router, ARQ worker; frontend Dokumenty (upload, lista, podgląd)
+
+**Ekstrakcja danych finansowych (`documents/extractor.py`, 94 linie):**
+- OCR text → LLM (DeepSeek/OpenAI) → structured JSON: `type` (expense/income), `amount` w groszach, `currency`, `description`, `date`, `category_suggestion`
+- `detected=false` gdy dokument nie zawiera danych finansowych; tekst ucinany do 8000 znaków
+- Wynik → inbox item z sugerowaną transakcją → zatwierdzenie w Inbox
+
+**Doradca Level 2 — mutacje z potwierdzeniem:**
+- `registry.py`: `_execute_create_task`, `_execute_create_time_block`, `_execute_create_transaction` (167 linii)
+- Endpointy `POST /tool-executions/{id}/confirm` i `/deny`: status `pending_confirmation` → `completed`/`denied`, `policy_check_passed=true`, audit log (`performed_by=human`)
+- Frontend: przyciski potwierdzenia/odrzucenia w czacie
+
+**Kalendarz (`Calendar.tsx`, +263/-74):**
+- Widok miesiąca, taski z due dates, filtrowanie po zakresie dat, kolorowane bloki czasowe
+
+**Finanse:**
+- `actual_parser.py`: payee resolution z fallbackiem na kategorię
+- `migrate_actual.py` (+76): opening balances
+- Endpoint transakcji per konto (`/api/finance/accounts/{id}/transactions`)
+- Redesign `Finances.tsx`: 470 → 86 linii (salde, wybór konta, transakcje)
+
+### Decyzje techniczne
+
+1. **Level 2 = poziom autonomii 2** (zatwierdzenie) — mutacje NIE wykonują się bez potwierdzenia człowieka; spełnia policy engine z AGENTS.md.
+2. **Ekstrakcja przez LLM to sugestia, nie źródło prawdy** — LLM zwraca JSON, użytkownik zatwierdza w Inbox; kwoty w groszach (BIGINT).
+3. **Two-step OCR** — oddzielny krok OCR + ekstrakcja tekstu (jedno przejście Stirling zwracało binarny PDF bez tekstu).
+
+### Znane problemy
+
+- Tool call bannery nie aktualizują się w czasie rzeczywistym (widoczne po przeładowaniu) — ~~otwarte~~ częściowo: eager-loading naprawione, streaming nadal brak.
+- Brak testów dla tool calling loop (trudne mockowanie LLM API).
+- 3 daty USD bez kursu NBP (niedziele: 2026-05-30, 2026-06-14, 2026-06-21) — `base_amount_pln = source_amount`, do ręcznej korekty.
+
+### Następna sesja
+1. Konfiguracja opencode (LSP, MCP EXA, komendy) — patrz Sesja 5
+2. Spłata długu: lint, typecheck, testy integracyjne
+
+---
+
 ## 2026-08-12 — Sesja 3: Doradca z narzędziami
 
 ### Cel sesji
