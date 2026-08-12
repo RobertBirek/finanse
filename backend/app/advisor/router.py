@@ -2,6 +2,8 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from openai import OpenAIError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.advisor.models import Conversation, Message, ToolExecution
@@ -69,7 +71,7 @@ async def send_message_endpoint(
             data.conversation_id,
             data.content,
         )
-    except Exception as e:
+    except (OpenAIError, SQLAlchemyError, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     from sqlalchemy import select as sa_select
@@ -119,7 +121,7 @@ async def confirm_tool_execution(
     try:
         async with db.begin_nested():
             exec_result = await tool.executor(db, str(current_user.id), **(te.arguments or {}))
-            if tool.autonomy_level >= 2 and "error" in exec_result:
+            if getattr(tool, "autonomy_level", 0) >= 2 and "error" in exec_result:
                 raise _MutationResultError
             te.result = exec_result
             te.status = "completed"
@@ -137,7 +139,14 @@ async def confirm_tool_execution(
                 new_state={"status": "completed", "result": exec_result},
                 performed_by="human",
             )
-    except Exception:
+    except (
+        _MutationResultError,
+        SQLAlchemyError,
+        ValueError,
+        KeyError,
+        TypeError,
+        RuntimeError,
+    ):
         te.result = {"error": "Nie udało się wykonać narzędzia"}
         te.status = "error"
         te.policy_check_passed = False

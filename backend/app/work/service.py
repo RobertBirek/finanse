@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,11 @@ from app.work.schemas import (
     TimeBlockCreate,
     TimeBlockUpdate,
 )
+
+
+def _local_today() -> date:
+    """Keep schedule dates aligned with the user's local calendar day."""
+    return datetime.now(UTC).astimezone().date()
 
 
 async def create_project(db: AsyncSession, user_id: uuid.UUID, data: ProjectCreate) -> Project:
@@ -108,7 +113,7 @@ async def update_task(
         return None
     update_data = data.model_dump(exclude_unset=True)
     if "status" in update_data and update_data["status"] == "done" and task.status != "done":
-        task.completed_at = datetime.now(timezone.utc)
+        task.completed_at = datetime.now(UTC)
     for key, value in update_data.items():
         if key == "completed_at":
             continue
@@ -189,9 +194,9 @@ async def delete_time_block(db: AsyncSession, user_id: uuid.UUID, block_id: uuid
 
 
 async def get_today_schedule(db: AsyncSession, user_id: uuid.UUID) -> dict:
-    today = date.today()
-    start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0, tzinfo=timezone.utc)
-    end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=timezone.utc)
+    today = _local_today()
+    start_of_day = datetime(today.year, today.month, today.day, 0, 0, 0, tzinfo=UTC)
+    end_of_day = datetime(today.year, today.month, today.day, 23, 59, 59, tzinfo=UTC)
 
     stmt = (
         select(TimeBlock)

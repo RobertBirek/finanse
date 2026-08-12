@@ -1,12 +1,20 @@
 """Unified tool registry for Advisor. Each tool has an OpenAI function schema + executor."""
 
 from collections.abc import Callable, Coroutine
+from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Type for async executor functions: takes db + user_id + kwargs, returns serializable dict
 ToolExecutor = Callable[..., Coroutine[Any, Any, dict[str, Any]]]
+
+
+def _local_now() -> datetime:
+    """Return a naive wall-clock time for legacy local calendar inputs."""
+    return datetime.now(UTC).astimezone().replace(tzinfo=None)
 
 
 class Tool:
@@ -213,7 +221,6 @@ async def _execute_create_time_block(
     db: AsyncSession, user_id: str, **kwargs: Any
 ) -> dict[str, Any]:
     import uuid as _uuid
-    from datetime import datetime
 
     from app.work.schemas import TimeBlockCreate
     from app.work.service import create_time_block
@@ -223,8 +230,8 @@ async def _execute_create_time_block(
     end_str = kwargs.get("end_time")
     block_type = kwargs.get("block_type", "shallow")
 
-    start_time = datetime.fromisoformat(start_str) if start_str else datetime.now()
-    end_time = datetime.fromisoformat(end_str) if end_str else datetime.now()
+    start_time = datetime.fromisoformat(start_str) if start_str else _local_now()
+    end_time = datetime.fromisoformat(end_str) if end_str else _local_now()
 
     data = TimeBlockCreate(
         title=title,
@@ -332,7 +339,7 @@ async def _execute_create_transaction(
             "description": txn.description,
             "date": str(txn.date),
         }
-    except Exception as e:
+    except (SQLAlchemyError, ValidationError, ValueError, KeyError, TypeError, RuntimeError) as e:
         return {"error": str(e)}
 
 

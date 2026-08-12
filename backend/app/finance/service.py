@@ -17,6 +17,11 @@ from app.finance.schemas import (
 )
 
 
+def _local_today() -> date:
+    """Keep transaction dates aligned with the user's local calendar day."""
+    return datetime.now(UTC).astimezone().date()
+
+
 async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCreate) -> Account:
     account = Account(user_id=user_id, **data.model_dump())
     db.add(account)
@@ -137,7 +142,7 @@ async def create_transaction(
 
     txn = FinancialTransaction(
         user_id=user_id,
-        date=data.transaction_date or date.today(),
+        date=data.transaction_date or _local_today(),
         description=data.description,
         type=data.type,
         is_pending=data.is_pending,
