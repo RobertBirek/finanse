@@ -14,7 +14,7 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ### Known Limitations
 - `make lint`, `make typecheck`, `make test` i `make test-integration` bez override `VENV` nie startują w tym worktree, ponieważ brakuje `backend/.venv`; uruchomienie z `/opt/finanse/backend/.venv/bin` pozwoliło wykonać testy oraz ujawniło problemy niżej.
 - Backend `ruff` kończy się 20 błędami, a `mypy` 9 błędami.
-- `frontend/npm run lint` kończy się błędem, bo projekt nie ma konfiguracji ESLint; zależności ESLint są zainstalowane.
+- `npm run lint` w `frontend` kończy się błędem, bo projekt nie ma konfiguracji ESLint; zależności ESLint są zainstalowane.
 - Testy backendu zgłaszają 15 ostrzeżeń deprecacyjnych/runtime; nie blokują testów, ale wymagają osobnego porządku jakościowego.
 
 ## [0.3.0] — 2026-08-12
