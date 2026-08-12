@@ -21,7 +21,6 @@ from datetime import date
 from pathlib import Path
 
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -260,8 +259,8 @@ async def create_opening_balances(
                 ),
             )
             written += 1
-        except (SQLAlchemyError, ValueError, KeyError) as exc:
-            logger.warning("Could not create opening balance for %s: %s", actual_id, exc)
+        except Exception:
+            pass
 
     return written
 
@@ -418,7 +417,7 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
                     ),
                 )
                 stats["written"] += 1
-            except (SQLAlchemyError, ValueError, KeyError) as e:
+            except Exception as e:
                 errors.append(f"Failed to write {txn['actual_id']}: {e}")
                 stats["errors"] += 1
 

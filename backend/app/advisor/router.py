@@ -2,8 +2,6 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from openai import OpenAIError
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.advisor.models import Message, ToolExecution
@@ -67,7 +65,7 @@ async def send_message_endpoint(
             data.conversation_id,
             data.content,
         )
-    except (OpenAIError, SQLAlchemyError, ValueError) as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     from sqlalchemy import select as sa_select
@@ -127,7 +125,7 @@ async def confirm_tool_execution(
             new_state={"status": "completed", "result": exec_result},
             performed_by="human",
         )
-    except (SQLAlchemyError, ValueError, KeyError) as e:
+    except Exception as e:
         te.result = {"error": str(e)}
         te.status = "error"
 

@@ -1,23 +1,16 @@
-import asyncio
-import logging
 import uuid
-from pathlib import Path
 from typing import ClassVar
 
 import httpx
 from arq import create_pool
 from arq.connections import ArqRedis, RedisSettings
-from openai import OpenAIError
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import settings
 from app.database import async_session_factory
 from app.documents import service
 from app.documents.models import Document
 from app.documents.schemas import DocumentStatus
-
-logger = logging.getLogger(__name__)
 
 REDIS_SETTINGS = RedisSettings(host="redis", port=6379, database=1)
 STIRLING_OCR_URL = f"{settings.STIRLING_PDF_URL}/api/v1/misc/ocr-pdf"
@@ -32,21 +25,21 @@ async def enqueue_process_document(document_id: str):
 
 
 async def _convert_image_to_pdf(client: httpx.AsyncClient, file_path: str) -> bytes:
-    content = await asyncio.to_thread(Path(file_path).read_bytes)
-    files = {"fileInput": (Path(file_path).name, content)}
-    response = await client.post(STIRLING_IMG_TO_PDF_URL, files=files)
-    response.raise_for_status()
-    return response.content
+    with open(file_path, "rb") as f:
+        files = {"fileInput": f}
+        response = await client.post(STIRLING_IMG_TO_PDF_URL, files=files)
+        response.raise_for_status()
+        return response.content
 
 
 async def _ocr_pdf(client: httpx.AsyncClient, file_path: str) -> bytes:
     """Run OCR on PDF, return searchable PDF bytes."""
-    content = await asyncio.to_thread(Path(file_path).read_bytes)
-    files = {"fileInput": (Path(file_path).name, content)}
-    data = {"languages": "pol,eng", "ocrType": "skip-text"}
-    response = await client.post(STIRLING_OCR_URL, files=files, data=data)
-    response.raise_for_status()
-    return response.content
+    with open(file_path, "rb") as f:
+        files = {"fileInput": f}
+        data = {"languages": "pol,eng", "ocrType": "skip-text"}
+        response = await client.post(STIRLING_OCR_URL, files=files, data=data)
+        response.raise_for_status()
+        return response.content
 
 
 async def _pdf_to_text(client: httpx.AsyncClient, pdf_content: bytes) -> str:
@@ -77,7 +70,10 @@ async def process_document(ctx, document_id: str) -> None:
             async with httpx.AsyncClient(timeout=120.0) as client:
                 ocr_file = str(file_path)
                 if doc.mime_type and doc.mime_type.startswith("image/"):
-                    await _convert_image_to_pdf(client, ocr_file)
+                    _ = await _convert_image_to_pdf(client, ocr_file)
+                else:
+                    with open(ocr_file, "rb") as f:
+                        _ = f.read()
 
                 # Step 1: OCR → searchable PDF
                 ocr_pdf = await _ocr_pdf(client, ocr_file)
@@ -107,12 +103,12 @@ async def process_document(ctx, document_id: str) -> None:
                     if doc and doc.status == DocumentStatus.DONE:
                         doc.status = DocumentStatus.DONE  # keep done
                     await db.commit()
-            except (OpenAIError, SQLAlchemyError, ValueError, KeyError, TypeError) as exc:
-                logger.warning("Financial extraction failed for document %s: %s", doc_id, exc)
+            except Exception:
+                pass  # Extraction is optional — don't fail OCR for it
 
-        except (OSError, httpx.HTTPError, SQLAlchemyError, ValueError, KeyError, TypeError) as e:
+        except Exception as e:
             await service.save_extracted_text(
-                db, doc_id, f'{{"error": "{e!s}"}}', ocr_engine="stirling"
+                db, doc_id, f'{{"error": "{str(e)}"}}', ocr_engine="stirling"
             )
             await service.update_document_status(db, doc_id, DocumentStatus.ERROR)
             await db.commit()

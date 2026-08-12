@@ -3,8 +3,6 @@
 from collections.abc import Callable, Coroutine
 from typing import Any
 
-from pydantic import ValidationError
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Type for async executor functions: takes db + user_id + kwargs, returns serializable dict
@@ -207,7 +205,7 @@ async def _execute_create_task(db: AsyncSession, user_id: str, **kwargs) -> dict
 
 async def _execute_create_time_block(db: AsyncSession, user_id: str, **kwargs) -> dict:
     import uuid as _uuid
-    from datetime import UTC, datetime
+    from datetime import datetime
 
     from app.work.schemas import TimeBlockCreate
     from app.work.service import create_time_block
@@ -217,8 +215,8 @@ async def _execute_create_time_block(db: AsyncSession, user_id: str, **kwargs) -
     end_str = kwargs.get("end_time")
     block_type = kwargs.get("block_type", "shallow")
 
-    start_time = datetime.fromisoformat(start_str) if start_str else datetime.now(UTC)
-    end_time = datetime.fromisoformat(end_str) if end_str else datetime.now(UTC)
+    start_time = datetime.fromisoformat(start_str) if start_str else datetime.now()
+    end_time = datetime.fromisoformat(end_str) if end_str else datetime.now()
 
     data = TimeBlockCreate(
         title=title,
@@ -311,7 +309,7 @@ async def _execute_create_transaction(db: AsyncSession, user_id: str, **kwargs) 
             "description": txn.description,
             "date": str(txn.date),
         }
-    except (SQLAlchemyError, ValidationError, ValueError) as e:
+    except Exception as e:
         return {"error": str(e)}
 
 

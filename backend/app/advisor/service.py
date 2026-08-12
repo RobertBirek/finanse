@@ -1,9 +1,8 @@
 import json
 import uuid
 
-from openai import AsyncOpenAI, OpenAIError
+from openai import AsyncOpenAI
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.advisor.models import Conversation, Message, ToolExecution
@@ -131,7 +130,7 @@ async def send_message(
                 temperature=0.7,
                 max_tokens=1024,
             )
-        except (OpenAIError, SQLAlchemyError, ValueError) as e:
+        except Exception as e:
             assistant_msg = Message(
                 conversation_id=conversation_id,
                 role="assistant",
@@ -199,7 +198,7 @@ async def send_message(
                 try:
                     result = await tool.executor(db, str(user_id), **arguments)
                     status_val = "completed"
-                except (SQLAlchemyError, ValueError, KeyError) as e:
+                except Exception as e:
                     result = {"error": str(e)}
                     status_val = "error"
 
