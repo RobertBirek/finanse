@@ -67,6 +67,7 @@ async def test_create_transaction_rejects_ambiguous_account_name(monkeypatch):
     ("accounts", "expected_error"),
     [
         ([], "No accounts found; account_name is required"),
+        ([account("ING")], "account_name is required"),
         (
             [account("ING"), account("Gotowka")],
             "account_name is required when multiple accounts exist",
