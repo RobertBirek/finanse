@@ -17,6 +17,7 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - **Doradca — atomiczność potwierdzeń**: blokada wiersza chroni przed równoległym potwierdzeniem, a savepoint wycofuje częściowe zapisy executora i audit logu.
 - **Frontend Advisora**: polling aktywnej rozmowy co 2 sekundy działa wyłącznie przy `pending_confirmation`; po rozstrzygnięciu polling się zatrzymuje.
 - Poprawiono lokalne granice dnia i obsługę zmian czasu w harmonogramie, w tym offset DST zależny od konkretnej daty.
+- Przywrócono lokalną semantykę daty transakcji (`7cc1973`): brak jawnej daty używa bieżącego dnia użytkownika zamiast daty UTC.
 - Dodano konfigurację ESLint 8 z parserem TypeScript, regułami React Hooks/Refresh oraz środowiskiem browser/ES2022.
 
 ### Fixed
@@ -25,7 +26,7 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Poprawiono ochronę fixture testowej bazy: schemat można tworzyć i usuwać tylko w lokalnej bazie `finanse_test` na zatwierdzonym porcie; niedostępna baza powoduje pominięcie testów integracyjnych zamiast ingerencji w inną bazę.
 
 ### Verified
-- Historia `origin/main..HEAD` obejmuje 26 commitów; wcześniejszy zapis o 17 commitach był nieaktualny.
+- Historia `f90a4d6..HEAD` obejmuje 27 commitów; wcześniejszy zapis o 17 commitach był nieaktualny.
 - Backend Ruff: PASS, bez błędów.
 - Backend mypy: PASS, `46 source files`, bez błędów.
 - Backend pytest: PASS, `87 passed, 16 skipped, 6 warnings`; testy zależne od niedostępnej lokalnie bazy zostały pominięte.

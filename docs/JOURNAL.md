@@ -9,12 +9,13 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 Zamknąć dokumentację po implementacji poprawek jakościowych Advisora, testów oraz konfiguracji frontendu. Nie zmieniać kodu i nie deklarować deployu produkcyjnego.
 
 ### Co zrobiono
-- Zweryfikowano 26 commitów `origin/main..HEAD`; wcześniejsza dokumentacja podawała nieaktualną liczbę 17 commitów.
+- Zweryfikowano 27 commitów `f90a4d6..HEAD`; wcześniejsza dokumentacja podawała nieaktualną liczbę 17 commitów.
 - Potwierdzono atomiczność potwierdzania mutacji Advisora: blokada wiersza chroni przed równoległym wykonaniem, savepoint wycofuje częściowe zapisy executora, a błąd audit logu nie zostawia mutacji.
 - Potwierdzono bezpieczną walidację `create_transaction`: jawne `account_name`, dodatnia kwota całkowita, zgodna waluta konta oraz odrzucenie niezweryfikowanego FX.
 - Dodano i uruchomiono testy tool-calling loop, błędnych argumentów, nieznanych narzędzi, błędów executorów, limitu iteracji, potwierdzeń Level 2 i rollbacku.
 - Zweryfikowano izolowaną bazę PostgreSQL na `127.0.0.1:55432`; fixture ogranicza operacje schematu do lokalnej bazy `finanse_test`, a `make test-integration` usuwa kontener i sieć po zakończeniu.
 - Potwierdzono polling Advisora co 2 sekundy tylko dla `pending_confirmation` oraz poprawkę lokalnego harmonogramu uwzględniającą granice dnia i DST.
+- Udokumentowano poprawkę `7cc1973`, która przywróciła lokalną semantykę daty transakcji: brak jawnej daty używa bieżącego dnia użytkownika zamiast daty UTC.
 - Dodano konfigurację ESLint 8 i usunięto 7 błędów lintowania frontendu.
 
 ### Weryfikacja
@@ -75,7 +76,7 @@ Uzupełnić brakującą konfigurację ESLint i domknąć frontendowy quality gat
 Przejrzeć historię Task 1-5, wykonać pełną dostępną weryfikację i udokumentować rzeczywisty stan bez zmian w kodzie, deployu ani migracji produkcyjnej.
 
 ### Co zrobiono
-- Przejrzano 17 commitów `origin/main..HEAD` w worktree `quality-advisor` oraz aktualne dokumenty projektu. Liczba była poprawna dla tego wcześniejszego punktu historii; końcowy zakres branchu wyniósł 26 commitów.
+- Przejrzano 17 commitów `origin/main..HEAD` w worktree `quality-advisor` oraz aktualne dokumenty projektu. Liczba była poprawna dla tego wcześniejszego punktu historii; końcowy zakres sesji wyniósł 27 commitów od `f90a4d6` do `ab344ad`.
 - Uruchomiono izolowany PostgreSQL z `/docker/finanse/compose.test.yaml` na `127.0.0.1:55432`; testowy kontener został posprzątany przez `make test-integration`.
 - Pełny backend pytest: `81 passed, 15 warnings`.
 - Backend testy integracyjne: `15 passed, 66 deselected, 12 warnings` w ówczesnym uruchomieniu; późniejszy test zwiększył świeży wynik do 16.

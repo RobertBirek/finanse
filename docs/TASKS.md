@@ -8,13 +8,14 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Task 6 — Spłata długu jakościowego (2026-08-12)
 
-- [x] Przejrzano 26 commitów ponad `origin/main` oraz aktualną dokumentację; wcześniejszy zapis o 17 commitach był nieaktualny.
+- [x] Przejrzano 27 commitów od `f90a4d6` oraz aktualną dokumentację; wcześniejszy zapis o 17 commitach był nieaktualny.
 - [x] Uruchomiono izolowaną testową bazę PostgreSQL bez dotykania produkcji.
 - [x] Backend: Ruff `app/ tests/` i mypy `app/` przechodzą; pytest `87 passed, 16 skipped, 6 warnings` przy niedostępnej bazie lokalnej.
 - [x] Testy integracyjne: świeże uruchomienie `16 passed, 87 deselected, 12 warnings`; wcześniejszy zapis tego zestawu zawierał `15 passed`.
 - [x] Frontend: ESLint, Vitest `4 passed`, TypeScript typecheck i Vite production build.
 - [x] Dodano testy pętli tool-calling, atomiczności/rollbacku potwierdzeń oraz bezpiecznej walidacji mutacji finansowych.
 - [x] Doradca odświeża oczekujące potwierdzenia pollingiem co 2 sekundy; harmonogram używa lokalnych granic dnia i offsetu DST dla konkretnej daty.
+- [x] Przywrócono lokalną datę transakcji (`7cc1973`): brak jawnej daty używa bieżącego dnia użytkownika, nie dnia UTC.
 - [x] Zapisano dokładne wyniki i ograniczenia w CHANGELOG/JOURNAL.
 - [x] Frontend lint: dodano konfigurację ESLint i usunięto 7 błędów wykrytych w kodzie.
 
