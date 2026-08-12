@@ -62,7 +62,7 @@ class TestRegisterAndLogin:
                     "display_name": "Test User",
                 },
             )
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["email"] == "test@example.com"
             assert data["display_name"] == "Test User"
@@ -89,7 +89,7 @@ class TestRegisterAndLogin:
                     "display_name": "User 2",
                 },
             )
-            assert response.status_code == 400
+            assert response.status_code == 409
 
     @pytest.mark.asyncio
     async def test_login_success(self):

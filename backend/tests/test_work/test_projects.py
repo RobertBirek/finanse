@@ -40,7 +40,7 @@ class TestWorkAPI:
                     "status": "active",
                 },
             )
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["name"] == "Personal Advisor MVP"
             assert data["status"] == "active"
@@ -131,7 +131,7 @@ class TestWorkAPI:
                     "estimated_minutes": 240,
                 },
             )
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["title"] == "Implement ledger"
             assert data["project_id"] == project_id
@@ -167,7 +167,7 @@ class TestWorkAPI:
                     "priority": "medium",
                 },
             )
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["project_id"] is None
 
@@ -203,7 +203,7 @@ class TestWorkAPI:
                     "title": "Implementacja księgi",
                 },
             )
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["block_type"] == "deep_work"
             assert data["title"] == "Implementacja księgi"

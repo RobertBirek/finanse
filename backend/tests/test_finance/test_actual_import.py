@@ -274,6 +274,8 @@ class TestActualParserTransactions:
             acct TEXT, category TEXT, amount INTEGER, description TEXT,
             notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
         );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
         """
         inserts = [
             "INSERT INTO accounts VALUES ('acc_ing', 'ING', 0, 0, 0)",
@@ -308,6 +310,8 @@ class TestActualParserTransactions:
             acct TEXT, category TEXT, amount INTEGER, description TEXT,
             notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
         );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
         """
         inserts = [
             "INSERT INTO accounts VALUES ('acc_ing', 'ING', 0, 0, 0)",
@@ -339,6 +343,8 @@ class TestActualParserTransactions:
             acct TEXT, category TEXT, amount INTEGER, description TEXT,
             notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
         );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
         """
         inserts = [
             "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
@@ -385,6 +391,8 @@ class TestActualParserTransactions:
             acct TEXT, category TEXT, amount INTEGER, description TEXT,
             notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
         );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
         """
         inserts = [
             "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
@@ -620,16 +628,22 @@ class TestMigrationPipeline:
             acct TEXT, category TEXT, amount INTEGER, description TEXT,
             notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
         );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
         """
         inserts = [
             "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
             "INSERT INTO accounts VALUES ('acc2', 'Gotowka', 0, 0, 0)",
             "INSERT INTO categories VALUES ('cat1', 'Jedzenie', 0, 'g1', 0)",
             "INSERT INTO categories VALUES ('cat2', 'Pensja', 1, 'g2', 0)",
-            "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'cat1', -5000, NULL, 'Biedronka', 20260701, NULL, 0)",
-            "INSERT INTO transactions VALUES ('tx2', 0, 0, NULL, 'acc1', 'cat2', 500000, NULL, 'Wyplata', 20260701, NULL, 0)",
-            "INSERT INTO transactions VALUES ('tx_a', 0, 0, NULL, 'acc1', NULL, -20000, NULL, NULL, 20260701, 'link1', 0)",
-            "INSERT INTO transactions VALUES ('tx_b', 0, 0, NULL, 'acc2', NULL, 20000, NULL, NULL, 20260701, 'link1', 0)",
+            "INSERT INTO payees VALUES ('pay1', 'Biedronka')",
+            "INSERT INTO payees VALUES ('pay2', 'Wyplata')",
+            "INSERT INTO payee_mapping VALUES ('pm1', 'tx1', 'pay1')",
+            "INSERT INTO payee_mapping VALUES ('pm2', 'tx2', 'pay2')",
+            "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'cat1', -5000, 'pm1', NULL, 20260701, NULL, 0)",
+            "INSERT INTO transactions VALUES ('tx2', 0, 0, NULL, 'acc1', 'cat2', 500000, 'pm2', NULL, 20260701, NULL, 0)",
+            "INSERT INTO transactions VALUES ('tx_a', 0, 0, NULL, 'acc1', NULL, -20000, NULL, NULL, 20260701, 'tx_b', 0)",
+            "INSERT INTO transactions VALUES ('tx_b', 0, 0, NULL, 'acc2', NULL, 20000, NULL, NULL, 20260701, 'tx_a', 0)",
             "INSERT INTO transactions VALUES ('parent1', 1, 0, NULL, 'acc1', NULL, -10000, NULL, NULL, 20260701, NULL, 0)",
             "INSERT INTO transactions VALUES ('child1', 0, 1, 'parent1', 'acc1', 'cat1', -6000, NULL, NULL, 20260701, NULL, 0)",
             "INSERT INTO transactions VALUES ('child2', 0, 1, 'parent1', 'acc1', 'cat1', -4000, NULL, NULL, 20260701, NULL, 0)",
@@ -714,9 +728,9 @@ class TestMigrationPipeline:
             )
             written += 1
 
-        assert written == 5
+        assert written == 4
 
         db_txns = await get_transactions(db_session, user_id, limit=100)
-        assert len(db_txns) == 5
+        assert len(db_txns) == 4
 
         os.unlink(db_path)
