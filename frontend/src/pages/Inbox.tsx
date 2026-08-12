@@ -3,6 +3,7 @@ import {
   useInboxItems,
   useCreateInboxItem,
   useProcessInboxItem,
+  type ProcessTargetType,
 } from "../api/inbox";
 
 const TARGET_LABELS: Record<string, string> = {
@@ -15,12 +16,19 @@ const TARGET_LABELS: Record<string, string> = {
 };
 
 export function Inbox() {
-  const [filter, setFilter] = useState<"unprocessed" | "processed" | "all">("unprocessed");
+  const [filter, setFilter] = useState<"unprocessed" | "processed" | "all">(
+    "unprocessed",
+  );
   const [content, setContent] = useState("");
 
-  const processed = filter === "processed" ? true : filter === "unprocessed" ? false : undefined;
+  const processed =
+    filter === "processed"
+      ? true
+      : filter === "unprocessed"
+        ? false
+        : undefined;
   const { data: items, isLoading } = useInboxItems(
-    processed !== undefined ? { processed } : undefined
+    processed !== undefined ? { processed } : undefined,
   );
   const createItem = useCreateInboxItem();
   const processItem = useProcessInboxItem();
@@ -30,15 +38,13 @@ export function Inbox() {
     if (!content.trim()) return;
     createItem.mutate(
       { content: content.trim() },
-      { onSuccess: () => setContent("") }
+      { onSuccess: () => setContent("") },
     );
   };
 
-  const handleProcess = (id: string, target_type: string) => {
-    processItem.mutate({ id, target_type: target_type as any });
+  const handleProcess = (id: string, target_type: ProcessTargetType) => {
+    processItem.mutate({ id, target_type });
   };
-
-  const unprocessed = items?.filter((i) => !i.is_processed) || [];
 
   return (
     <div className="max-w-3xl">
@@ -77,7 +83,11 @@ export function Inbox() {
                 : "text-gray-400 hover:text-gray-200"
             }`}
           >
-            {f === "unprocessed" ? "Nieprzetworzone" : f === "processed" ? "Przetworzone" : "Wszystkie"}
+            {f === "unprocessed"
+              ? "Nieprzetworzone"
+              : f === "processed"
+                ? "Przetworzone"
+                : "Wszystkie"}
           </button>
         ))}
       </div>
@@ -99,9 +109,7 @@ export function Inbox() {
           items?.map((item) => (
             <div
               key={item.id}
-              className={`card ${
-                item.is_processed ? "opacity-60" : ""
-              }`}
+              className={`card ${item.is_processed ? "opacity-60" : ""}`}
             >
               <p className="text-white text-sm mb-2">{item.content}</p>
               {item.agent_suggestion?.suggested_type && !item.is_processed && (
@@ -131,18 +139,18 @@ export function Inbox() {
                 </span>
                 {!item.is_processed && (
                   <div className="flex gap-2">
-                    {(["task", "project", "transaction", "reference"] as const).map(
-                      (type) => (
-                        <button
-                          key={type}
-                          onClick={() => handleProcess(item.id, type)}
-                          disabled={processItem.isPending}
-                          className="px-3 py-1 text-xs rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors disabled:opacity-50"
-                        >
-                          → {TARGET_LABELS[type]}
-                        </button>
-                      )
-                    )}
+                    {(
+                      ["task", "project", "transaction", "reference"] as const
+                    ).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => handleProcess(item.id, type)}
+                        disabled={processItem.isPending}
+                        className="px-3 py-1 text-xs rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors disabled:opacity-50"
+                      >
+                        → {TARGET_LABELS[type]}
+                      </button>
+                    ))}
                   </div>
                 )}
                 {item.is_processed && item.target_type && (

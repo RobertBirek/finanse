@@ -10,11 +10,11 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ### Changed
 - **Task 6 — weryfikacja jakościowa**: potwierdzono pełny zestaw testów backendu (`81 passed`) po uruchomieniu izolowanej bazy PostgreSQL oraz testy integracyjne (`15 passed`); frontend Vitest (`4 passed`), typecheck i build również przeszły.
 - Udokumentowano wyniki weryfikacji wszystkich dostępnych ścieżek Makefile bez modyfikowania kodu ani wdrażania zmian.
+- Skonfigurowano ESLint 8 dla frontendu z parserem TypeScript, regułami React Hooks/Refresh i środowiskiem browser/ES2022; lint przechodzi bez ostrzeżeń.
 
 ### Known Limitations
 - `make lint`, `make typecheck`, `make test` i `make test-integration` bez override `VENV` nie startują w tym worktree, ponieważ brakuje `backend/.venv`; uruchomienie z `/opt/finanse/backend/.venv/bin` pozwoliło wykonać testy oraz ujawniło problemy niżej.
 - Backend `ruff` kończy się 20 błędami, a `mypy` 9 błędami.
-- `npm run lint` w `frontend` kończy się błędem, bo projekt nie ma konfiguracji ESLint; zależności ESLint są zainstalowane.
 - Testy backendu zgłaszają 15 ostrzeżeń deprecacyjnych/runtime; nie blokują testów, ale wymagają osobnego porządku jakościowego.
 
 ## [0.3.0] — 2026-08-12

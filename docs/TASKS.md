@@ -14,7 +14,7 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Frontend: Vitest `4 passed`, TypeScript typecheck i Vite production build.
 - [x] Zapisano dokładne wyniki i ograniczenia w CHANGELOG/JOURNAL.
 - [ ] Backend lint/typecheck: pozostaje 20 błędów ruff i 9 błędów mypy.
-- [ ] Frontend lint: brak konfiguracji ESLint mimo obecnych zależności.
+- [x] Frontend lint: dodano konfigurację ESLint i usunięto 7 błędów wykrytych w kodzie.
 
 Weryfikacja nie zmienia statusu pozostałego długu jakościowego. Nie wykonano deployu ani migracji produkcyjnej.
 

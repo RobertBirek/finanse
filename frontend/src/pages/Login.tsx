@@ -10,6 +10,9 @@ export function Login() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const loginError = loginMutation.error as {
+    response?: { data?: { detail?: string } };
+  } | null;
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -46,7 +49,7 @@ export function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {loginMutation.isError && (
               <div className="bg-red-900/30 border border-red-800 text-red-400 px-4 py-3 rounded-lg text-sm">
-                {(loginMutation.error as any)?.response?.data?.detail ||
+                {loginError?.response?.data?.detail ||
                   "Nieprawidłowy email lub hasło"}
               </div>
             )}

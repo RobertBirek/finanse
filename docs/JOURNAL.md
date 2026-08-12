@@ -3,6 +3,31 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-12 — Sesja 8: Konfiguracja ESLint frontendu
+
+### Cel sesji
+Uzupełnić brakującą konfigurację ESLint i domknąć frontendowy quality gate w worktree `quality-advisor`.
+
+### Co zrobiono
+- Potwierdzono ESLint `8.57.1`, `@typescript-eslint` `7.18.0`, `eslint-plugin-react-hooks` `4.6.2` oraz `eslint-plugin-react-refresh` `0.4.x`.
+- Dodano `frontend/.eslintrc.cjs` w formacie legacy z parserem TypeScript, regułami React Hooks/Refresh oraz env browser/ES2022.
+- Usunięto 7 błędów lintowych ujawnionych przez konfigurację: nieużywane deklaracje/importy oraz dwa niejawne `any`, bez szerokich wyłączeń reguł.
+- Nie zmieniono zachowania aplikacji ani nie dodano testów, ponieważ zadanie dotyczyło wyłącznie konfiguracji jakościowej.
+
+### Weryfikacja
+- `cd frontend && npm run lint` — PASS.
+- `cd frontend && npm run typecheck` — PASS.
+- `cd frontend && npm run test` — PASS: 1 plik, 4 testy.
+- `cd frontend && npm run build` — PASS: Vite production build.
+
+### Decyzje techniczne
+- Wybrano `.eslintrc.cjs`, ponieważ projekt używa ESLint 8 i nie wymaga migracji do flat config.
+- Pozostawiono `--report-unused-disable-directives` i `--max-warnings 0` ze skryptu npm; nie dodano globalnych disable.
+
+### Znane problemy
+- Backendowy dług jakościowy z Task 6 pozostaje bez zmian: 20 błędów ruff i 9 błędów mypy.
+
+---
 ## 2026-08-12 — Sesja 7: Task 6 — weryfikacja jakościowa
 
 ### Cel sesji

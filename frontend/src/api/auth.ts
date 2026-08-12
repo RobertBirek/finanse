@@ -3,9 +3,6 @@ import { useAuthStore } from "../stores/authStore";
 import api from "../lib/api";
 
 export function useCurrentUser() {
-  const fetchUser = useAuthStore((s) => s.fetchUser);
-  const setUser = useAuthStore.getState;
-
   return useQuery({
     queryKey: ["auth", "me"],
     queryFn: async () => {
@@ -21,7 +18,13 @@ export function useLogin() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+    mutationFn: async ({
+      email,
+      password,
+    }: {
+      email: string;
+      password: string;
+    }) => {
       await login(email, password);
     },
     onSuccess: () => {
