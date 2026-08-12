@@ -61,6 +61,7 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Endpointy confirm/deny tool-execution z potwierdzeniem użytkownika
 - [x] Audit log dla mutacji (performed_by=human)
 - [x] Frontend: przyciski potwierdzenia/odrzucenia w czacie
+- [x] Testy pętli tool-calling: odpowiedź plain, Level 0, Level 2 pending, błędy i MAX_TOOL_ITERATIONS
 
 ### Dokumenty — ekstrakcja danych
 - [x] OpenAI extraction z OCR text (structured JSON: type, amount, currency, category)
