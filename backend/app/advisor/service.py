@@ -214,6 +214,7 @@ async def send_message(
                 status=status_val,
                 autonomy_level=tool.autonomy_level if tool else 0,
             )
+            assistant_msg.tool_executions.append(tool_exec)
             db.add(tool_exec)
 
             messages.append(

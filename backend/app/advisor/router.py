@@ -100,9 +100,10 @@ async def confirm_tool_execution(
         .join(ToolExecution.message)
         .join(Message.conversation)
         .where(ToolExecution.id == execution_id, Conversation.user_id == current_user.id)
+        .with_for_update(of=ToolExecution)
     )
     te = result.scalar_one_or_none()
-    if te is None:
+    if te is None or te.message.conversation.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Tool execution not found")
     if te.status != "pending_confirmation":
         raise HTTPException(status_code=409, detail="Tool execution is no longer pending")
@@ -160,9 +161,10 @@ async def deny_tool_execution(
         .join(ToolExecution.message)
         .join(Message.conversation)
         .where(ToolExecution.id == execution_id, Conversation.user_id == current_user.id)
+        .with_for_update(of=ToolExecution)
     )
     te = result.scalar_one_or_none()
-    if te is None:
+    if te is None or te.message.conversation.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Tool execution not found")
     if te.status != "pending_confirmation":
         raise HTTPException(status_code=409, detail="Tool execution is no longer pending")
