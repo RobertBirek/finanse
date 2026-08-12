@@ -252,6 +252,7 @@ async def test_confirm_rolls_back_executor_flush_when_audit_fails(monkeypatch):
 async def test_confirm_treats_mutating_error_result_as_failure(monkeypatch):
     user_id = uuid.uuid4()
     execution = execution_for(user_id)
+    execution.tool_name = "create_transaction"
     session = RollbackSession(execution)
     audit = AsyncMock()
 
@@ -277,6 +278,29 @@ async def test_confirm_treats_mutating_error_result_as_failure(monkeypatch):
     assert execution.result == {"error": "Nie udało się wykonać narzędzia"}
     audit.assert_not_awaited()
     session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_confirm_marks_invalid_create_transaction_as_error(monkeypatch):
+    user_id = uuid.uuid4()
+    execution = execution_for(user_id)
+    execution.tool_name = "create_transaction"
+    execution.arguments = {"amount": 0, "account_name": "ING"}
+    session = RollbackSession(execution)
+
+    monkeypatch.setattr("app.audit.service.log_event", AsyncMock())
+    get_accounts = AsyncMock()
+    monkeypatch.setattr("app.finance.service.get_accounts", get_accounts)
+
+    await confirm_tool_execution(
+        execution.id,
+        SimpleNamespace(id=user_id),
+        session,
+    )
+
+    assert execution.status == "error"
+    assert execution.result == {"error": "Nie udało się wykonać narzędzia"}
+    get_accounts.assert_not_awaited()
 
 
 @pytest.mark.asyncio

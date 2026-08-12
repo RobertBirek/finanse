@@ -252,23 +252,31 @@ async def _execute_create_transaction(
     uid = _uuid.UUID(user_id)
     txn_type = kwargs.get("type", "expense")
     amount = kwargs.get("amount", 0)
-    currency = kwargs.get("currency", "PLN")
+    currency = str(kwargs.get("currency", "PLN")).upper()
     description = kwargs.get("description", "Nowa transakcja")
-    account_name = kwargs.get("account_name", "")
+    account_name = kwargs.get("account_name")
     category_name = kwargs.get("category_name", "")
 
+    if type(amount) is not int or amount <= 0:
+        return {"error": "Amount must be a positive integer"}
+
+    if currency != "PLN":
+        return {"error": f"Advisor transactions in {currency} require a verified FX rate"}
+
     accounts = await get_accounts(db, uid)
-    account_id = None
-    for a in accounts:
-        if a.name.lower() == account_name.lower() or not account_name:
-            account_id = a.id
-            break
-
-    if not account_id and accounts:
+    if account_name:
+        matching_accounts = [a for a in accounts if a.name.lower() == account_name.lower()]
+        if not matching_accounts:
+            return {"error": f"Account '{account_name}' not found"}
+        if len(matching_accounts) > 1:
+            return {"error": f"Account '{account_name}' is ambiguous"}
+        account_id = matching_accounts[0].id
+    elif len(accounts) == 1:
         account_id = accounts[0].id
-
-    if not account_id:
-        return {"error": "No accounts found"}
+    elif not accounts:
+        return {"error": "No accounts found; account_name is required"}
+    else:
+        return {"error": "account_name is required when multiple accounts exist"}
 
     categories = await get_categories(db, uid)
     category_id = None
@@ -445,6 +453,7 @@ TOOLS = [
                 },
                 "amount": {
                     "type": "integer",
+                    "minimum": 1,
                     "description": "Kwota w groszach/centach (np. 50 PLN = 5000)",
                 },
                 "currency": {
