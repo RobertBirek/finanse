@@ -5,6 +5,18 @@ Wszystkie istotne zmiany w projekcie.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — 2026-08-12
+
+### Changed
+- **Task 6 — weryfikacja jakościowa**: potwierdzono pełny zestaw testów backendu (`81 passed`) po uruchomieniu izolowanej bazy PostgreSQL oraz testy integracyjne (`15 passed`); frontend Vitest (`4 passed`), typecheck i build również przeszły.
+- Udokumentowano wyniki weryfikacji wszystkich dostępnych ścieżek Makefile bez modyfikowania kodu ani wdrażania zmian.
+
+### Known Limitations
+- `make lint`, `make typecheck`, `make test` i `make test-integration` bez override `VENV` nie startują w tym worktree, ponieważ brakuje `backend/.venv`; uruchomienie z `/opt/finanse/backend/.venv/bin` pozwoliło wykonać testy oraz ujawniło problemy niżej.
+- Backend `ruff` kończy się 20 błędami, a `mypy` 9 błędami.
+- `frontend/npm run lint` kończy się błędem, bo projekt nie ma konfiguracji ESLint; zależności ESLint są zainstalowane.
+- Testy backendu zgłaszają 15 ostrzeżeń deprecacyjnych/runtime; nie blokują testów, ale wymagają osobnego porządku jakościowego.
+
 ## [0.3.0] — 2026-08-12
 
 ### Added

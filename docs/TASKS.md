@@ -6,6 +6,18 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 6 — Spłata długu jakościowego (2026-08-12)
+
+- [x] Przejrzano wszystkie 17 commitów Task 1-5 ponad `origin/main` oraz aktualną dokumentację.
+- [x] Uruchomiono izolowaną testową bazę PostgreSQL bez dotykania produkcji.
+- [x] Backend: pełny pytest `81 passed`; testy integracyjne `15 passed`.
+- [x] Frontend: Vitest `4 passed`, TypeScript typecheck i Vite production build.
+- [x] Zapisano dokładne wyniki i ograniczenia w CHANGELOG/JOURNAL.
+- [ ] Backend lint/typecheck: pozostaje 20 błędów ruff i 9 błędów mypy.
+- [ ] Frontend lint: brak konfiguracji ESLint mimo obecnych zależności.
+
+Weryfikacja nie zmienia statusu pozostałego długu jakościowego. Nie wykonano deployu ani migracji produkcyjnej.
+
 ## Iteracja 1 — Pierwszy Vertical Slice (MVP)
 
 ### Inbox → Task

@@ -3,6 +3,50 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-12 — Sesja 7: Task 6 — weryfikacja jakościowa
+
+### Cel sesji
+Przejrzeć historię Task 1-5, wykonać pełną dostępną weryfikację i udokumentować rzeczywisty stan bez zmian w kodzie, deployu ani migracji produkcyjnej.
+
+### Co zrobiono
+- Przejrzano 17 commitów `origin/main..HEAD` w worktree `quality-advisor` oraz aktualne dokumenty projektu.
+- Uruchomiono izolowany PostgreSQL z `/docker/finanse/compose.test.yaml` na `127.0.0.1:55432`; testowy kontener został posprzątany przez `make test-integration`.
+- Pełny backend pytest: `81 passed, 15 warnings`.
+- Backend testy integracyjne: `15 passed, 66 deselected, 12 warnings`.
+- Frontend Vitest: `1 test file passed, 4 tests passed`; `npm run typecheck` zakończył się kodem 0; `npm run build` zakończył się kodem 0.
+- Nie zmieniono kodu, nie uruchomiono migracji ani deployu produkcyjnego.
+
+### Komendy i wyniki
+- `make lint` — FAIL, kod 127: brak `backend/.venv/bin/ruff`.
+- `make typecheck` — FAIL, kod 127: brak `backend/.venv/bin/mypy`.
+- `make test` — FAIL, kod 127: brak `backend/.venv/bin/pytest`.
+- `make test-integration` — FAIL, kod 127 bez override `VENV`; baza wystartowała, ale brak lokalnego pytest.
+- `TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest -v` (w `backend`) — PASS: `81 passed, 15 warnings`.
+- `make VENV=/opt/finanse/backend/.venv/bin test` — PASS: backend `66 passed, 15 skipped`; frontend `4 passed` (uruchomienie równoległe z integracją zatrzymało bazę po zakończeniu integracji).
+- `make VENV=/opt/finanse/backend/.venv/bin test-integration` — PASS: `15 passed, 66 deselected`.
+- `make VENV=/opt/finanse/backend/.venv/bin lint` — FAIL: ruff zgłasza 20 błędów.
+- `make VENV=/opt/finanse/backend/.venv/bin typecheck` — FAIL: mypy zgłasza 9 błędów.
+- `npm run test` (w `frontend`) — PASS: `1 test file passed, 4 tests passed`.
+- `npm run lint` (w `frontend`) — FAIL: brak konfiguracji ESLint, mimo zainstalowanych zależności.
+- `npm run typecheck` (w `frontend`) — PASS.
+- `npm run build` (w `frontend`) — PASS: Vite wygenerował `dist`.
+
+### Decyzje techniczne
+1. Nie kopiowano ani nie tworzono `backend/.venv` w worktree; użyto istniejącego venv poza repo wyłącznie do weryfikacji, aby nie modyfikować kodu i zachować reprodukowalność znanego ograniczenia.
+2. Nie naprawiano lint/typecheck: nie było jasnej regresji z Task 1-5 blokującej testy, a polecenie sesji wymagało pozostawienia kodu bez zmian.
+
+### Znane problemy
+- Ruff: 20 błędów, głównie `BLE001`, `DTZ`, `UP017`, `ASYNC230` i importy.
+- Mypy: 9 błędów w `actual_parser.py`, integracjach typów użytkownika z narzędziami oraz brakujących stubach `jose`/`passlib`.
+- Frontend ESLint: brak pliku konfiguracyjnego; sam pakiet i pluginy są obecne.
+- Pytest: ostrzeżenia dotyczą m.in. scope fixture `pytest-asyncio`, `passlib`/`argon2`, `python-jose`, a także nieoczekiwanego `RuntimeWarning` w teście NBP.
+
+### Następna sesja
+1. Uzupełnić konfigurację ESLint i zależności/typy wymagane przez mypy.
+2. Usunąć 20 błędów ruff po osobnym przeglądzie semantycznym.
+3. Uporządkować ostrzeżenia testowe, zwłaszcza konfigurację event loop i mock NBP.
+
+---
 ## 2026-08-12 — Sesja 6: Odświeżanie statusów narzędzi Doradcy
 
 ### Cel sesji
