@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.advisor.tools.registry import _execute_create_transaction, get_tool_by_name
+from app.finance.schemas import AccountCreate, CategoryCreate
+from app.finance.service import create_account, create_category, get_transaction
 
 
 def account(name: str, currency: str = "PLN"):
@@ -157,6 +159,10 @@ async def test_create_transaction_creates_balanced_pln_postings(monkeypatch):
     assert [posting.base_amount_pln for posting in transaction_data.postings] == [5000, 5000]
     assert [posting.fx_rate for posting in transaction_data.postings] == [1.0, 1.0]
     assert [posting.direction for posting in transaction_data.postings] == ["credit", "debit"]
+    assert [posting.account_id for posting in transaction_data.postings] == [
+        selected_account.id,
+        None,
+    ]
     assert (
         sum(
             posting.base_amount_pln if posting.direction == "debit" else -posting.base_amount_pln
@@ -164,6 +170,37 @@ async def test_create_transaction_creates_balanced_pln_postings(monkeypatch):
         )
         == 0
     )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_create_transaction_creates_category_only_pln_posting(db_session):
+    user_id = uuid.uuid4()
+    account_record = await create_account(
+        db_session, user_id, AccountCreate(name="ING", type="checking")
+    )
+    category_record = await create_category(
+        db_session, user_id, CategoryCreate(name="Jedzenie", type="expense")
+    )
+
+    result = await _execute_create_transaction(
+        db_session,
+        str(user_id),
+        type="expense",
+        amount=5000,
+        currency="PLN",
+        account_name="ING",
+        category_name="Jedzenie",
+        description="Zakupy",
+    )
+
+    assert "error" not in result
+    transaction = await get_transaction(db_session, user_id, uuid.UUID(result["id"]))
+    assert transaction is not None
+    assert [(posting.account_id, posting.category_id) for posting in transaction.postings] == [
+        (account_record.id, None),
+        (None, category_record.id),
+    ]
 
 
 def test_create_transaction_tool_requires_account_and_positive_integer_amount():

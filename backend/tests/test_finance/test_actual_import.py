@@ -601,6 +601,66 @@ class TestFxEnrichment:
         assert base_amount == 10000
 
 
+class TestMigrationPostings:
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_ordinary_pln_transaction_uses_account_and_category_sides(self, db_session):
+        from app.finance.schemas import AccountCreate, CategoryCreate, TransactionCreate
+        from app.finance.service import create_account, create_category, create_transaction
+        from scripts.migrate_actual import build_pa_postings
+
+        user_id = _uuid.uuid4()
+        account = await create_account(
+            db_session, user_id, AccountCreate(name="ING", type="checking")
+        )
+        category = await create_category(
+            db_session, user_id, CategoryCreate(name="Paliwo", type="expense")
+        )
+        transaction = {
+            "actual_id": "expense-1",
+            "date": date(2026, 7, 15),
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-1",
+                    "category_actual_id": None,
+                    "source_amount": 5000,
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-1",
+                    "category_actual_id": "category-1",
+                    "source_amount": 5000,
+                    "direction": "debit",
+                },
+            ],
+        }
+        postings = build_pa_postings(
+            transaction,
+            {"account-1": account.id},
+            {"category-1": category.id},
+            {"account-1": "PLN"},
+            {},
+        )
+
+        await create_transaction(
+            db_session,
+            user_id,
+            TransactionCreate(
+                transaction_date=transaction["date"],
+                description="[actual:expense-1] Paliwo",
+                type="expense",
+                source="actual",
+                postings=postings,
+            ),
+        )
+
+        assert [(posting.account_id, posting.category_id) for posting in postings] == [
+            (account.id, None),
+            (None, category.id),
+        ]
+
+
 class TestMigrationPipeline:
     pytestmark = pytest.mark.integration
 

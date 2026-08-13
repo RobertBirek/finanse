@@ -107,7 +107,7 @@ def build_pa_postings(
 
         postings.append(
             PostingCreate(
-                account_id=acct_map[actual_acct_id],
+                account_id=(None if p.get("category_actual_id") else acct_map[actual_acct_id]),
                 category_id=cat_map.get(p.get("category_actual_id"))
                 if p.get("category_actual_id")
                 else None,
