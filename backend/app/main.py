@@ -35,6 +35,7 @@ async def health_check():
 
 
 from app.advisor.router import router as advisor_router
+from app.audit import models as _audit_models  # noqa: F401 - register audit_events metadata
 from app.documents.router import router as documents_router
 from app.finance.router import router as finance_router
 from app.identity.router import router as identity_router
