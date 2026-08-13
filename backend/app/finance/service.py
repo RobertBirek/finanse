@@ -327,6 +327,7 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
             FinancialTransaction.type == "income",
             FinancialTransaction.date >= month_start,
             Posting.category_id.is_not(None),
+            Posting.account_id.is_(None),
             Posting.is_budget_impact.is_(True),
             Posting.direction == "credit",
         )
@@ -341,6 +342,7 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
             FinancialTransaction.type == "expense",
             FinancialTransaction.date >= month_start,
             Posting.category_id.is_not(None),
+            Posting.account_id.is_(None),
             Posting.is_budget_impact.is_(True),
             Posting.direction == "debit",
         )

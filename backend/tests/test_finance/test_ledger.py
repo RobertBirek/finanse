@@ -14,6 +14,7 @@ from app.finance.service import (
     create_account,
     create_category,
     create_transaction,
+    get_category_summary,
     get_financial_summary,
 )
 from app.identity.router import get_current_user
@@ -278,6 +279,95 @@ async def create_categorized_transaction(
             ],
         ),
     )
+
+
+async def create_legacy_combined_transaction(
+    db_session,
+    user_id,
+    account_id,
+    category_id,
+    *,
+    transaction_type="expense",
+    amount=10000,
+):
+    account_direction, category_direction = (
+        ("credit", "debit") if transaction_type == "expense" else ("debit", "credit")
+    )
+    return await create_transaction(
+        db_session,
+        user_id,
+        TransactionCreate(
+            transaction_date=datetime.now(UTC).date(),
+            description="Historyczny posting laczony",
+            type=transaction_type,
+            postings=[
+                PostingCreate(
+                    account_id=account_id,
+                    source_amount=amount,
+                    source_currency="PLN",
+                    base_amount_pln=amount,
+                    direction=account_direction,
+                ),
+                PostingCreate(
+                    account_id=account_id,
+                    category_id=category_id,
+                    source_amount=amount,
+                    source_currency="PLN",
+                    base_amount_pln=amount,
+                    direction=category_direction,
+                ),
+            ],
+        ),
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_analytics_exclude_legacy_combined_account_category_postings(db_session):
+    user_id = uuid.uuid4()
+    account = await create_account(db_session, user_id, AccountCreate(name="ING", type="checking"))
+    transport = await create_category(
+        db_session, user_id, CategoryCreate(name="Transport", type="expense")
+    )
+    fuel = await create_category(
+        db_session,
+        user_id,
+        CategoryCreate(name="Paliwo", type="expense", parent_id=transport.id),
+    )
+    income_category = await create_category(
+        db_session, user_id, CategoryCreate(name="Wyplata", type="income")
+    )
+
+    await create_categorized_transaction(db_session, user_id, account.id, fuel.id, amount=5000)
+    await create_categorized_transaction(
+        db_session,
+        user_id,
+        account.id,
+        income_category.id,
+        transaction_type="income",
+        amount=4000,
+    )
+    await create_legacy_combined_transaction(db_session, user_id, account.id, fuel.id, amount=3000)
+    await create_legacy_combined_transaction(
+        db_session,
+        user_id,
+        account.id,
+        income_category.id,
+        transaction_type="income",
+        amount=2000,
+    )
+
+    financial_summary = await get_financial_summary(db_session, user_id)
+    category_summary = await get_category_summary(db_session, user_id)
+
+    assert financial_summary.expense_total_pln == 5000
+    assert financial_summary.income_total_pln == 4000
+    assert [(category.name, category.total_pln) for category in category_summary.categories] == [
+        ("Paliwo", 5000)
+    ]
+    assert [(group.name, group.total_pln) for group in category_summary.groups] == [
+        ("Transport", 5000)
+    ]
 
 
 @pytest.mark.integration
