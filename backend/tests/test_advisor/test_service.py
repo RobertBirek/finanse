@@ -197,3 +197,85 @@ async def test_send_message_stops_after_max_tool_iterations(monkeypatch):
     assert executor.await_count == advisor_service.MAX_TOOL_ITERATIONS
     executions = [item for item in db.added if item.__class__.__name__ == "ToolExecution"]
     assert len(executions) == advisor_service.MAX_TOOL_ITERATIONS
+
+
+@pytest.mark.asyncio
+async def test_second_user_turn_replays_prior_tool_result(monkeypatch):
+    executor = AsyncMock(return_value={"accounts": [{"name": "Konto główne"}]})
+    tool = SimpleNamespace(name="get_accounts", autonomy_level=0, executor=executor)
+    first_call = tool_call("get_accounts", "{}", "call-first")
+    conversation = SimpleNamespace(id=uuid.uuid4(), title="Nowa rozmowa")
+    client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(
+                create=AsyncMock(
+                    side_effect=[
+                        llm_response(tool_calls=[first_call]),
+                        llm_response(content="Masz jedno konto."),
+                        llm_response(content="To konto jest aktywne."),
+                    ]
+                )
+            )
+        )
+    )
+    history_calls = 0
+
+    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda: client)
+    monkeypatch.setattr(advisor_service, "get_openai_tools", list)
+    monkeypatch.setattr(advisor_service, "get_conversation", AsyncMock(return_value=conversation))
+    monkeypatch.setattr(advisor_service, "get_tool_by_name", lambda _name: tool)
+
+    async def conversation_history(_db, _user_id, _conversation_id):
+        nonlocal history_calls
+        history_calls += 1
+        if history_calls == 1:
+            return []
+        return [item for item in db.added if item.__class__.__name__ == "Message"]
+
+    monkeypatch.setattr(advisor_service, "get_conversation_messages", conversation_history)
+    user_id = uuid.uuid4()
+    db = FakeSession()
+
+    first_result = await advisor_service.send_message(db, user_id, conversation.id, "Pokaż konta")
+    second_result = await advisor_service.send_message(
+        db, user_id, conversation.id, "Czy to konto jest aktywne?"
+    )
+
+    assert first_result.content == "Masz jedno konto."
+    assert second_result.content == "To konto jest aktywne."
+    second_messages = client.chat.completions.create.await_args_list[2].kwargs["messages"]
+    assert {
+        "role": "tool",
+        "tool_call_id": "call-first",
+        "content": '{"accounts": [{"name": "Konto główne"}]}',
+    } in second_messages
+    assert second_messages[-1] == {
+        "role": "user",
+        "content": "Czy to konto jest aktywne?",
+    }
+    assert sum(message["role"] == "tool" for message in second_messages) == 1
+
+
+def test_history_messages_adds_sanitized_result_when_execution_is_missing():
+    history = [
+        SimpleNamespace(
+            role="assistant",
+            content="",
+            tool_calls=[
+                {
+                    "id": "call-missing",
+                    "type": "function",
+                    "function": {"name": "get_accounts", "arguments": "{}"},
+                }
+            ],
+            tool_executions=[],
+        )
+    ]
+
+    messages = advisor_service._history_messages(history)
+
+    assert messages[-1] == {
+        "role": "tool",
+        "tool_call_id": "call-missing",
+        "content": '{"error": "Nie udało się odtworzyć wyniku narzędzia"}',
+    }

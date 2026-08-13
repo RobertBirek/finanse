@@ -114,7 +114,7 @@ export function Finances() {
                 <p
                   className={`text-xl font-bold ${(selected.balance_pln ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}
                 >
-                  {formatPLN(selected.balance_pln ?? 0)} {selected.currency}
+                  {formatPLN(selected.balance_pln ?? 0)} PLN
                 </p>
               </div>
 

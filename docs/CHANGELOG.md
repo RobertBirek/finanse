@@ -5,7 +5,14 @@ Wszystkie istotne zmiany w projekcie.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — 2026-08-12
+## [Unreleased] — 2026-08-13
+
+### Fixed
+- Domknięto historię tool calls Advisora dla kolejnych tur, walidację własności i walut transakcji w serwisie domenowym oraz oznaczenie sald `balance_pln` jako PLN.
+- Fixture testowej bazy wiąże aplikacyjny session factory z izolowanym silnikiem per test.
+
+### Changed
+- `DB_SCHEMA.md` opisuje rzeczywiste statusy `ToolExecution`.
 
 ### Added
 - Testy pętli tool-calling Advisora: odpowiedź Level 0 po wykonaniu narzędzia, błędny JSON, nieznane narzędzie, błędy executora, limit iteracji oraz oczekiwanie na potwierdzenie Level 2.

@@ -181,7 +181,7 @@ Schemat bazy danych PostgreSQL dla Personal Advisor.
 | tool_name | VARCHAR(255) NOT NULL | |
 | arguments | JSONB | |
 | result | JSONB | |
-| status | VARCHAR(50) DEFAULT 'pending' | pending/running/success/error/denied |
+| status | VARCHAR(50) DEFAULT 'pending' | pending/pending_confirmation/completed/error/denied |
 | autonomy_level | INTEGER DEFAULT 0 | 0-4 |
 | policy_check_passed | BOOLEAN | |
 

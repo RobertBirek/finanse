@@ -47,7 +47,10 @@ async def create_account_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    return await create_account(db, current_user.id, data)
+    try:
+        return await create_account(db, current_user.id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
 
 @router.get("/accounts", response_model=list[AccountResponse])

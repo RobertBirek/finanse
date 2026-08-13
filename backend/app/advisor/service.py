@@ -91,6 +91,81 @@ async def create_conversation(db: AsyncSession, user_id: uuid.UUID) -> Conversat
 MAX_TOOL_ITERATIONS = 3
 
 
+def _tool_result_content(tool_execution: ToolExecution) -> str:
+    if tool_execution.status == "pending_confirmation":
+        return "⏳ Oczekuje na zatwierdzenie przez użytkownika."
+    return json.dumps(tool_execution.result or {}, ensure_ascii=False, default=str)
+
+
+def _history_messages(history: list[Message]) -> list[dict[str, Any]]:
+    messages: list[dict[str, Any]] = []
+    for msg in history:
+        if msg.role == "tool":
+            continue
+
+        entry: dict[str, Any] = {"role": msg.role, "content": msg.content}
+        if msg.tool_calls:
+            entry["tool_calls"] = msg.tool_calls
+        messages.append(entry)
+
+        if msg.role != "assistant" or not msg.tool_calls:
+            continue
+
+        executions = list(getattr(msg, "tool_executions", None) or [])
+        used_execution_ids: set[uuid.UUID] = set()
+        for tool_call in cast(list[dict[str, Any]], msg.tool_calls):
+            call_id = tool_call.get("id")
+            function = tool_call.get("function") or {}
+            tool_name = function.get("name")
+            try:
+                call_arguments = json.loads(function.get("arguments", "{}"))
+            except (TypeError, json.JSONDecodeError):
+                call_arguments = {}
+
+            execution = next(
+                (
+                    candidate
+                    for candidate in executions
+                    if candidate.id not in used_execution_ids
+                    and candidate.tool_name == tool_name
+                    and (candidate.arguments or {}) == call_arguments
+                ),
+                None,
+            )
+            if execution is None:
+                execution = next(
+                    (
+                        candidate
+                        for candidate in executions
+                        if candidate.id not in used_execution_ids
+                    ),
+                    None,
+                )
+            if execution is None:
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call_id,
+                        "content": json.dumps(
+                            {"error": "Nie udało się odtworzyć wyniku narzędzia"},
+                            ensure_ascii=False,
+                        ),
+                    }
+                )
+                continue
+
+            used_execution_ids.add(execution.id)
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "content": _tool_result_content(execution),
+                }
+            )
+
+    return messages
+
+
 async def send_message(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -111,14 +186,10 @@ async def send_message(
     await db.flush()
 
     history = await get_conversation_messages(db, user_id, conversation_id)
-    messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for msg in history:
-        if msg.role == "tool":
-            continue
-        entry: dict[str, Any] = {"role": msg.role, "content": msg.content}
-        if msg.tool_calls:
-            entry["tool_calls"] = msg.tool_calls
-        messages.append(entry)
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        *_history_messages(history),
+    ]
 
     client = _get_llm_client()
     tools = get_openai_tools()

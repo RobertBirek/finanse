@@ -3,6 +3,29 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-13 — Sesja 10: Domknięcie walidacji i historii narzędzi
+
+### Cel sesji
+Naprawić końcowe ustalenia przeglądu jakości bez wdrażania ani migracji produkcyjnych.
+
+### Co zrobiono
+- Odtwarzanie komunikatów `tool` z `ToolExecution` przy kolejnych turach Doradcy, z zachowaniem wyników, błędów i oczekujących potwierdzeń.
+- Walidacja finansowa na granicy serwisu: własność kont i kategorii, dodatnie kwoty, obsługiwane waluty oraz zgodność waluty konta z postingiem.
+- Salda `balance_pln` w Finances są oznaczone `PLN`.
+- `DB_SCHEMA.md` opisuje rzeczywiste statusy `ToolExecution`.
+- Fixture testowej bazy wiąże aplikacyjny session factory z izolowanym silnikiem per test.
+
+### Decyzje techniczne
+1. Wyniki narzędzi są rekonstruowane z identyfikatorów assistant tool calls i pasujących `ToolExecution`; dane wewnętrzne bazy nie trafiają do LLM.
+2. Walidacja finansowa pozostaje w serwisie domenowym, aby Advisor i wywołania HTTP korzystały z tej samej granicy autoryzacji.
+
+### Znane problemy
+- Testy generują 14 istniejących ostrzeżeń zależności/runtime (m.in. `datetime.utcnow`, passlib/argon2 i AsyncMock w testach NBP); nie blokują wyniku.
+
+### Następna sesja
+Brak dalszych działań dla tego zakresu.
+
+---
 ## 2026-08-12 — Sesja 9: Końcowa jakość projektu
 
 ### Cel sesji

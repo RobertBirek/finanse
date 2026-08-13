@@ -113,6 +113,8 @@ Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, t
 
 ## Done
 
+- [x] Domknięcie przeglądu jakości: historia tool calls, walidacja mutacji finansowych, oznaczenie sald PLN, aktualizacja schematu DB
+
 - [x] Fundament backendu (7 domen, 16 tabel)
 - [x] Fundament frontendu (9 stron, routing, Tailwind)
 - [x] Docker: postgres, redis, backend, frontend, stirling-pdf

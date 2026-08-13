@@ -1,4 +1,3 @@
-import asyncio
 import os
 import socket
 
@@ -71,13 +70,6 @@ def is_connection_unavailable_error(error: BaseException) -> bool:
     return False
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def test_database(request):
     if request.node.get_closest_marker("integration") is None:
@@ -90,12 +82,19 @@ async def test_database(request):
             "PostgreSQL database named finanse_test on port 5432 or 55432"
         )
 
+    from app import database as app_database
     from app.database import Base
 
     engine = None
     schema_created = False
+    previous_engine = app_database.engine
+    previous_session_factory = app_database.async_session_factory
     try:
         engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+        app_database.engine = engine
+        app_database.async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -112,6 +111,8 @@ async def test_database(request):
 
         yield engine
     finally:
+        app_database.engine = previous_engine
+        app_database.async_session_factory = previous_session_factory
         if engine is not None:
             try:
                 if schema_created:
