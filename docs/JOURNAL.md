@@ -3,6 +3,31 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-13 — Sesja 11: Korekta zakresu migracji i wyników testów
+
+### Cel sesji
+Usunąć z końcowej korekty niezwiązane porządkowanie migracji oraz odświeżyć dokumentację wyłącznie na podstawie świeżej weryfikacji.
+
+### Co zrobiono
+- Przywrócono `backend/migrations/env.py` oraz dwie wersje migracji dokładnie do `f90a4d6`; nie zmieniono schematu.
+- Zaktualizowano CHANGELOG, TASKS i JOURNAL o bieżące, zweryfikowane wyniki.
+
+### Weryfikacja
+- `/opt/finanse/backend/.venv/bin/pytest -v` (w `backend`) — PASS: `89 passed, 23 skipped, 5 warnings`.
+- `make VENV=/opt/finanse/backend/.venv/bin test-integration` — PASS: `23 passed, 89 deselected, 11 warnings`; użyto izolowanego PostgreSQL, a kontener i sieć zostały usunięte przez trap Makefile.
+- `git diff --check` — PASS.
+
+### Decyzje techniczne
+1. Zmiany w migracjach były wyłącznie porządkowaniem formatowania, importów i typów, więc nie należą do zakresu tej pracy i zostały wycofane bez modyfikacji schematu.
+2. Nie wykonano migracji ani deployu produkcyjnego.
+
+### Znane problemy
+- Ostrzeżenia testowe i zależności pozostają opisane w najnowszych ograniczeniach CHANGELOG.
+
+### Następna sesja
+Brak dalszych działań dla tego zakresu.
+
+---
 ## 2026-08-13 — Sesja 10: Domknięcie walidacji i historii narzędzi
 
 ### Cel sesji

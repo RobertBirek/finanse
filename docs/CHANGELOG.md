@@ -36,9 +36,10 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Historia sesji `f90a4d6..ab344ad` obejmuje 27 commitów; wcześniejszy zapis o 17 commitach był nieaktualny. Bieżący corrective docs commit nie należy do tego zakresu.
 - Backend Ruff: PASS, bez błędów.
 - Backend mypy: PASS, `46 source files`, bez błędów.
-- Backend pytest: PASS, `87 passed, 16 skipped, 6 warnings`; testy zależne od niedostępnej lokalnie bazy zostały pominięte.
-- Testy integracyjne z izolowanym PostgreSQL: PASS, `16 passed, 87 deselected, 12 warnings` w świeżonym uruchomieniu. Wcześniejszy zapis tego samego zestawu zawierał `15 passed` przed dołączeniem dodatkowego testu.
+- Backend pytest: PASS, `89 passed, 23 skipped, 5 warnings`; testy zależne od niedostępnej lokalnie bazy zostały pominięte.
+- Testy integracyjne z izolowanym PostgreSQL: PASS, `23 passed, 89 deselected, 11 warnings` w świeżonym uruchomieniu.
 - Frontend: `npm run lint`, `npm run typecheck`, `npm run test` (`1 test file, 4 tests`) oraz `npm run build` przeszły.
+- Zmiany wyłącznie porządkowe w `backend/migrations/` przywrócono do `f90a4d6`; nie zmieniono schematu.
 - Weryfikacja nie uruchamiała migracji ani deployu produkcyjnego.
 
 ### Known Limitations
