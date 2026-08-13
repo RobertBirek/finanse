@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 from app.finance.actual_parser import ActualParser
+from app.finance.models import Category
 
 
 def _make_actual_db(schema_sql: str, inserts: list[str]) -> Path:
@@ -714,6 +715,186 @@ class TestFxEnrichment:
 
 
 class TestMigrationPostings:
+    def test_expense_uses_account_and_category_sides(self):
+        from scripts.migrate_actual import build_pa_postings
+
+        account_id = _uuid.uuid4()
+        category_id = _uuid.uuid4()
+        transaction = {
+            "actual_id": "expense-1",
+            "date": date(2026, 7, 15),
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-1",
+                    "category_actual_id": None,
+                    "source_amount": 5000,
+                    "source_currency": "PLN",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-1",
+                    "category_actual_id": "category-1",
+                    "source_amount": 5000,
+                    "source_currency": "PLN",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        postings = build_pa_postings(
+            transaction,
+            {"account-1": account_id},
+            {"category-1": category_id},
+            {"account-1": "PLN"},
+            {},
+            {"account-1": False},
+        )
+
+        assert [(posting.account_id, posting.category_id) for posting in postings] == [
+            (account_id, None),
+            (None, category_id),
+        ]
+        assert all(posting.is_budget_impact is False for posting in postings)
+        assert (
+            sum(
+                posting.base_amount_pln
+                if posting.direction == "debit"
+                else -posting.base_amount_pln
+                for posting in postings
+            )
+            == 0
+        )
+
+    def test_eur_posting_uses_verified_nbp_rate(self):
+        from scripts.migrate_actual import build_pa_postings
+
+        account_id = _uuid.uuid4()
+        category_id = _uuid.uuid4()
+        transaction = {
+            "actual_id": "expense-eur",
+            "date": date(2026, 7, 15),
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-eur",
+                    "category_actual_id": None,
+                    "source_amount": 500,
+                    "source_currency": "EUR",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-eur",
+                    "category_actual_id": "category-1",
+                    "source_amount": 500,
+                    "source_currency": "EUR",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        postings = build_pa_postings(
+            transaction,
+            {"account-eur": account_id},
+            {"category-1": category_id},
+            {"account-eur": "EUR"},
+            {("EUR", date(2026, 7, 15)): 4.2856},
+        )
+
+        assert [posting.base_amount_pln for posting in postings] == [2143, 2143]
+        assert all(posting.fx_rate == 4.2856 for posting in postings)
+        assert all(posting.fx_rate_source == "nbp" for posting in postings)
+
+    def test_missing_usd_rate_rejects_entire_transaction(self):
+        from scripts.migrate_actual import ImportValidationError, build_pa_postings
+
+        transaction = {
+            "actual_id": "expense-usd",
+            "date": date(2026, 7, 15),
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": None,
+                    "source_amount": 500,
+                    "source_currency": "USD",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": "category-1",
+                    "source_amount": 500,
+                    "source_currency": "USD",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        with pytest.raises(ImportValidationError, match="Missing FX rate: USD on 2026-07-15"):
+            build_pa_postings(
+                transaction,
+                {"account-usd": _uuid.uuid4()},
+                {"category-1": _uuid.uuid4()},
+                {"account-usd": "USD"},
+                {("USD", date(2026, 7, 15)): 0.0},
+            )
+
+    def test_cross_currency_transfer_adds_non_budget_fx_difference_posting(self):
+        from scripts.migrate_actual import build_pa_postings
+
+        pln_account_id = _uuid.uuid4()
+        usd_account_id = _uuid.uuid4()
+        gain_category_id = _uuid.uuid4()
+        transaction = {
+            "actual_id": "transfer-usd-pln",
+            "date": date(2026, 7, 15),
+            "type": "transfer",
+            "postings": [
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": None,
+                    "source_amount": 10000,
+                    "source_currency": "USD",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-pln",
+                    "category_actual_id": None,
+                    "source_amount": 43000,
+                    "source_currency": "PLN",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        postings = build_pa_postings(
+            transaction,
+            {"account-usd": usd_account_id, "account-pln": pln_account_id},
+            {},
+            {"account-usd": "USD", "account-pln": "PLN"},
+            {("USD", date(2026, 7, 15)): 4.2856},
+            fx_category_ids={"gain": gain_category_id},
+        )
+
+        assert [(posting.source_amount, posting.source_currency) for posting in postings[:2]] == [
+            (10000, "USD"),
+            (43000, "PLN"),
+        ]
+        assert postings[2].account_id is None
+        assert postings[2].category_id == gain_category_id
+        assert postings[2].direction == "credit"
+        assert postings[2].base_amount_pln == 144
+        assert postings[2].is_budget_impact is False
+        assert (
+            sum(
+                posting.base_amount_pln
+                if posting.direction == "debit"
+                else -posting.base_amount_pln
+                for posting in postings
+            )
+            == 0
+        )
+
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_ordinary_pln_transaction_uses_account_and_category_sides(self, db_session):
@@ -775,6 +956,46 @@ class TestMigrationPostings:
 
 class TestMigrationPipeline:
     pytestmark = pytest.mark.integration
+
+    @pytest.mark.asyncio
+    async def test_resolve_ids_creates_category_groups_before_children(self, db_session):
+        from sqlalchemy import select
+
+        from scripts.migrate_actual import resolve_ids
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'ING', 1, 0, 0)",
+                "INSERT INTO category_groups VALUES ('group1', 'Transport', 0)",
+                "INSERT INTO categories VALUES ('fuel', 'Paliwo', 0, 'group1', 0)",
+            ],
+        )
+
+        user_id = _uuid.uuid4()
+        try:
+            with ActualParser(db_path) as parser:
+                account_map, category_map, _, budget_account_map = await resolve_ids(
+                    db_session, user_id, parser
+                )
+            categories = (
+                (await db_session.execute(select(Category).where(Category.user_id == user_id)))
+                .scalars()
+                .all()
+            )
+            by_id = {category.id: category for category in categories}
+
+            assert budget_account_map == {"acc1": False}
+            assert account_map["acc1"]
+            assert by_id[category_map["fuel"]].parent_id is not None
+            assert by_id[by_id[category_map["fuel"]].parent_id].name == "Transport"
+        finally:
+            os.unlink(db_path)
 
     @pytest.mark.asyncio
     async def test_full_import_does_not_create_opening_balance_transactions(
