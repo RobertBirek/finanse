@@ -9,12 +9,14 @@ class AccountCreate(BaseModel):
     type: str = Field(pattern=r"^(checking|savings|cash|credit|investment)$")
     currency: str = Field(default="PLN", min_length=3, max_length=3)
     is_active: bool = True
+    is_budget_account: bool = True
 
 
 class AccountUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     type: str | None = Field(default=None, pattern=r"^(checking|savings|cash|credit|investment)$")
     is_active: bool | None = None
+    is_budget_account: bool | None = None
     closed_at: dt.date | None = None
 
 
@@ -25,6 +27,7 @@ class AccountResponse(BaseModel):
     type: str
     currency: str
     is_active: bool
+    is_budget_account: bool
     balance_pln: int = 0
     opened_at: dt.date
     closed_at: dt.date | None
@@ -59,7 +62,7 @@ class CategoryResponse(BaseModel):
 
 
 class PostingCreate(BaseModel):
-    account_id: uuid.UUID
+    account_id: uuid.UUID | None = None
     category_id: uuid.UUID | None = None
     source_amount: int = Field(description="Amount in source currency minor units (grosze/centy)")
     source_currency: str = Field(default="PLN", min_length=3, max_length=3)
@@ -67,12 +70,13 @@ class PostingCreate(BaseModel):
     fx_rate: float = Field(default=1.0, ge=0)
     fx_rate_source: str = Field(default="manual", max_length=50)
     direction: str = Field(pattern=r"^(debit|credit)$")
+    is_budget_impact: bool = True
 
 
 class PostingResponse(BaseModel):
     id: uuid.UUID
     transaction_id: uuid.UUID
-    account_id: uuid.UUID
+    account_id: uuid.UUID | None
     category_id: uuid.UUID | None
     source_amount: int
     source_currency: str
@@ -80,6 +84,7 @@ class PostingResponse(BaseModel):
     fx_rate: float
     fx_rate_source: str
     direction: str
+    is_budget_impact: bool
     created_at: dt.datetime
     updated_at: dt.datetime
 

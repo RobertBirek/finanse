@@ -143,11 +143,13 @@ def _validate_posting_sum(postings: list, txn_type: str) -> None:
 async def _validate_transaction_postings(
     db: AsyncSession, user_id: uuid.UUID, postings: list
 ) -> None:
-    account_ids = {posting.account_id for posting in postings}
-    account_result = await db.execute(
-        select(Account).where(Account.user_id == user_id, Account.id.in_(account_ids))
-    )
-    accounts = {account.id: account for account in account_result.scalars().all()}
+    account_ids = {posting.account_id for posting in postings if posting.account_id is not None}
+    accounts: dict[uuid.UUID, Account] = {}
+    if account_ids:
+        account_result = await db.execute(
+            select(Account).where(Account.user_id == user_id, Account.id.in_(account_ids))
+        )
+        accounts = {account.id: account for account in account_result.scalars().all()}
 
     category_ids = {posting.category_id for posting in postings if posting.category_id is not None}
     categories: dict[uuid.UUID, Category] = {}
@@ -158,24 +160,26 @@ async def _validate_transaction_postings(
         categories = {category.id: category for category in category_result.scalars().all()}
 
     for posting in postings:
-        account = accounts.get(posting.account_id)
-        if account is None:
+        if posting.account_id is None and posting.category_id is None:
+            raise ValueError("Posting must have at least an account or category")
+        account = accounts.get(posting.account_id) if posting.account_id is not None else None
+        if posting.account_id is not None and account is None:
             raise ValueError("Account not found")
         if posting.category_id is not None and posting.category_id not in categories:
             raise ValueError("Category not found")
 
         source_currency = str(posting.source_currency).upper()
-        account_currency = str(account.currency).upper()
-        if (
-            source_currency not in SUPPORTED_CURRENCIES
-            or account_currency not in SUPPORTED_CURRENCIES
-        ):
+        if source_currency not in SUPPORTED_CURRENCIES:
             raise ValueError("Unsupported currency")
-        if source_currency != account_currency:
-            raise ValueError(
-                f"Posting currency {source_currency} does not match account currency "
-                f"{account_currency}"
-            )
+        if account is not None:
+            account_currency = str(account.currency).upper()
+            if account_currency not in SUPPORTED_CURRENCIES:
+                raise ValueError("Unsupported currency")
+            if source_currency != account_currency:
+                raise ValueError(
+                    f"Posting currency {source_currency} does not match account currency "
+                    f"{account_currency}"
+                )
         if posting.source_amount <= 0 or posting.base_amount_pln <= 0:
             raise ValueError("Posting amounts must be positive")
         if posting.fx_rate <= 0:
@@ -211,6 +215,7 @@ async def create_transaction(
             fx_rate=p_data.fx_rate,
             fx_rate_source=p_data.fx_rate_source,
             direction=p_data.direction,
+            is_budget_impact=p_data.is_budget_impact,
         )
         db.add(posting)
 

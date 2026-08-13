@@ -187,6 +187,92 @@ def transaction_data(account_id, category_id=None, *, currency="PLN", amount=100
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+async def test_category_only_posting_is_persisted(db_session):
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Paliwo", type="expense")
+    )
+
+    transaction = await create_transaction(
+        db_session,
+        user_id,
+        TransactionCreate(
+            description="Paliwo",
+            type="expense",
+            postings=[
+                PostingCreate(
+                    account_id=account.id,
+                    category_id=None,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="credit",
+                    is_budget_impact=True,
+                ),
+                PostingCreate(
+                    account_id=None,
+                    category_id=category.id,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="debit",
+                    is_budget_impact=True,
+                ),
+            ],
+        ),
+    )
+
+    assert transaction.postings[0].account_id == account.id
+    assert transaction.postings[1].account_id is None
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_posting_requires_account_or_category(db_session):
+    user_id = uuid.uuid4()
+
+    with pytest.raises(ValueError, match="at least an account or category"):
+        await create_transaction(
+            db_session,
+            user_id,
+            TransactionCreate(
+                description="Nieprawidlowy posting",
+                type="expense",
+                postings=[
+                    PostingCreate(
+                        account_id=None,
+                        category_id=None,
+                        source_amount=5000,
+                        source_currency="PLN",
+                        base_amount_pln=5000,
+                        fx_rate=1.0,
+                        fx_rate_source="manual",
+                        direction="credit",
+                    ),
+                    PostingCreate(
+                        account_id=None,
+                        category_id=None,
+                        source_amount=5000,
+                        source_currency="PLN",
+                        base_amount_pln=5000,
+                        fx_rate=1.0,
+                        fx_rate_source="manual",
+                        direction="debit",
+                    ),
+                ],
+            ),
+        )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_transaction_rejects_another_users_account_without_mutating_db(db_session):
     owner_id = uuid.uuid4()
     another_user_id = uuid.uuid4()
