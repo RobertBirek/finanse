@@ -8,6 +8,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.database import get_db
+from app.finance.models import FinancialTransaction, Posting
 from app.finance.schemas import AccountCreate, CategoryCreate, PostingCreate, TransactionCreate
 from app.finance.service import (
     _validate_posting_sum,
@@ -293,32 +294,36 @@ async def create_legacy_combined_transaction(
     account_direction, category_direction = (
         ("credit", "debit") if transaction_type == "expense" else ("debit", "credit")
     )
-    return await create_transaction(
-        db_session,
-        user_id,
-        TransactionCreate(
-            transaction_date=datetime.now(UTC).date(),
-            description="Historyczny posting laczony",
-            type=transaction_type,
-            postings=[
-                PostingCreate(
-                    account_id=account_id,
-                    source_amount=amount,
-                    source_currency="PLN",
-                    base_amount_pln=amount,
-                    direction=account_direction,
-                ),
-                PostingCreate(
-                    account_id=account_id,
-                    category_id=category_id,
-                    source_amount=amount,
-                    source_currency="PLN",
-                    base_amount_pln=amount,
-                    direction=category_direction,
-                ),
-            ],
-        ),
+    transaction = FinancialTransaction(
+        user_id=user_id,
+        date=datetime.now(UTC).date(),
+        description="Historyczny posting laczony",
+        type=transaction_type,
     )
+    db_session.add(transaction)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            Posting(
+                transaction_id=transaction.id,
+                account_id=account_id,
+                source_amount=amount,
+                source_currency="PLN",
+                base_amount_pln=amount,
+                direction=account_direction,
+            ),
+            Posting(
+                transaction_id=transaction.id,
+                account_id=account_id,
+                category_id=category_id,
+                source_amount=amount,
+                source_currency="PLN",
+                base_amount_pln=amount,
+                direction=category_direction,
+            ),
+        ]
+    )
+    await db_session.flush()
 
 
 @pytest.mark.integration
@@ -372,7 +377,7 @@ async def test_analytics_exclude_legacy_combined_account_category_postings(db_se
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_summary_excludes_offbudget_accounts_and_category_impact(db_session):
+async def test_summary_derives_offbudget_exclusion_from_account(db_session):
     user_id = uuid.uuid4()
     budget_account = await create_account(
         db_session, user_id, AccountCreate(name="ING", type="checking", is_budget_account=True)
@@ -392,13 +397,13 @@ async def test_summary_excludes_offbudget_accounts_and_category_impact(db_sessio
     await create_categorized_transaction(
         db_session, user_id, budget_account.id, expense_category.id
     )
-    await create_categorized_transaction(
+    offbudget_transaction = await create_categorized_transaction(
         db_session,
         user_id,
         offbudget_account.id,
         expense_category.id,
         amount=10000,
-        is_budget_impact=False,
+        is_budget_impact=True,
     )
     await create_categorized_transaction(
         db_session,
@@ -414,11 +419,12 @@ async def test_summary_excludes_offbudget_accounts_and_category_impact(db_sessio
     assert summary.expense_total_pln == 10000
     assert summary.income_total_pln == 4000
     assert [account["name"] for account in summary.accounts] == ["ING"]
+    assert offbudget_transaction.postings[1].is_budget_impact is False
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_category_summary_aggregates_children_and_excludes_offbudget(db_session):
+async def test_category_summary_aggregates_children_roots_and_excludes_offbudget(db_session):
     user_id = uuid.uuid4()
     budget_account = await create_account(
         db_session, user_id, AccountCreate(name="ING", type="checking", is_budget_account=True)
@@ -436,6 +442,9 @@ async def test_category_summary_aggregates_children_and_excludes_offbudget(db_se
         user_id,
         CategoryCreate(name="Paliwo", type="expense", parent_id=transport.id),
     )
+    health = await create_category(
+        db_session, user_id, CategoryCreate(name="Zdrowie", type="expense")
+    )
 
     await create_categorized_transaction(
         db_session, user_id, budget_account.id, fuel.id, amount=5000
@@ -446,7 +455,10 @@ async def test_category_summary_aggregates_children_and_excludes_offbudget(db_se
         offbudget_account.id,
         fuel.id,
         amount=3000,
-        is_budget_impact=False,
+        is_budget_impact=True,
+    )
+    await create_categorized_transaction(
+        db_session, user_id, budget_account.id, health.id, amount=2000
     )
 
     async def override_current_user():
@@ -472,7 +484,13 @@ async def test_category_summary_aggregates_children_and_excludes_offbudget(db_se
             "name": "Paliwo",
             "parent_id": str(transport.id),
             "total_pln": 5000,
-        }
+        },
+        {
+            "category_id": str(health.id),
+            "name": "Zdrowie",
+            "parent_id": None,
+            "total_pln": 2000,
+        },
     ]
     assert body["groups"] == [
         {
@@ -482,6 +500,66 @@ async def test_category_summary_aggregates_children_and_excludes_offbudget(db_se
             "total_pln": 5000,
         }
     ]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+@pytest.mark.parametrize("account_side_count", [0, 2])
+async def test_income_expense_requires_exactly_one_account_side_posting(
+    db_session, account_side_count
+):
+    user_id = uuid.uuid4()
+    account = await create_account(db_session, user_id, AccountCreate(name="ING", type="checking"))
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Zakupy", type="expense")
+    )
+    postings = [
+        PostingCreate(
+            category_id=category.id,
+            source_amount=1000,
+            source_currency="PLN",
+            base_amount_pln=1000,
+            direction="debit",
+        )
+    ]
+    if account_side_count == 0:
+        postings.append(
+            PostingCreate(
+                category_id=category.id,
+                source_amount=1000,
+                source_currency="PLN",
+                base_amount_pln=1000,
+                direction="credit",
+            )
+        )
+    else:
+        postings.extend(
+            [
+                PostingCreate(
+                    account_id=account.id,
+                    source_amount=500,
+                    source_currency="PLN",
+                    base_amount_pln=500,
+                    direction="credit",
+                ),
+                PostingCreate(
+                    account_id=account.id,
+                    source_amount=500,
+                    source_currency="PLN",
+                    base_amount_pln=500,
+                    direction="credit",
+                ),
+            ]
+        )
+
+    with pytest.raises(ValueError, match="exactly one account-side posting"):
+        await create_transaction(
+            db_session,
+            user_id,
+            TransactionCreate(
+                description="Nieprawidlowa transakcja", type="expense", postings=postings
+            ),
+        )
 
 
 @pytest.mark.integration
