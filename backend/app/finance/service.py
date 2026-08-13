@@ -323,7 +323,7 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
         )
         total_debits = debit_result.scalar() or 0
         total_credits = credit_result.scalar() or 0
-        balance = total_debits - total_credits
+        balance = int(total_credits - total_debits)
 
         account_balances.append(
             {
@@ -353,7 +353,6 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
             Posting.category_id.is_not(None),
             Posting.account_id.is_(None),
             Account.is_budget_account.is_(True),
-            Posting.direction == "credit",
         )
     )
     income_total = income_result.scalar() or 0
@@ -375,7 +374,6 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
             Posting.category_id.is_not(None),
             Posting.account_id.is_(None),
             Account.is_budget_account.is_(True),
-            Posting.direction == "debit",
         )
     )
     expense_total = expense_result.scalar() or 0
@@ -419,7 +417,6 @@ async def get_category_summary(db: AsyncSession, user_id: uuid.UUID) -> Category
             FinancialTransaction.date < month_end,
             Posting.account_id.is_(None),
             Account.is_budget_account.is_(True),
-            Posting.direction == "debit",
         )
         .group_by(Category.id, Category.name, Category.parent_id)
         .order_by(Category.name)

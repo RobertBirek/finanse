@@ -21,7 +21,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -57,6 +58,7 @@ async def resolve_ids(
     parser: ActualParser,
 ) -> tuple[dict[str, uuid.UUID], dict[str, uuid.UUID], dict[str, str], dict[str, bool]]:
     """Create accounts and categories, return Actual ID -> PA ID mappings."""
+    await db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"actual-import:{user_id}"))))
     acct_map: dict[str, uuid.UUID] = {}
     cat_map: dict[str, uuid.UUID] = {}
     acct_currency: dict[str, str] = {}
@@ -134,16 +136,31 @@ async def _get_mapped_entity(
 
 async def _store_mapping(
     db: Any, user_id: uuid.UUID, entity_type: str, actual_id: str, entity_id: uuid.UUID
-) -> None:
-    db.add(
-        ActualImportMapping(
+) -> uuid.UUID:
+    result = await db.execute(
+        pg_insert(ActualImportMapping)
+        .values(
             user_id=user_id,
             entity_type=entity_type,
             actual_id=actual_id,
             entity_id=entity_id,
         )
+        .on_conflict_do_nothing(constraint="uq_actual_import_mapping")
+        .returning(ActualImportMapping.entity_id)
     )
-    await db.flush()
+    stored_entity_id = result.scalar_one_or_none()
+    if stored_entity_id is not None:
+        return stored_entity_id
+    existing_entity_id = await db.scalar(
+        select(ActualImportMapping.entity_id).where(
+            ActualImportMapping.user_id == user_id,
+            ActualImportMapping.entity_type == entity_type,
+            ActualImportMapping.actual_id == actual_id,
+        )
+    )
+    if existing_entity_id is None:
+        raise RuntimeError("Actual mapping disappeared after conflict")
+    return existing_entity_id
 
 
 def _posting_base_amount(

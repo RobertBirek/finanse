@@ -605,7 +605,7 @@ class TestActualParserTransactions:
 
 
 import uuid as _uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -961,8 +961,10 @@ class TestMigrationPipeline:
     async def test_imported_expense_decreases_and_income_increases_account_balance(
         self, db_session, monkeypatch
     ):
-        from app.finance.service import get_accounts
+        from app.finance.service import get_accounts, get_category_summary, get_financial_summary
         from scripts import migrate_actual
+
+        actual_date = datetime.now(UTC).date().strftime("%Y%m%d")
 
         schema = """
         CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
@@ -982,7 +984,7 @@ class TestMigrationPipeline:
                 "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
                 "INSERT INTO category_groups VALUES ('expense-group', 'Wydatki', 0)",
                 "INSERT INTO categories VALUES ('expense-cat', 'Paliwo', 0, 'expense-group', 0)",
-                "INSERT INTO transactions VALUES ('expense', 0, 0, NULL, 'acc1', 'expense-cat', -5000, NULL, NULL, 20260715, NULL, 0)",
+                f"INSERT INTO transactions VALUES ('expense', 0, 0, NULL, 'acc1', 'expense-cat', -5000, NULL, NULL, {actual_date}, NULL, 0)",
             ],
         )
         income_db_path = _make_actual_db(
@@ -991,7 +993,7 @@ class TestMigrationPipeline:
                 "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
                 "INSERT INTO category_groups VALUES ('income-group', 'Przychody', 0)",
                 "INSERT INTO categories VALUES ('income-cat', 'Pensja', 1, 'income-group', 0)",
-                "INSERT INTO transactions VALUES ('income', 0, 0, NULL, 'acc1', 'income-cat', 12000, NULL, NULL, 20260715, NULL, 0)",
+                f"INSERT INTO transactions VALUES ('income', 0, 0, NULL, 'acc1', 'income-cat', 12000, NULL, NULL, {actual_date}, NULL, 0)",
             ],
         )
         user_id = _uuid.uuid4()
@@ -1022,9 +1024,56 @@ class TestMigrationPipeline:
             await migrate_actual.migrate(Path("unused"), user_id)
             accounts = await get_accounts(db_session, user_id)
             assert [(account.name, account.balance_pln) for account in accounts] == [("ING", 7000)]
+            financial_summary = await get_financial_summary(db_session, user_id)
+            category_summary = await get_category_summary(db_session, user_id)
+            assert [
+                (account["name"], account["balance_pln"]) for account in financial_summary.accounts
+            ] == [("ING", 7000)]
+            assert financial_summary.income_total_pln == 12000
+            assert financial_summary.expense_total_pln == 5000
+            assert [
+                (category.name, category.total_pln) for category in category_summary.categories
+            ] == [("Paliwo", 5000)]
+            assert [(group.name, group.total_pln) for group in category_summary.groups] == [
+                ("Wydatki", 5000)
+            ]
         finally:
             os.unlink(expense_db_path)
             os.unlink(income_db_path)
+
+    @pytest.mark.asyncio
+    async def test_duplicate_actual_mapping_keeps_session_usable(self, db_session):
+        from sqlalchemy import select
+
+        from app.finance.models import ActualImportMapping
+        from app.finance.schemas import AccountCreate
+        from app.finance.service import create_account
+        from scripts.migrate_actual import _store_mapping
+
+        user_id = _uuid.uuid4()
+        first_account = await create_account(
+            db_session, user_id, AccountCreate(name="Pierwsze", type="checking")
+        )
+        second_account = await create_account(
+            db_session, user_id, AccountCreate(name="Drugie", type="checking")
+        )
+
+        await _store_mapping(db_session, user_id, "account", "actual-account", first_account.id)
+        await _store_mapping(db_session, user_id, "account", "actual-account", second_account.id)
+        third_account = await create_account(
+            db_session, user_id, AccountCreate(name="Trzecie", type="checking")
+        )
+        mapping = await db_session.scalar(
+            select(ActualImportMapping).where(
+                ActualImportMapping.user_id == user_id,
+                ActualImportMapping.entity_type == "account",
+                ActualImportMapping.actual_id == "actual-account",
+            )
+        )
+
+        assert mapping is not None
+        assert mapping.entity_id == first_account.id
+        assert third_account.id
 
     @pytest.mark.asyncio
     async def test_second_import_reuses_actual_accounts_categories_and_transactions(
