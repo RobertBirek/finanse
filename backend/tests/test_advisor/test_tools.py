@@ -141,6 +141,22 @@ async def test_create_transaction_rejects_pln_for_non_pln_account(monkeypatch, a
 
 
 @pytest.mark.asyncio
+async def test_create_transaction_rejects_missing_category_for_requested_type(monkeypatch):
+    result, _, _, create_transaction = await execute_transaction(
+        monkeypatch,
+        accounts=[account("ING")],
+        categories=[category("Pensja", "income")],
+        type="expense",
+        amount=5000,
+        account_name="ING",
+        description="Zakupy",
+    )
+
+    assert result == {"error": "No expense category found"}
+    create_transaction.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_create_transaction_creates_balanced_pln_postings(monkeypatch):
     selected_account = account("ING")
     result, _, _, create_transaction = await execute_transaction(

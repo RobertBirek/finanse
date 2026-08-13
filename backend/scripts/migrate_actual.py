@@ -169,102 +169,6 @@ def generate_report(stats: dict, errors: list[str], warnings: list[str], mapping
     return "\n".join(lines)
 
 
-async def create_opening_balances(
-    db,
-    user_id: uuid.UUID,
-    acct_map: dict[str, uuid.UUID],
-    parser: ActualParser,
-) -> int:
-    table = parser._txn_table
-    col_acct = parser._txn_col_acct
-    col_is_parent = parser._txn_col_is_parent
-    col_is_child = parser._txn_col_is_child
-
-    rows = parser._conn.execute(
-        f"SELECT {col_acct}, amount FROM {table} "
-        f"WHERE tombstone=0 AND {col_is_parent}=0 AND {col_is_child}=0"
-    ).fetchall()
-
-    balance: dict[str, int] = {}
-    for r in rows:
-        acct = r[col_acct]
-        amt = r["amount"]
-        balance[acct] = balance.get(acct, 0) + amt
-
-    written = 0
-    for actual_id, pa_id in acct_map.items():
-        total = balance.get(actual_id, 0)
-        if total == 0:
-            continue
-
-        abs_total = abs(total)
-        acct = next((a for a in parser.get_accounts() if a["actual_id"] == actual_id), None)
-        acct_name = acct["name"] if acct else "Unknown"
-
-        if total > 0:
-            postings = [
-                PostingCreate(
-                    account_id=pa_id,
-                    source_amount=abs_total,
-                    source_currency="PLN",
-                    base_amount_pln=abs_total,
-                    fx_rate=1.0,
-                    fx_rate_source="manual",
-                    direction="debit",
-                ),
-                PostingCreate(
-                    account_id=pa_id,
-                    source_amount=abs_total,
-                    source_currency="PLN",
-                    base_amount_pln=abs_total,
-                    fx_rate=1.0,
-                    fx_rate_source="manual",
-                    direction="credit",
-                ),
-            ]
-            txn_type = "income"
-        else:
-            postings = [
-                PostingCreate(
-                    account_id=pa_id,
-                    source_amount=abs_total,
-                    source_currency="PLN",
-                    base_amount_pln=abs_total,
-                    fx_rate=1.0,
-                    fx_rate_source="manual",
-                    direction="credit",
-                ),
-                PostingCreate(
-                    account_id=pa_id,
-                    source_amount=abs_total,
-                    source_currency="PLN",
-                    base_amount_pln=abs_total,
-                    fx_rate=1.0,
-                    fx_rate_source="manual",
-                    direction="debit",
-                ),
-            ]
-            txn_type = "expense"
-
-        try:
-            await create_transaction(
-                db,
-                user_id,
-                TransactionCreate(
-                    transaction_date=None,
-                    description=f"[BO] Bilans otwarcia \u2014 {acct_name}",
-                    type=txn_type,
-                    source="actual",
-                    postings=postings,
-                ),
-            )
-            written += 1
-        except Exception:
-            pass
-
-    return written
-
-
 async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) -> None:
     """Main migration pipeline."""
     sqlite_path = await extract_sqlite(blob_path)
@@ -365,9 +269,6 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
             mapping["accounts"][actual_id] = str(pa_id)
         for actual_id, pa_id in cat_map.items():
             mapping["categories"][actual_id] = str(pa_id)
-
-        bo_count = await create_opening_balances(db, user_id, acct_map, parser)
-        print(f"  Opening balances created: {bo_count}")
 
         # Phase 3: Fetch FX rates
         print("Phase 3: Fetching FX rates...")

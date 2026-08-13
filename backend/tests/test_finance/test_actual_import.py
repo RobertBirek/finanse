@@ -494,6 +494,7 @@ class TestActualParserTransactions:
 
 import uuid as _uuid
 from datetime import date
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -663,6 +664,63 @@ class TestMigrationPostings:
 
 class TestMigrationPipeline:
     pytestmark = pytest.mark.integration
+
+    @pytest.mark.asyncio
+    async def test_full_import_does_not_create_opening_balance_transactions(
+        self, db_session, monkeypatch
+    ):
+        from sqlalchemy import select
+
+        from app.finance.models import FinancialTransaction
+        from scripts import migrate_actual
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+                "INSERT INTO categories VALUES ('cat1', 'Jedzenie', 0, 'g1', 0)",
+                "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'cat1', -5000, 'Zakupy', NULL, 20260701, NULL, 0)",
+            ],
+        )
+
+        class SessionContext:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return None
+
+        opening_balances = AsyncMock()
+        monkeypatch.setattr(migrate_actual, "extract_sqlite", AsyncMock(return_value=db_path))
+        monkeypatch.setattr(migrate_actual, "async_session_factory", SessionContext)
+        monkeypatch.setattr(
+            migrate_actual, "create_opening_balances", opening_balances, raising=False
+        )
+        monkeypatch.setattr(
+            migrate_actual,
+            "NbpRateProvider",
+            lambda: SimpleNamespace(close=AsyncMock()),
+        )
+
+        try:
+            await migrate_actual.migrate(Path("unused"), _uuid.uuid4())
+        finally:
+            os.unlink(db_path)
+
+        opening_balances.assert_not_awaited()
+        transactions = (await db_session.execute(select(FinancialTransaction))).scalars().all()
+        assert all(not transaction.description.startswith("[BO]") for transaction in transactions)
 
     @pytest.mark.asyncio
     async def test_full_pipeline_dry_run(self, db_session):

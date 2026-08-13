@@ -302,6 +302,9 @@ async def _execute_create_transaction(
         if matching:
             category_id = matching[0].id
 
+    if category_id is None:
+        return {"error": f"No {txn_type} category found"}
+
     try:
         txn = await create_transaction(
             db,
