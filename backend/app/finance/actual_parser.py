@@ -1,5 +1,5 @@
-import sqlite3
 import re
+import sqlite3
 from datetime import date
 from pathlib import Path
 from typing import TypedDict
@@ -135,24 +135,18 @@ class ActualParser:
 
         if self._use_view:
             # Build payee name lookup (payee column in v_transactions is UUID)
-            payee_rows = self._conn.execute(
-                "SELECT id, name FROM payees"
-            ).fetchall()
+            payee_rows = self._conn.execute("SELECT id, name FROM payees").fetchall()
             payee_map = {r["id"]: r["name"] for r in payee_rows}
 
             # Build category name lookup for fallback descriptions
-            cat_rows = self._conn.execute(
-                "SELECT id, name FROM categories"
-            ).fetchall()
+            cat_rows = self._conn.execute("SELECT id, name FROM categories").fetchall()
             cat_map = {r["id"]: r["name"] for r in cat_rows}
 
             rows = self._conn.execute(
                 "SELECT id, account, category, amount, payee, notes, date "
-                "FROM {} "
-                "WHERE tombstone=0 AND {}={} AND {}={} AND {} IS NULL "
-                "ORDER BY date, id".format(
-                    txn_table, col_is_parent, 0, col_is_child, 0, col_transfer_id
-                )
+                f"FROM {txn_table} "
+                f"WHERE tombstone=0 AND {col_is_parent}={0} AND {col_is_child}={0} AND {col_transfer_id} IS NULL "
+                "ORDER BY date, id"
             ).fetchall()
         else:
             payee_rows = self._conn.execute(
@@ -163,14 +157,12 @@ class ActualParser:
 
             rows = self._conn.execute(
                 "SELECT id, acct, category, amount, description, notes, date "
-                "FROM {} "
-                "WHERE tombstone=0 AND {}={} AND {}={} AND {} IS NULL "
-                "ORDER BY date, id".format(
-                    txn_table, col_is_parent, 0, col_is_child, 0, col_transfer_id
-                )
+                f"FROM {txn_table} "
+                f"WHERE tombstone=0 AND {col_is_parent}={0} AND {col_is_child}={0} AND {col_transfer_id} IS NULL "
+                "ORDER BY date, id"
             ).fetchall()
 
-        result = []
+        result: list[TransactionDict] = []
         for r in rows:
             amount = r["amount"]
             abs_amount = abs(amount)
@@ -225,16 +217,17 @@ class ActualParser:
                 },
             ]
 
-            result.append({
-                "actual_id": r["id"],
-                "type": txn_type,
-                "date": self._parse_date(r["date"]),
-                "description": description,
-                "postings": postings,
-            })
+            result.append(
+                {
+                    "actual_id": r["id"],
+                    "type": txn_type,
+                    "date": self._parse_date(r["date"]),
+                    "description": description,
+                    "postings": postings,
+                }
+            )
 
         return result
-
 
     def get_transfers(self) -> list[TransactionDict]:
         """Reconstruct transfer transactions from paired transfer_id rows (mutual reference)."""
@@ -263,7 +256,7 @@ class ActualParser:
         )
         rows = self._conn.execute(query).fetchall()
 
-        result = []
+        result: list[TransactionDict] = []
         for r in rows:
             # Determine source (negative) and destination (positive)
             if r["amount1"] < 0:
@@ -300,13 +293,15 @@ class ActualParser:
                 },
             ]
 
-            result.append({
-                "actual_id": r["id1"],  # use first ID as reference
-                "type": "transfer",
-                "date": self._parse_date(r["date1"]),
-                "description": f"Transfer: {source_name} -> {dest_name}",
-                "postings": postings,
-            })
+            result.append(
+                {
+                    "actual_id": r["id1"],  # use first ID as reference
+                    "type": "transfer",
+                    "date": self._parse_date(r["date1"]),
+                    "description": f"Transfer: {source_name} -> {dest_name}",
+                    "postings": postings,
+                }
+            )
 
         return result
 
@@ -320,10 +315,8 @@ class ActualParser:
         col_parent_id = self._txn_col_parent_id
 
         parents = self._conn.execute(
-            "SELECT id, {acct}, amount, date FROM {table} "
-            "WHERE tombstone=0 AND {is_parent}=1 AND {is_child}=0".format(
-                acct=col_acct, table=txn_table, is_parent=col_is_parent, is_child=col_is_child
-            )
+            f"SELECT id, {col_acct}, amount, date FROM {txn_table} "
+            f"WHERE tombstone=0 AND {col_is_parent}=1 AND {col_is_child}=0"
         ).fetchall()
 
         if not parents:
@@ -332,13 +325,10 @@ class ActualParser:
         parent_ids = [p["id"] for p in parents]
         placeholders = ",".join("?" for _ in parent_ids)
         children = self._conn.execute(
-            "SELECT id, {parent_id}, {acct}, category, amount "
-            "FROM {table} "
-            "WHERE tombstone=0 AND {is_child}=1 AND {parent_id} IN ({placeholders}) "
-            "ORDER BY {parent_id}, amount".format(
-                parent_id=col_parent_id, acct=col_acct, table=txn_table,
-                is_child=col_is_child, placeholders=placeholders
-            ),
+            f"SELECT id, {col_parent_id}, {col_acct}, category, amount "
+            f"FROM {txn_table} "
+            f"WHERE tombstone=0 AND {col_is_child}=1 AND {col_parent_id} IN ({placeholders}) "
+            f"ORDER BY {col_parent_id}, amount",
             parent_ids,
         ).fetchall()
 
@@ -349,7 +339,7 @@ class ActualParser:
                 children_by_parent[pid] = []
             children_by_parent[pid].append(c)
 
-        result = []
+        result: list[TransactionDict] = []
         for p in parents:
             pid = p["id"]
             child_list = children_by_parent.get(pid, [])
@@ -386,21 +376,25 @@ class ActualParser:
 
             for c in child_list:
                 child_acct_id = c[col_acct]
-                postings.append({
-                    "account_actual_id": child_acct_id,
-                    "category_actual_id": c["category"],
-                    "source_amount": abs(c["amount"]),
-                    "source_currency": acct_currency.get(child_acct_id, "PLN"),
-                    "direction": children_direction,
-                })
+                postings.append(
+                    {
+                        "account_actual_id": child_acct_id,
+                        "category_actual_id": c["category"],
+                        "source_amount": abs(c["amount"]),
+                        "source_currency": acct_currency.get(child_acct_id, "PLN"),
+                        "direction": children_direction,
+                    }
+                )
 
-            result.append({
-                "actual_id": pid,
-                "type": txn_type,
-                "date": self._parse_date(p["date"]),
-                "description": f"Split transaction ({len(child_list)} parts)",
-                "postings": postings,
-            })
+            result.append(
+                {
+                    "actual_id": pid,
+                    "type": txn_type,
+                    "date": self._parse_date(p["date"]),
+                    "description": f"Split transaction ({len(child_list)} parts)",
+                    "postings": postings,
+                }
+            )
 
         return result
 

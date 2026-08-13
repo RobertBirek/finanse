@@ -6,6 +6,21 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 6 — Spłata długu jakościowego (2026-08-12)
+
+- [x] Przejrzano 27 commitów z zakresu `f90a4d6..ab344ad` oraz aktualną dokumentację; wcześniejszy zapis o 17 commitach był nieaktualny.
+- [x] Uruchomiono izolowaną testową bazę PostgreSQL bez dotykania produkcji.
+- [x] Backend: Ruff `app/ tests/` i mypy `app/` przechodzą; pytest `89 passed, 23 skipped, 5 warnings` przy niedostępnej bazie lokalnej.
+- [x] Testy integracyjne: świeże uruchomienie `23 passed, 89 deselected, 11 warnings` na izolowanym PostgreSQL.
+- [x] Frontend: ESLint, Vitest `4 passed`, TypeScript typecheck i Vite production build.
+- [x] Dodano testy pętli tool-calling, atomiczności/rollbacku potwierdzeń oraz bezpiecznej walidacji mutacji finansowych.
+- [x] Doradca odświeża oczekujące potwierdzenia pollingiem co 2 sekundy; harmonogram używa lokalnych granic dnia i offsetu DST dla konkretnej daty.
+- [x] Przywrócono lokalną datę transakcji (`7cc1973`): brak jawnej daty używa bieżącego dnia użytkownika, nie dnia UTC.
+- [x] Zapisano dokładne wyniki i ograniczenia w CHANGELOG/JOURNAL; porządkowe zmiany `backend/migrations/` przywrócono do `f90a4d6` bez zmiany schematu.
+- [x] Frontend lint: dodano konfigurację ESLint i usunięto 7 błędów wykrytych w kodzie.
+
+Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, trzy daty USD bez kursu NBP oraz brak rzeczywistych danych split transactions w testach. Nie wykonano deployu ani migracji produkcyjnej.
+
 ## Iteracja 1 — Pierwszy Vertical Slice (MVP)
 
 ### Inbox → Task
@@ -61,6 +76,7 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Endpointy confirm/deny tool-execution z potwierdzeniem użytkownika
 - [x] Audit log dla mutacji (performed_by=human)
 - [x] Frontend: przyciski potwierdzenia/odrzucenia w czacie
+- [x] Frontend: polling statusu narzędzi tylko dla oczekujących potwierdzenia
 
 ### Dokumenty — ekstrakcja danych
 - [x] OpenAI extraction z OCR text (structured JSON: type, amount, currency, category)
@@ -97,6 +113,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Done
 
+- [x] Domknięcie przeglądu jakości: historia tool calls, walidacja mutacji finansowych, oznaczenie sald PLN, aktualizacja schematu DB
+
 - [x] Fundament backendu (7 domen, 16 tabel)
 - [x] Fundament frontendu (9 stron, routing, Tailwind)
 - [x] Docker: postgres, redis, backend, frontend, stirling-pdf
@@ -107,6 +125,6 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Docker Compose + .env + Makefile
 - [x] Repo: github.com/RobertBirek/finanse
 - [x] Dokumentacja: AGENTS.md, PRD.md, DB_SCHEMA.md, 9 ADR-ów
-- [x] Testy: 15 testów (11 unit, 4 integracyjne)
+- [x] Testy początkowego vertical slice'a: 15 testów (11 unit, 4 integracyjne)
 - [x] Agent OpenCode: .opencode/agent/personal-advisor.md
 - [x] CHANGELOG.md, JOURNAL.md, TASKS.md

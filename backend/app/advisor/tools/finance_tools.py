@@ -1,3 +1,5 @@
+import uuid
+
 FINANCE_TOOLS = [
     {
         "name": "get_financial_summary",
@@ -34,16 +36,24 @@ def get_finance_tool_schemas() -> list[dict]:
 
 async def execute_get_financial_summary(db, user_id: str) -> dict:
     from app.finance.service import get_financial_summary
-    summary = await get_financial_summary(db, user_id)
+
+    summary = await get_financial_summary(db, uuid.UUID(user_id))
     return summary.model_dump()
 
 
 async def execute_get_accounts(db, user_id: str) -> dict:
     from app.finance.service import get_accounts
-    accounts = await get_accounts(db, user_id)
+
+    accounts = await get_accounts(db, uuid.UUID(user_id))
     return {
         "accounts": [
-            {"id": str(a.id), "name": a.name, "type": a.type, "currency": a.currency, "is_active": a.is_active}
+            {
+                "id": str(a.id),
+                "name": a.name,
+                "type": a.type,
+                "currency": a.currency,
+                "is_active": a.is_active,
+            }
             for a in accounts
         ]
     }

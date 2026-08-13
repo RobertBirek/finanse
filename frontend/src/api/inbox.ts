@@ -20,6 +20,9 @@ export interface ProcessResponse {
   created_task: TaskBrief | null;
 }
 
+export type ProcessTargetType =
+  "task" | "project" | "transaction" | "document" | "decision" | "reference";
+
 export interface TaskBrief {
   id: string;
   title: string;
@@ -60,11 +63,14 @@ export function useProcessInboxItem() {
       target_type,
     }: {
       id: string;
-      target_type: "task" | "project" | "transaction" | "document" | "decision" | "reference";
+      target_type: ProcessTargetType;
     }) => {
-      const { data } = await api.post<ProcessResponse>(`/inbox/items/${id}/process`, {
-        target_type,
-      });
+      const { data } = await api.post<ProcessResponse>(
+        `/inbox/items/${id}/process`,
+        {
+          target_type,
+        },
+      );
       return data;
     },
     onSuccess: () => {

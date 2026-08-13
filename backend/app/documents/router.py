@@ -1,14 +1,15 @@
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.identity.models import User
-from app.identity.router import get_current_user
 from app.documents import service
 from app.documents.schemas import DocumentResponse, DocumentTextResponse, DocumentUploadResponse
+from app.identity.models import User
+from app.identity.router import get_current_user
 
 router = APIRouter()
 MAX_FILE_SIZE = 20 * 1024 * 1024
@@ -17,47 +18,60 @@ ALLOWED_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png"}
 
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    file: Annotated[UploadFile, File(...)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     if file.content_type not in ALLOWED_MIME_TYPES:
         return JSONResponse(
-            content={"detail": f"Unsupported file type: {file.content_type}. Allowed: PDF, JPG, PNG."},
+            content={
+                "detail": f"Unsupported file type: {file.content_type}. Allowed: PDF, JPG, PNG."
+            },
             status_code=400,
         )
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
-        return JSONResponse(content={"detail": "File too large. Maximum size: 20 MB."}, status_code=400)
+        return JSONResponse(
+            content={"detail": "File too large. Maximum size: 20 MB."}, status_code=400
+        )
 
     doc = await service.upload_document(
-        db, current_user.id, content, file.filename or "untitled", file.content_type or "application/octet-stream"
+        db,
+        current_user.id,
+        content,
+        file.filename or "untitled",
+        file.content_type or "application/octet-stream",
     )
     is_duplicate = doc.created_at != doc.updated_at
     if not is_duplicate:
         from app.worker import enqueue_process_document
+
         await enqueue_process_document(str(doc.id))
 
-    return DocumentUploadResponse(document=DocumentResponse.model_validate(doc), is_duplicate=is_duplicate)
+    return DocumentUploadResponse(
+        document=DocumentResponse.model_validate(doc), is_duplicate=is_duplicate
+    )
 
 
 @router.get("", response_model=list[DocumentResponse])
 async def list_documents(
-    limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    status: str | None = Query(None, pattern=r"^(pending|processing|done|error)$"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    status: Annotated[str | None, Query(pattern=r"^(pending|processing|done|error)$")] = None,
 ):
-    docs = await service.get_documents(db, current_user.id, limit=limit, offset=offset, status=status)
+    docs = await service.get_documents(
+        db, current_user.id, limit=limit, offset=offset, status=status
+    )
     return [DocumentResponse.model_validate(d) for d in docs]
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     doc = await service.get_document(db, current_user.id, document_id)
     if doc is None:
@@ -68,8 +82,8 @@ async def get_document(
 @router.get("/{document_id}/text", response_model=DocumentTextResponse)
 async def get_document_text(
     document_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     doc = await service.get_document(db, current_user.id, document_id)
     if doc is None:
@@ -83,8 +97,8 @@ async def get_document_text(
 @router.delete("/{document_id}")
 async def delete_document(
     document_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     deleted = await service.delete_document(db, current_user.id, document_id)
     if not deleted:

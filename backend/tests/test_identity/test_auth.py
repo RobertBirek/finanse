@@ -1,13 +1,15 @@
 """Tests for identity domain."""
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
 from app.main import app
-from app.identity.service import hash_password, verify_password, create_access_token
+
 
 @pytest.fixture
 def auth_service():
     from app.identity import service
+
     return service
 
 
@@ -34,8 +36,10 @@ class TestPasswordHashing:
 
 class TestToken:
     def test_create_and_decode_token(self, auth_service):
-        from app.config import settings
         from jose import jwt
+
+        from app.config import settings
+
         user_id = "test-user-id-123"
         token = auth_service.create_access_token(user_id)
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
@@ -44,16 +48,21 @@ class TestToken:
 
 
 class TestRegisterAndLogin:
+    pytestmark = pytest.mark.integration
+
     @pytest.mark.asyncio
     async def test_register_user(self):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.post("/api/auth/register", json={
-                "email": "test@example.com",
-                "password": "TestPass123!",
-                "display_name": "Test User",
-            })
-            assert response.status_code == 200
+            response = await client.post(
+                "/api/auth/register",
+                json={
+                    "email": "test@example.com",
+                    "password": "TestPass123!",
+                    "display_name": "Test User",
+                },
+            )
+            assert response.status_code == 201
             data = response.json()
             assert data["email"] == "test@example.com"
             assert data["display_name"] == "Test User"
@@ -64,31 +73,43 @@ class TestRegisterAndLogin:
     async def test_register_duplicate_email(self):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            await client.post("/api/auth/register", json={
-                "email": "dup@example.com",
-                "password": "TestPass123!",
-                "display_name": "User 1",
-            })
-            response = await client.post("/api/auth/register", json={
-                "email": "dup@example.com",
-                "password": "TestPass123!",
-                "display_name": "User 2",
-            })
-            assert response.status_code == 400
+            await client.post(
+                "/api/auth/register",
+                json={
+                    "email": "dup@example.com",
+                    "password": "TestPass123!",
+                    "display_name": "User 1",
+                },
+            )
+            response = await client.post(
+                "/api/auth/register",
+                json={
+                    "email": "dup@example.com",
+                    "password": "TestPass123!",
+                    "display_name": "User 2",
+                },
+            )
+            assert response.status_code == 409
 
     @pytest.mark.asyncio
     async def test_login_success(self):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            await client.post("/api/auth/register", json={
-                "email": "login@example.com",
-                "password": "TestPass123!",
-                "display_name": "Login User",
-            })
-            response = await client.post("/api/auth/login", json={
-                "email": "login@example.com",
-                "password": "TestPass123!",
-            })
+            await client.post(
+                "/api/auth/register",
+                json={
+                    "email": "login@example.com",
+                    "password": "TestPass123!",
+                    "display_name": "Login User",
+                },
+            )
+            response = await client.post(
+                "/api/auth/login",
+                json={
+                    "email": "login@example.com",
+                    "password": "TestPass123!",
+                },
+            )
             assert response.status_code == 200
             assert "access_token" in response.json()
             assert "session" in response.cookies or response.cookies
@@ -97,13 +118,19 @@ class TestRegisterAndLogin:
     async def test_login_wrong_password(self):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            await client.post("/api/auth/register", json={
-                "email": "wrongpass@example.com",
-                "password": "TestPass123!",
-                "display_name": "User",
-            })
-            response = await client.post("/api/auth/login", json={
-                "email": "wrongpass@example.com",
-                "password": "WrongPassword1",
-            })
+            await client.post(
+                "/api/auth/register",
+                json={
+                    "email": "wrongpass@example.com",
+                    "password": "TestPass123!",
+                    "display_name": "User",
+                },
+            )
+            response = await client.post(
+                "/api/auth/login",
+                json={
+                    "email": "wrongpass@example.com",
+                    "password": "WrongPassword1",
+                },
+            )
             assert response.status_code == 401

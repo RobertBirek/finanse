@@ -1,3 +1,5 @@
+import uuid
+
 WORK_TOOLS = [
     {
         "name": "get_projects",
@@ -35,10 +37,16 @@ def get_work_tool_schemas() -> list[dict]:
 
 async def execute_get_projects(db, user_id: str) -> dict:
     from app.work.service import get_projects
-    projects = await get_projects(db, user_id)
+
+    projects = await get_projects(db, uuid.UUID(user_id))
     return {
         "projects": [
-            {"id": str(p.id), "name": p.name, "status": p.status, "deadline": str(p.deadline) if p.deadline else None}
+            {
+                "id": str(p.id),
+                "name": p.name,
+                "status": p.status,
+                "deadline": str(p.deadline) if p.deadline else None,
+            }
             for p in projects
         ]
     }
@@ -46,7 +54,8 @@ async def execute_get_projects(db, user_id: str) -> dict:
 
 async def execute_get_today_schedule(db, user_id: str) -> dict:
     from app.work.service import get_today_schedule
-    schedule = await get_today_schedule(db, user_id)
+
+    schedule = await get_today_schedule(db, uuid.UUID(user_id))
     return {
         "date": schedule["date"],
         "time_blocks": [
@@ -66,17 +75,28 @@ async def execute_get_today_schedule(db, user_id: str) -> dict:
     }
 
 
-async def execute_get_tasks(db, user_id: str, project_id: str | None = None, status: str | None = None) -> dict:
-    from app.work.service import get_tasks
+async def execute_get_tasks(
+    db, user_id: str, project_id: str | None = None, status: str | None = None
+) -> dict:
     import uuid as uuid_mod
+
+    from app.work.service import get_tasks
+
     tasks = await get_tasks(
-        db, uuid_mod.UUID(user_id),
+        db,
+        uuid_mod.UUID(user_id),
         project_id=uuid_mod.UUID(project_id) if project_id else None,
         status=status,
     )
     return {
         "tasks": [
-            {"id": str(t.id), "title": t.title, "status": t.status, "priority": t.priority, "project_id": str(t.project_id) if t.project_id else None}
+            {
+                "id": str(t.id),
+                "title": t.title,
+                "status": t.status,
+                "priority": t.priority,
+                "project_id": str(t.project_id) if t.project_id else None,
+            }
             for t in tasks
         ]
     }

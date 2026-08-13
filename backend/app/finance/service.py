@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,9 +16,19 @@ from app.finance.schemas import (
     TransactionUpdate,
 )
 
+SUPPORTED_CURRENCIES = {"PLN", "EUR", "USD"}
+
+
+def _local_today() -> date:
+    """Keep transaction dates aligned with the user's local calendar day."""
+    return datetime.now(UTC).astimezone().date()
+
 
 async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCreate) -> Account:
-    account = Account(user_id=user_id, **data.model_dump())
+    currency = data.currency.upper()
+    if currency not in SUPPORTED_CURRENCIES:
+        raise ValueError("Unsupported currency")
+    account = Account(user_id=user_id, **data.model_dump(exclude={"currency"}), currency=currency)
     db.add(account)
     await db.flush()
     return account
@@ -56,7 +66,9 @@ async def get_accounts(db: AsyncSession, user_id: uuid.UUID) -> list[Account]:
     return accounts
 
 
-async def get_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID) -> Account | None:
+async def get_account(
+    db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID
+) -> Account | None:
     result = await db.execute(
         select(Account).where(Account.id == account_id, Account.user_id == user_id)
     )
@@ -120,20 +132,65 @@ def _validate_posting_sum(postings: list, txn_type: str) -> None:
         )
 
     if txn_type in ("income", "expense") and len(postings) < 2:
-        raise ValueError("Income/expense transactions must have at least 2 postings (source + destination)")
+        raise ValueError(
+            "Income/expense transactions must have at least 2 postings (source + destination)"
+        )
 
     if len(postings) < 2:
         raise ValueError("Transactions must have at least 2 postings")
+
+
+async def _validate_transaction_postings(
+    db: AsyncSession, user_id: uuid.UUID, postings: list
+) -> None:
+    account_ids = {posting.account_id for posting in postings}
+    account_result = await db.execute(
+        select(Account).where(Account.user_id == user_id, Account.id.in_(account_ids))
+    )
+    accounts = {account.id: account for account in account_result.scalars().all()}
+
+    category_ids = {posting.category_id for posting in postings if posting.category_id is not None}
+    categories: dict[uuid.UUID, Category] = {}
+    if category_ids:
+        category_result = await db.execute(
+            select(Category).where(Category.user_id == user_id, Category.id.in_(category_ids))
+        )
+        categories = {category.id: category for category in category_result.scalars().all()}
+
+    for posting in postings:
+        account = accounts.get(posting.account_id)
+        if account is None:
+            raise ValueError("Account not found")
+        if posting.category_id is not None and posting.category_id not in categories:
+            raise ValueError("Category not found")
+
+        source_currency = str(posting.source_currency).upper()
+        account_currency = str(account.currency).upper()
+        if (
+            source_currency not in SUPPORTED_CURRENCIES
+            or account_currency not in SUPPORTED_CURRENCIES
+        ):
+            raise ValueError("Unsupported currency")
+        if source_currency != account_currency:
+            raise ValueError(
+                f"Posting currency {source_currency} does not match account currency "
+                f"{account_currency}"
+            )
+        if posting.source_amount <= 0 or posting.base_amount_pln <= 0:
+            raise ValueError("Posting amounts must be positive")
+        if posting.fx_rate <= 0:
+            raise ValueError("FX rate must be positive")
 
 
 async def create_transaction(
     db: AsyncSession, user_id: uuid.UUID, data: TransactionCreate
 ) -> FinancialTransaction:
     _validate_posting_sum(data.postings, data.type)
+    await _validate_transaction_postings(db, user_id, data.postings)
 
     txn = FinancialTransaction(
         user_id=user_id,
-        date=data.transaction_date or date.today(),
+        date=data.transaction_date or _local_today(),
         description=data.description,
         type=data.type,
         is_pending=data.is_pending,
@@ -149,7 +206,7 @@ async def create_transaction(
             account_id=p_data.account_id,
             category_id=p_data.category_id,
             source_amount=p_data.source_amount,
-            source_currency=p_data.source_currency,
+            source_currency=p_data.source_currency.upper(),
             base_amount_pln=p_data.base_amount_pln,
             fx_rate=p_data.fx_rate,
             fx_rate_source=p_data.fx_rate_source,
@@ -213,7 +270,7 @@ async def update_transaction(
 
 
 async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> FinancialSummary:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_month = now.month
     current_year = now.year
     month_start = date(current_year, current_month, 1)
@@ -241,13 +298,15 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
         total_credits = credit_result.scalar() or 0
         balance = total_debits - total_credits
 
-        account_balances.append({
-            "id": str(account.id),
-            "name": account.name,
-            "type": account.type,
-            "currency": account.currency,
-            "balance_pln": balance,
-        })
+        account_balances.append(
+            {
+                "id": str(account.id),
+                "name": account.name,
+                "type": account.type,
+                "currency": account.currency,
+                "balance_pln": balance,
+            }
+        )
 
     income_result = await db.execute(
         select(func.coalesce(func.sum(Posting.base_amount_pln), 0))

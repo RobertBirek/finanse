@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { useAccounts, useFinancialSummary, useAccountTransactions } from "../api/finance";
-import type { Account, Transaction } from "../api/finance";
+import {
+  useAccounts,
+  useFinancialSummary,
+  useAccountTransactions,
+} from "../api/finance";
+import type { Transaction } from "../api/finance";
 
 const formatPLN = (amount: number) => {
   return new Intl.NumberFormat("pl-PL", {
@@ -13,7 +17,8 @@ export function Finances() {
   const { data: accounts } = useAccounts();
   const { data: summary } = useFinancialSummary();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { data: acctTxns, isLoading: txLoading } = useAccountTransactions(selectedId);
+  const { data: acctTxns, isLoading: txLoading } =
+    useAccountTransactions(selectedId);
 
   const selected = accounts?.find((a) => a.id === selectedId) ?? null;
 
@@ -25,21 +30,29 @@ export function Finances() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="card">
             <p className="text-xs text-gray-400 mb-1">Przychody</p>
-            <p className="text-lg font-bold text-green-400">{formatPLN(summary.income_total_pln)} PLN</p>
+            <p className="text-lg font-bold text-green-400">
+              {formatPLN(summary.income_total_pln)} PLN
+            </p>
           </div>
           <div className="card">
             <p className="text-xs text-gray-400 mb-1">Wydatki</p>
-            <p className="text-lg font-bold text-red-400">{formatPLN(summary.expense_total_pln)} PLN</p>
+            <p className="text-lg font-bold text-red-400">
+              {formatPLN(summary.expense_total_pln)} PLN
+            </p>
           </div>
           <div className="card">
             <p className="text-xs text-gray-400 mb-1">Bilans</p>
-            <p className={`text-lg font-bold ${summary.net_total_pln >= 0 ? "text-green-400" : "text-red-400"}`}>
+            <p
+              className={`text-lg font-bold ${summary.net_total_pln >= 0 ? "text-green-400" : "text-red-400"}`}
+            >
               {formatPLN(summary.net_total_pln)} PLN
             </p>
           </div>
           <div className="card">
             <p className="text-xs text-gray-400 mb-1">Okres</p>
-            <p className="text-lg font-bold text-gray-200">{summary.month}.{summary.year}</p>
+            <p className="text-lg font-bold text-gray-200">
+              {summary.month}.{summary.year}
+            </p>
           </div>
         </div>
       )}
@@ -49,13 +62,17 @@ export function Finances() {
           <div className="card">
             <h2 className="text-lg font-semibold text-white mb-4">Konta</h2>
             {accounts?.length === 0 ? (
-              <p className="text-gray-500 text-sm py-4 text-center">Brak kont</p>
+              <p className="text-gray-500 text-sm py-4 text-center">
+                Brak kont
+              </p>
             ) : (
               <div className="space-y-1">
                 {accounts?.map((a) => (
                   <button
                     key={a.id}
-                    onClick={() => setSelectedId(selectedId === a.id ? null : a.id)}
+                    onClick={() =>
+                      setSelectedId(selectedId === a.id ? null : a.id)
+                    }
                     className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
                       selectedId === a.id
                         ? "bg-advisor-500/20 border border-advisor-500/30"
@@ -63,10 +80,16 @@ export function Finances() {
                     }`}
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{a.name}</p>
-                      <p className="text-xs text-gray-500">{a.type} · {a.currency}</p>
+                      <p className="text-sm font-medium text-white truncate">
+                        {a.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {a.type} · {a.currency}
+                      </p>
                     </div>
-                    <p className={`text-sm font-mono font-medium flex-shrink-0 ml-2 ${(a.balance_pln ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    <p
+                      className={`text-sm font-mono font-medium flex-shrink-0 ml-2 ${(a.balance_pln ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}
+                    >
                       {formatPLN(a.balance_pln ?? 0)}
                     </p>
                   </button>
@@ -81,37 +104,60 @@ export function Finances() {
             <div className="card">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">{selected.name}</h2>
-                  <p className="text-sm text-gray-500">{selected.type} · {selected.currency}</p>
+                  <h2 className="text-lg font-semibold text-white">
+                    {selected.name}
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    {selected.type} · {selected.currency}
+                  </p>
                 </div>
-                <p className={`text-xl font-bold ${(selected.balance_pln ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                  {formatPLN(selected.balance_pln ?? 0)} {selected.currency}
+                <p
+                  className={`text-xl font-bold ${(selected.balance_pln ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}
+                >
+                  {formatPLN(selected.balance_pln ?? 0)} PLN
                 </p>
               </div>
 
-              <h3 className="text-sm font-medium text-gray-400 mb-3">Transakcje</h3>
+              <h3 className="text-sm font-medium text-gray-400 mb-3">
+                Transakcje
+              </h3>
               {txLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="w-6 h-6 border-2 border-advisor-500 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : acctTxns?.length === 0 ? (
-                <p className="text-gray-500 text-sm py-4 text-center">Brak transakcji dla tego konta</p>
+                <p className="text-gray-500 text-sm py-4 text-center">
+                  Brak transakcji dla tego konta
+                </p>
               ) : (
                 <div className="space-y-1">
                   {acctTxns?.map((tx: Transaction) => {
-                    const myPosting = tx.postings?.find((p) => p.account_id === selected.id);
+                    const myPosting = tx.postings?.find(
+                      (p) => p.account_id === selected.id,
+                    );
                     const amount = myPosting?.source_amount ?? 0;
                     const isIncome = myPosting?.direction === "debit";
                     return (
-                      <div key={tx.id} className="flex items-center justify-between p-2.5 rounded bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
+                      <div
+                        key={tx.id}
+                        className="flex items-center justify-between p-2.5 rounded bg-gray-800/30 hover:bg-gray-800/50 transition-colors"
+                      >
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm text-gray-200 truncate">{tx.description}</p>
+                          <p className="text-sm text-gray-200 truncate">
+                            {tx.description}
+                          </p>
                           <p className="text-xs text-gray-500">
-                            {new Date(tx.transaction_date).toLocaleDateString("pl-PL")} · {tx.type}
+                            {new Date(tx.transaction_date).toLocaleDateString(
+                              "pl-PL",
+                            )}{" "}
+                            · {tx.type}
                           </p>
                         </div>
-                        <p className={`text-sm font-mono font-medium flex-shrink-0 ml-3 ${isIncome ? "text-green-400" : "text-red-400"}`}>
-                          {isIncome ? "+" : "\u2212"}{formatPLN(amount)}
+                        <p
+                          className={`text-sm font-mono font-medium flex-shrink-0 ml-3 ${isIncome ? "text-green-400" : "text-red-400"}`}
+                        >
+                          {isIncome ? "+" : "\u2212"}
+                          {formatPLN(amount)}
                         </p>
                       </div>
                     );
@@ -121,7 +167,9 @@ export function Finances() {
             </div>
           ) : (
             <div className="card flex items-center justify-center min-h-[200px]">
-              <p className="text-gray-500 text-sm">Wybierz konto z listy, aby zobaczyć szczegóły</p>
+              <p className="text-gray-500 text-sm">
+                Wybierz konto z listy, aby zobaczyć szczegóły
+              </p>
             </div>
           )}
         </div>

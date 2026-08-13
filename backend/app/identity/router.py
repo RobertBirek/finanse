@@ -1,9 +1,12 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.config import settings
+from app.database import get_db
+from app.identity.models import User
 from app.identity.schemas import TokenResponse, UserCreate, UserLogin, UserResponse
 from app.identity.service import (
     authenticate,
@@ -23,9 +26,9 @@ COOKIE_MAX_AGE = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 
 async def get_current_user(
-    access_token: str | None = Cookie(default=None, alias=COOKIE_NAME),
-    bearer_token: str | None = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
+    bearer_token: Annotated[str | None, Depends(oauth2_scheme)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    access_token: Annotated[str | None, Cookie(alias=COOKIE_NAME)] = None,
 ):
     token = bearer_token or access_token
     if token is None:
@@ -33,17 +36,23 @@ async def get_current_user(
 
     user_id = decode_access_token(token)
     if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
+        )
 
     user = await get_user_by_id(db, user_id)
     if user is None or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive"
+        )
 
     return user
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(data: UserCreate, response: Response, db: AsyncSession = Depends(get_db)):
+async def register(
+    data: UserCreate, response: Response, db: Annotated[AsyncSession, Depends(get_db)]
+):
     existing = await get_user_by_email(db, data.email)
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
@@ -64,10 +73,12 @@ async def register(data: UserCreate, response: Response, db: AsyncSession = Depe
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: UserLogin, response: Response, db: AsyncSession = Depends(get_db)):
+async def login(data: UserLogin, response: Response, db: Annotated[AsyncSession, Depends(get_db)]):
     user = await authenticate(db, data.email, data.password)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
+        )
 
     token = create_access_token(user.id)
 
@@ -90,5 +101,5 @@ async def logout(response: Response):
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(current_user=Depends(get_current_user)):
+async def me(current_user: Annotated[User, Depends(get_current_user)]):
     return current_user
