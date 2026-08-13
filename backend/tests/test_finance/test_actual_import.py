@@ -113,11 +113,11 @@ class TestActualParserCategories:
     def test_reads_categories_with_groups(self):
         schema = """
         CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
-        CREATE TABLE category_groups (id TEXT, name TEXT);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
         """
         inserts = [
-            "INSERT INTO category_groups VALUES ('g1', 'Wydatki biezace')",
-            "INSERT INTO category_groups VALUES ('g2', 'Przychody')",
+            "INSERT INTO category_groups VALUES ('g1', 'Wydatki biezace', 0)",
+            "INSERT INTO category_groups VALUES ('g2', 'Przychody', 0)",
             "INSERT INTO categories VALUES ('c1', 'Jedzenie', 0, 'g1', 0)",
             "INSERT INTO categories VALUES ('c2', 'Pensja', 1, 'g2', 0)",
             "INSERT INTO categories VALUES ('c3', 'Ukryta', 0, 'g1', 1)",
@@ -140,6 +140,27 @@ class TestActualParserCategories:
                 {"actual_id": "g2", "name": "Przychody", "type": "income"},
                 {"actual_id": "g1", "name": "Wydatki biezace", "type": "expense"},
             ]
+        finally:
+            os.unlink(db_path)
+
+    def test_skips_tombstoned_groups_with_active_children(self):
+        schema = """
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        """
+        inserts = [
+            "INSERT INTO category_groups VALUES ('g_active', 'Aktywna', 0)",
+            "INSERT INTO category_groups VALUES ('g_deleted', 'Usunieta', 1)",
+            "INSERT INTO categories VALUES ('c_active', 'Paliwo', 0, 'g_active', 0)",
+            "INSERT INTO categories VALUES ('c_deleted_group', 'Czynsz', 0, 'g_deleted', 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                assert parser.get_category_groups() == [
+                    {"actual_id": "g_active", "name": "Aktywna", "type": "expense"}
+                ]
         finally:
             os.unlink(db_path)
 
@@ -331,6 +352,49 @@ class TestActualParserTransactions:
             with ActualParser(db_path) as parser:
                 postings = parser.get_transfers()[0]["postings"]
                 assert postings == [
+                    {
+                        "account_actual_id": "acc_pln",
+                        "category_actual_id": None,
+                        "source_amount": 43210,
+                        "source_currency": "PLN",
+                        "direction": "credit",
+                    },
+                    {
+                        "account_actual_id": "acc_usd",
+                        "category_actual_id": None,
+                        "source_amount": 12345,
+                        "source_currency": "USD",
+                        "direction": "debit",
+                    },
+                ]
+        finally:
+            os.unlink(db_path)
+
+    def test_reconstructs_transfer_from_view_schema_with_real_currency_values(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE transaction_rows (
+            id TEXT, account TEXT, category TEXT, amount INTEGER, payee TEXT,
+            notes TEXT, date INTEGER, transfer_id TEXT, tombstone INTEGER,
+            is_parent INTEGER, is_child INTEGER, parent_id TEXT
+        );
+        CREATE VIEW v_transactions AS
+        SELECT id, account, category, amount, payee, notes, date, transfer_id,
+               tombstone, is_parent, is_child, parent_id
+        FROM transaction_rows;
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc_pln', 'ING', 0, 0, 0)",
+            "INSERT INTO accounts VALUES ('acc_usd', 'Revolut USD', 0, 0, 0)",
+            "INSERT INTO transaction_rows VALUES ('tx_pln', 'acc_pln', NULL, -43210, NULL, NULL, 20260701, 'tx_usd', 0, 0, 0, NULL)",
+            "INSERT INTO transaction_rows VALUES ('tx_usd', 'acc_usd', NULL, 12345, NULL, NULL, 20260701, 'tx_pln', 0, 0, 0, NULL)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                assert parser._use_view is True
+                assert parser.get_transfers()[0]["postings"] == [
                     {
                         "account_actual_id": "acc_pln",
                         "category_actual_id": None,

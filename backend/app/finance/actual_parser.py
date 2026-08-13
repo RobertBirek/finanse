@@ -139,7 +139,7 @@ class ActualParser:
             "SELECT g.id, g.name, c.is_income "
             "FROM category_groups g "
             "JOIN categories c ON c.cat_group = g.id "
-            "WHERE c.tombstone=0 "
+            "WHERE g.tombstone=0 AND c.tombstone=0 "
             "ORDER BY g.name"
         ).fetchall()
         group_children: dict[str, list[sqlite3.Row]] = {}
