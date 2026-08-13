@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.database import async_session_factory
 from app.finance.actual_parser import ActualParser, TransactionDict
-from app.finance.models import FinancialTransaction
+from app.finance.models import Account, ActualImportMapping, Category, FinancialTransaction
 from app.finance.nbp_rates import NbpRateProvider
 from app.finance.schemas import AccountCreate, CategoryCreate, PostingCreate, TransactionCreate
 from app.finance.service import create_account, create_category, create_transaction
@@ -64,16 +64,19 @@ async def resolve_ids(
     group_map: dict[str, uuid.UUID] = {}
 
     for a in parser.get_accounts():
-        pa_acct = await create_account(
-            db,
-            user_id,
-            AccountCreate(
-                name=a["name"],
-                type=a["type"],
-                currency=a["currency"],
-                is_budget_account=a["is_budget_account"],
-            ),
-        )
+        pa_acct = await _get_mapped_entity(db, user_id, "account", a["actual_id"], Account)
+        if pa_acct is None:
+            pa_acct = await create_account(
+                db,
+                user_id,
+                AccountCreate(
+                    name=a["name"],
+                    type=a["type"],
+                    currency=a["currency"],
+                    is_budget_account=a["is_budget_account"],
+                ),
+            )
+            await _store_mapping(db, user_id, "account", a["actual_id"], pa_acct.id)
         acct_map[a["actual_id"]] = pa_acct.id
         acct_currency[a["actual_id"]] = a["currency"]
         acct_budget[a["actual_id"]] = a["is_budget_account"]
@@ -84,26 +87,63 @@ async def resolve_ids(
         category_groups = []
 
     for group in category_groups:
-        pa_group = await create_category(
-            db,
-            user_id,
-            CategoryCreate(name=group["name"], type=group["type"]),
+        pa_group = await _get_mapped_entity(
+            db, user_id, "category_group", group["actual_id"], Category
         )
+        if pa_group is None:
+            pa_group = await create_category(
+                db,
+                user_id,
+                CategoryCreate(name=group["name"], type=group["type"]),
+            )
+            await _store_mapping(db, user_id, "category_group", group["actual_id"], pa_group.id)
         group_map[group["actual_id"]] = pa_group.id
 
     for c in parser.get_categories():
-        pa_cat = await create_category(
-            db,
-            user_id,
-            CategoryCreate(
-                name=c["name"],
-                type=c["type"],
-                parent_id=group_map.get(c["group_actual_id"]) if c["group_actual_id"] else None,
-            ),
-        )
+        pa_cat = await _get_mapped_entity(db, user_id, "category", c["actual_id"], Category)
+        if pa_cat is None:
+            pa_cat = await create_category(
+                db,
+                user_id,
+                CategoryCreate(
+                    name=c["name"],
+                    type=c["type"],
+                    parent_id=group_map.get(c["group_actual_id"]) if c["group_actual_id"] else None,
+                ),
+            )
+            await _store_mapping(db, user_id, "category", c["actual_id"], pa_cat.id)
         cat_map[c["actual_id"]] = pa_cat.id
 
     return acct_map, cat_map, acct_currency, acct_budget
+
+
+async def _get_mapped_entity(
+    db: Any, user_id: uuid.UUID, entity_type: str, actual_id: str, model: type[Any]
+) -> Any | None:
+    entity_id = await db.scalar(
+        select(ActualImportMapping.entity_id).where(
+            ActualImportMapping.user_id == user_id,
+            ActualImportMapping.entity_type == entity_type,
+            ActualImportMapping.actual_id == actual_id,
+        )
+    )
+    if entity_id is None:
+        return None
+    return await db.scalar(select(model).where(model.id == entity_id, model.user_id == user_id))
+
+
+async def _store_mapping(
+    db: Any, user_id: uuid.UUID, entity_type: str, actual_id: str, entity_id: uuid.UUID
+) -> None:
+    db.add(
+        ActualImportMapping(
+            user_id=user_id,
+            entity_type=entity_type,
+            actual_id=actual_id,
+            entity_id=entity_id,
+        )
+    )
+    await db.flush()
 
 
 def _posting_base_amount(
@@ -150,7 +190,7 @@ def required_fx_difference_kind(
         base_amount, _, _ = _posting_base_amount(
             posting["source_amount"], currency, txn["date"], fx_rates
         )
-        total += base_amount if posting["direction"] == "debit" else -base_amount
+        total += base_amount if posting["direction"] == "credit" else -base_amount
     if total > 0:
         return "gain"
     if total < 0:
@@ -192,7 +232,8 @@ def build_pa_postings(
                 base_amount_pln=base_amount,
                 fx_rate=fx_rate,
                 fx_rate_source=fx_source,
-                direction=p["direction"],
+                # Actual's account sign is opposite to PA's credit-minus-debit balance convention.
+                direction="debit" if p["direction"] == "credit" else "credit",
                 is_budget_impact=(acct_budget or {}).get(actual_acct_id, True),
             )
         )
@@ -239,6 +280,11 @@ def make_description(actual_id: str, description: str) -> str:
 
 async def check_idempotent(db, user_id: uuid.UUID, actual_id: str) -> bool:
     """Check if transaction with this Actual ID already exists."""
+    mapped_transaction = await _get_mapped_entity(
+        db, user_id, "transaction", actual_id, FinancialTransaction
+    )
+    if mapped_transaction is not None:
+        return True
     result = await db.execute(
         select(FinancialTransaction.id).where(
             FinancialTransaction.user_id == user_id,
@@ -246,7 +292,11 @@ async def check_idempotent(db, user_id: uuid.UUID, actual_id: str) -> bool:
             FinancialTransaction.description.like(f"[actual:{actual_id}]%"),
         )
     )
-    return result.first() is not None
+    transaction_id = result.scalar_one_or_none()
+    if transaction_id is None:
+        return False
+    await _store_mapping(db, user_id, "transaction", actual_id, transaction_id)
+    return True
 
 
 def generate_report(stats: dict, errors: list[str], warnings: list[str], mapping: dict) -> str:
@@ -468,7 +518,7 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
                 continue
 
             try:
-                await create_transaction(
+                created_transaction = await create_transaction(
                     db,
                     user_id,
                     TransactionCreate(
@@ -478,6 +528,9 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
                         source="actual",
                         postings=postings,
                     ),
+                )
+                await _store_mapping(
+                    db, user_id, "transaction", txn["actual_id"], created_transaction.id
                 )
                 stats["written"] += 1
             except (SQLAlchemyError, ValueError) as error:

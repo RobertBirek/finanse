@@ -10,6 +10,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -55,6 +56,19 @@ class Category(Base):
         "Category", remote_side="Category.id", backref="children"
     )
     postings: Mapped[list["Posting"]] = relationship("Posting", back_populates="category")
+
+
+class ActualImportMapping(Base):
+    __tablename__ = "actual_import_mappings"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    entity_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    actual_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "entity_type", "actual_id", name="uq_actual_import_mapping"),
+    )
 
 
 class FinancialTransaction(Base):
