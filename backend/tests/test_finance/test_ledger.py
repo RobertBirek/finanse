@@ -1,17 +1,22 @@
 """Tests for finance domain — double-entry ledger invariants."""
 
 import uuid
+from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.database import get_db
 from app.finance.schemas import AccountCreate, CategoryCreate, PostingCreate, TransactionCreate
 from app.finance.service import (
     _validate_posting_sum,
     create_account,
     create_category,
     create_transaction,
+    get_financial_summary,
 )
+from app.identity.router import get_current_user
 from app.main import app
 
 
@@ -231,6 +236,162 @@ async def test_category_only_posting_is_persisted(db_session):
 
     assert transaction.postings[0].account_id == account.id
     assert transaction.postings[1].account_id is None
+
+
+async def create_categorized_transaction(
+    db_session,
+    user_id,
+    account_id,
+    category_id,
+    *,
+    transaction_type="expense",
+    amount=10000,
+    is_budget_impact=True,
+):
+    account_direction, category_direction = (
+        ("credit", "debit") if transaction_type == "expense" else ("debit", "credit")
+    )
+    return await create_transaction(
+        db_session,
+        user_id,
+        TransactionCreate(
+            transaction_date=datetime.now(UTC).date(),
+            description="Skategoryzowana transakcja",
+            type=transaction_type,
+            postings=[
+                PostingCreate(
+                    account_id=account_id,
+                    source_amount=amount,
+                    source_currency="PLN",
+                    base_amount_pln=amount,
+                    direction=account_direction,
+                    is_budget_impact=is_budget_impact,
+                ),
+                PostingCreate(
+                    category_id=category_id,
+                    source_amount=amount,
+                    source_currency="PLN",
+                    base_amount_pln=amount,
+                    direction=category_direction,
+                    is_budget_impact=is_budget_impact,
+                ),
+            ],
+        ),
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_summary_excludes_offbudget_accounts_and_category_impact(db_session):
+    user_id = uuid.uuid4()
+    budget_account = await create_account(
+        db_session, user_id, AccountCreate(name="ING", type="checking", is_budget_account=True)
+    )
+    offbudget_account = await create_account(
+        db_session,
+        user_id,
+        AccountCreate(name="Pozyczka", type="credit", is_budget_account=False),
+    )
+    expense_category = await create_category(
+        db_session, user_id, CategoryCreate(name="Zakupy", type="expense")
+    )
+    income_category = await create_category(
+        db_session, user_id, CategoryCreate(name="Wyplata", type="income")
+    )
+
+    await create_categorized_transaction(
+        db_session, user_id, budget_account.id, expense_category.id
+    )
+    await create_categorized_transaction(
+        db_session,
+        user_id,
+        offbudget_account.id,
+        expense_category.id,
+        amount=10000,
+        is_budget_impact=False,
+    )
+    await create_categorized_transaction(
+        db_session,
+        user_id,
+        budget_account.id,
+        income_category.id,
+        transaction_type="income",
+        amount=4000,
+    )
+
+    summary = await get_financial_summary(db_session, user_id)
+
+    assert summary.expense_total_pln == 10000
+    assert summary.income_total_pln == 4000
+    assert [account["name"] for account in summary.accounts] == ["ING"]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_category_summary_aggregates_children_and_excludes_offbudget(db_session):
+    user_id = uuid.uuid4()
+    budget_account = await create_account(
+        db_session, user_id, AccountCreate(name="ING", type="checking", is_budget_account=True)
+    )
+    offbudget_account = await create_account(
+        db_session,
+        user_id,
+        AccountCreate(name="Pozyczka", type="credit", is_budget_account=False),
+    )
+    transport = await create_category(
+        db_session, user_id, CategoryCreate(name="Transport", type="expense")
+    )
+    fuel = await create_category(
+        db_session,
+        user_id,
+        CategoryCreate(name="Paliwo", type="expense", parent_id=transport.id),
+    )
+
+    await create_categorized_transaction(
+        db_session, user_id, budget_account.id, fuel.id, amount=5000
+    )
+    await create_categorized_transaction(
+        db_session,
+        user_id,
+        offbudget_account.id,
+        fuel.id,
+        amount=3000,
+        is_budget_impact=False,
+    )
+
+    async def override_current_user():
+        return SimpleNamespace(id=user_id)
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_db] = override_get_db
+    transport_client = ASGITransport(app=app)
+    try:
+        async with AsyncClient(transport=transport_client, base_url="http://test") as client:
+            response = await client.get("/api/finance/category-summary")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["categories"] == [
+        {
+            "category_id": str(fuel.id),
+            "name": "Paliwo",
+            "parent_id": str(transport.id),
+            "total_pln": 5000,
+        }
+    ]
+    assert body["groups"] == [
+        {
+            "category_id": str(transport.id),
+            "name": "Transport",
+            "parent_id": None,
+            "total_pln": 5000,
+        }
+    ]
 
 
 @pytest.mark.integration

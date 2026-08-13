@@ -132,3 +132,17 @@ class FinancialSummary(BaseModel):
     net_total_pln: int
     month: int
     year: int
+
+
+class CategorySpendResponse(BaseModel):
+    category_id: uuid.UUID
+    name: str
+    parent_id: uuid.UUID | None
+    total_pln: int
+
+
+class CategorySummaryResponse(BaseModel):
+    month: int
+    year: int
+    groups: list[CategorySpendResponse]
+    categories: list[CategorySpendResponse]

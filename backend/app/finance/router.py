@@ -15,6 +15,7 @@ from app.finance.schemas import (
     AccountUpdate,
     CategoryCreate,
     CategoryResponse,
+    CategorySummaryResponse,
     CategoryUpdate,
     FinancialSummary,
     TransactionCreate,
@@ -28,6 +29,7 @@ from app.finance.service import (
     get_account,
     get_accounts,
     get_categories,
+    get_category_summary,
     get_financial_summary,
     get_transaction,
     get_transactions,
@@ -201,3 +203,11 @@ async def get_summary(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     return await get_financial_summary(db, current_user.id)
+
+
+@router.get("/category-summary", response_model=CategorySummaryResponse)
+async def get_category_summary_endpoint(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await get_category_summary(db, current_user.id)

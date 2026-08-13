@@ -10,6 +10,8 @@ from app.finance.schemas import (
     AccountCreate,
     AccountUpdate,
     CategoryCreate,
+    CategorySpendResponse,
+    CategorySummaryResponse,
     CategoryUpdate,
     FinancialSummary,
     TransactionCreate,
@@ -281,7 +283,11 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
     month_start = date(current_year, current_month, 1)
 
     accounts_result = await db.execute(
-        select(Account).where(Account.user_id == user_id, Account.is_active == True)
+        select(Account).where(
+            Account.user_id == user_id,
+            Account.is_active.is_(True),
+            Account.is_budget_account.is_(True),
+        )
     )
     accounts = list(accounts_result.scalars().all())
 
@@ -320,6 +326,8 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
             FinancialTransaction.user_id == user_id,
             FinancialTransaction.type == "income",
             FinancialTransaction.date >= month_start,
+            Posting.category_id.is_not(None),
+            Posting.is_budget_impact.is_(True),
             Posting.direction == "credit",
         )
     )
@@ -332,6 +340,8 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
             FinancialTransaction.user_id == user_id,
             FinancialTransaction.type == "expense",
             FinancialTransaction.date >= month_start,
+            Posting.category_id.is_not(None),
+            Posting.is_budget_impact.is_(True),
             Posting.direction == "debit",
         )
     )
@@ -344,4 +354,72 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
         net_total_pln=income_total - expense_total,
         month=current_month,
         year=current_year,
+    )
+
+
+async def get_category_summary(db: AsyncSession, user_id: uuid.UUID) -> CategorySummaryResponse:
+    now = datetime.now(UTC)
+    month_start = date(now.year, now.month, 1)
+    month_end = date(now.year + (now.month == 12), (now.month % 12) + 1, 1)
+
+    result = await db.execute(
+        select(
+            Category.id,
+            Category.name,
+            Category.parent_id,
+            func.sum(Posting.base_amount_pln).label("total_pln"),
+        )
+        .join(Posting, Posting.category_id == Category.id)
+        .join(FinancialTransaction, Posting.transaction_id == FinancialTransaction.id)
+        .where(
+            FinancialTransaction.user_id == user_id,
+            FinancialTransaction.type == "expense",
+            FinancialTransaction.date >= month_start,
+            FinancialTransaction.date < month_end,
+            Posting.account_id.is_(None),
+            Posting.is_budget_impact.is_(True),
+            Posting.direction == "debit",
+        )
+        .group_by(Category.id, Category.name, Category.parent_id)
+        .order_by(Category.name)
+    )
+    category_totals = result.all()
+
+    categories = [
+        CategorySpendResponse(
+            category_id=category_id,
+            name=name,
+            parent_id=parent_id,
+            total_pln=int(total_pln),
+        )
+        for category_id, name, parent_id, total_pln in category_totals
+        if parent_id is not None
+    ]
+    group_totals: dict[uuid.UUID, int] = {}
+    for category in categories:
+        if category.parent_id is not None:
+            group_totals[category.parent_id] = (
+                group_totals.get(category.parent_id, 0) + category.total_pln
+            )
+
+    groups_result = await db.execute(
+        select(Category.id, Category.name, Category.parent_id)
+        .where(Category.user_id == user_id, Category.id.in_(group_totals))
+        .order_by(Category.name)
+    )
+    groups = [
+        CategorySpendResponse(
+            category_id=category_id,
+            name=name,
+            parent_id=parent_id,
+            total_pln=group_totals[category_id],
+        )
+        for category_id, name, parent_id in groups_result.all()
+    ]
+
+    return CategorySummaryResponse(
+        month=now.month,
+        year=now.year,
+        groups=groups,
+        categories=categories,
     )
