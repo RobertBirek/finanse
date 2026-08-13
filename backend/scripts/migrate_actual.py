@@ -63,6 +63,7 @@ async def resolve_ids(
                 name=a["name"],
                 type=a["type"],
                 currency=a["currency"],
+                is_budget_account=a["is_budget_account"],
             ),
         )
         acct_map[a["actual_id"]] = pa_acct.id

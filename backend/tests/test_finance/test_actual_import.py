@@ -42,8 +42,10 @@ class TestActualParserAccounts:
             assert len(result) == 2
             assert by_id["a1"]["name"] == "ING"
             assert by_id["a1"]["type"] == "checking"
+            assert by_id["a1"]["is_budget_account"] is True
             assert by_id["a2"]["name"] == "Gotowka"
             assert by_id["a2"]["type"] == "savings"
+            assert by_id["a2"]["is_budget_account"] is False
         finally:
             os.unlink(db_path)
 
@@ -130,8 +132,14 @@ class TestActualParserCategories:
             assert len(result) == 2
             assert by_id["c1"]["name"] == "Jedzenie"
             assert by_id["c1"]["type"] == "expense"
+            assert by_id["c1"]["group_actual_id"] == "g1"
             assert by_id["c2"]["name"] == "Pensja"
             assert by_id["c2"]["type"] == "income"
+            assert by_id["c2"]["group_actual_id"] == "g2"
+            assert parser.get_category_groups() == [
+                {"actual_id": "g2", "name": "Przychody", "type": "income"},
+                {"actual_id": "g1", "name": "Wydatki biezace", "type": "expense"},
+            ]
         finally:
             os.unlink(db_path)
 
@@ -299,6 +307,45 @@ class TestActualParserTransactions:
                 assert txn["postings"][1]["account_actual_id"] == "acc_cash"
                 assert txn["postings"][1]["direction"] == "debit"
                 assert txn["postings"][1]["source_amount"] == 10000
+        finally:
+            os.unlink(db_path)
+
+    def test_preserves_each_transfer_side_amount_and_currency(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc_pln', 'ING', 0, 0, 0)",
+            "INSERT INTO accounts VALUES ('acc_usd', 'Revolut USD', 0, 0, 0)",
+            "INSERT INTO transactions VALUES ('tx_pln', 0, 0, NULL, 'acc_pln', NULL, -43210, NULL, NULL, 20260701, 'tx_usd', 0)",
+            "INSERT INTO transactions VALUES ('tx_usd', 0, 0, NULL, 'acc_usd', NULL, 12345, NULL, NULL, 20260701, 'tx_pln', 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                postings = parser.get_transfers()[0]["postings"]
+                assert postings == [
+                    {
+                        "account_actual_id": "acc_pln",
+                        "category_actual_id": None,
+                        "source_amount": 43210,
+                        "source_currency": "PLN",
+                        "direction": "credit",
+                    },
+                    {
+                        "account_actual_id": "acc_usd",
+                        "category_actual_id": None,
+                        "source_amount": 12345,
+                        "source_currency": "USD",
+                        "direction": "debit",
+                    },
+                ]
         finally:
             os.unlink(db_path)
 

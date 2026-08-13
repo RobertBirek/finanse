@@ -10,12 +10,20 @@ class AccountDict(TypedDict):
     name: str
     type: str
     currency: str
+    is_budget_account: bool
+
+
+class CategoryGroupDict(TypedDict):
+    actual_id: str
+    name: str
+    type: str
 
 
 class CategoryDict(TypedDict):
     actual_id: str
     name: str
     type: str
+    group_actual_id: str | None
 
 
 class PostingDict(TypedDict):
@@ -107,21 +115,44 @@ class ActualParser:
                 "name": r["name"],
                 "type": "savings" if r["offbudget"] else "checking",
                 "currency": self._detect_currency(r["name"]),
+                "is_budget_account": not bool(r["offbudget"]),
             }
             for r in rows
         ]
 
     def get_categories(self) -> list[CategoryDict]:
         rows = self._conn.execute(
-            "SELECT id, name, is_income FROM categories WHERE tombstone=0 ORDER BY name"
+            "SELECT id, name, is_income, cat_group FROM categories WHERE tombstone=0 ORDER BY name"
         ).fetchall()
         return [
             {
                 "actual_id": r["id"],
                 "name": r["name"],
                 "type": "income" if r["is_income"] else "expense",
+                "group_actual_id": r["cat_group"],
             }
             for r in rows
+        ]
+
+    def get_category_groups(self) -> list[CategoryGroupDict]:
+        rows = self._conn.execute(
+            "SELECT g.id, g.name, c.is_income "
+            "FROM category_groups g "
+            "JOIN categories c ON c.cat_group = g.id "
+            "WHERE c.tombstone=0 "
+            "ORDER BY g.name"
+        ).fetchall()
+        group_children: dict[str, list[sqlite3.Row]] = {}
+        for row in rows:
+            group_children.setdefault(row["id"], []).append(row)
+
+        return [
+            {
+                "actual_id": group_id,
+                "name": children[0]["name"],
+                "type": "income" if all(child["is_income"] for child in children) else "expense",
+            }
+            for group_id, children in group_children.items()
         ]
 
     def get_transactions(self) -> list[TransactionDict]:
@@ -231,6 +262,7 @@ class ActualParser:
 
     def get_transfers(self) -> list[TransactionDict]:
         """Reconstruct transfer transactions from paired transfer_id rows (mutual reference)."""
+        acct_currency = self._get_account_currency_map()
         acct_rows = self._conn.execute(
             "SELECT id, name FROM accounts WHERE tombstone=0 AND closed=0"
         ).fetchall()
@@ -281,14 +313,14 @@ class ActualParser:
                     "account_actual_id": source_acct,
                     "category_actual_id": None,
                     "source_amount": source_amount,
-                    "source_currency": "PLN",
+                    "source_currency": acct_currency.get(source_acct, "PLN"),
                     "direction": "credit",
                 },
                 {
                     "account_actual_id": dest_acct,
                     "category_actual_id": None,
-                    "source_amount": source_amount,
-                    "source_currency": "PLN",
+                    "source_amount": dest_amount,
+                    "source_currency": acct_currency.get(dest_acct, "PLN"),
                     "direction": "debit",
                 },
             ]
