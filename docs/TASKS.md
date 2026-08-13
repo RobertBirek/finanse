@@ -57,6 +57,12 @@ Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, t
 
 ## Iteracja 2 — Dokumenty i Import
 
+### Jakość, bezpieczeństwo i deploy (2026-08-13)
+- [x] Scalono gałąź `quality-advisor` do `main`.
+- [x] Wdrożono backend i frontend na produkcję.
+- [x] Smoke test produkcji: `/api/health` i frontend odpowiadają HTTP 200.
+- [ ] Obserwacja produkcji po wdrożeniu i zebranie realnych problemów.
+
 ### Import z Actual
 - [x] Skrypt migracyjny Actual → Personal Advisor
 - [x] Mapowanie kont, kategorii, transakcji

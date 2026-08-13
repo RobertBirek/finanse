@@ -33,6 +33,8 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Poprawiono ochronę fixture testowej bazy: schemat można tworzyć i usuwać tylko w lokalnej bazie `finanse_test` na zatwierdzonym porcie; niedostępna baza powoduje pominięcie testów integracyjnych zamiast ingerencji w inną bazę.
 
 ### Verified
+- Wdrożenie produkcyjne: obrazy backend/frontend zbudowane i uruchomione; `/api/health` oraz frontend zwracają HTTP 200.
+- Smoke test produkcji: backend zgłasza `status=ok`, `environment=production`; kontenery backend/frontend działają.
 - Historia sesji `f90a4d6..ab344ad` obejmuje 27 commitów; wcześniejszy zapis o 17 commitach był nieaktualny. Bieżący corrective docs commit nie należy do tego zakresu.
 - Backend Ruff: PASS, bez błędów.
 - Backend mypy: PASS, `46 source files`, bez błędów.
@@ -40,7 +42,7 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Testy integracyjne z izolowanym PostgreSQL: PASS, `23 passed, 89 deselected, 11 warnings` w świeżonym uruchomieniu.
 - Frontend: `npm run lint`, `npm run typecheck`, `npm run test` (`1 test file, 4 tests`) oraz `npm run build` przeszły.
 - Zmiany wyłącznie porządkowe w `backend/migrations/` przywrócono do `f90a4d6`; nie zmieniono schematu.
-- Weryfikacja nie uruchamiała migracji ani deployu produkcyjnego.
+- Nie wykonano migracji produkcyjnej; deploy aplikacji wykonano po scaleniu do `main`.
 
 ### Known Limitations
 - Backend i frontend korzystają w tym worktree z zależności poza repozytorium: backend z `/opt/finanse/backend/.venv`, frontend z lokalnego `node_modules`.

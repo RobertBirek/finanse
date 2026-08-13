@@ -3,6 +3,30 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-13 — Sesja 12: Merge i deploy produkcyjny
+
+### Cel sesji
+Scalić `quality-advisor` do `main` i wdrożyć zweryfikowaną wersję na produkcję.
+
+### Co zrobiono
+- Zacommitowano specyfikację i plan jakości Advisora na `main`.
+- Scalono `quality-advisor` do `main` bez konfliktów (`4d7c7c4`).
+- Zbudowano i uruchomiono obrazy backendu oraz frontendu przez Docker Compose.
+- Nie wykonywano migracji bazy ani zmian schematu.
+
+### Weryfikacja produkcji
+- Backend i frontend: kontenery `finanse-backend` oraz `finanse-frontend` działają.
+- `GET https://finanse.birek.online/api/health` — HTTP 200, `status=ok`, `environment=production`.
+- `HEAD https://finanse.birek.online/` — HTTP 200.
+- Logi backendu: aplikacja wystartowała poprawnie; frontend: nginx gotowy do obsługi żądań.
+
+### Znane problemy
+- Testy emitują ostrzeżenia zależności/runtime opisane w poprzednich wpisach.
+
+### Następna sesja
+Obserwacja produkcji i wybór Iteracji 3 na podstawie realnego użycia.
+
+---
 ## 2026-08-13 — Sesja 11: Korekta zakresu migracji i wyników testów
 
 ### Cel sesji
