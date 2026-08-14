@@ -71,6 +71,12 @@ Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, t
 - [x] Kursy walut NBP (EUR/USD)
 - [x] Migracja produkcyjna wykonana (2026-08-11)
 
+### Task 7 — Próbne uzgodnienie Actual (2026-08-14)
+- [x] Uruchomiono pełny quality gate w worktree `actual-reconciliation`: lint, typecheck, backend pytest, frontend Vitest i production build.
+- [x] Zastosowano migracje i utworzono wyłącznie testowego użytkownika w izolowanej bazie `finanse_test` na `127.0.0.1:55432`.
+- [~] Import DOM blobu z `--execute --require-reconciled` został poprawnie zablokowany i wycofany: `Revolut USD` ma różnicę `-3750`, a cztery transakcje USD zostały odrzucone bez kursu NBP.
+- [ ] Ustalić weryfikowalne kursy lub inną zatwierdzoną obsługę czterech transakcji USD, ponowić uzgodnienie testowe do `is_reconciled=true` i dopiero wtedy przekazać decyzję o produkcji finalnemu kontrolerowi.
+
 ### Stirling PDF + OCR
 - [x] Worker async (Redis + ARQ)
 - [x] Pipeline: upload → SHA-256 → Stirling → OCR → tekst

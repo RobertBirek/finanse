@@ -3,6 +3,29 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-14 — Sesja 13: Task 7, próbne uzgodnienie Actual
+
+### Cel sesji
+Wykonać pełną weryfikację kodu oraz import DOM blobu Actual do izolowanej bazy z `--execute --require-reconciled`, bez dostępu do produkcyjnych API zapisu Actual i bez zmiany produkcyjnego PA.
+
+### Co zrobiono
+- W worktree `actual-reconciliation` przeszły Ruff, ESLint, mypy, TypeScript, backend pytest (`110 passed, 40 skipped, 5 warnings`), frontend Vitest (`6 tests`) oraz Vite production build.
+- Uruchomiono `postgres-test` na `127.0.0.1:55432`, zastosowano migracje do `e7a4b2c6d8f0` i utworzono testowego użytkownika `d34b6ca0-61be-453d-9818-81528de99e81` wyłącznie w `finanse_test`.
+- Importer DOM blobu uruchomiony z testowym `DATABASE_URL`, `--execute` i `--require-reconciled` zapisał raporty, zwrócił `ReconciliationError` i wykonał rollback przed commitem.
+
+### Wynik uzgodnienia
+- `/tmp/actual_migration/reconciliation.json` ma `is_reconciled=false`; `/tmp/actual_migration/reconciliation_report.txt` wskazuje tylko `Revolut USD`: Actual `290`, PA `4040`, `diff -3750`. Pozostałe 14 kont i wszystkie kategorie mają różnicę zero.
+- Cztery odrzucone wydatki USD są przyczyną różnicy: `-519` z 2026-05-30 oraz po `-1077` z 2026-06-14, 2026-06-14 i 2026-06-21. Ich suma wynosi `-3750`; importer odrzucił je, ponieważ NBP nie podał kursu USD dla tych dat.
+- Niezależne zapytanie SQL po rollbacku zwróciło zero postingów oraz zero transakcji `source='actual'` dla testowego użytkownika.
+
+### Decyzje techniczne
+1. Wynik nie kwalifikuje się do żadnej operacji na produkcyjnym PA. Nie użyto produkcyjnego DSN ani Actual write API.
+2. Przy odrzuceniu przez `--require-reconciled` raporty uzgodnienia są zapisane przed wyjątkiem; `migration_report.txt` nie jest w tym przebiegu odświeżany i nie jest źródłem wyniku.
+
+### Następna sesja
+Ustalić zweryfikowane kursy lub zatwierdzoną obsługę czterech historycznych wydatków USD, ponowić pełny import testowy i przekazać ewentualną komendę produkcyjną wyłącznie finalnemu kontrolerowi po raporcie zerowym.
+
+---
 ## 2026-08-13 — Sesja 12: Merge i deploy produkcyjny
 
 ### Cel sesji
