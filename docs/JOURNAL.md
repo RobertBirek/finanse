@@ -3,6 +3,28 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-14 — Sesja 14: Weekendowe kursy NBP i domknięcie Task 7
+
+### Cel sesji
+Naprawić blokadę Task 7 powodowaną przez brak kursu NBP Table A w sobotę/niedzielę, bez dostępu do produkcyjnego PA lub API zapisu Actual.
+
+### Co zrobiono
+- Potwierdzono zachowanie API NBP: żądanie kursu USD dla 2026-05-30 zwraca HTTP 404, a zakres kończący się 2026-05-30 zwraca kurs z 2026-05-29; identyczny wzorzec dotyczy niedziel.
+- Dodano `NbpRate` z kursem, datą efektywną i źródłem; provider cache'uje kompletny quote pod żądaną datą. Fallback działa wyłącznie po 404 w sobotę/niedzielę, pobiera ograniczony zakres siedmiu dni i akceptuje tylko kurs opublikowany przed datą transakcji.
+- Importer przenosi quote do postingów. Kursy z fallbacku są zapisane jako `fx_rate_source='nbp_previous_business_day'`; brak poprawnego kursu nadal powoduje `ImportValidationError`.
+- Testy TDD objęły sobotę, niedzielę, cache metadanych, brak kursu w fallback range oraz provenance postingu.
+
+### Weryfikacja
+- Ruff dla zmienionych plików i mypy dla providera/importera: PASS.
+- `pytest tests/test_finance/test_actual_import.py -v`: `33 passed, 10 skipped`.
+- Izolowany import DOM blobu do `finanse_test` na `127.0.0.1:55432`: `--execute --require-reconciled` zakończył się kodem 0; 15 kont, 46 kategorii, 800 transakcji i 0 błędów.
+- `/tmp/actual_migration/reconciliation.json`: `is_reconciled=true`; `Revolut USD` ma `Actual 290`, `PA 290`, `diff 0`.
+- Cztery historyczne wydatki USD są zapisane z `nbp_previous_business_day`: 519 USD przy 3.6395 (2026-05-30), dwa razy 1077 USD przy 3.6697 (2026-06-14) oraz 1077 USD przy 3.7162 (2026-06-21). Zmiany i import nie dotknęły produkcyjnego PA ani Actual.
+
+### Następna sesja
+Przekazać wynik testowego uzgodnienia finalnemu kontrolerowi; ewentualna decyzja o produkcji pozostaje poza tym worktree i tą sesją.
+
+---
 ## 2026-08-14 — Sesja 13: Task 7, próbne uzgodnienie Actual
 
 ### Cel sesji

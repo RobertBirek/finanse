@@ -74,8 +74,8 @@ Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, t
 ### Task 7 — Próbne uzgodnienie Actual (2026-08-14)
 - [x] Uruchomiono pełny quality gate w worktree `actual-reconciliation`: lint, typecheck, backend pytest, frontend Vitest i production build.
 - [x] Zastosowano migracje i utworzono wyłącznie testowego użytkownika w izolowanej bazie `finanse_test` na `127.0.0.1:55432`.
-- [~] Import DOM blobu z `--execute --require-reconciled` został poprawnie zablokowany i wycofany: `Revolut USD` ma różnicę `-3750`, a cztery transakcje USD zostały odrzucone bez kursu NBP.
-- [ ] Ustalić weryfikowalne kursy lub inną zatwierdzoną obsługę czterech transakcji USD, ponowić uzgodnienie testowe do `is_reconciled=true` i dopiero wtedy przekazać decyzję o produkcji finalnemu kontrolerowi.
+- [x] Dodano testowany fallback NBP Table A dla soboty/niedzieli: poprzedni opublikowany kurs zachowuje datę efektywną w cache i źródło `nbp_previous_business_day` w postingach; brak kursu nadal odrzuca transakcję.
+- [x] Import DOM blobu z `--execute --require-reconciled` zakończył się kodem 0: 800 transakcji, 0 błędów, `is_reconciled=true`, 15 kont i 46 kategorii bez różnic. Nie wykonano operacji na produkcyjnym PA ani Actual.
 
 ### Stirling PDF + OCR
 - [x] Worker async (Redis + ARQ)

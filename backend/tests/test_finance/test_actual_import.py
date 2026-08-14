@@ -614,6 +614,80 @@ import pytest
 
 class TestNbpRates:
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("weekend_date", "effective_date", "mid"),
+        [
+            (date(2026, 5, 30), date(2026, 5, 29), 3.6395),
+            (date(2026, 6, 14), date(2026, 6, 12), 3.6697),
+        ],
+    )
+    async def test_uses_and_caches_previous_published_rate_for_weekend_404(
+        self, weekend_date, effective_date, mid
+    ):
+        from unittest.mock import MagicMock
+
+        import httpx
+
+        from app.finance.nbp_rates import NbpRateProvider
+
+        provider = NbpRateProvider()
+        request = httpx.Request("GET", "https://api.nbp.pl")
+        exact_response = MagicMock()
+        exact_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "not found", request=request, response=httpx.Response(404, request=request)
+        )
+        fallback_response = MagicMock()
+        fallback_response.json.return_value = {
+            "code": "USD",
+            "rates": [{"mid": mid, "effectiveDate": effective_date.isoformat()}],
+        }
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = [exact_response, fallback_response]
+
+            quote = await provider.get_rate("USD", weekend_date)
+            cached_quote = await provider.get_rate("USD", weekend_date)
+
+        assert quote.rate == mid
+        assert quote.effective_date == effective_date
+        assert quote.source == "nbp_previous_business_day"
+        assert cached_quote == quote
+        assert mock_get.call_count == 2
+        assert mock_get.call_args_list[0].args[0].endswith(f"/USD/{weekend_date}/")
+        assert mock_get.call_args_list[1].args[0].endswith(f"/{weekend_date}/")
+
+    @pytest.mark.asyncio
+    async def test_does_not_cache_weekend_when_fallback_range_has_no_rate(self):
+        from unittest.mock import MagicMock
+
+        import httpx
+
+        from app.finance.nbp_rates import NbpRateProvider
+
+        provider = NbpRateProvider()
+        request = httpx.Request("GET", "https://api.nbp.pl")
+
+        def no_rate_response():
+            response = MagicMock()
+            response.raise_for_status.side_effect = httpx.HTTPStatusError(
+                "not found", request=request, response=httpx.Response(404, request=request)
+            )
+            return response
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = [
+                no_rate_response(),
+                no_rate_response(),
+                no_rate_response(),
+                no_rate_response(),
+            ]
+
+            assert await provider.get_rate("USD", date(2026, 6, 14)) is None
+            assert await provider.get_rate("USD", date(2026, 6, 14)) is None
+
+        assert mock_get.call_count == 4
+
+    @pytest.mark.asyncio
     async def test_fetches_eur_rate(self):
         from unittest.mock import MagicMock
 
@@ -628,8 +702,11 @@ class TestNbpRates:
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_response
-            rate = await provider.get_rate("EUR", date(2026, 7, 15))
-            assert rate == 4.30
+            quote = await provider.get_rate("EUR", date(2026, 7, 15))
+            assert quote is not None
+            assert quote.rate == 4.30
+            assert quote.effective_date == date(2026, 7, 15)
+            assert quote.source == "nbp"
 
     @pytest.mark.asyncio
     async def test_caches_same_day(self):
@@ -646,9 +723,11 @@ class TestNbpRates:
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_response
-            rate1 = await provider.get_rate("EUR", date(2026, 7, 15))
-            rate2 = await provider.get_rate("EUR", date(2026, 7, 15))
-            assert rate1 == rate2 == 4.30
+            quote1 = await provider.get_rate("EUR", date(2026, 7, 15))
+            quote2 = await provider.get_rate("EUR", date(2026, 7, 15))
+            assert quote1 == quote2
+            assert quote1 is not None
+            assert quote1.rate == 4.30
             assert mock_get.call_count == 1  # cached
 
     @pytest.mark.asyncio
@@ -656,8 +735,10 @@ class TestNbpRates:
         from app.finance.nbp_rates import NbpRateProvider
 
         provider = NbpRateProvider()
-        rate = await provider.get_rate("PLN", date(2026, 7, 15))
-        assert rate == 1.0
+        quote = await provider.get_rate("PLN", date(2026, 7, 15))
+        assert quote is not None
+        assert quote.rate == 1.0
+        assert quote.source == "manual"
 
     def test_calculate_base_amount(self):
         from app.finance.nbp_rates import NbpRateProvider
@@ -667,18 +748,21 @@ class TestNbpRates:
         assert provider.calculate_base_amount(50, 4.2678) == 213  # round to int
 
     @pytest.mark.asyncio
-    async def test_error_returns_zero_and_not_cached(self):
+    async def test_error_returns_none_and_not_cached(self):
+        from unittest.mock import MagicMock
+
         from app.finance.nbp_rates import NbpRateProvider
 
         provider = NbpRateProvider()
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = RuntimeError("network error")
 
-        with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
-            rate = await provider.get_rate("USD", date(2026, 7, 15))
-            assert rate == 0.0
-            rate2 = await provider.get_rate("USD", date(2026, 7, 15))
-            assert rate2 == 0.0
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            quote = await provider.get_rate("USD", date(2026, 7, 15))
+            assert quote is None
+            quote2 = await provider.get_rate("USD", date(2026, 7, 15))
+            assert quote2 is None
             assert mock_get.call_count == 2
 
 
@@ -698,9 +782,9 @@ class TestFxEnrichment:
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_response
-            base_amount = provider.calculate_base_amount(
-                500, await provider.get_rate("EUR", date(2026, 7, 15))
-            )
+            quote = await provider.get_rate("EUR", date(2026, 7, 15))
+            assert quote is not None
+            base_amount = provider.calculate_base_amount(500, quote.rate)
             assert base_amount == 2143  # 5.00 * 4.2856 = 21.428 -> round to 2143 groszy
 
     @pytest.mark.asyncio
@@ -708,9 +792,10 @@ class TestFxEnrichment:
         from app.finance.nbp_rates import NbpRateProvider
 
         provider = NbpRateProvider()
-        rate = await provider.get_rate("PLN", date(2026, 7, 15))
-        base_amount = provider.calculate_base_amount(10000, rate)
-        assert rate == 1.0
+        quote = await provider.get_rate("PLN", date(2026, 7, 15))
+        assert quote is not None
+        base_amount = provider.calculate_base_amount(10000, quote.rate)
+        assert quote.rate == 1.0
         assert base_amount == 10000
 
 
@@ -767,6 +852,7 @@ class TestMigrationPostings:
         )
 
     def test_eur_posting_uses_verified_nbp_rate(self):
+        from app.finance.nbp_rates import NbpRate
         from scripts.migrate_actual import build_pa_postings
 
         account_id = _uuid.uuid4()
@@ -798,12 +884,65 @@ class TestMigrationPostings:
             {"account-eur": account_id},
             {"category-1": category_id},
             {"account-eur": "EUR"},
-            {("EUR", date(2026, 7, 15)): 4.2856},
+            {
+                ("EUR", date(2026, 7, 15)): NbpRate(
+                    rate=4.2856,
+                    effective_date=date(2026, 7, 15),
+                    source="nbp",
+                )
+            },
         )
 
         assert [posting.base_amount_pln for posting in postings] == [2143, 2143]
         assert all(posting.fx_rate == 4.2856 for posting in postings)
         assert all(posting.fx_rate_source == "nbp" for posting in postings)
+
+    def test_weekend_usd_posting_preserves_fallback_rate_source(self):
+        from app.finance.nbp_rates import NbpRate
+        from scripts.migrate_actual import build_pa_postings
+
+        account_id = _uuid.uuid4()
+        category_id = _uuid.uuid4()
+        weekend_date = date(2026, 5, 30)
+        transaction = {
+            "actual_id": "expense-usd-weekend",
+            "date": weekend_date,
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": None,
+                    "source_amount": 500,
+                    "source_currency": "USD",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": "category-1",
+                    "source_amount": 500,
+                    "source_currency": "USD",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        postings = build_pa_postings(
+            transaction,
+            {"account-usd": account_id},
+            {"category-1": category_id},
+            {"account-usd": "USD"},
+            {
+                ("USD", weekend_date): NbpRate(
+                    rate=3.6395,
+                    effective_date=date(2026, 5, 29),
+                    source="nbp_previous_business_day",
+                )
+            },
+        )
+
+        assert [posting.base_amount_pln for posting in postings] == [1820, 1820]
+        assert all(posting.fx_rate == 3.6395 for posting in postings)
+        assert all(posting.fx_rate_source == "nbp_previous_business_day" for posting in postings)
 
     def test_missing_usd_rate_rejects_entire_transaction(self):
         from scripts.migrate_actual import ImportValidationError, build_pa_postings
@@ -836,10 +975,11 @@ class TestMigrationPostings:
                 {"account-usd": _uuid.uuid4()},
                 {"category-1": _uuid.uuid4()},
                 {"account-usd": "USD"},
-                {("USD", date(2026, 7, 15)): 0.0},
+                {},
             )
 
     def test_cross_currency_transfer_adds_non_budget_fx_difference_posting(self):
+        from app.finance.nbp_rates import NbpRate
         from scripts.migrate_actual import build_pa_postings
 
         pln_account_id = _uuid.uuid4()
@@ -872,7 +1012,13 @@ class TestMigrationPostings:
             {"account-usd": usd_account_id, "account-pln": pln_account_id},
             {},
             {"account-usd": "USD", "account-pln": "PLN"},
-            {("USD", date(2026, 7, 15)): 4.2856},
+            {
+                ("USD", date(2026, 7, 15)): NbpRate(
+                    rate=4.2856,
+                    effective_date=date(2026, 7, 15),
+                    source="nbp",
+                )
+            },
             fx_category_ids={"loss": loss_category_id},
         )
 

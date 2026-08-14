@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.database import async_session_factory
 from app.finance.actual_parser import ActualParser, TransactionDict
 from app.finance.models import Account, ActualImportMapping, Category, FinancialTransaction, Posting
-from app.finance.nbp_rates import NbpRateProvider
+from app.finance.nbp_rates import NbpRate, NbpRateProvider
 from app.finance.reconciliation import (
     CategoryBalance,
     ReconciliationError,
@@ -320,15 +320,15 @@ def _posting_base_amount(
     source_amount: int,
     currency: str,
     transaction_date: date,
-    fx_rates: dict[tuple[str, date], float],
+    fx_rates: dict[tuple[str, date], NbpRate],
 ) -> tuple[int, float, str]:
     if currency == "PLN":
         return source_amount, 1.0, "manual"
 
-    fx_rate = fx_rates.get((currency, transaction_date), 0.0)
-    if fx_rate <= 0:
+    quote = fx_rates.get((currency, transaction_date))
+    if quote is None:
         raise ImportValidationError(f"Missing FX rate: {currency} on {transaction_date}")
-    return round(source_amount * fx_rate), fx_rate, "nbp"
+    return round(source_amount * quote.rate), quote.rate, quote.source
 
 
 def _fx_difference_kind(postings: list[PostingCreate]) -> str | None:
@@ -346,7 +346,7 @@ def _fx_difference_kind(postings: list[PostingCreate]) -> str | None:
 def required_fx_difference_kind(
     txn: TransactionDict,
     acct_currency: dict[str, str],
-    fx_rates: dict[tuple[str, date], float],
+    fx_rates: dict[tuple[str, date], NbpRate],
 ) -> str | None:
     """Return the balancing FX category needed for a transfer, if any."""
     if txn["type"] not in {"transfer", "exchange"}:
@@ -373,7 +373,7 @@ def build_pa_postings(
     acct_map: dict[str, uuid.UUID],
     cat_map: dict[str, uuid.UUID],
     acct_currency: dict[str, str],
-    fx_rates: dict[tuple[str, date], float],
+    fx_rates: dict[tuple[str, date], NbpRate],
     acct_budget: dict[str, bool] | None = None,
     fx_category_ids: dict[str, uuid.UUID] | None = None,
 ) -> list[PostingCreate]:
@@ -572,7 +572,7 @@ def get_actual_category_balances(
     account_map: dict[str, uuid.UUID],
     category_map: dict[str, uuid.UUID],
     account_currency: dict[str, str],
-    fx_rates: dict[tuple[str, date], float],
+    fx_rates: dict[tuple[str, date], NbpRate],
     account_budget: dict[str, bool],
 ) -> dict[str, CategoryBalance]:
     """Calculate expected category PLN balances from importable Actual transactions."""
@@ -701,7 +701,7 @@ async def migrate(
         acct_map = {account["actual_id"]: uuid.uuid4() for account in accounts}
         cat_map = {category["actual_id"]: uuid.uuid4() for category in categories}
         acct_budget = {account["actual_id"]: account["is_budget_account"] for account in accounts}
-        fetched_fx_rates: dict[tuple[str, date], float] = {}
+        fetched_fx_rates: dict[tuple[str, date], NbpRate] = {}
         fx_dates: set[tuple[str, date]] = set()
         for txn in all_txns:
             for p in txn["postings"]:
@@ -710,8 +710,9 @@ async def migrate(
                     fx_dates.add((currency, txn["date"]))
 
         for currency, dt in fx_dates:
-            rate = await nbp.get_rate(currency, dt)
-            fetched_fx_rates[(currency, dt)] = rate
+            quote = await nbp.get_rate(currency, dt)
+            if quote is not None:
+                fetched_fx_rates[(currency, dt)] = quote
 
         for txn in all_txns:
             try:
@@ -847,13 +848,14 @@ async def migrate(
 
         # Phase 3: Fetch FX rates
         print("Phase 3: Fetching FX rates...")
-        fx_rates: dict[tuple[str, date], float] = {}
+        fx_rates: dict[tuple[str, date], NbpRate] = {}
         for txn in all_txns:
             for p in txn["postings"]:
                 currency = p["source_currency"]
                 if currency != "PLN":
-                    rate = await nbp.get_rate(currency, txn["date"])
-                    fx_rates[(currency, txn["date"])] = rate
+                    quote = await nbp.get_rate(currency, txn["date"])
+                    if quote is not None:
+                        fx_rates[(currency, txn["date"])] = quote
 
         actual_category_balances = get_actual_category_balances(
             all_txns,

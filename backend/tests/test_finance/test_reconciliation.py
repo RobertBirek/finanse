@@ -346,7 +346,7 @@ async def test_dry_run_reconciliation_report_includes_skipped_missing_fx_transac
     monkeypatch.setattr(
         migrate_actual,
         "NbpRateProvider",
-        lambda: SimpleNamespace(get_rate=AsyncMock(return_value=0.0), close=AsyncMock()),
+        lambda: SimpleNamespace(get_rate=AsyncMock(return_value=None), close=AsyncMock()),
     )
     monkeypatch.setattr(migrate_actual.tempfile, "gettempdir", lambda: str(tmp_path))
 
