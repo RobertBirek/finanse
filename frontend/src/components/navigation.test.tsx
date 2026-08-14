@@ -44,14 +44,25 @@ describe("isMenuItemActive", () => {
     expect(isMenuItemActive(projects, "/projects/project-42")).toBe(true);
     expect(isMenuItemActive(projects, "/projects-archive")).toBe(false);
   });
+
+  it("marks the matching finance route active", () => {
+    const reports = navigationContexts
+      .find((context) => context.id === "finance")!
+      .items.find((item) => item.label === "Raporty")!;
+
+    expect(isMenuItemActive(reports, "/finances/reports")).toBe(true);
+    expect(isMenuItemActive(reports, "/finances/budgets")).toBe(false);
+  });
 });
 
 describe("contextual navigation components", () => {
-  it("renders accessible rail tooltips and keeps future menu entries disabled", () => {
+  it("renders accessible rail tooltips and finance route links", () => {
     const finance = getContextForPathname("/finances");
 
     render(
-      <MemoryRouter>
+      <MemoryRouter
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
         <IconRail activeContext={finance} />
         <ContextualSidebar
           context={finance}
@@ -66,20 +77,32 @@ describe("contextual navigation components", () => {
       .find((link) => link.hasAttribute("title"));
 
     expect(financeRailLink).toHaveAttribute("title", "Finanse");
-    expect(screen.getByText("Budżet").parentElement).toHaveAttribute(
-      "aria-disabled",
-      "true",
+    expect(screen.getByRole("link", { name: "Transakcje" })).toHaveAttribute(
+      "href",
+      "/finances/transactions",
     );
-    expect(
-      screen.queryByRole("link", { name: "Budżet" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Płynność" })).toHaveAttribute(
+      "href",
+      "/finances/cashflow",
+    );
+    expect(screen.getByRole("link", { name: "Budżet" })).toHaveAttribute(
+      "href",
+      "/finances/budgets",
+    );
+    expect(screen.getByRole("link", { name: "Raporty" })).toHaveAttribute(
+      "href",
+      "/finances/reports",
+    );
   });
 });
 
 describe("Layout", () => {
   it("composes the finance rail and contextual menu from the current URL", () => {
     render(
-      <MemoryRouter initialEntries={["/finances"]}>
+      <MemoryRouter
+        initialEntries={["/finances"]}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
         <Routes>
           <Route element={<Layout />}>
             <Route path="/finances" element={<Outlet />} />
