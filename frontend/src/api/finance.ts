@@ -7,6 +7,7 @@ export interface Account {
   type: string;
   currency: string;
   is_active: boolean;
+  is_budget_account: boolean;
   balance_pln: number;
   opened_at: string;
   closed_at: string | null;
@@ -22,12 +23,13 @@ export interface Category {
 export interface Posting {
   id: string;
   transaction_id: string;
-  account_id: string;
+  account_id: string | null;
   category_id: string | null;
   source_amount: number;
   source_currency: string;
   base_amount_pln: number;
   fx_rate: number;
+  is_budget_impact: boolean;
   direction: "debit" | "credit";
 }
 
@@ -43,12 +45,67 @@ export interface Transaction {
 }
 
 export interface FinancialSummary {
-  accounts: Array<{ id: string; name: string; balance_pln: number; currency: string }>;
+  accounts: Array<{
+    id: string;
+    name: string;
+    balance_pln: number;
+    currency: string;
+  }>;
   income_total_pln: number;
   expense_total_pln: number;
   net_total_pln: number;
   month: number;
   year: number;
+}
+
+export interface CategorySpend {
+  category_id: string;
+  name: string;
+  parent_id: string | null;
+  total_pln: number;
+}
+
+export interface CategorySummary {
+  month: number;
+  year: number;
+  groups: CategorySpend[];
+  categories: CategorySpend[];
+}
+
+export interface CategoryGroup extends CategorySpend {
+  children: CategorySpend[];
+}
+
+export function splitAccounts(accounts: Account[]) {
+  return {
+    budget: accounts.filter((account) => account.is_budget_account),
+    informational: accounts.filter((account) => !account.is_budget_account),
+  };
+}
+
+export function buildCategoryTree(summary: CategorySummary): CategoryGroup[] {
+  const groupsById = new Set(summary.groups.map((group) => group.category_id));
+  const childrenByGroup = new Map<string, CategorySpend[]>();
+
+  for (const category of summary.categories) {
+    if (category.parent_id === null) continue;
+    const children = childrenByGroup.get(category.parent_id) ?? [];
+    children.push(category);
+    childrenByGroup.set(category.parent_id, children);
+  }
+
+  return [
+    ...summary.groups.map((group) => ({
+      ...group,
+      children: childrenByGroup.get(group.category_id) ?? [],
+    })),
+    ...summary.categories
+      .filter(
+        (category) =>
+          category.parent_id === null && !groupsById.has(category.category_id),
+      )
+      .map((category) => ({ ...category, children: [] })),
+  ];
 }
 
 export function useAccounts() {
@@ -75,7 +132,11 @@ export function useAccount(id: string | null) {
 export function useCreateAccount() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (account: { name: string; type: string; currency?: string }) => {
+    mutationFn: async (account: {
+      name: string;
+      type: string;
+      currency?: string;
+    }) => {
       const { data } = await api.post<Account>("/finance/accounts", account);
       return data;
     },
@@ -95,21 +156,32 @@ export function useCategories() {
   });
 }
 
-export function useTransactions(params?: { account_id?: string; limit?: number }) {
+export function useTransactions(params?: {
+  account_id?: string;
+  limit?: number;
+}) {
   return useQuery({
     queryKey: ["finance", "transactions", params],
     queryFn: async () => {
-      const { data } = await api.get<Transaction[]>("/finance/transactions", { params });
+      const { data } = await api.get<Transaction[]>("/finance/transactions", {
+        params,
+      });
       return data;
     },
   });
 }
 
-export function useAccountTransactions(accountId: string | null, params?: { limit?: number }) {
+export function useAccountTransactions(
+  accountId: string | null,
+  params?: { limit?: number },
+) {
   return useQuery({
     queryKey: ["finance", "accounts", accountId, "transactions", params],
     queryFn: async () => {
-      const { data } = await api.get<Transaction[]>(`/finance/accounts/${accountId}/transactions`, { params });
+      const { data } = await api.get<Transaction[]>(
+        `/finance/accounts/${accountId}/transactions`,
+        { params },
+      );
       return data;
     },
     enabled: !!accountId,
@@ -126,7 +198,7 @@ export function useCreateTransaction() {
       is_pending?: boolean;
       project_id?: string;
       postings: Array<{
-        account_id: string;
+        account_id?: string | null;
         category_id?: string;
         source_amount: number;
         source_currency?: string;
@@ -141,6 +213,9 @@ export function useCreateTransaction() {
       queryClient.invalidateQueries({ queryKey: ["finance", "transactions"] });
       queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
       queryClient.invalidateQueries({ queryKey: ["finance", "summary"] });
+      queryClient.invalidateQueries({
+        queryKey: ["finance", "category-summary"],
+      });
     },
   });
 }
@@ -156,6 +231,18 @@ export function useFinancialSummary(month?: number, year?: number) {
       const { data } = await api.get<FinancialSummary>("/finance/summary", {
         params: { month: m, year: y },
       });
+      return data;
+    },
+  });
+}
+
+export function useCategorySummary() {
+  return useQuery({
+    queryKey: ["finance", "category-summary"],
+    queryFn: async () => {
+      const { data } = await api.get<CategorySummary>(
+        "/finance/category-summary",
+      );
       return data;
     },
   });
