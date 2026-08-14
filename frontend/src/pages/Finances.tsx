@@ -1,8 +1,11 @@
 import { useState } from "react";
 import {
+  buildCategoryTree,
+  splitAccounts,
   useAccounts,
-  useFinancialSummary,
   useAccountTransactions,
+  useCategorySummary,
+  useFinancialSummary,
 } from "../api/finance";
 import type { Transaction } from "../api/finance";
 
@@ -16,11 +19,16 @@ const formatPLN = (amount: number) => {
 export function Finances() {
   const { data: accounts } = useAccounts();
   const { data: summary } = useFinancialSummary();
+  const { data: categorySummary } = useCategorySummary();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data: acctTxns, isLoading: txLoading } =
     useAccountTransactions(selectedId);
 
   const selected = accounts?.find((a) => a.id === selectedId) ?? null;
+  const accountGroups = splitAccounts(accounts ?? []);
+  const categoryGroups = categorySummary
+    ? buildCategoryTree(categorySummary)
+    : [];
 
   return (
     <div className="max-w-6xl">
@@ -57,42 +65,119 @@ export function Finances() {
         </div>
       )}
 
+      {categorySummary && (
+        <section className="card mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4">
+            Wydatki według kategorii
+          </h2>
+          {categoryGroups.length === 0 ? (
+            <p className="text-gray-500 text-sm">
+              Brak wydatków skategoryzowanych w tym miesiącu
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {categoryGroups.map((group) => (
+                <div key={group.category_id}>
+                  <div className="flex items-center justify-between text-sm font-medium text-gray-200">
+                    <span>{group.name}</span>
+                    <span className="font-mono">
+                      {formatPLN(group.total_pln)} PLN
+                    </span>
+                  </div>
+                  {group.children.length > 0 && (
+                    <div className="mt-1 space-y-1 border-l border-gray-700 pl-3">
+                      {group.children.map((category) => (
+                        <div
+                          key={category.category_id}
+                          className="flex items-center justify-between text-sm text-gray-400"
+                        >
+                          <span>{category.name}</span>
+                          <span className="font-mono">
+                            {formatPLN(category.total_pln)} PLN
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           <div className="card">
-            <h2 className="text-lg font-semibold text-white mb-4">Konta</h2>
             {accounts?.length === 0 ? (
               <p className="text-gray-500 text-sm py-4 text-center">
                 Brak kont
               </p>
             ) : (
-              <div className="space-y-1">
-                {accounts?.map((a) => (
-                  <button
-                    key={a.id}
-                    onClick={() =>
-                      setSelectedId(selectedId === a.id ? null : a.id)
-                    }
-                    className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
-                      selectedId === a.id
-                        ? "bg-advisor-500/20 border border-advisor-500/30"
-                        : "bg-gray-800/50 hover:bg-gray-800 border border-transparent"
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">
-                        {a.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {a.type} · {a.currency}
-                      </p>
+              <div className="space-y-6">
+                {[
+                  {
+                    title: "Konta budżetowe",
+                    accounts: accountGroups.budget,
+                    label: null,
+                  },
+                  ...(accountGroups.informational.length > 0
+                    ? [
+                        {
+                          title: "Pozabudżetowe / informacyjne",
+                          accounts: accountGroups.informational,
+                          label: "poza analizami",
+                        },
+                      ]
+                    : []),
+                ].map((section) => (
+                  <section key={section.title}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-lg font-semibold text-white">
+                        {section.title}
+                      </h2>
+                      {section.label && (
+                        <span className="text-xs text-gray-500">
+                          {section.label}
+                        </span>
+                      )}
                     </div>
-                    <p
-                      className={`text-sm font-mono font-medium flex-shrink-0 ml-2 ${(a.balance_pln ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}
-                    >
-                      {formatPLN(a.balance_pln ?? 0)}
-                    </p>
-                  </button>
+                    {section.accounts.length === 0 ? (
+                      <p className="text-gray-500 text-sm py-2">
+                        Brak kont budżetowych
+                      </p>
+                    ) : (
+                      <div className="space-y-1">
+                        {section.accounts.map((a) => (
+                          <button
+                            key={a.id}
+                            onClick={() =>
+                              setSelectedId(selectedId === a.id ? null : a.id)
+                            }
+                            className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
+                              selectedId === a.id
+                                ? "bg-advisor-500/20 border border-advisor-500/30"
+                                : "bg-gray-800/50 hover:bg-gray-800 border border-transparent"
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-white truncate">
+                                {a.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {a.type} · {a.currency}
+                              </p>
+                            </div>
+                            <p
+                              className={`text-sm font-mono font-medium flex-shrink-0 ml-2 ${(a.balance_pln ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}
+                            >
+                              {formatPLN(a.balance_pln ?? 0)}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </section>
                 ))}
               </div>
             )}

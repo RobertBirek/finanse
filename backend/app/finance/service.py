@@ -3,13 +3,15 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from app.finance.models import Account, Category, FinancialTransaction, Posting
 from app.finance.schemas import (
     AccountCreate,
     AccountUpdate,
     CategoryCreate,
+    CategorySpendResponse,
+    CategorySummaryResponse,
     CategoryUpdate,
     FinancialSummary,
     TransactionCreate,
@@ -141,13 +143,15 @@ def _validate_posting_sum(postings: list, txn_type: str) -> None:
 
 
 async def _validate_transaction_postings(
-    db: AsyncSession, user_id: uuid.UUID, postings: list
+    db: AsyncSession, user_id: uuid.UUID, postings: list, txn_type: str
 ) -> None:
-    account_ids = {posting.account_id for posting in postings}
-    account_result = await db.execute(
-        select(Account).where(Account.user_id == user_id, Account.id.in_(account_ids))
-    )
-    accounts = {account.id: account for account in account_result.scalars().all()}
+    account_ids = {posting.account_id for posting in postings if posting.account_id is not None}
+    accounts: dict[uuid.UUID, Account] = {}
+    if account_ids:
+        account_result = await db.execute(
+            select(Account).where(Account.user_id == user_id, Account.id.in_(account_ids))
+        )
+        accounts = {account.id: account for account in account_result.scalars().all()}
 
     category_ids = {posting.category_id for posting in postings if posting.category_id is not None}
     categories: dict[uuid.UUID, Category] = {}
@@ -158,35 +162,53 @@ async def _validate_transaction_postings(
         categories = {category.id: category for category in category_result.scalars().all()}
 
     for posting in postings:
-        account = accounts.get(posting.account_id)
-        if account is None:
+        if posting.account_id is None and posting.category_id is None:
+            raise ValueError("Posting must have at least an account or category")
+        account = accounts.get(posting.account_id) if posting.account_id is not None else None
+        if posting.account_id is not None and account is None:
             raise ValueError("Account not found")
         if posting.category_id is not None and posting.category_id not in categories:
             raise ValueError("Category not found")
 
         source_currency = str(posting.source_currency).upper()
-        account_currency = str(account.currency).upper()
-        if (
-            source_currency not in SUPPORTED_CURRENCIES
-            or account_currency not in SUPPORTED_CURRENCIES
-        ):
+        if source_currency not in SUPPORTED_CURRENCIES:
             raise ValueError("Unsupported currency")
-        if source_currency != account_currency:
-            raise ValueError(
-                f"Posting currency {source_currency} does not match account currency "
-                f"{account_currency}"
-            )
+        if account is not None:
+            account_currency = str(account.currency).upper()
+            if account_currency not in SUPPORTED_CURRENCIES:
+                raise ValueError("Unsupported currency")
+            if source_currency != account_currency:
+                raise ValueError(
+                    f"Posting currency {source_currency} does not match account currency "
+                    f"{account_currency}"
+                )
         if posting.source_amount <= 0 or posting.base_amount_pln <= 0:
             raise ValueError("Posting amounts must be positive")
         if posting.fx_rate <= 0:
             raise ValueError("FX rate must be positive")
+
+    if txn_type not in {"income", "expense"}:
+        return
+
+    account_side_postings = [
+        posting
+        for posting in postings
+        if posting.account_id is not None and posting.category_id is None
+    ]
+    if len(account_side_postings) != 1:
+        raise ValueError("Income/expense transactions require exactly one account-side posting")
+
+    account = accounts[account_side_postings[0].account_id]
+    for posting in postings:
+        if posting.account_id is None and posting.category_id is not None:
+            posting.is_budget_impact = account.is_budget_account
 
 
 async def create_transaction(
     db: AsyncSession, user_id: uuid.UUID, data: TransactionCreate
 ) -> FinancialTransaction:
     _validate_posting_sum(data.postings, data.type)
-    await _validate_transaction_postings(db, user_id, data.postings)
+    await _validate_transaction_postings(db, user_id, data.postings, data.type)
 
     txn = FinancialTransaction(
         user_id=user_id,
@@ -211,6 +233,7 @@ async def create_transaction(
             fx_rate=p_data.fx_rate,
             fx_rate_source=p_data.fx_rate_source,
             direction=p_data.direction,
+            is_budget_impact=p_data.is_budget_impact,
         )
         db.add(posting)
 
@@ -276,7 +299,11 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
     month_start = date(current_year, current_month, 1)
 
     accounts_result = await db.execute(
-        select(Account).where(Account.user_id == user_id, Account.is_active == True)
+        select(Account).where(
+            Account.user_id == user_id,
+            Account.is_active.is_(True),
+            Account.is_budget_account.is_(True),
+        )
     )
     accounts = list(accounts_result.scalars().all())
 
@@ -296,7 +323,7 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
         )
         total_debits = debit_result.scalar() or 0
         total_credits = credit_result.scalar() or 0
-        balance = total_debits - total_credits
+        balance = int(total_credits - total_debits)
 
         account_balances.append(
             {
@@ -308,14 +335,24 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
             }
         )
 
+    account_posting = aliased(Posting)
     income_result = await db.execute(
         select(func.coalesce(func.sum(Posting.base_amount_pln), 0))
         .join(FinancialTransaction, Posting.transaction_id == FinancialTransaction.id)
+        .join(
+            account_posting,
+            (account_posting.transaction_id == FinancialTransaction.id)
+            & account_posting.account_id.is_not(None)
+            & account_posting.category_id.is_(None),
+        )
+        .join(Account, Account.id == account_posting.account_id)
         .where(
             FinancialTransaction.user_id == user_id,
             FinancialTransaction.type == "income",
             FinancialTransaction.date >= month_start,
-            Posting.direction == "credit",
+            Posting.category_id.is_not(None),
+            Posting.account_id.is_(None),
+            Account.is_budget_account.is_(True),
         )
     )
     income_total = income_result.scalar() or 0
@@ -323,11 +360,20 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
     expense_result = await db.execute(
         select(func.coalesce(func.sum(Posting.base_amount_pln), 0))
         .join(FinancialTransaction, Posting.transaction_id == FinancialTransaction.id)
+        .join(
+            account_posting,
+            (account_posting.transaction_id == FinancialTransaction.id)
+            & account_posting.account_id.is_not(None)
+            & account_posting.category_id.is_(None),
+        )
+        .join(Account, Account.id == account_posting.account_id)
         .where(
             FinancialTransaction.user_id == user_id,
             FinancialTransaction.type == "expense",
             FinancialTransaction.date >= month_start,
-            Posting.direction == "debit",
+            Posting.category_id.is_not(None),
+            Posting.account_id.is_(None),
+            Account.is_budget_account.is_(True),
         )
     )
     expense_total = expense_result.scalar() or 0
@@ -339,4 +385,78 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
         net_total_pln=income_total - expense_total,
         month=current_month,
         year=current_year,
+    )
+
+
+async def get_category_summary(db: AsyncSession, user_id: uuid.UUID) -> CategorySummaryResponse:
+    now = datetime.now(UTC)
+    month_start = date(now.year, now.month, 1)
+    month_end = date(now.year + (now.month == 12), (now.month % 12) + 1, 1)
+
+    account_posting = aliased(Posting)
+    result = await db.execute(
+        select(
+            Category.id,
+            Category.name,
+            Category.parent_id,
+            func.sum(Posting.base_amount_pln).label("total_pln"),
+        )
+        .join(Posting, Posting.category_id == Category.id)
+        .join(FinancialTransaction, Posting.transaction_id == FinancialTransaction.id)
+        .join(
+            account_posting,
+            (account_posting.transaction_id == FinancialTransaction.id)
+            & account_posting.account_id.is_not(None)
+            & account_posting.category_id.is_(None),
+        )
+        .join(Account, Account.id == account_posting.account_id)
+        .where(
+            FinancialTransaction.user_id == user_id,
+            FinancialTransaction.type == "expense",
+            FinancialTransaction.date >= month_start,
+            FinancialTransaction.date < month_end,
+            Posting.account_id.is_(None),
+            Account.is_budget_account.is_(True),
+        )
+        .group_by(Category.id, Category.name, Category.parent_id)
+        .order_by(Category.name)
+    )
+    category_totals = result.all()
+
+    categories = [
+        CategorySpendResponse(
+            category_id=category_id,
+            name=name,
+            parent_id=parent_id,
+            total_pln=int(total_pln),
+        )
+        for category_id, name, parent_id, total_pln in category_totals
+    ]
+    group_totals: dict[uuid.UUID, int] = {}
+    for category in categories:
+        if category.parent_id is not None:
+            group_totals[category.parent_id] = (
+                group_totals.get(category.parent_id, 0) + category.total_pln
+            )
+
+    groups_result = await db.execute(
+        select(Category.id, Category.name, Category.parent_id)
+        .where(Category.user_id == user_id, Category.id.in_(group_totals))
+        .order_by(Category.name)
+    )
+    groups = [
+        CategorySpendResponse(
+            category_id=category_id,
+            name=name,
+            parent_id=parent_id,
+            total_pln=group_totals[category_id],
+        )
+        for category_id, name, parent_id in groups_result.all()
+    ]
+
+    return CategorySummaryResponse(
+        month=now.month,
+        year=now.year,
+        groups=groups,
+        categories=categories,
     )

@@ -10,6 +10,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -26,10 +27,15 @@ class Account(Base):
     type: Mapped[str] = mapped_column(String(20), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="PLN")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    opened_at: Mapped[date] = mapped_column(Date, nullable=False, server_default=func.current_date())
+    is_budget_account: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    opened_at: Mapped[date] = mapped_column(
+        Date, nullable=False, server_default=func.current_date()
+    )
     closed_at: Mapped[date | None] = mapped_column(Date, nullable=True)
 
-    postings: Mapped[list["Posting"]] = relationship("Posting", back_populates="account", cascade="all, delete-orphan")
+    postings: Mapped[list["Posting"]] = relationship(
+        "Posting", back_populates="account", cascade="all, delete-orphan"
+    )
 
     @property
     def balance_pln(self) -> int:
@@ -41,11 +47,28 @@ class Category(Base):
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    parent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
+    )
     type: Mapped[str] = mapped_column(String(20), nullable=False)
 
-    parent: Mapped["Category | None"] = relationship("Category", remote_side="Category.id", backref="children")
+    parent: Mapped["Category | None"] = relationship(
+        "Category", remote_side="Category.id", backref="children"
+    )
     postings: Mapped[list["Posting"]] = relationship("Posting", back_populates="category")
+
+
+class ActualImportMapping(Base):
+    __tablename__ = "actual_import_mappings"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    entity_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    actual_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "entity_type", "actual_id", name="uq_actual_import_mapping"),
+    )
 
 
 class FinancialTransaction(Base):
@@ -60,26 +83,43 @@ class FinancialTransaction(Base):
     created_by: Mapped[str] = mapped_column(String(50), nullable=False, default="human")
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
 
-    postings: Mapped[list["Posting"]] = relationship("Posting", back_populates="transaction", cascade="all, delete-orphan")
+    postings: Mapped[list["Posting"]] = relationship(
+        "Posting", back_populates="transaction", cascade="all, delete-orphan"
+    )
 
 
 class Posting(Base):
     __tablename__ = "postings"
 
-    transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("financial_transactions.id", ondelete="CASCADE"), nullable=False, index=True)
-    account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="RESTRICT"), nullable=False, index=True)
-    category_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_transactions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    account_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    category_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
+    )
     source_amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
     source_currency: Mapped[str] = mapped_column(String(3), nullable=False, default="PLN")
     base_amount_pln: Mapped[int] = mapped_column(BigInteger, nullable=False)
     fx_rate: Mapped[float] = mapped_column(Numeric(12, 6), nullable=False, default=1.0)
     fx_rate_source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
     direction: Mapped[str] = mapped_column(String(10), nullable=False)
+    is_budget_impact: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     __table_args__ = (
         CheckConstraint("direction IN ('debit', 'credit')", name="ck_posting_direction"),
     )
 
-    transaction: Mapped["FinancialTransaction"] = relationship("FinancialTransaction", back_populates="postings")
+    transaction: Mapped["FinancialTransaction"] = relationship(
+        "FinancialTransaction", back_populates="postings"
+    )
     account: Mapped["Account"] = relationship("Account", back_populates="postings")
     category: Mapped["Category"] = relationship("Category", back_populates="postings")

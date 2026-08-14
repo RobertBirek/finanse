@@ -10,6 +10,7 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ### Fixed
 - Domknięto historię tool calls Advisora dla kolejnych tur, walidację własności i walut transakcji w serwisie domenowym oraz oznaczenie sald `balance_pln` jako PLN.
 - Fixture testowej bazy wiąże aplikacyjny session factory z izolowanym silnikiem per test.
+- Import Actual rozpoznaje sobotnio-niedzielne HTTP 404 z NBP Table A, używa poprzedniego opublikowanego kursu z ograniczonego zakresu i zapisuje źródło `nbp_previous_business_day` zamiast odrzucać transakcję lub używać kursu 1.0.
 
 ### Changed
 - `DB_SCHEMA.md` opisuje rzeczywiste statusy `ToolExecution`.
@@ -33,6 +34,10 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Poprawiono ochronę fixture testowej bazy: schemat można tworzyć i usuwać tylko w lokalnej bazie `finanse_test` na zatwierdzonym porcie; niedostępna baza powoduje pominięcie testów integracyjnych zamiast ingerencji w inną bazę.
 
 ### Verified
+- Task 7 Actual reconciliation against isolated `finanse_test` on `127.0.0.1:55432`: migrations reached `e7a4b2c6d8f0`, and `--execute --require-reconciled` completed with exit code 0. No production PA database or Actual write API was used.
+- `/tmp/actual_migration/reconciliation.json` has `is_reconciled=true`: all 15 account rows and all 46 category rows have zero difference; `Revolut USD` is `Actual 290`, `PA 290`, `diff 0`.
+- The four formerly rejected USD expenses were imported using verified prior business-day rates and `fx_rate_source=nbp_previous_business_day`; the import wrote 800 transactions with 0 errors.
+- Fresh quality gate in `actual-reconciliation`: Ruff, ESLint, mypy and TypeScript passed; backend pytest passed (`110 passed, 40 skipped, 5 warnings`); frontend Vitest passed (`6 tests`); Vite production build passed.
 - Wdrożenie produkcyjne: obrazy backend/frontend zbudowane i uruchomione; `/api/health` oraz frontend zwracają HTTP 200.
 - Smoke test produkcji: backend zgłasza `status=ok`, `environment=production`; kontenery backend/frontend działają.
 - Historia sesji `f90a4d6..ab344ad` obejmuje 27 commitów; wcześniejszy zapis o 17 commitach był nieaktualny. Bieżący corrective docs commit nie należy do tego zakresu.
@@ -47,7 +52,6 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ### Known Limitations
 - Backend i frontend korzystają w tym worktree z zależności poza repozytorium: backend z `/opt/finanse/backend/.venv`, frontend z lokalnego `node_modules`.
 - Testy zgłaszają ostrzeżenia dotyczące domyślnego scope event loop w `pytest-asyncio`, deprecacji `crypt`/Argon2 i `datetime.utcnow` w zależnościach oraz `RuntimeWarning` w mocku NBP.
-- Trzy historyczne daty USD bez kursu NBP pozostają do ręcznej korekty: 2026-05-30, 2026-06-14 i 2026-06-21.
 - Parser split transactions nie został zweryfikowany na rzeczywistych danych użytkownika.
 - Brak SSE/streamingu dla zmian innych niż polling oczekujących potwierdzeń.
 

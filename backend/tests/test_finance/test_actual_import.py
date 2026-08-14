@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 from app.finance.actual_parser import ActualParser
+from app.finance.models import Category
 
 
 def _make_actual_db(schema_sql: str, inserts: list[str]) -> Path:
@@ -42,8 +43,10 @@ class TestActualParserAccounts:
             assert len(result) == 2
             assert by_id["a1"]["name"] == "ING"
             assert by_id["a1"]["type"] == "checking"
+            assert by_id["a1"]["is_budget_account"] is True
             assert by_id["a2"]["name"] == "Gotowka"
             assert by_id["a2"]["type"] == "savings"
+            assert by_id["a2"]["is_budget_account"] is False
         finally:
             os.unlink(db_path)
 
@@ -111,11 +114,11 @@ class TestActualParserCategories:
     def test_reads_categories_with_groups(self):
         schema = """
         CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
-        CREATE TABLE category_groups (id TEXT, name TEXT);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
         """
         inserts = [
-            "INSERT INTO category_groups VALUES ('g1', 'Wydatki biezace')",
-            "INSERT INTO category_groups VALUES ('g2', 'Przychody')",
+            "INSERT INTO category_groups VALUES ('g1', 'Wydatki biezace', 0)",
+            "INSERT INTO category_groups VALUES ('g2', 'Przychody', 0)",
             "INSERT INTO categories VALUES ('c1', 'Jedzenie', 0, 'g1', 0)",
             "INSERT INTO categories VALUES ('c2', 'Pensja', 1, 'g2', 0)",
             "INSERT INTO categories VALUES ('c3', 'Ukryta', 0, 'g1', 1)",
@@ -130,8 +133,35 @@ class TestActualParserCategories:
             assert len(result) == 2
             assert by_id["c1"]["name"] == "Jedzenie"
             assert by_id["c1"]["type"] == "expense"
+            assert by_id["c1"]["group_actual_id"] == "g1"
             assert by_id["c2"]["name"] == "Pensja"
             assert by_id["c2"]["type"] == "income"
+            assert by_id["c2"]["group_actual_id"] == "g2"
+            assert parser.get_category_groups() == [
+                {"actual_id": "g2", "name": "Przychody", "type": "income"},
+                {"actual_id": "g1", "name": "Wydatki biezace", "type": "expense"},
+            ]
+        finally:
+            os.unlink(db_path)
+
+    def test_skips_tombstoned_groups_with_active_children(self):
+        schema = """
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        """
+        inserts = [
+            "INSERT INTO category_groups VALUES ('g_active', 'Aktywna', 0)",
+            "INSERT INTO category_groups VALUES ('g_deleted', 'Usunieta', 1)",
+            "INSERT INTO categories VALUES ('c_active', 'Paliwo', 0, 'g_active', 0)",
+            "INSERT INTO categories VALUES ('c_deleted_group', 'Czynsz', 0, 'g_deleted', 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                assert parser.get_category_groups() == [
+                    {"actual_id": "g_active", "name": "Aktywna", "type": "expense"}
+                ]
         finally:
             os.unlink(db_path)
 
@@ -299,6 +329,88 @@ class TestActualParserTransactions:
                 assert txn["postings"][1]["account_actual_id"] == "acc_cash"
                 assert txn["postings"][1]["direction"] == "debit"
                 assert txn["postings"][1]["source_amount"] == 10000
+        finally:
+            os.unlink(db_path)
+
+    def test_preserves_each_transfer_side_amount_and_currency(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc_pln', 'ING', 0, 0, 0)",
+            "INSERT INTO accounts VALUES ('acc_usd', 'Revolut USD', 0, 0, 0)",
+            "INSERT INTO transactions VALUES ('tx_pln', 0, 0, NULL, 'acc_pln', NULL, -43210, NULL, NULL, 20260701, 'tx_usd', 0)",
+            "INSERT INTO transactions VALUES ('tx_usd', 0, 0, NULL, 'acc_usd', NULL, 12345, NULL, NULL, 20260701, 'tx_pln', 0)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                postings = parser.get_transfers()[0]["postings"]
+                assert postings == [
+                    {
+                        "account_actual_id": "acc_pln",
+                        "category_actual_id": None,
+                        "source_amount": 43210,
+                        "source_currency": "PLN",
+                        "direction": "credit",
+                    },
+                    {
+                        "account_actual_id": "acc_usd",
+                        "category_actual_id": None,
+                        "source_amount": 12345,
+                        "source_currency": "USD",
+                        "direction": "debit",
+                    },
+                ]
+        finally:
+            os.unlink(db_path)
+
+    def test_reconstructs_transfer_from_view_schema_with_real_currency_values(self):
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE transaction_rows (
+            id TEXT, account TEXT, category TEXT, amount INTEGER, payee TEXT,
+            notes TEXT, date INTEGER, transfer_id TEXT, tombstone INTEGER,
+            is_parent INTEGER, is_child INTEGER, parent_id TEXT
+        );
+        CREATE VIEW v_transactions AS
+        SELECT id, account, category, amount, payee, notes, date, transfer_id,
+               tombstone, is_parent, is_child, parent_id
+        FROM transaction_rows;
+        """
+        inserts = [
+            "INSERT INTO accounts VALUES ('acc_pln', 'ING', 0, 0, 0)",
+            "INSERT INTO accounts VALUES ('acc_usd', 'Revolut USD', 0, 0, 0)",
+            "INSERT INTO transaction_rows VALUES ('tx_pln', 'acc_pln', NULL, -43210, NULL, NULL, 20260701, 'tx_usd', 0, 0, 0, NULL)",
+            "INSERT INTO transaction_rows VALUES ('tx_usd', 'acc_usd', NULL, 12345, NULL, NULL, 20260701, 'tx_pln', 0, 0, 0, NULL)",
+        ]
+        db_path = _make_actual_db(schema, inserts)
+
+        try:
+            with ActualParser(db_path) as parser:
+                assert parser._use_view is True
+                assert parser.get_transfers()[0]["postings"] == [
+                    {
+                        "account_actual_id": "acc_pln",
+                        "category_actual_id": None,
+                        "source_amount": 43210,
+                        "source_currency": "PLN",
+                        "direction": "credit",
+                    },
+                    {
+                        "account_actual_id": "acc_usd",
+                        "category_actual_id": None,
+                        "source_amount": 12345,
+                        "source_currency": "USD",
+                        "direction": "debit",
+                    },
+                ]
         finally:
             os.unlink(db_path)
 
@@ -493,13 +605,88 @@ class TestActualParserTransactions:
 
 
 import uuid as _uuid
-from datetime import date
+from datetime import UTC, date, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 
 class TestNbpRates:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("weekend_date", "effective_date", "mid"),
+        [
+            (date(2026, 5, 30), date(2026, 5, 29), 3.6395),
+            (date(2026, 6, 14), date(2026, 6, 12), 3.6697),
+        ],
+    )
+    async def test_uses_and_caches_previous_published_rate_for_weekend_404(
+        self, weekend_date, effective_date, mid
+    ):
+        from unittest.mock import MagicMock
+
+        import httpx
+
+        from app.finance.nbp_rates import NbpRateProvider
+
+        provider = NbpRateProvider()
+        request = httpx.Request("GET", "https://api.nbp.pl")
+        exact_response = MagicMock()
+        exact_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "not found", request=request, response=httpx.Response(404, request=request)
+        )
+        fallback_response = MagicMock()
+        fallback_response.json.return_value = {
+            "code": "USD",
+            "rates": [{"mid": mid, "effectiveDate": effective_date.isoformat()}],
+        }
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = [exact_response, fallback_response]
+
+            quote = await provider.get_rate("USD", weekend_date)
+            cached_quote = await provider.get_rate("USD", weekend_date)
+
+        assert quote.rate == mid
+        assert quote.effective_date == effective_date
+        assert quote.source == "nbp_previous_business_day"
+        assert cached_quote == quote
+        assert mock_get.call_count == 2
+        assert mock_get.call_args_list[0].args[0].endswith(f"/USD/{weekend_date}/")
+        assert mock_get.call_args_list[1].args[0].endswith(f"/{weekend_date}/")
+
+    @pytest.mark.asyncio
+    async def test_does_not_cache_weekend_when_fallback_range_has_no_rate(self):
+        from unittest.mock import MagicMock
+
+        import httpx
+
+        from app.finance.nbp_rates import NbpRateProvider
+
+        provider = NbpRateProvider()
+        request = httpx.Request("GET", "https://api.nbp.pl")
+
+        def no_rate_response():
+            response = MagicMock()
+            response.raise_for_status.side_effect = httpx.HTTPStatusError(
+                "not found", request=request, response=httpx.Response(404, request=request)
+            )
+            return response
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = [
+                no_rate_response(),
+                no_rate_response(),
+                no_rate_response(),
+                no_rate_response(),
+            ]
+
+            assert await provider.get_rate("USD", date(2026, 6, 14)) is None
+            assert await provider.get_rate("USD", date(2026, 6, 14)) is None
+
+        assert mock_get.call_count == 4
+
     @pytest.mark.asyncio
     async def test_fetches_eur_rate(self):
         from unittest.mock import MagicMock
@@ -515,8 +702,11 @@ class TestNbpRates:
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_response
-            rate = await provider.get_rate("EUR", date(2026, 7, 15))
-            assert rate == 4.30
+            quote = await provider.get_rate("EUR", date(2026, 7, 15))
+            assert quote is not None
+            assert quote.rate == 4.30
+            assert quote.effective_date == date(2026, 7, 15)
+            assert quote.source == "nbp"
 
     @pytest.mark.asyncio
     async def test_caches_same_day(self):
@@ -533,9 +723,11 @@ class TestNbpRates:
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_response
-            rate1 = await provider.get_rate("EUR", date(2026, 7, 15))
-            rate2 = await provider.get_rate("EUR", date(2026, 7, 15))
-            assert rate1 == rate2 == 4.30
+            quote1 = await provider.get_rate("EUR", date(2026, 7, 15))
+            quote2 = await provider.get_rate("EUR", date(2026, 7, 15))
+            assert quote1 == quote2
+            assert quote1 is not None
+            assert quote1.rate == 4.30
             assert mock_get.call_count == 1  # cached
 
     @pytest.mark.asyncio
@@ -543,8 +735,10 @@ class TestNbpRates:
         from app.finance.nbp_rates import NbpRateProvider
 
         provider = NbpRateProvider()
-        rate = await provider.get_rate("PLN", date(2026, 7, 15))
-        assert rate == 1.0
+        quote = await provider.get_rate("PLN", date(2026, 7, 15))
+        assert quote is not None
+        assert quote.rate == 1.0
+        assert quote.source == "manual"
 
     def test_calculate_base_amount(self):
         from app.finance.nbp_rates import NbpRateProvider
@@ -554,18 +748,21 @@ class TestNbpRates:
         assert provider.calculate_base_amount(50, 4.2678) == 213  # round to int
 
     @pytest.mark.asyncio
-    async def test_error_returns_zero_and_not_cached(self):
+    async def test_error_returns_none_and_not_cached(self):
+        from unittest.mock import MagicMock
+
         from app.finance.nbp_rates import NbpRateProvider
 
         provider = NbpRateProvider()
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = RuntimeError("network error")
 
-        with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
-            rate = await provider.get_rate("USD", date(2026, 7, 15))
-            assert rate == 0.0
-            rate2 = await provider.get_rate("USD", date(2026, 7, 15))
-            assert rate2 == 0.0
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response
+            quote = await provider.get_rate("USD", date(2026, 7, 15))
+            assert quote is None
+            quote2 = await provider.get_rate("USD", date(2026, 7, 15))
+            assert quote2 is None
             assert mock_get.call_count == 2
 
 
@@ -585,9 +782,9 @@ class TestFxEnrichment:
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_response
-            base_amount = provider.calculate_base_amount(
-                500, await provider.get_rate("EUR", date(2026, 7, 15))
-            )
+            quote = await provider.get_rate("EUR", date(2026, 7, 15))
+            assert quote is not None
+            base_amount = provider.calculate_base_amount(500, quote.rate)
             assert base_amount == 2143  # 5.00 * 4.2856 = 21.428 -> round to 2143 groszy
 
     @pytest.mark.asyncio
@@ -595,14 +792,872 @@ class TestFxEnrichment:
         from app.finance.nbp_rates import NbpRateProvider
 
         provider = NbpRateProvider()
-        rate = await provider.get_rate("PLN", date(2026, 7, 15))
-        base_amount = provider.calculate_base_amount(10000, rate)
-        assert rate == 1.0
+        quote = await provider.get_rate("PLN", date(2026, 7, 15))
+        assert quote is not None
+        base_amount = provider.calculate_base_amount(10000, quote.rate)
+        assert quote.rate == 1.0
         assert base_amount == 10000
+
+
+class TestMigrationPostings:
+    def test_expense_uses_account_and_category_sides(self):
+        from scripts.migrate_actual import build_pa_postings
+
+        account_id = _uuid.uuid4()
+        category_id = _uuid.uuid4()
+        transaction = {
+            "actual_id": "expense-1",
+            "date": date(2026, 7, 15),
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-1",
+                    "category_actual_id": None,
+                    "source_amount": 5000,
+                    "source_currency": "PLN",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-1",
+                    "category_actual_id": "category-1",
+                    "source_amount": 5000,
+                    "source_currency": "PLN",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        postings = build_pa_postings(
+            transaction,
+            {"account-1": account_id},
+            {"category-1": category_id},
+            {"account-1": "PLN"},
+            {},
+            {"account-1": False},
+        )
+
+        assert [(posting.account_id, posting.category_id) for posting in postings] == [
+            (account_id, None),
+            (None, category_id),
+        ]
+        assert all(posting.is_budget_impact is False for posting in postings)
+        assert (
+            sum(
+                posting.base_amount_pln
+                if posting.direction == "debit"
+                else -posting.base_amount_pln
+                for posting in postings
+            )
+            == 0
+        )
+
+    def test_eur_posting_uses_verified_nbp_rate(self):
+        from app.finance.nbp_rates import NbpRate
+        from scripts.migrate_actual import build_pa_postings
+
+        account_id = _uuid.uuid4()
+        category_id = _uuid.uuid4()
+        transaction = {
+            "actual_id": "expense-eur",
+            "date": date(2026, 7, 15),
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-eur",
+                    "category_actual_id": None,
+                    "source_amount": 500,
+                    "source_currency": "EUR",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-eur",
+                    "category_actual_id": "category-1",
+                    "source_amount": 500,
+                    "source_currency": "EUR",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        postings = build_pa_postings(
+            transaction,
+            {"account-eur": account_id},
+            {"category-1": category_id},
+            {"account-eur": "EUR"},
+            {
+                ("EUR", date(2026, 7, 15)): NbpRate(
+                    rate=4.2856,
+                    effective_date=date(2026, 7, 15),
+                    source="nbp",
+                )
+            },
+        )
+
+        assert [posting.base_amount_pln for posting in postings] == [2143, 2143]
+        assert all(posting.fx_rate == 4.2856 for posting in postings)
+        assert all(posting.fx_rate_source == "nbp" for posting in postings)
+
+    def test_weekend_usd_posting_preserves_fallback_rate_source(self):
+        from app.finance.nbp_rates import NbpRate
+        from scripts.migrate_actual import build_pa_postings
+
+        account_id = _uuid.uuid4()
+        category_id = _uuid.uuid4()
+        weekend_date = date(2026, 5, 30)
+        transaction = {
+            "actual_id": "expense-usd-weekend",
+            "date": weekend_date,
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": None,
+                    "source_amount": 500,
+                    "source_currency": "USD",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": "category-1",
+                    "source_amount": 500,
+                    "source_currency": "USD",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        postings = build_pa_postings(
+            transaction,
+            {"account-usd": account_id},
+            {"category-1": category_id},
+            {"account-usd": "USD"},
+            {
+                ("USD", weekend_date): NbpRate(
+                    rate=3.6395,
+                    effective_date=date(2026, 5, 29),
+                    source="nbp_previous_business_day",
+                )
+            },
+        )
+
+        assert [posting.base_amount_pln for posting in postings] == [1820, 1820]
+        assert all(posting.fx_rate == 3.6395 for posting in postings)
+        assert all(posting.fx_rate_source == "nbp_previous_business_day" for posting in postings)
+
+    def test_missing_usd_rate_rejects_entire_transaction(self):
+        from scripts.migrate_actual import ImportValidationError, build_pa_postings
+
+        transaction = {
+            "actual_id": "expense-usd",
+            "date": date(2026, 7, 15),
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": None,
+                    "source_amount": 500,
+                    "source_currency": "USD",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": "category-1",
+                    "source_amount": 500,
+                    "source_currency": "USD",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        with pytest.raises(ImportValidationError, match="Missing FX rate: USD on 2026-07-15"):
+            build_pa_postings(
+                transaction,
+                {"account-usd": _uuid.uuid4()},
+                {"category-1": _uuid.uuid4()},
+                {"account-usd": "USD"},
+                {},
+            )
+
+    def test_cross_currency_transfer_adds_non_budget_fx_difference_posting(self):
+        from app.finance.nbp_rates import NbpRate
+        from scripts.migrate_actual import build_pa_postings
+
+        pln_account_id = _uuid.uuid4()
+        usd_account_id = _uuid.uuid4()
+        loss_category_id = _uuid.uuid4()
+        transaction = {
+            "actual_id": "transfer-usd-pln",
+            "date": date(2026, 7, 15),
+            "type": "transfer",
+            "postings": [
+                {
+                    "account_actual_id": "account-usd",
+                    "category_actual_id": None,
+                    "source_amount": 10000,
+                    "source_currency": "USD",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-pln",
+                    "category_actual_id": None,
+                    "source_amount": 43000,
+                    "source_currency": "PLN",
+                    "direction": "debit",
+                },
+            ],
+        }
+
+        postings = build_pa_postings(
+            transaction,
+            {"account-usd": usd_account_id, "account-pln": pln_account_id},
+            {},
+            {"account-usd": "USD", "account-pln": "PLN"},
+            {
+                ("USD", date(2026, 7, 15)): NbpRate(
+                    rate=4.2856,
+                    effective_date=date(2026, 7, 15),
+                    source="nbp",
+                )
+            },
+            fx_category_ids={"loss": loss_category_id},
+        )
+
+        assert [(posting.source_amount, posting.source_currency) for posting in postings[:2]] == [
+            (10000, "USD"),
+            (43000, "PLN"),
+        ]
+        assert postings[2].account_id is None
+        assert postings[2].category_id == loss_category_id
+        assert postings[2].direction == "debit"
+        assert postings[2].base_amount_pln == 144
+        assert postings[2].is_budget_impact is False
+        assert (
+            sum(
+                posting.base_amount_pln
+                if posting.direction == "debit"
+                else -posting.base_amount_pln
+                for posting in postings
+            )
+            == 0
+        )
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_ordinary_pln_transaction_uses_account_and_category_sides(self, db_session):
+        from app.finance.schemas import AccountCreate, CategoryCreate, TransactionCreate
+        from app.finance.service import create_account, create_category, create_transaction
+        from scripts.migrate_actual import build_pa_postings
+
+        user_id = _uuid.uuid4()
+        account = await create_account(
+            db_session, user_id, AccountCreate(name="ING", type="checking")
+        )
+        category = await create_category(
+            db_session, user_id, CategoryCreate(name="Paliwo", type="expense")
+        )
+        transaction = {
+            "actual_id": "expense-1",
+            "date": date(2026, 7, 15),
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "account-1",
+                    "category_actual_id": None,
+                    "source_amount": 5000,
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "account-1",
+                    "category_actual_id": "category-1",
+                    "source_amount": 5000,
+                    "direction": "debit",
+                },
+            ],
+        }
+        postings = build_pa_postings(
+            transaction,
+            {"account-1": account.id},
+            {"category-1": category.id},
+            {"account-1": "PLN"},
+            {},
+        )
+
+        await create_transaction(
+            db_session,
+            user_id,
+            TransactionCreate(
+                transaction_date=transaction["date"],
+                description="[actual:expense-1] Paliwo",
+                type="expense",
+                source="actual",
+                postings=postings,
+            ),
+        )
+
+        assert [(posting.account_id, posting.category_id) for posting in postings] == [
+            (account.id, None),
+            (None, category.id),
+        ]
 
 
 class TestMigrationPipeline:
     pytestmark = pytest.mark.integration
+
+    @pytest.mark.asyncio
+    async def test_legacy_actual_transactions_backfill_account_category_and_group_mappings(
+        self, db_session, monkeypatch
+    ):
+        from sqlalchemy import func, select
+
+        from app.finance.models import (
+            Account,
+            ActualImportMapping,
+            Category,
+            FinancialTransaction,
+            Posting,
+        )
+        from app.finance.schemas import AccountCreate, CategoryCreate
+        from app.finance.service import create_account, create_category
+        from scripts import migrate_actual
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'Actual ING', 0, 0, 0)",
+                "INSERT INTO category_groups VALUES ('group1', 'Actual Transport', 0)",
+                "INSERT INTO categories VALUES ('fuel', 'Actual Paliwo', 0, 'group1', 0)",
+                "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'fuel', -5000, NULL, NULL, 20260814, NULL, 0)",
+            ],
+        )
+        user_id = _uuid.uuid4()
+        account = await create_account(
+            db_session, user_id, AccountCreate(name="Legacy account", type="checking")
+        )
+        group = await create_category(
+            db_session, user_id, CategoryCreate(name="Legacy group", type="expense")
+        )
+        category = await create_category(
+            db_session,
+            user_id,
+            CategoryCreate(name="Legacy category", type="expense", parent_id=group.id),
+        )
+        transaction = FinancialTransaction(
+            user_id=user_id,
+            date=date(2026, 8, 14),
+            description="[actual:tx1] Legacy expense",
+            type="expense",
+            source="actual",
+        )
+        db_session.add(transaction)
+        await db_session.flush()
+        db_session.add_all(
+            [
+                Posting(
+                    transaction_id=transaction.id,
+                    account_id=account.id,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="credit",
+                ),
+                Posting(
+                    transaction_id=transaction.id,
+                    account_id=account.id,
+                    category_id=category.id,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="debit",
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        class SessionContext:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return None
+
+        monkeypatch.setattr(migrate_actual, "extract_sqlite", AsyncMock(return_value=db_path))
+        monkeypatch.setattr(migrate_actual, "async_session_factory", SessionContext)
+        monkeypatch.setattr(
+            migrate_actual,
+            "NbpRateProvider",
+            lambda: SimpleNamespace(close=AsyncMock()),
+        )
+
+        try:
+            await migrate_actual.migrate(Path("unused"), user_id)
+            counts = [
+                await db_session.scalar(
+                    select(func.count(model.id)).where(model.user_id == user_id)
+                )
+                for model in (Account, Category, FinancialTransaction, ActualImportMapping)
+            ]
+            assert counts == [1, 2, 1, 4]
+        finally:
+            os.unlink(db_path)
+
+    @pytest.mark.asyncio
+    async def test_unresolved_legacy_actual_mapping_fails_without_creating_entities(
+        self, db_session, monkeypatch
+    ):
+        from sqlalchemy import func, select
+
+        from app.finance.models import Account, Category, FinancialTransaction, Posting
+        from app.finance.schemas import AccountCreate, CategoryCreate
+        from app.finance.service import create_account, create_category
+        from scripts import migrate_actual
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'Actual ING', 0, 0, 0)",
+                "INSERT INTO accounts VALUES ('acc2', 'Actual Cash', 0, 0, 0)",
+                "INSERT INTO category_groups VALUES ('group1', 'Actual Transport', 0)",
+                "INSERT INTO categories VALUES ('fuel', 'Actual Paliwo', 0, 'group1', 0)",
+                "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'fuel', -5000, NULL, NULL, 20260814, NULL, 0)",
+            ],
+        )
+        user_id = _uuid.uuid4()
+        account = await create_account(
+            db_session, user_id, AccountCreate(name="Legacy account", type="checking")
+        )
+        category = await create_category(
+            db_session, user_id, CategoryCreate(name="Legacy category", type="expense")
+        )
+        transaction = FinancialTransaction(
+            user_id=user_id,
+            date=date(2026, 8, 14),
+            description="[actual:tx1] Legacy expense",
+            type="expense",
+            source="actual",
+        )
+        db_session.add(transaction)
+        await db_session.flush()
+        db_session.add_all(
+            [
+                Posting(
+                    transaction_id=transaction.id,
+                    account_id=account.id,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="credit",
+                ),
+                Posting(
+                    transaction_id=transaction.id,
+                    account_id=account.id,
+                    category_id=category.id,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="debit",
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        class SessionContext:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return None
+
+        monkeypatch.setattr(migrate_actual, "extract_sqlite", AsyncMock(return_value=db_path))
+        monkeypatch.setattr(migrate_actual, "async_session_factory", SessionContext)
+        monkeypatch.setattr(
+            migrate_actual,
+            "NbpRateProvider",
+            lambda: SimpleNamespace(close=AsyncMock()),
+        )
+
+        try:
+            with pytest.raises(migrate_actual.LegacyActualMappingError, match="acc2"):
+                await migrate_actual.migrate(Path("unused"), user_id)
+            counts = [
+                await db_session.scalar(
+                    select(func.count(model.id)).where(model.user_id == user_id)
+                )
+                for model in (Account, Category, FinancialTransaction)
+            ]
+            assert counts == [1, 1, 1]
+        finally:
+            os.unlink(db_path)
+
+    @pytest.mark.asyncio
+    async def test_imported_expense_decreases_and_income_increases_account_balance(
+        self, db_session, monkeypatch
+    ):
+        from app.finance.service import get_accounts, get_category_summary, get_financial_summary
+        from scripts import migrate_actual
+
+        actual_date = datetime.now(UTC).date().strftime("%Y%m%d")
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        expense_db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+                "INSERT INTO category_groups VALUES ('expense-group', 'Wydatki', 0)",
+                "INSERT INTO categories VALUES ('expense-cat', 'Paliwo', 0, 'expense-group', 0)",
+                f"INSERT INTO transactions VALUES ('expense', 0, 0, NULL, 'acc1', 'expense-cat', -5000, NULL, NULL, {actual_date}, NULL, 0)",
+            ],
+        )
+        income_db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+                "INSERT INTO category_groups VALUES ('income-group', 'Przychody', 0)",
+                "INSERT INTO categories VALUES ('income-cat', 'Pensja', 1, 'income-group', 0)",
+                f"INSERT INTO transactions VALUES ('income', 0, 0, NULL, 'acc1', 'income-cat', 12000, NULL, NULL, {actual_date}, NULL, 0)",
+            ],
+        )
+        user_id = _uuid.uuid4()
+
+        class SessionContext:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return None
+
+        monkeypatch.setattr(
+            migrate_actual,
+            "extract_sqlite",
+            AsyncMock(side_effect=[expense_db_path, income_db_path]),
+        )
+        monkeypatch.setattr(migrate_actual, "async_session_factory", SessionContext)
+        monkeypatch.setattr(
+            migrate_actual,
+            "NbpRateProvider",
+            lambda: SimpleNamespace(close=AsyncMock()),
+        )
+
+        try:
+            await migrate_actual.migrate(Path("unused"), user_id)
+            accounts = await get_accounts(db_session, user_id)
+            assert [(account.name, account.balance_pln) for account in accounts] == [("ING", -5000)]
+            await migrate_actual.migrate(Path("unused"), user_id)
+            accounts = await get_accounts(db_session, user_id)
+            assert [(account.name, account.balance_pln) for account in accounts] == [("ING", 7000)]
+            financial_summary = await get_financial_summary(db_session, user_id)
+            category_summary = await get_category_summary(db_session, user_id)
+            assert [
+                (account["name"], account["balance_pln"]) for account in financial_summary.accounts
+            ] == [("ING", 7000)]
+            assert financial_summary.income_total_pln == 12000
+            assert financial_summary.expense_total_pln == 5000
+            assert [
+                (category.name, category.total_pln) for category in category_summary.categories
+            ] == [("Paliwo", 5000)]
+            assert [(group.name, group.total_pln) for group in category_summary.groups] == [
+                ("Wydatki", 5000)
+            ]
+        finally:
+            os.unlink(expense_db_path)
+            os.unlink(income_db_path)
+
+    @pytest.mark.asyncio
+    async def test_duplicate_actual_mapping_keeps_session_usable(self, db_session):
+        from sqlalchemy import select
+
+        from app.finance.models import ActualImportMapping
+        from app.finance.schemas import AccountCreate
+        from app.finance.service import create_account
+        from scripts.migrate_actual import _store_mapping
+
+        user_id = _uuid.uuid4()
+        first_account = await create_account(
+            db_session, user_id, AccountCreate(name="Pierwsze", type="checking")
+        )
+        second_account = await create_account(
+            db_session, user_id, AccountCreate(name="Drugie", type="checking")
+        )
+
+        await _store_mapping(db_session, user_id, "account", "actual-account", first_account.id)
+        await _store_mapping(db_session, user_id, "account", "actual-account", second_account.id)
+        third_account = await create_account(
+            db_session, user_id, AccountCreate(name="Trzecie", type="checking")
+        )
+        mapping = await db_session.scalar(
+            select(ActualImportMapping).where(
+                ActualImportMapping.user_id == user_id,
+                ActualImportMapping.entity_type == "account",
+                ActualImportMapping.actual_id == "actual-account",
+            )
+        )
+
+        assert mapping is not None
+        assert mapping.entity_id == first_account.id
+        assert third_account.id
+
+    @pytest.mark.asyncio
+    async def test_second_import_reuses_actual_accounts_categories_and_transactions(
+        self, db_session, monkeypatch
+    ):
+        from sqlalchemy import func, select
+
+        from app.finance.models import Account, Category, FinancialTransaction
+        from scripts import migrate_actual
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+                "INSERT INTO category_groups VALUES ('group1', 'Transport', 0)",
+                "INSERT INTO categories VALUES ('fuel', 'Paliwo', 0, 'group1', 0)",
+                "INSERT INTO transactions VALUES ('expense', 0, 0, NULL, 'acc1', 'fuel', -5000, NULL, NULL, 20260715, NULL, 0)",
+            ],
+        )
+        user_id = _uuid.uuid4()
+
+        class SessionContext:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return None
+
+        monkeypatch.setattr(migrate_actual, "extract_sqlite", AsyncMock(return_value=db_path))
+        monkeypatch.setattr(migrate_actual, "async_session_factory", SessionContext)
+        monkeypatch.setattr(
+            migrate_actual,
+            "NbpRateProvider",
+            lambda: SimpleNamespace(close=AsyncMock()),
+        )
+
+        try:
+            await migrate_actual.migrate(Path("unused"), user_id)
+            await migrate_actual.migrate(Path("unused"), user_id)
+            counts = [
+                await db_session.scalar(
+                    select(func.count(model.id)).where(model.user_id == user_id)
+                )
+                for model in (Account, Category, FinancialTransaction)
+            ]
+            assert counts == [1, 2, 1]
+        finally:
+            os.unlink(db_path)
+
+    @pytest.mark.asyncio
+    async def test_import_does_not_reuse_manual_records_with_matching_names(
+        self, db_session, monkeypatch
+    ):
+        from sqlalchemy import func, select
+
+        from app.finance.models import Account, Category
+        from app.finance.schemas import AccountCreate, CategoryCreate
+        from app.finance.service import create_account, create_category
+        from scripts import migrate_actual
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+                "INSERT INTO category_groups VALUES ('group1', 'Transport', 0)",
+                "INSERT INTO categories VALUES ('fuel', 'Paliwo', 0, 'group1', 0)",
+                "INSERT INTO transactions VALUES ('expense', 0, 0, NULL, 'acc1', 'fuel', -5000, NULL, NULL, 20260715, NULL, 0)",
+            ],
+        )
+        user_id = _uuid.uuid4()
+        await create_account(db_session, user_id, AccountCreate(name="ING", type="checking"))
+        await create_category(db_session, user_id, CategoryCreate(name="Paliwo", type="expense"))
+
+        class SessionContext:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return None
+
+        monkeypatch.setattr(migrate_actual, "extract_sqlite", AsyncMock(return_value=db_path))
+        monkeypatch.setattr(migrate_actual, "async_session_factory", SessionContext)
+        monkeypatch.setattr(
+            migrate_actual,
+            "NbpRateProvider",
+            lambda: SimpleNamespace(close=AsyncMock()),
+        )
+
+        try:
+            await migrate_actual.migrate(Path("unused"), user_id)
+            await migrate_actual.migrate(Path("unused"), user_id)
+            counts = [
+                await db_session.scalar(
+                    select(func.count(model.id)).where(model.user_id == user_id)
+                )
+                for model in (Account, Category)
+            ]
+            assert counts == [2, 3]
+        finally:
+            os.unlink(db_path)
+
+    @pytest.mark.asyncio
+    async def test_resolve_ids_creates_category_groups_before_children(self, db_session):
+        from sqlalchemy import select
+
+        from scripts.migrate_actual import resolve_ids
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'ING', 1, 0, 0)",
+                "INSERT INTO category_groups VALUES ('group1', 'Transport', 0)",
+                "INSERT INTO categories VALUES ('fuel', 'Paliwo', 0, 'group1', 0)",
+            ],
+        )
+
+        user_id = _uuid.uuid4()
+        try:
+            with ActualParser(db_path) as parser:
+                account_map, category_map, _, budget_account_map = await resolve_ids(
+                    db_session, user_id, parser
+                )
+            categories = (
+                (await db_session.execute(select(Category).where(Category.user_id == user_id)))
+                .scalars()
+                .all()
+            )
+            by_id = {category.id: category for category in categories}
+
+            assert budget_account_map == {"acc1": False}
+            assert account_map["acc1"]
+            assert by_id[category_map["fuel"]].parent_id is not None
+            assert by_id[by_id[category_map["fuel"]].parent_id].name == "Transport"
+        finally:
+            os.unlink(db_path)
+
+    @pytest.mark.asyncio
+    async def test_full_import_does_not_create_opening_balance_transactions(
+        self, db_session, monkeypatch
+    ):
+        from sqlalchemy import select
+
+        from app.finance.models import FinancialTransaction
+        from scripts import migrate_actual
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'ING', 0, 0, 0)",
+                "INSERT INTO categories VALUES ('cat1', 'Jedzenie', 0, 'g1', 0)",
+                "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'cat1', -5000, 'Zakupy', NULL, 20260701, NULL, 0)",
+            ],
+        )
+
+        class SessionContext:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return None
+
+        opening_balances = AsyncMock()
+        monkeypatch.setattr(migrate_actual, "extract_sqlite", AsyncMock(return_value=db_path))
+        monkeypatch.setattr(migrate_actual, "async_session_factory", SessionContext)
+        monkeypatch.setattr(
+            migrate_actual, "create_opening_balances", opening_balances, raising=False
+        )
+        monkeypatch.setattr(
+            migrate_actual,
+            "NbpRateProvider",
+            lambda: SimpleNamespace(close=AsyncMock()),
+        )
+
+        try:
+            await migrate_actual.migrate(Path("unused"), _uuid.uuid4())
+        finally:
+            os.unlink(db_path)
+
+        opening_balances.assert_not_awaited()
+        transactions = (await db_session.execute(select(FinancialTransaction))).scalars().all()
+        assert all(not transaction.description.startswith("[BO]") for transaction in transactions)
 
     @pytest.mark.asyncio
     async def test_full_pipeline_dry_run(self, db_session):

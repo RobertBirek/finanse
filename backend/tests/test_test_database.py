@@ -9,6 +9,14 @@ from conftest import (
 from sqlalchemy.exc import OperationalError
 
 
+def test_application_registers_audit_event_in_metadata():
+    from app.database import Base
+    from app.main import app
+
+    assert app is not None
+    assert "audit_events" in Base.metadata.tables
+
+
 def test_default_test_database_url_keeps_approved_fallback():
     assert DEFAULT_TEST_DATABASE_URL == (
         "postgresql+asyncpg://finanse:finanse@localhost:5432/finanse_test"

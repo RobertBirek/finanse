@@ -302,6 +302,9 @@ async def _execute_create_transaction(
         if matching:
             category_id = matching[0].id
 
+    if category_id is None:
+        return {"error": f"No {txn_type} category found"}
+
     try:
         txn = await create_transaction(
             db,
@@ -321,7 +324,7 @@ async def _execute_create_transaction(
                         direction="credit" if txn_type == "expense" else "debit",
                     ),
                     PostingCreate(
-                        account_id=account_id,
+                        account_id=None,
                         category_id=category_id,
                         source_amount=amount,
                         source_currency=currency,

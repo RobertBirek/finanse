@@ -3,6 +3,51 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-14 — Sesja 14: Weekendowe kursy NBP i domknięcie Task 7
+
+### Cel sesji
+Naprawić blokadę Task 7 powodowaną przez brak kursu NBP Table A w sobotę/niedzielę, bez dostępu do produkcyjnego PA lub API zapisu Actual.
+
+### Co zrobiono
+- Potwierdzono zachowanie API NBP: żądanie kursu USD dla 2026-05-30 zwraca HTTP 404, a zakres kończący się 2026-05-30 zwraca kurs z 2026-05-29; identyczny wzorzec dotyczy niedziel.
+- Dodano `NbpRate` z kursem, datą efektywną i źródłem; provider cache'uje kompletny quote pod żądaną datą. Fallback działa wyłącznie po 404 w sobotę/niedzielę, pobiera ograniczony zakres siedmiu dni i akceptuje tylko kurs opublikowany przed datą transakcji.
+- Importer przenosi quote do postingów. Kursy z fallbacku są zapisane jako `fx_rate_source='nbp_previous_business_day'`; brak poprawnego kursu nadal powoduje `ImportValidationError`.
+- Testy TDD objęły sobotę, niedzielę, cache metadanych, brak kursu w fallback range oraz provenance postingu.
+
+### Weryfikacja
+- Ruff dla zmienionych plików i mypy dla providera/importera: PASS.
+- `pytest tests/test_finance/test_actual_import.py -v`: `33 passed, 10 skipped`.
+- Izolowany import DOM blobu do `finanse_test` na `127.0.0.1:55432`: `--execute --require-reconciled` zakończył się kodem 0; 15 kont, 46 kategorii, 800 transakcji i 0 błędów.
+- `/tmp/actual_migration/reconciliation.json`: `is_reconciled=true`; `Revolut USD` ma `Actual 290`, `PA 290`, `diff 0`.
+- Cztery historyczne wydatki USD są zapisane z `nbp_previous_business_day`: 519 USD przy 3.6395 (2026-05-30), dwa razy 1077 USD przy 3.6697 (2026-06-14) oraz 1077 USD przy 3.7162 (2026-06-21). Zmiany i import nie dotknęły produkcyjnego PA ani Actual.
+
+### Następna sesja
+Przekazać wynik testowego uzgodnienia finalnemu kontrolerowi; ewentualna decyzja o produkcji pozostaje poza tym worktree i tą sesją.
+
+---
+## 2026-08-14 — Sesja 13: Task 7, próbne uzgodnienie Actual
+
+### Cel sesji
+Wykonać pełną weryfikację kodu oraz import DOM blobu Actual do izolowanej bazy z `--execute --require-reconciled`, bez dostępu do produkcyjnych API zapisu Actual i bez zmiany produkcyjnego PA.
+
+### Co zrobiono
+- W worktree `actual-reconciliation` przeszły Ruff, ESLint, mypy, TypeScript, backend pytest (`110 passed, 40 skipped, 5 warnings`), frontend Vitest (`6 tests`) oraz Vite production build.
+- Uruchomiono `postgres-test` na `127.0.0.1:55432`, zastosowano migracje do `e7a4b2c6d8f0` i utworzono testowego użytkownika `d34b6ca0-61be-453d-9818-81528de99e81` wyłącznie w `finanse_test`.
+- Importer DOM blobu uruchomiony z testowym `DATABASE_URL`, `--execute` i `--require-reconciled` zapisał raporty, zwrócił `ReconciliationError` i wykonał rollback przed commitem.
+
+### Wynik uzgodnienia
+- `/tmp/actual_migration/reconciliation.json` ma `is_reconciled=false`; `/tmp/actual_migration/reconciliation_report.txt` wskazuje tylko `Revolut USD`: Actual `290`, PA `4040`, `diff -3750`. Pozostałe 14 kont i wszystkie kategorie mają różnicę zero.
+- Cztery odrzucone wydatki USD są przyczyną różnicy: `-519` z 2026-05-30 oraz po `-1077` z 2026-06-14, 2026-06-14 i 2026-06-21. Ich suma wynosi `-3750`; importer odrzucił je, ponieważ NBP nie podał kursu USD dla tych dat.
+- Niezależne zapytanie SQL po rollbacku zwróciło zero postingów oraz zero transakcji `source='actual'` dla testowego użytkownika.
+
+### Decyzje techniczne
+1. Wynik nie kwalifikuje się do żadnej operacji na produkcyjnym PA. Nie użyto produkcyjnego DSN ani Actual write API.
+2. Przy odrzuceniu przez `--require-reconciled` raporty uzgodnienia są zapisane przed wyjątkiem; `migration_report.txt` nie jest w tym przebiegu odświeżany i nie jest źródłem wyniku.
+
+### Następna sesja
+Ustalić zweryfikowane kursy lub zatwierdzoną obsługę czterech historycznych wydatków USD, ponowić pełny import testowy i przekazać ewentualną komendę produkcyjną wyłącznie finalnemu kontrolerowi po raporcie zerowym.
+
+---
 ## 2026-08-13 — Sesja 12: Merge i deploy produkcyjny
 
 ### Cel sesji
