@@ -20,6 +20,7 @@ import sys
 import tempfile
 import uuid
 import zipfile
+from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,25 @@ class ImportValidationError(ValueError):
 
 class LegacyActualMappingError(ImportValidationError):
     """Raised when legacy Actual entities cannot be mapped without guessing."""
+
+
+def _is_legacy_opening_balance(source: str, description: str, postings: Sequence[Posting]) -> bool:
+    if source != "actual" or not description.startswith("[BO] Bilans otwarcia"):
+        return False
+    if len(postings) != 2:
+        return False
+
+    first, second = postings
+    if (
+        first.account_id is None
+        or first.account_id != second.account_id
+        or first.category_id is not None
+        or second.category_id is not None
+        or {first.direction, second.direction} != {"debit", "credit"}
+    ):
+        return False
+
+    return first.base_amount_pln == second.base_amount_pln
 
 
 def create_verified_backup(backup_path: Path) -> None:
@@ -115,15 +135,27 @@ async def replace_legacy_actual_data(
     """Delete only Actual-proven entities, rejecting any manual reference first."""
     actual_rows = (
         await db.execute(
-            select(FinancialTransaction.id, FinancialTransaction.description).where(
+            select(
+                FinancialTransaction.id,
+                FinancialTransaction.source,
+                FinancialTransaction.description,
+            ).where(
                 FinancialTransaction.user_id == user_id, FinancialTransaction.source == "actual"
             )
         )
     ).all()
     actual_transaction_ids: set[uuid.UUID] = set()
-    for transaction_id, description in actual_rows:
+    for transaction_id, source, description in actual_rows:
         match = re.match(r"^\[actual:([^\]]+)\]", description)
         if match is None or match.group(1) not in blob_transaction_ids:
+            postings = (
+                (await db.execute(select(Posting).where(Posting.transaction_id == transaction_id)))
+                .scalars()
+                .all()
+            )
+            if _is_legacy_opening_balance(source, description, postings):
+                actual_transaction_ids.add(transaction_id)
+                continue
             raise LegacyActualMappingError(
                 "Cannot replace Actual import: transaction provenance does not match the supplied blob"
             )

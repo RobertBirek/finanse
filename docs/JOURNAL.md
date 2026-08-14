@@ -3,6 +3,36 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-14 — Sesja 16: Legacy bilanse otwarcia w preflight korekty
+
+### Cel sesji
+Odblokować wyłącznie historyczne, syntetyczne bilanse otwarcia w preflight
+`--replace-legacy-actual`, bez poszerzania wyjątku na ręczne lub niepewne dane.
+
+### Co zrobiono
+- Dodano ścisłe rozpoznanie BO: `source='actual'`, prefiks `[BO] Bilans otwarcia`,
+  dokładnie dwie nogi, wspólne niepuste konto, brak kategorii oraz równe wartości
+  bazowe po stronach debit/credit.
+- Normalne dopasowanie `[actual:<id>]` pozostaje pierwsze; tylko niepasujący
+  rekord o powyższym kształcie jest dopuszczany do usunięcia. Każdy lookalike,
+  rekord ręczny, niezbilansowany lub skategoryzowany BO nadal jest odrzucony.
+- Testy TDD najpierw zakończyły się błędem braku predykatu, następnie objęły
+  dozwolony BO i przypadki odrzucone.
+
+### Weryfikacja
+- Focused pytest: `6 passed` dla predykatu BO; pełny `test_actual_import.py`:
+  `38 passed, 11 skipped`.
+- Quality gate: lint i typecheck przeszły; `make test`: backend `122 passed,
+  41 skipped`, frontend Vitest `6 passed`; izolowane `make test-integration`:
+  `41 passed, 121 deselected`.
+- Nie uruchomiono polecenia produkcyjnej korekty ani polecenia
+  `--replace-legacy-actual` przeciwko produkcyjnej bazie.
+
+### Następna sesja
+Po wdrożeniu kodu decyzja o produkcyjnej korekcie pozostaje osobnym, ręcznie
+zatwierdzanym krokiem z wymaganym backupem i raportem uzgodnienia równym zero.
+
+---
 ## 2026-08-14 — Sesja 15: Kontrolowana korekta legacy Actual
 
 ### Cel sesji
