@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import api from "../lib/api";
 
 export interface Account {
@@ -90,6 +95,35 @@ export interface ScheduledFinanceItem {
   is_active: boolean;
 }
 
+export interface FinanceSettings {
+  payday_day: number;
+  payday_account_id: string | null;
+  forecast_horizon_days: number;
+  overdue_grace_days: number;
+}
+
+export interface FinanceSettingsUpdate {
+  payday_day?: number;
+  payday_account_id?: string | null;
+  forecast_horizon_days?: number;
+  overdue_grace_days?: number;
+}
+
+export interface ScheduledFinanceItemInput {
+  name: string;
+  type: "income" | "expense";
+  account_id: string;
+  category_id: string;
+  currency: string;
+  due_day: number;
+  amount_method: "fixed" | "last_actual";
+  fixed_amount_pln: number | null;
+}
+
+export interface ScheduledFinanceConfirmation {
+  transaction: Transaction;
+}
+
 export type CashflowStatus =
   "due" | "overdue" | "overdue_uncertain" | "matched_actual" | "amount_unknown";
 
@@ -156,6 +190,44 @@ export function buildCategoryTree(summary: CategorySummary): CategoryGroup[] {
       )
       .map((category) => ({ ...category, children: [] })),
   ];
+}
+
+export function parsePlnToGrosze(raw: string): number | null {
+  const normalized = raw.replace(/\s/g, "").replace(",", ".");
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null;
+
+  const [whole, fractional = ""] = normalized.split(".");
+  const grosze = Number(whole) * 100 + Number(fractional.padEnd(2, "0"));
+
+  return Number.isSafeInteger(grosze) && grosze > 0 ? grosze : null;
+}
+
+export function canConfirmSuggestion(
+  suggestion: Pick<CashflowSuggestion, "status" | "amount_pln" | "due_date">,
+  todayIso: string,
+): boolean {
+  return (
+    (suggestion.status === "due" || suggestion.status === "overdue") &&
+    suggestion.amount_pln !== null &&
+    suggestion.amount_pln > 0 &&
+    suggestion.due_date <= todayIso
+  );
+}
+
+function invalidateCashflowMutationQueries(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["finance", "cashflow"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "transactions"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "summary"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "category-summary"] });
+}
+
+function normalizeScheduledFinanceItemInput(
+  item: ScheduledFinanceItemInput,
+): ScheduledFinanceItemInput {
+  return item.amount_method === "last_actual"
+    ? { ...item, fixed_amount_pln: null }
+    : item;
 }
 
 export function useAccounts() {
@@ -286,12 +358,17 @@ export function useFinancialSummary(month?: number, year?: number) {
   });
 }
 
-export function useCategorySummary() {
+export function useCategorySummary(month?: number, year?: number) {
+  const now = new Date();
+  const m = month ?? now.getMonth() + 1;
+  const y = year ?? now.getFullYear();
+
   return useQuery({
-    queryKey: ["finance", "category-summary"],
+    queryKey: ["finance", "category-summary", { month: m, year: y }],
     queryFn: async () => {
       const { data } = await api.get<CategorySummary>(
         "/finance/category-summary",
+        { params: { month: m, year: y } },
       );
       return data;
     },
@@ -310,6 +387,32 @@ export function useCashflowForecast() {
   });
 }
 
+export function useCashflowSettings() {
+  return useQuery({
+    queryKey: ["finance", "cashflow", "settings"],
+    queryFn: async () => {
+      const { data } = await api.get<FinanceSettings>(
+        "/finance/cashflow/settings",
+      );
+      return data;
+    },
+  });
+}
+
+export function useUpdateCashflowSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (settings: FinanceSettingsUpdate) => {
+      const { data } = await api.patch<FinanceSettings>(
+        "/finance/cashflow/settings",
+        settings,
+      );
+      return data;
+    },
+    onSuccess: () => invalidateCashflowMutationQueries(queryClient),
+  });
+}
+
 export function useScheduledFinanceItems() {
   return useQuery({
     queryKey: ["finance", "cashflow", "items"],
@@ -319,5 +422,69 @@ export function useScheduledFinanceItems() {
       );
       return data;
     },
+  });
+}
+
+export function useCreateScheduledFinanceItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (item: ScheduledFinanceItemInput) => {
+      const { data } = await api.post<ScheduledFinanceItem>(
+        "/finance/cashflow/items",
+        normalizeScheduledFinanceItemInput(item),
+      );
+      return data;
+    },
+    onSuccess: () => invalidateCashflowMutationQueries(queryClient),
+  });
+}
+
+export function useUpdateScheduledFinanceItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...item
+    }: ScheduledFinanceItemInput & { id: string }) => {
+      const normalizedItem = normalizeScheduledFinanceItemInput(item);
+      const update = {
+        name: normalizedItem.name,
+        account_id: normalizedItem.account_id,
+        category_id: normalizedItem.category_id,
+        currency: normalizedItem.currency,
+        due_day: normalizedItem.due_day,
+        amount_method: normalizedItem.amount_method,
+        fixed_amount_pln: normalizedItem.fixed_amount_pln,
+      };
+      const { data } = await api.patch<ScheduledFinanceItem>(
+        `/finance/cashflow/items/${id}`,
+        update,
+      );
+      return data;
+    },
+    onSuccess: () => invalidateCashflowMutationQueries(queryClient),
+  });
+}
+
+export function useDeleteScheduledFinanceItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/finance/cashflow/items/${id}`);
+    },
+    onSuccess: () => invalidateCashflowMutationQueries(queryClient),
+  });
+}
+
+export function useConfirmScheduledFinanceItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post<ScheduledFinanceConfirmation>(
+        `/finance/cashflow/items/${id}/confirm`,
+      );
+      return data;
+    },
+    onSuccess: () => invalidateCashflowMutationQueries(queryClient),
   });
 }

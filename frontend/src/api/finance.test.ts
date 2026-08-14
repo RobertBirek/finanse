@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCategoryTree,
+  canConfirmSuggestion,
   cashflowStatusLabel,
+  parsePlnToGrosze,
   splitAccounts,
   type Account,
   type CategorySummary,
@@ -78,5 +80,49 @@ describe("cashflowStatusLabel", () => {
     expect(cashflowStatusLabel("overdue_uncertain")).toBe(
       "Po terminie - kwota niepewna",
     );
+  });
+});
+
+describe("parsePlnToGrosze", () => {
+  it("parses a spaced Polish decimal amount into grosze", () => {
+    expect(parsePlnToGrosze("1 234,50")).toBe(123450);
+  });
+
+  it("rejects zero and an amount with more than two fractional digits", () => {
+    expect(parsePlnToGrosze("0")).toBeNull();
+    expect(parsePlnToGrosze("12,345")).toBeNull();
+  });
+});
+
+describe("canConfirmSuggestion", () => {
+  it("allows a positive suggestion due today", () => {
+    expect(
+      canConfirmSuggestion(
+        { status: "due", amount_pln: 12500, due_date: "2026-08-14" },
+        "2026-08-14",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects a future due suggestion", () => {
+    expect(
+      canConfirmSuggestion(
+        { status: "due", amount_pln: 12500, due_date: "2026-08-15" },
+        "2026-08-14",
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects an uncertain overdue suggestion", () => {
+    expect(
+      canConfirmSuggestion(
+        {
+          status: "overdue_uncertain",
+          amount_pln: 12500,
+          due_date: "2026-08-13",
+        },
+        "2026-08-14",
+      ),
+    ).toBe(false);
   });
 });
