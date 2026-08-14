@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 
 import pytest
@@ -16,11 +16,14 @@ from app.finance.schemas import (
     TransactionCreate,
 )
 from app.finance.service import (
+    confirm_scheduled_item,
     create_account,
     create_category,
     create_scheduled_item,
     create_transaction,
+    delete_scheduled_item,
     get_cashflow_forecast,
+    get_scheduled_items,
 )
 from app.identity.router import get_current_user
 from app.main import app
@@ -239,6 +242,216 @@ async def test_forecast_does_not_return_occurrences_outside_its_horizon(db_sessi
     forecast = await get_cashflow_forecast(db_session, user_id, today=date(2026, 8, 27))
 
     assert [suggestion.due_date for suggestion in forecast.suggestions] == [date(2026, 8, 28)]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_delete_scheduled_item_returns_false_without_deleting_another_users_item(
+    db_session,
+) -> None:
+    owner_id = uuid.uuid4()
+    other_user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, owner_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, owner_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    item = await create_scheduled_item(
+        db_session, owner_id, scheduled_item_data(account.id, category.id)
+    )
+
+    assert await delete_scheduled_item(db_session, other_user_id, item.id) is False
+    assert await delete_scheduled_item(db_session, owner_id, uuid.uuid4()) is False
+    assert [scheduled.id for scheduled in await get_scheduled_items(db_session, owner_id)] == [
+        item.id
+    ]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_confirming_due_expense_creates_balanced_scheduled_transaction(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    item = await create_scheduled_item(
+        db_session,
+        user_id,
+        scheduled_item_data(account.id, category.id, due_day=14, fixed_amount_pln=4_000),
+    )
+
+    transaction = await confirm_scheduled_item(
+        db_session, user_id, item.id, today=date(2026, 8, 14)
+    )
+
+    assert transaction is not None
+    assert transaction.source == "scheduled_confirmation"
+    assert transaction.type == "expense"
+    assert transaction.date == date(2026, 8, 14)
+    assert len(transaction.postings) == 2
+    assert all(posting.source_amount == 4_000 for posting in transaction.postings)
+    assert all(posting.base_amount_pln == 4_000 for posting in transaction.postings)
+    assert (
+        sum(
+            posting.base_amount_pln if posting.direction == "debit" else -posting.base_amount_pln
+            for posting in transaction.postings
+        )
+        == 0
+    )
+    assert {
+        (posting.account_id, posting.category_id, posting.direction)
+        for posting in transaction.postings
+    } == {
+        (account.id, None, "debit"),
+        (None, category.id, "credit"),
+    }
+    assert await row_count(db_session, FinancialTransaction) == 1
+
+    with pytest.raises(ValueError, match="matched_actual"):
+        await confirm_scheduled_item(db_session, user_id, item.id, today=date(2026, 8, 14))
+
+    assert await row_count(db_session, FinancialTransaction) == 1
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_confirm_scheduled_item_rejects_missing_foreign_and_unconfirmable_suggestions(
+    db_session,
+) -> None:
+    user_id = uuid.uuid4()
+    other_user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    future = await create_scheduled_item(
+        db_session, user_id, scheduled_item_data(account.id, category.id, due_day=15)
+    )
+    uncertain = await create_scheduled_item(
+        db_session,
+        user_id,
+        scheduled_item_data(account.id, category.id, name="Prąd", due_day=10),
+    )
+    unknown = await create_scheduled_item(
+        db_session,
+        user_id,
+        scheduled_item_data(
+            account.id,
+            category.id,
+            name="Telefon",
+            due_day=14,
+            amount_method="last_actual",
+            fixed_amount_pln=None,
+        ),
+    )
+
+    assert (
+        await confirm_scheduled_item(db_session, other_user_id, future.id, today=date(2026, 8, 14))
+        is None
+    )
+    assert (
+        await confirm_scheduled_item(db_session, user_id, uuid.uuid4(), today=date(2026, 8, 14))
+        is None
+    )
+    for item in (future, uncertain, unknown):
+        with pytest.raises(ValueError):
+            await confirm_scheduled_item(db_session, user_id, item.id, today=date(2026, 8, 14))
+
+    assert await row_count(db_session, FinancialTransaction) == 0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_cashflow_api_deletes_only_the_current_users_scheduled_item(db_session) -> None:
+    user_id = uuid.uuid4()
+    other_user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    item = await create_scheduled_item(
+        db_session, user_id, scheduled_item_data(account.id, category.id)
+    )
+    other_account = await create_account(
+        db_session, other_user_id, AccountCreate(name="Inne konto", type="checking")
+    )
+    other_category = await create_category(
+        db_session, other_user_id, CategoryCreate(name="Inny czynsz", type="expense")
+    )
+    other_item = await create_scheduled_item(
+        db_session, other_user_id, scheduled_item_data(other_account.id, other_category.id)
+    )
+
+    async def override_current_user():
+        return SimpleNamespace(id=user_id)
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            deleted = await client.delete(f"/api/finance/cashflow/items/{item.id}")
+            foreign = await client.delete(f"/api/finance/cashflow/items/{other_item.id}")
+            missing = await client.delete(f"/api/finance/cashflow/items/{uuid.uuid4()}")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert deleted.status_code == 204
+    assert foreign.status_code == 404
+    assert missing.status_code == 404
+    assert [scheduled.id for scheduled in await get_scheduled_items(db_session, other_user_id)] == [
+        other_item.id
+    ]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_cashflow_api_confirms_due_item_once(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    item = await create_scheduled_item(
+        db_session,
+        user_id,
+        scheduled_item_data(
+            account.id, category.id, due_day=datetime.now(UTC).astimezone().date().day
+        ),
+    )
+
+    async def override_current_user():
+        return SimpleNamespace(id=user_id)
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            confirmed = await client.post(f"/api/finance/cashflow/items/{item.id}/confirm")
+            repeated = await client.post(f"/api/finance/cashflow/items/{item.id}/confirm")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert confirmed.status_code == 200
+    assert confirmed.json()["transaction"]["source"] == "scheduled_confirmation"
+    assert repeated.status_code == 422
 
 
 @pytest.mark.integration

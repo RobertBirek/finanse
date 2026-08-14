@@ -26,6 +26,7 @@ from app.finance.schemas import (
     CategoryUpdate,
     FinanceSettingsUpdate,
     FinancialSummary,
+    PostingCreate,
     ScheduledFinanceItemCreate,
     ScheduledFinanceItemUpdate,
     TransactionCreate,
@@ -614,6 +615,20 @@ async def update_scheduled_item(
     return item
 
 
+async def delete_scheduled_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID) -> bool:
+    result = await db.execute(
+        select(ScheduledFinanceItem).where(
+            ScheduledFinanceItem.id == item_id, ScheduledFinanceItem.user_id == user_id
+        )
+    )
+    item = result.scalar_one_or_none()
+    if item is None:
+        return False
+    await db.delete(item)
+    await db.flush()
+    return True
+
+
 async def _matching_actuals(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -773,5 +788,75 @@ async def get_cashflow_forecast(
         days=days,
         suggestions=sorted(
             suggestions, key=lambda suggestion: (suggestion.due_date, suggestion.name)
+        ),
+    )
+
+
+async def confirm_scheduled_item(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    item_id: uuid.UUID,
+    *,
+    today: date | None = None,
+) -> FinancialTransaction | None:
+    result = await db.execute(
+        select(ScheduledFinanceItem)
+        .where(
+            ScheduledFinanceItem.id == item_id,
+            ScheduledFinanceItem.user_id == user_id,
+            ScheduledFinanceItem.is_active.is_(True),
+        )
+        .with_for_update()
+    )
+    item = result.scalar_one_or_none()
+    if item is None:
+        return None
+
+    effective_today = today or _local_today()
+    forecast = await get_cashflow_forecast(db, user_id, today=effective_today)
+    suggestion = next(
+        (
+            candidate
+            for candidate in forecast.suggestions
+            if candidate.scheduled_item_id == item.id and candidate.due_date <= effective_today
+        ),
+        None,
+    )
+    if suggestion is None:
+        raise ValueError("Scheduled item has no confirmable occurrence")
+    if suggestion.status not in {"due", "overdue"} or suggestion.amount_pln is None:
+        raise ValueError(f"Scheduled item cannot be confirmed with status {suggestion.status}")
+
+    amount = suggestion.amount_pln
+    account_direction = "credit" if item.type == "income" else "debit"
+    category_direction = "debit" if item.type == "income" else "credit"
+    return await create_transaction(
+        db,
+        user_id,
+        TransactionCreate(
+            transaction_date=effective_today,
+            description=f"{item.name} — {suggestion.due_date.isoformat()}",
+            type=item.type,
+            source="scheduled_confirmation",
+            postings=[
+                PostingCreate(
+                    account_id=item.account_id,
+                    source_amount=amount,
+                    source_currency=item.currency,
+                    base_amount_pln=amount,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction=account_direction,
+                ),
+                PostingCreate(
+                    category_id=item.category_id,
+                    source_amount=amount,
+                    source_currency=item.currency,
+                    base_amount_pln=amount,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction=category_direction,
+                ),
+            ],
         ),
     )

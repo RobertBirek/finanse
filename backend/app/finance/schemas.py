@@ -126,6 +126,10 @@ class TransactionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ScheduledFinanceConfirmationResponse(BaseModel):
+    transaction: TransactionResponse
+
+
 class FinancialSummary(BaseModel):
     accounts: list[dict]
     income_total_pln: int

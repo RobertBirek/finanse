@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,7 @@ from app.finance.schemas import (
     FinanceSettingsResponse,
     FinanceSettingsUpdate,
     FinancialSummary,
+    ScheduledFinanceConfirmationResponse,
     ScheduledFinanceItemCreate,
     ScheduledFinanceItemResponse,
     ScheduledFinanceItemUpdate,
@@ -29,10 +30,12 @@ from app.finance.schemas import (
     TransactionUpdate,
 )
 from app.finance.service import (
+    confirm_scheduled_item,
     create_account,
     create_category,
     create_scheduled_item,
     create_transaction,
+    delete_scheduled_item,
     get_account,
     get_accounts,
     get_cashflow_forecast,
@@ -289,6 +292,41 @@ async def update_scheduled_finance_item(
             status_code=status.HTTP_404_NOT_FOUND, detail="Scheduled item not found"
         )
     return item
+
+
+@router.delete("/cashflow/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_scheduled_finance_item(
+    item_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    deleted = await delete_scheduled_item(db, current_user.id, item_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Scheduled item not found"
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/cashflow/items/{item_id}/confirm", response_model=ScheduledFinanceConfirmationResponse
+)
+async def confirm_scheduled_finance_item(
+    item_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        transaction = await confirm_scheduled_item(db, current_user.id, item_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    if transaction is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Scheduled item not found"
+        )
+    return ScheduledFinanceConfirmationResponse(
+        transaction=TransactionResponse.model_validate(transaction)
+    )
 
 
 @router.get("/cashflow/forecast", response_model=CashflowForecastResponse)
