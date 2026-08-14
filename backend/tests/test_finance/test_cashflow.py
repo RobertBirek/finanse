@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 
 from app.database import get_db
+from app.finance import service as finance_service
 from app.finance.models import FinanceSettings, FinancialTransaction, Posting
 from app.finance.schemas import (
     AccountCreate,
@@ -319,6 +320,74 @@ async def test_confirming_due_expense_creates_balanced_scheduled_transaction(db_
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+async def test_confirming_due_income_creates_balanced_scheduled_transaction(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Wynagrodzenie", type="income")
+    )
+    item = await create_scheduled_item(
+        db_session,
+        user_id,
+        scheduled_item_data(
+            account.id,
+            category.id,
+            name="Wynagrodzenie",
+            type="income",
+            due_day=14,
+            fixed_amount_pln=10_000,
+        ),
+    )
+
+    transaction = await confirm_scheduled_item(
+        db_session, user_id, item.id, today=date(2026, 8, 14)
+    )
+
+    assert transaction is not None
+    assert transaction.type == "income"
+    assert {
+        (posting.account_id, posting.category_id, posting.direction)
+        for posting in transaction.postings
+    } == {
+        (account.id, None, "credit"),
+        (None, category.id, "debit"),
+    }
+    assert (
+        sum(
+            posting.base_amount_pln if posting.direction == "debit" else -posting.base_amount_pln
+            for posting in transaction.postings
+        )
+        == 0
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_confirming_non_pln_scheduled_item_rejects_unresolved_fx(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto EUR", type="checking", currency="EUR")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    item = await create_scheduled_item(
+        db_session,
+        user_id,
+        scheduled_item_data(account.id, category.id, currency="EUR", due_day=14),
+    )
+
+    with pytest.raises(ValueError, match="PLN"):
+        await confirm_scheduled_item(db_session, user_id, item.id, today=date(2026, 8, 14))
+
+    assert await row_count(db_session, FinancialTransaction) == 0
+    assert await row_count(db_session, Posting) == 0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_confirm_scheduled_item_rejects_missing_foreign_and_unconfirmable_suggestions(
     db_session,
 ) -> None:
@@ -452,6 +521,87 @@ async def test_cashflow_api_confirms_due_item_once(db_session) -> None:
     assert confirmed.status_code == 200
     assert confirmed.json()["transaction"]["source"] == "scheduled_confirmation"
     assert repeated.status_code == 422
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_cashflow_api_rejects_unconfirmable_or_inaccessible_items(
+    db_session, monkeypatch
+) -> None:
+    today = date(2026, 8, 14)
+    monkeypatch.setattr(finance_service, "_local_today", lambda: today)
+    user_id = uuid.uuid4()
+    other_user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    future = await create_scheduled_item(
+        db_session, user_id, scheduled_item_data(account.id, category.id, due_day=15)
+    )
+    uncertain = await create_scheduled_item(
+        db_session,
+        user_id,
+        scheduled_item_data(account.id, category.id, name="Prąd", due_day=10),
+    )
+    unknown = await create_scheduled_item(
+        db_session,
+        user_id,
+        scheduled_item_data(
+            account.id,
+            category.id,
+            name="Telefon",
+            due_day=14,
+            amount_method="last_actual",
+            fixed_amount_pln=None,
+        ),
+    )
+    other_account = await create_account(
+        db_session, other_user_id, AccountCreate(name="Inne konto", type="checking")
+    )
+    other_category = await create_category(
+        db_session, other_user_id, CategoryCreate(name="Inny czynsz", type="expense")
+    )
+    foreign = await create_scheduled_item(
+        db_session,
+        other_user_id,
+        scheduled_item_data(other_account.id, other_category.id, due_day=14),
+    )
+
+    async def override_current_user():
+        return SimpleNamespace(id=user_id)
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            missing_response = await client.post(
+                f"/api/finance/cashflow/items/{uuid.uuid4()}/confirm"
+            )
+            foreign_response = await client.post(
+                f"/api/finance/cashflow/items/{foreign.id}/confirm"
+            )
+            future_response = await client.post(f"/api/finance/cashflow/items/{future.id}/confirm")
+            uncertain_response = await client.post(
+                f"/api/finance/cashflow/items/{uncertain.id}/confirm"
+            )
+            unknown_response = await client.post(
+                f"/api/finance/cashflow/items/{unknown.id}/confirm"
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert missing_response.status_code == 404
+    assert foreign_response.status_code == 404
+    assert future_response.status_code == 422
+    assert uncertain_response.status_code == 422
+    assert unknown_response.status_code == 422
 
 
 @pytest.mark.integration

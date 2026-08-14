@@ -811,6 +811,10 @@ async def confirm_scheduled_item(
     item = result.scalar_one_or_none()
     if item is None:
         return None
+    if item.currency.upper() != "PLN":
+        raise ValueError(
+            "Scheduled item confirmation supports PLN only until source amount and FX rate are available"
+        )
 
     effective_today = today or _local_today()
     forecast = await get_cashflow_forecast(db, user_id, today=effective_today)
