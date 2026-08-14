@@ -116,6 +116,7 @@ class CategoryReconciliation:
 class ReconciliationReport:
     accounts: tuple[AccountReconciliation, ...]
     categories: tuple[CategoryReconciliation, ...] = ()
+    category_groups: tuple[CategoryReconciliation, ...] = ()
     import_errors: tuple[str, ...] = ()
 
     @property
@@ -124,6 +125,7 @@ class ReconciliationReport:
             not self.import_errors
             and all(account.is_reconciled for account in self.accounts)
             and all(category.is_reconciled for category in self.categories)
+            and all(group.is_reconciled for group in self.category_groups)
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -131,6 +133,7 @@ class ReconciliationReport:
             "is_reconciled": self.is_reconciled,
             "accounts": [account.to_dict() for account in self.accounts],
             "categories": [category.to_dict() for category in self.categories],
+            "category_groups": [group.to_dict() for group in self.category_groups],
             "import_errors": list(self.import_errors),
         }
 
@@ -138,6 +141,8 @@ class ReconciliationReport:
         lines = [account.to_text() for account in self.accounts]
         if self.categories:
             lines.extend(["Categories:", *(category.to_text() for category in self.categories)])
+        if self.category_groups:
+            lines.extend(["Category groups:", *(group.to_text() for group in self.category_groups)])
         if self.import_errors:
             lines.extend(["Import errors:", *(f"  [E] {error}" for error in self.import_errors)])
         return "\n".join(lines)

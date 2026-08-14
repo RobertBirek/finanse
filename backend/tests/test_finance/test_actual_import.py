@@ -1585,7 +1585,7 @@ class TestMigrationPipeline:
         user_id = _uuid.uuid4()
         try:
             with ActualParser(db_path) as parser:
-                account_map, category_map, _, budget_account_map = await resolve_ids(
+                account_map, category_map, _, _, budget_account_map = await resolve_ids(
                     db_session, user_id, parser
                 )
             categories = (
@@ -1599,6 +1599,46 @@ class TestMigrationPipeline:
             assert account_map["acc1"]
             assert by_id[category_map["fuel"]].parent_id is not None
             assert by_id[by_id[category_map["fuel"]].parent_id].name == "Transport"
+        finally:
+            os.unlink(db_path)
+
+    @pytest.mark.asyncio
+    async def test_import_persists_actual_entity_provenance(self, db_session):
+        from sqlalchemy import select
+
+        from app.finance.models import Account, Category
+        from scripts.migrate_actual import resolve_ids
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'Actual ING', 0, 0, 0)",
+                "INSERT INTO category_groups VALUES ('group1', 'Transport', 0)",
+                "INSERT INTO categories VALUES ('fuel', 'Paliwo', 0, 'group1', 0)",
+            ],
+        )
+        user_id = _uuid.uuid4()
+
+        try:
+            with ActualParser(db_path) as parser:
+                account_map, category_map, _, _, _ = await resolve_ids(db_session, user_id, parser)
+            account = await db_session.get(Account, account_map["acc1"])
+            category = await db_session.get(Category, category_map["fuel"])
+            group = await db_session.scalar(
+                select(Category).where(Category.user_id == user_id, Category.name == "Transport")
+            )
+
+            assert account is not None
+            assert category is not None
+            assert group is not None
+            assert account.source == "actual"
+            assert category.source == "actual"
+            assert group.source == "actual"
         finally:
             os.unlink(db_path)
 

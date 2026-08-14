@@ -70,6 +70,8 @@ Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, t
 - [x] Transfery wewnętrzne (66 par)
 - [x] Kursy walut NBP (EUR/USD)
 - [x] Migracja produkcyjna wykonana (2026-08-11)
+- [x] Uzgodnienie kategorii/grup niezależne od księgowania importu i trwałe provenance kont/kategorii.
+- [~] Kontrolowana korekta produkcyjna legacy Actual: kod i quality gates gotowe; polecenie produkcyjne nie zostało uruchomione.
 
 ### Task 7 — Próbne uzgodnienie Actual (2026-08-14)
 - [x] Uruchomiono pełny quality gate w worktree `actual-reconciliation`: lint, typecheck, backend pytest, frontend Vitest i production build.

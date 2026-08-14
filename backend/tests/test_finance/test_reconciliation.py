@@ -2,8 +2,9 @@ import json
 import sqlite3
 import sys
 import uuid
+from datetime import date
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -125,6 +126,70 @@ def test_report_fails_closed_on_category_discrepancy():
     assert report.is_reconciled is False
 
 
+def test_expected_category_and_group_totals_do_not_call_posting_builder():
+    from app.finance.nbp_rates import NbpRate
+    from scripts.migrate_actual import get_actual_category_balances
+
+    transactions = [
+        {
+            "actual_id": "fuel-1",
+            "date": date(2026, 8, 14),
+            "type": "expense",
+            "postings": [
+                {
+                    "account_actual_id": "ing",
+                    "category_actual_id": None,
+                    "source_amount": 5000,
+                    "source_currency": "PLN",
+                    "direction": "credit",
+                },
+                {
+                    "account_actual_id": "ing",
+                    "category_actual_id": "fuel",
+                    "source_amount": 5000,
+                    "source_currency": "PLN",
+                    "direction": "debit",
+                },
+            ],
+        }
+    ]
+    with patch("scripts.migrate_actual.build_pa_postings", side_effect=AssertionError):
+        categories, groups = get_actual_category_balances(
+            transactions,
+            [
+                {
+                    "actual_id": "fuel",
+                    "name": "Fuel",
+                    "type": "expense",
+                    "group_actual_id": "transport",
+                }
+            ],
+            [{"actual_id": "transport", "name": "Transport", "type": "expense"}],
+            {"ing": uuid.uuid4()},
+            {"fuel": uuid.uuid4()},
+            {"transport": uuid.uuid4()},
+            {"ing": "PLN"},
+            {("PLN", date(2026, 8, 14)): NbpRate(1.0, date(2026, 8, 14), "manual")},
+            {"ing": True},
+        )
+
+    assert categories["fuel"].amount_pln == -5000
+    assert groups["transport"].amount_pln == -5000
+
+
+def test_report_fails_closed_on_category_group_discrepancy():
+    groups = reconcile_category_balances(
+        {"transport": CategoryBalance("transport", "Transport", "expense", -5000)},
+        {"transport": CategoryBalance("transport", "Transport", "expense", -4999)},
+    )
+    report = ReconciliationReport(accounts=(), category_groups=groups)
+
+    assert report.category_groups[0].is_reconciled is False
+    assert report.is_reconciled is False
+    with pytest.raises(ReconciliationError, match="not reconciled"):
+        require_reconciled(report)
+
+
 def test_report_fails_closed_and_exposes_currency_budget_and_mapping_mismatches():
     report = reconcile_account_balances(
         {"actual-ing": SourceBalance("actual-ing", "ING", "PLN", True, 109805)},
@@ -165,6 +230,7 @@ def test_report_serializes_json_data_and_human_readable_rows():
             }
         ],
         "categories": [],
+        "category_groups": [],
         "import_errors": [],
     }
     assert report.to_text() == "ING | PLN | budget | Actual 109805 | PA 109805 | diff 0 | OK"

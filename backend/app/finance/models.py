@@ -26,6 +26,7 @@ class Account(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     type: Mapped[str] = mapped_column(String(20), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="PLN")
+    source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_budget_account: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     opened_at: Mapped[date] = mapped_column(
@@ -51,6 +52,7 @@ class Category(Base):
         UUID(as_uuid=True), ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
     type: Mapped[str] = mapped_column(String(20), nullable=False)
+    source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
 
     parent: Mapped["Category | None"] = relationship(
         "Category", remote_side="Category.id", backref="children"
