@@ -13,11 +13,17 @@ from app.finance.schemas import (
     AccountCreate,
     AccountResponse,
     AccountUpdate,
+    CashflowForecastResponse,
     CategoryCreate,
     CategoryResponse,
     CategorySummaryResponse,
     CategoryUpdate,
+    FinanceSettingsResponse,
+    FinanceSettingsUpdate,
     FinancialSummary,
+    ScheduledFinanceItemCreate,
+    ScheduledFinanceItemResponse,
+    ScheduledFinanceItemUpdate,
     TransactionCreate,
     TransactionResponse,
     TransactionUpdate,
@@ -25,16 +31,22 @@ from app.finance.schemas import (
 from app.finance.service import (
     create_account,
     create_category,
+    create_scheduled_item,
     create_transaction,
     get_account,
     get_accounts,
+    get_cashflow_forecast,
     get_categories,
     get_category_summary,
     get_financial_summary,
+    get_or_create_finance_settings,
+    get_scheduled_items,
     get_transaction,
     get_transactions,
     update_account,
     update_category,
+    update_finance_settings,
+    update_scheduled_item,
     update_transaction,
 )
 from app.identity.models import User
@@ -211,3 +223,73 @@ async def get_category_summary_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     return await get_category_summary(db, current_user.id)
+
+
+@router.get("/cashflow/settings", response_model=FinanceSettingsResponse)
+async def get_cashflow_settings(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await get_or_create_finance_settings(db, current_user.id)
+
+
+@router.patch("/cashflow/settings", response_model=FinanceSettingsResponse)
+async def update_cashflow_settings(
+    data: FinanceSettingsUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        return await update_finance_settings(db, current_user.id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.get("/cashflow/items", response_model=list[ScheduledFinanceItemResponse])
+async def list_scheduled_finance_items(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await get_scheduled_items(db, current_user.id)
+
+
+@router.post(
+    "/cashflow/items",
+    response_model=ScheduledFinanceItemResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_scheduled_finance_item(
+    data: ScheduledFinanceItemCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        return await create_scheduled_item(db, current_user.id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.patch("/cashflow/items/{item_id}", response_model=ScheduledFinanceItemResponse)
+async def update_scheduled_finance_item(
+    item_id: uuid.UUID,
+    data: ScheduledFinanceItemUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        item = await update_scheduled_item(db, current_user.id, item_id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Scheduled item not found"
+        )
+    return item
+
+
+@router.get("/cashflow/forecast", response_model=CashflowForecastResponse)
+async def get_cashflow_forecast_endpoint(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await get_cashflow_forecast(db, current_user.id)

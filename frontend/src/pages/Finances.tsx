@@ -1,11 +1,14 @@
 import { useState } from "react";
 import {
   buildCategoryTree,
+  cashflowStatusLabel,
   splitAccounts,
   useAccounts,
   useAccountTransactions,
+  useCashflowForecast,
   useCategorySummary,
   useFinancialSummary,
+  useScheduledFinanceItems,
 } from "../api/finance";
 import type { Transaction } from "../api/finance";
 
@@ -20,6 +23,8 @@ export function Finances() {
   const { data: accounts } = useAccounts();
   const { data: summary } = useFinancialSummary();
   const { data: categorySummary } = useCategorySummary();
+  const { data: cashflow } = useCashflowForecast();
+  const { data: scheduledItems } = useScheduledFinanceItems();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data: acctTxns, isLoading: txLoading } =
     useAccountTransactions(selectedId);
@@ -63,6 +68,96 @@ export function Finances() {
             </p>
           </div>
         </div>
+      )}
+
+      {cashflow && (
+        <section className="card mb-8 border border-advisor-500/30 bg-gradient-to-br from-advisor-500/10 via-gray-900 to-gray-900">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-5">
+            <div>
+              <p className="text-xs font-medium tracking-wide text-advisor-300 uppercase">
+                Cykl wypłaty
+              </p>
+              <h2 className="text-lg font-semibold text-white">
+                Płynność do{" "}
+                {new Date(cashflow.next_payday).toLocaleDateString("pl-PL")}
+              </h2>
+            </div>
+            <p className="text-xs text-gray-400">Prognoza, bez księgowania</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-xs text-gray-400">Przed wypłatą</p>
+              <p
+                className={`mt-1 text-xl font-bold ${cashflow.projected_balance_before_next_payday_pln >= 0 ? "text-green-400" : "text-red-400"}`}
+              >
+                {formatPLN(cashflow.projected_balance_before_next_payday_pln)}{" "}
+                PLN
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Najniższe saldo</p>
+              <p
+                className={`mt-1 text-xl font-bold ${cashflow.lowest_balance_pln >= 0 ? "text-green-400" : "text-red-400"}`}
+              >
+                {formatPLN(cashflow.lowest_balance_pln)} PLN
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Bezpiecznie dziennie</p>
+              <p className="mt-1 text-xl font-bold text-white">
+                {formatPLN(cashflow.safe_daily_limit_pln)} PLN
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {scheduledItems && (
+        <section className="card mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">
+              Planowane wpływy i wydatki
+            </h2>
+            <span className="text-xs text-gray-500">miesięcznie</span>
+          </div>
+          {scheduledItems.length === 0 ? (
+            <p className="text-sm text-gray-500">Brak zaplanowanych pozycji</p>
+          ) : (
+            <div className="divide-y divide-gray-800">
+              {scheduledItems.map((item) => {
+                const suggestion = cashflow?.suggestions.find(
+                  (entry) => entry.scheduled_item_id === item.id,
+                );
+                const amount = suggestion?.amount_pln ?? item.fixed_amount_pln;
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-200 truncate">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {item.type === "income" ? "Wpływ" : "Wydatek"}{" "}
+                        {item.due_day}. dnia
+                        {suggestion &&
+                          ` · ${cashflowStatusLabel(suggestion.status)}`}
+                      </p>
+                    </div>
+                    <p
+                      className={`shrink-0 font-mono text-sm ${item.type === "income" ? "text-green-400" : "text-red-400"}`}
+                    >
+                      {amount === null
+                        ? "Brak kwoty"
+                        : `${formatPLN(amount)} PLN`}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       )}
 
       {categorySummary && (

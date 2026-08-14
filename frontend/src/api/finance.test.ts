@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCategoryTree,
+  cashflowStatusLabel,
   splitAccounts,
   type Account,
   type CategorySummary,
@@ -69,5 +70,13 @@ describe("buildCategoryTree", () => {
         ],
       },
     ]);
+  });
+});
+
+describe("cashflowStatusLabel", () => {
+  it("makes uncertain overdue forecasts explicit without suggesting a ledger action", () => {
+    expect(cashflowStatusLabel("overdue_uncertain")).toBe(
+      "Po terminie - kwota niepewna",
+    );
   });
 });

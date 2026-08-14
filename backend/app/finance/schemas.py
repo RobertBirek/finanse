@@ -1,7 +1,8 @@
 import datetime as dt
 import uuid
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class AccountCreate(BaseModel):
@@ -146,3 +147,93 @@ class CategorySummaryResponse(BaseModel):
     year: int
     groups: list[CategorySpendResponse]
     categories: list[CategorySpendResponse]
+
+
+class FinanceSettingsUpdate(BaseModel):
+    payday_day: int | None = Field(default=None, ge=1, le=28)
+    payday_account_id: uuid.UUID | None = None
+    forecast_horizon_days: int | None = Field(default=None, ge=1, le=90)
+    overdue_grace_days: int | None = Field(default=None, ge=0, le=14)
+
+
+class FinanceSettingsResponse(BaseModel):
+    payday_day: int
+    payday_account_id: uuid.UUID | None
+    forecast_horizon_days: int
+    overdue_grace_days: int
+
+    model_config = {"from_attributes": True}
+
+
+class ScheduledFinanceItemCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    type: Literal["income", "expense"]
+    account_id: uuid.UUID
+    category_id: uuid.UUID
+    currency: str = Field(min_length=3, max_length=3)
+    due_day: int = Field(ge=1, le=28)
+    amount_method: Literal["fixed", "last_actual"]
+    fixed_amount_pln: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_amount_method(self) -> "ScheduledFinanceItemCreate":
+        if self.amount_method == "fixed" and self.fixed_amount_pln is None:
+            raise ValueError("fixed_amount_pln is required for fixed amount_method")
+        if self.amount_method == "last_actual" and self.fixed_amount_pln is not None:
+            raise ValueError("fixed_amount_pln must be omitted for last_actual amount_method")
+        self.currency = self.currency.upper()
+        return self
+
+
+class ScheduledFinanceItemUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    account_id: uuid.UUID | None = None
+    category_id: uuid.UUID | None = None
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    due_day: int | None = Field(default=None, ge=1, le=28)
+    amount_method: Literal["fixed", "last_actual"] | None = None
+    fixed_amount_pln: int | None = Field(default=None, gt=0)
+    is_active: bool | None = None
+
+
+class ScheduledFinanceItemResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    type: Literal["income", "expense"]
+    account_id: uuid.UUID
+    category_id: uuid.UUID
+    currency: str
+    cadence: Literal["monthly"]
+    due_day: int
+    amount_method: Literal["fixed", "last_actual"]
+    fixed_amount_pln: int | None
+    is_active: bool
+
+    model_config = {"from_attributes": True}
+
+
+class CashflowDay(BaseModel):
+    date: dt.date
+    projected_balance_pln: int
+
+
+class CashflowSuggestion(BaseModel):
+    scheduled_item_id: uuid.UUID
+    name: str
+    type: Literal["income", "expense"]
+    due_date: dt.date
+    amount_pln: int | None
+    status: Literal["due", "overdue", "overdue_uncertain", "matched_actual", "amount_unknown"]
+    included_in_forecast: bool
+    actual_transaction_id: uuid.UUID | None = None
+
+
+class CashflowForecastResponse(BaseModel):
+    last_payday: dt.date
+    next_payday: dt.date
+    opening_balance_pln: int
+    projected_balance_before_next_payday_pln: int
+    safe_daily_limit_pln: int
+    lowest_balance_pln: int
+    days: list[CashflowDay]
+    suggestions: list[CashflowSuggestion]

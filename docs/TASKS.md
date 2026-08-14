@@ -102,6 +102,8 @@ Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, t
 - [x] Finanse: endpoint transakcji per konto, opening balances w migracji
 - [x] Finanse: redesign strony (salde, wybór konta, transakcje per konto)
 - [x] Payee resolution z fallbackiem na kategorię
+- [x] Finanse: pierwszy slice prognozy płynności cyklu wypłaty — ustawienia,
+  miesięczne pozycje, forecast do wypłaty, trzydniowa niepewność i UI tylko do odczytu.
 
 ---
 

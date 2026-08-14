@@ -76,6 +76,56 @@ export interface CategoryGroup extends CategorySpend {
   children: CategorySpend[];
 }
 
+export interface ScheduledFinanceItem {
+  id: string;
+  name: string;
+  type: "income" | "expense";
+  account_id: string;
+  category_id: string;
+  currency: string;
+  cadence: "monthly";
+  due_day: number;
+  amount_method: "fixed" | "last_actual";
+  fixed_amount_pln: number | null;
+  is_active: boolean;
+}
+
+export type CashflowStatus =
+  "due" | "overdue" | "overdue_uncertain" | "matched_actual" | "amount_unknown";
+
+export interface CashflowSuggestion {
+  scheduled_item_id: string;
+  name: string;
+  type: "income" | "expense";
+  due_date: string;
+  amount_pln: number | null;
+  status: CashflowStatus;
+  included_in_forecast: boolean;
+  actual_transaction_id: string | null;
+}
+
+export interface CashflowForecast {
+  last_payday: string;
+  next_payday: string;
+  opening_balance_pln: number;
+  projected_balance_before_next_payday_pln: number;
+  safe_daily_limit_pln: number;
+  lowest_balance_pln: number;
+  days: Array<{ date: string; projected_balance_pln: number }>;
+  suggestions: CashflowSuggestion[];
+}
+
+export function cashflowStatusLabel(status: CashflowStatus) {
+  const labels: Record<CashflowStatus, string> = {
+    due: "Zaplanowane",
+    overdue: "Po terminie",
+    overdue_uncertain: "Po terminie - kwota niepewna",
+    matched_actual: "Zaksięgowane",
+    amount_unknown: "Brak ostatniej kwoty",
+  };
+  return labels[status];
+}
+
 export function splitAccounts(accounts: Account[]) {
   return {
     budget: accounts.filter((account) => account.is_budget_account),
@@ -242,6 +292,30 @@ export function useCategorySummary() {
     queryFn: async () => {
       const { data } = await api.get<CategorySummary>(
         "/finance/category-summary",
+      );
+      return data;
+    },
+  });
+}
+
+export function useCashflowForecast() {
+  return useQuery({
+    queryKey: ["finance", "cashflow", "forecast"],
+    queryFn: async () => {
+      const { data } = await api.get<CashflowForecast>(
+        "/finance/cashflow/forecast",
+      );
+      return data;
+    },
+  });
+}
+
+export function useScheduledFinanceItems() {
+  return useQuery({
+    queryKey: ["finance", "cashflow", "items"],
+    queryFn: async () => {
+      const { data } = await api.get<ScheduledFinanceItem[]>(
+        "/finance/cashflow/items",
       );
       return data;
     },

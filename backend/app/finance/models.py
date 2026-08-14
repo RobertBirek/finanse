@@ -60,6 +60,47 @@ class Category(Base):
     postings: Mapped[list["Posting"]] = relationship("Posting", back_populates="category")
 
 
+class FinanceSettings(Base):
+    __tablename__ = "finance_settings"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, unique=True)
+    payday_day: Mapped[int] = mapped_column(nullable=False, default=10)
+    payday_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True
+    )
+    forecast_horizon_days: Mapped[int] = mapped_column(nullable=False, default=30)
+    overdue_grace_days: Mapped[int] = mapped_column(nullable=False, default=3)
+
+
+class ScheduledFinanceItem(Base):
+    __tablename__ = "scheduled_finance_items"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    type: Mapped[str] = mapped_column(String(20), nullable=False)
+    account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    category_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("categories.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    cadence: Mapped[str] = mapped_column(String(20), nullable=False, default="monthly")
+    due_day: Mapped[int] = mapped_column(nullable=False)
+    amount_method: Mapped[str] = mapped_column(String(20), nullable=False)
+    fixed_amount_pln: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    account: Mapped["Account"] = relationship("Account")
+    category: Mapped["Category"] = relationship("Category")
+
+
 class ActualImportMapping(Base):
     __tablename__ = "actual_import_mappings"
 

@@ -3,6 +3,48 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-14 — Sesja 17: Prognoza płynności cyklu wypłaty
+
+### Cel sesji
+Zrealizować pierwszy pionowy slice prognozy finansowej: ustawienia cyklu,
+miesięczne przychody i wydatki, forecast do kolejnej wypłaty oraz sugestie bez
+automatycznego księgowania.
+
+### Co zrobiono
+- Dodano migrację `8a6d0c1e2b3f`, modele `FinanceSettings` i
+  `ScheduledFinanceItem`, walidację własności konta/kategorii, konta budżetowego
+  i zgodności waluty.
+- Dodano API ustawień, pozycji harmonogramu i prognozy. Pozycja obsługuje kwotę
+  `fixed` w groszach PLN albo `last_actual` z ostatniej zgodnej transakcji.
+- Forecast liczy wyłącznie aktywne konta budżetowe, rozpoznaje transakcję
+  rzeczywistą po koncie, kategorii, typie, kwocie i oknie dat ±3 dni, pokazuje
+  saldo przed następną wypłatą, limit dzienny i najniższe saldo.
+- Nieznana pozycja po trzech dniach ma `overdue_uncertain` i jest wykluczona z
+  projekcji. Odczyt forecastu nie zapisuje ustawień, transakcji ani postings.
+- Strona Finanse ma kartę płynności i listę harmonogramu; nie dodano kontroli
+  tworzącej wpis księgi.
+
+### Weryfikacja
+- TDD objęło walidację kwoty stałej, konto pozabudżetowe, niepewność po trzech
+  dniach, dopasowanie realnej transakcji bez mutacji księgi, `last_actual`,
+  granicę 30 dni i API.
+- Alembic z `DATABASE_URL` wskazującym izolowaną bazę `finanse_test` na
+  `127.0.0.1:55432` zastosował wszystkie migracje do `8a6d0c1e2b3f`.
+- Lint i typecheck: PASS. `make test`: backend `123 passed, 47 skipped,
+  3 warnings`, frontend `7 passed`. `make test-integration`: `47 passed,
+  123 deselected, 11 warnings`. Build Vite: PASS.
+
+### Decyzje techniczne
+1. Pierwszy slice używa wyłącznie cyklu miesięcznego i dnia 1-28, aby uniknąć
+   niejednoznaczności końca miesiąca.
+2. Sugestie są wyliczane dynamicznie z istniejącej księgi; nie powstał model
+   oczekującej transakcji i endpoint forecastu nie ma ścieżki zapisu.
+
+### Następna sesja
+Opcjonalnie dodać formularze zarządzania ustawieniami i pozycjami oraz osobny,
+zatwierdzany przez użytkownika workflow przekształcania sugestii w transakcję.
+
+---
 ## 2026-08-14 — Sesja 16: Legacy bilanse otwarcia w preflight korekty
 
 ### Cel sesji

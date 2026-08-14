@@ -7,6 +7,34 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 2026-08-13
 
+### Added
+- **Finanse — prognoza płynności cyklu wypłaty**: ustawienia dnia wypłaty,
+  konta wpływu, horyzontu i tolerancji opóźnienia; miesięczne pozycje
+  przychodu/wydatku powiązane z kontem budżetowym i kategorią.
+- Migracja `8a6d0c1e2b3f` tworzy `finance_settings` i
+  `scheduled_finance_items` z ograniczeniami dni, typów, metod kwot i własności
+  relacji.
+- Endpointy `cashflow/settings`, `cashflow/items` i `cashflow/forecast` oraz
+  karta i lista prognozy na stronie Finanse.
+
+### Changed
+- Prognoza wykorzystuje wyłącznie salda kont budżetowych, kwotę stałą lub
+  ostatnią zgodną transakcję, rozpoznaje rzeczywisty wpis w oknie trzech dni i
+  nie dubluje go w projekcji. Po trzech dniach od terminu pozycja ma status
+  `overdue_uncertain` i nie wpływa na saldo.
+- Odczyt prognozy nie tworzy transakcji, postingów ani domyślnych ustawień;
+  UI nie oferuje akcji księgowania.
+
+### Verified
+- Migracja izolowanej bazy `finanse_test` na `127.0.0.1:55432` doszła do
+  `8a6d0c1e2b3f`; nie uruchomiono migracji produkcyjnej.
+- `make VENV=/opt/finanse/backend/.venv/bin lint` i `typecheck`: PASS.
+- `make VENV=/opt/finanse/backend/.venv/bin test`: backend `123 passed,
+  47 skipped, 3 warnings`; frontend Vitest `7 passed`.
+- `make VENV=/opt/finanse/backend/.venv/bin test-integration`: `47 passed,
+  123 deselected, 11 warnings`; kontener testowy został usunięty.
+- `npm run build` w `frontend`: PASS. Nie wykonano deployu.
+
 ### Fixed
 - Domknięto historię tool calls Advisora dla kolejnych tur, walidację własności i walut transakcji w serwisie domenowym oraz oznaczenie sald `balance_pln` jako PLN.
 - Fixture testowej bazy wiąże aplikacyjny session factory z izolowanym silnikiem per test.
