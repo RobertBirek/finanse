@@ -380,6 +380,70 @@ async def test_selected_reporting_month_excludes_future_transactions(db_session)
     ]
 
 
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_category_summary_uses_selected_reporting_month(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session,
+        user_id,
+        AccountCreate(name="Konto", type="checking"),
+    )
+    july_category = await create_category(
+        db_session,
+        user_id,
+        CategoryCreate(name="Lipiec", type="expense"),
+    )
+    august_category = await create_category(
+        db_session,
+        user_id,
+        CategoryCreate(name="Sierpień", type="expense"),
+    )
+    await create_expense(
+        db_session,
+        user_id,
+        account.id,
+        july_category.id,
+        2_500,
+        date(2025, 7, 15),
+    )
+    await create_expense(
+        db_session,
+        user_id,
+        account.id,
+        august_category.id,
+        5_000,
+        date(2025, 8, 1),
+    )
+
+    async def override_current_user():
+        return SimpleNamespace(id=user_id)
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            category_summary = await client.get("/api/finance/category-summary?month=7&year=2025")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert category_summary.status_code == 200
+    assert category_summary.json()["month"] == 7
+    assert category_summary.json()["year"] == 2025
+    assert category_summary.json()["categories"] == [
+        {
+            "category_id": str(july_category.id),
+            "name": "Lipiec",
+            "parent_id": None,
+            "total_pln": 2_500,
+        }
+    ]
+
+
 async def create_income(
     db_session, user_id, account_id, category_id, amount: int, transaction_date: date | None = None
 ) -> None:
