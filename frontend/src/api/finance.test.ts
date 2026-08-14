@@ -1,12 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   buildCategoryTree,
   canConfirmSuggestion,
   cashflowStatusLabel,
   parsePlnToGrosze,
   splitAccounts,
+  useCategorySummary,
+  useFinancialSummary,
   type Account,
   type CategorySummary,
+  type FinancialPeriod,
 } from "./finance";
 
 const account = (id: string, is_budget_account: boolean): Account => ({
@@ -124,5 +127,16 @@ describe("canConfirmSuggestion", () => {
         "2026-08-14",
       ),
     ).toBe(false);
+  });
+});
+
+describe("financial period hook contracts", () => {
+  it("accepts the same optional period object for both summaries", () => {
+    expectTypeOf<Parameters<typeof useFinancialSummary>>().toEqualTypeOf<
+      [period?: FinancialPeriod]
+    >();
+    expectTypeOf<Parameters<typeof useCategorySummary>>().toEqualTypeOf<
+      [period?: FinancialPeriod]
+    >();
   });
 });

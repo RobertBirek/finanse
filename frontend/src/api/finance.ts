@@ -63,6 +63,11 @@ export interface FinancialSummary {
   year: number;
 }
 
+export interface FinancialPeriod {
+  month?: number;
+  year?: number;
+}
+
 export interface CategorySpend {
   category_id: string;
   name: string;
@@ -342,10 +347,10 @@ export function useCreateTransaction() {
   });
 }
 
-export function useFinancialSummary(month?: number, year?: number) {
+export function useFinancialSummary(period?: FinancialPeriod) {
   const now = new Date();
-  const m = month ?? now.getMonth() + 1;
-  const y = year ?? now.getFullYear();
+  const m = period?.month ?? now.getMonth() + 1;
+  const y = period?.year ?? now.getFullYear();
 
   return useQuery({
     queryKey: ["finance", "summary", { month: m, year: y }],
@@ -358,10 +363,10 @@ export function useFinancialSummary(month?: number, year?: number) {
   });
 }
 
-export function useCategorySummary(month?: number, year?: number) {
+export function useCategorySummary(period?: FinancialPeriod) {
   const now = new Date();
-  const m = month ?? now.getMonth() + 1;
-  const y = year ?? now.getFullYear();
+  const m = period?.month ?? now.getMonth() + 1;
+  const y = period?.year ?? now.getFullYear();
 
   return useQuery({
     queryKey: ["finance", "category-summary", { month: m, year: y }],
