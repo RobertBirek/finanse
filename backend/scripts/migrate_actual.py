@@ -34,10 +34,12 @@ from app.finance.actual_parser import ActualParser, TransactionDict
 from app.finance.models import Account, ActualImportMapping, Category, FinancialTransaction, Posting
 from app.finance.nbp_rates import NbpRateProvider
 from app.finance.reconciliation import (
+    CategoryBalance,
     ReconciliationError,
     ReconciliationReport,
     SourceBalance,
     reconcile_account_balances,
+    reconcile_category_balances,
 )
 from app.finance.reconciliation import require_reconciled as ensure_reconciled
 from app.finance.schemas import AccountCreate, CategoryCreate, PostingCreate, TransactionCreate
@@ -516,6 +518,108 @@ async def get_pa_source_balances(
     }
 
 
+async def get_pa_category_balances(
+    db: Any, user_id: uuid.UUID, category_map: dict[str, uuid.UUID]
+) -> dict[str, CategoryBalance]:
+    """Return PLN category balances for mapped PA categories, keyed by Actual ID."""
+    pa_ids = set(category_map.values())
+    if len(pa_ids) != len(category_map):
+        raise ReconciliationError("Multiple Actual categories map to the same PA category")
+    if not pa_ids:
+        return {}
+
+    category_result = await db.execute(
+        select(Category).where(Category.user_id == user_id, Category.id.in_(pa_ids))
+    )
+    categories = {category.id: category for category in category_result.scalars().all()}
+    balance_result = await db.execute(
+        select(
+            Posting.category_id,
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Posting.direction == "debit", Posting.base_amount_pln),
+                        else_=-Posting.base_amount_pln,
+                    )
+                ),
+                0,
+            ).label("amount_pln"),
+        )
+        .join(FinancialTransaction, FinancialTransaction.id == Posting.transaction_id)
+        .where(
+            FinancialTransaction.user_id == user_id,
+            Posting.category_id.in_(categories),
+            Posting.account_id.is_(None),
+        )
+        .group_by(Posting.category_id)
+    )
+    amounts = {category_id: int(amount) for category_id, amount in balance_result.all()}
+    return {
+        actual_id: CategoryBalance(
+            actual_id=actual_id,
+            name=categories[pa_id].name,
+            type=categories[pa_id].type,
+            amount_pln=amounts.get(pa_id, 0),
+        )
+        for actual_id, pa_id in category_map.items()
+        if pa_id in categories
+    }
+
+
+def get_actual_category_balances(
+    transactions: list[TransactionDict],
+    categories: list[Any],
+    account_map: dict[str, uuid.UUID],
+    category_map: dict[str, uuid.UUID],
+    account_currency: dict[str, str],
+    fx_rates: dict[tuple[str, date], float],
+    account_budget: dict[str, bool],
+) -> dict[str, CategoryBalance]:
+    """Calculate expected category PLN balances from importable Actual transactions."""
+    categories_by_id = {category["actual_id"]: category for category in categories}
+    category_by_pa_id = {pa_id: actual_id for actual_id, pa_id in category_map.items()}
+    amounts = {actual_id: 0 for actual_id in categories_by_id}
+
+    for transaction in transactions:
+        try:
+            fx_difference_kind = required_fx_difference_kind(
+                transaction, account_currency, fx_rates
+            )
+            postings = build_pa_postings(
+                transaction,
+                account_map,
+                category_map,
+                account_currency,
+                fx_rates,
+                account_budget,
+                {fx_difference_kind: uuid.uuid4()} if fx_difference_kind is not None else {},
+            )
+        except ImportValidationError:
+            continue
+        for posting in postings:
+            if posting.category_id is None:
+                continue
+            actual_id = category_by_pa_id.get(posting.category_id)
+            if actual_id is None:
+                continue
+            amount = (
+                posting.base_amount_pln
+                if posting.direction == "debit"
+                else -posting.base_amount_pln
+            )
+            amounts[actual_id] += amount
+
+    return {
+        actual_id: CategoryBalance(
+            actual_id=actual_id,
+            name=category["name"],
+            type=category["type"],
+            amount_pln=amounts[actual_id],
+        )
+        for actual_id, category in categories_by_id.items()
+    }
+
+
 def generate_report(stats: dict, errors: list[str], warnings: list[str], mapping: dict) -> str:
     """Generate human-readable report."""
     lines = [
@@ -627,7 +731,7 @@ async def migrate(
                     dry_run_fx_category_ids,
                 )
             except ImportValidationError as error:
-                errors.append(str(error))
+                errors.append(f"Skipped {txn['actual_id']}: {error}")
                 continue
 
             total = sum(
@@ -671,7 +775,22 @@ async def migrate(
                 default=str,
             )
         )
-        reconciliation = reconcile_account_balances(actual_balances, {})
+        reconciliation = ReconciliationReport(
+            accounts=reconcile_account_balances(actual_balances, {}).accounts,
+            categories=reconcile_category_balances(
+                get_actual_category_balances(
+                    all_txns,
+                    categories,
+                    acct_map,
+                    cat_map,
+                    acct_currency,
+                    fetched_fx_rates,
+                    acct_budget,
+                ),
+                {},
+            ),
+            import_errors=tuple(errors),
+        )
         write_reconciliation_report(output_dir, reconciliation)
         print(reconciliation.to_text())
         print("Report saved to scripts/output/")
@@ -708,6 +827,13 @@ async def migrate(
             output_dir = Path(tempfile.gettempdir()) / "actual_migration"
             output_dir.mkdir(exist_ok=True)
             (output_dir / "migration_report.txt").write_text(report)
+            write_reconciliation_report(
+                output_dir,
+                ReconciliationReport(
+                    accounts=reconcile_account_balances(actual_balances, {}).accounts,
+                    import_errors=tuple(errors),
+                ),
+            )
             print(report)
             print("Legacy mapping failure report saved to scripts/output/")
             await nbp.close()
@@ -728,6 +854,16 @@ async def migrate(
                 if currency != "PLN":
                     rate = await nbp.get_rate(currency, txn["date"])
                     fx_rates[(currency, txn["date"])] = rate
+
+        actual_category_balances = get_actual_category_balances(
+            all_txns,
+            categories,
+            acct_map,
+            cat_map,
+            acct_currency,
+            fx_rates,
+            acct_budget,
+        )
 
         # Phase 4: Write transactions
         print("Phase 4: Writing transactions...")
@@ -763,7 +899,7 @@ async def migrate(
                     fx_category_ids,
                 )
             except ImportValidationError as error:
-                errors.append(str(error))
+                errors.append(f"Skipped {txn['actual_id']}: {error}")
                 stats["errors"] += 1
                 continue
 
@@ -805,6 +941,14 @@ async def migrate(
         reconciliation = reconcile_account_balances(
             actual_balances,
             await get_pa_source_balances(db, user_id, acct_map),
+        )
+        reconciliation = ReconciliationReport(
+            accounts=reconciliation.accounts,
+            categories=reconcile_category_balances(
+                actual_category_balances,
+                await get_pa_category_balances(db, user_id, cat_map),
+            ),
+            import_errors=tuple(errors),
         )
         write_reconciliation_report(output_dir, reconciliation)
         print(reconciliation.to_text())

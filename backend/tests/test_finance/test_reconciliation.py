@@ -9,9 +9,12 @@ import pytest
 
 from app.finance.actual_parser import ActualParser
 from app.finance.reconciliation import (
+    CategoryBalance,
     ReconciliationError,
+    ReconciliationReport,
     SourceBalance,
     reconcile_account_balances,
+    reconcile_category_balances,
     require_reconciled,
 )
 
@@ -84,6 +87,44 @@ def test_require_reconciled_rejects_a_balance_difference():
         require_reconciled(report)
 
 
+def test_report_fails_closed_on_import_error_despite_reconciled_account_and_category_rows():
+    accounts = reconcile_account_balances(
+        {"actual-account-1": SourceBalance("actual-account-1", "ING", "PLN", True, 109805)},
+        {"actual-account-1": SourceBalance("actual-account-1", "ING", "PLN", True, 109805)},
+    ).accounts
+    categories = reconcile_category_balances(
+        {"food": CategoryBalance("food", "Food", "expense", -5000)},
+        {"food": CategoryBalance("food", "Food", "expense", -5000)},
+    )
+    report = ReconciliationReport(
+        accounts=accounts,
+        categories=categories,
+        import_errors=("Skipped expense-1: Missing FX rate: USD on 2026-08-14",),
+    )
+
+    assert report.is_reconciled is False
+    assert report.to_dict()["import_errors"] == [
+        "Skipped expense-1: Missing FX rate: USD on 2026-08-14"
+    ]
+    assert "Categories:" in report.to_text()
+    assert "Import errors:" in report.to_text()
+    with pytest.raises(ReconciliationError, match="not reconciled"):
+        require_reconciled(report)
+
+
+def test_report_fails_closed_on_category_discrepancy():
+    accounts = reconcile_account_balances({}, {}).accounts
+    categories = reconcile_category_balances(
+        {"food": CategoryBalance("food", "Food", "expense", -5000)},
+        {"food": CategoryBalance("food", "Food", "expense", -4995)},
+    )
+
+    report = ReconciliationReport(accounts=accounts, categories=categories)
+
+    assert report.categories[0].difference == -5
+    assert report.is_reconciled is False
+
+
 def test_report_fails_closed_and_exposes_currency_budget_and_mapping_mismatches():
     report = reconcile_account_balances(
         {"actual-ing": SourceBalance("actual-ing", "ING", "PLN", True, 109805)},
@@ -123,6 +164,8 @@ def test_report_serializes_json_data_and_human_readable_rows():
                 "is_reconciled": True,
             }
         ],
+        "categories": [],
+        "import_errors": [],
     }
     assert report.to_text() == "ING | PLN | budget | Actual 109805 | PA 109805 | diff 0 | OK"
 
@@ -258,3 +301,56 @@ async def test_dry_run_require_reconciled_writes_reports_then_fails_closed(tmp_p
     output_dir = tmp_path / "actual_migration"
     assert (output_dir / "reconciliation.json").exists()
     assert "MISMATCH" in (output_dir / "reconciliation_report.txt").read_text()
+    report = json.loads((output_dir / "reconciliation.json").read_text())
+    assert report["categories"] == [
+        {
+            "actual_id": "income",
+            "actual_name": "Income",
+            "pa_name": None,
+            "type": "income",
+            "pa_type": None,
+            "actual_amount_pln": 109805,
+            "pa_amount_pln": None,
+            "difference": None,
+            "is_reconciled": False,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_dry_run_reconciliation_report_includes_skipped_missing_fx_transaction(
+    tmp_path, monkeypatch
+):
+    from scripts import migrate_actual
+
+    sqlite_path = tmp_path / "actual.sqlite"
+    connection = sqlite3.connect(sqlite_path)
+    connection.executescript(
+        """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        INSERT INTO accounts VALUES ('usd', 'Revolut USD', 0, 0, 0);
+        INSERT INTO categories VALUES ('food', 'Food', 0, NULL, 0);
+        INSERT INTO transactions VALUES ('expense-1', 0, 0, NULL, 'usd', 'food', -500, NULL, NULL, 20260814, NULL, 0);
+        """
+    )
+    connection.close()
+    monkeypatch.setattr(migrate_actual, "extract_sqlite", AsyncMock(return_value=sqlite_path))
+    monkeypatch.setattr(
+        migrate_actual,
+        "NbpRateProvider",
+        lambda: SimpleNamespace(get_rate=AsyncMock(return_value=0.0), close=AsyncMock()),
+    )
+    monkeypatch.setattr(migrate_actual.tempfile, "gettempdir", lambda: str(tmp_path))
+
+    await migrate_actual.migrate(tmp_path / "unused.blob", uuid.uuid4(), dry_run=True)
+
+    report = json.loads((tmp_path / "actual_migration" / "reconciliation.json").read_text())
+    assert report["import_errors"] == ["Skipped expense-1: Missing FX rate: USD on 2026-08-14"]
