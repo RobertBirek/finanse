@@ -811,6 +811,31 @@ async def confirm_scheduled_item(
     item = result.scalar_one_or_none()
     if item is None:
         return None
+
+    account_result = await db.execute(
+        select(Account)
+        .where(Account.id == item.account_id, Account.user_id == user_id)
+        .with_for_update()
+    )
+    account = account_result.scalar_one_or_none()
+    if account is None:
+        raise ValueError("Scheduled item account not found")
+    if not account.is_active or not account.is_budget_account:
+        raise ValueError("Scheduled item requires an active budget account")
+    if account.currency.upper() != item.currency.upper():
+        raise ValueError("Scheduled item currency does not match account currency")
+
+    category_result = await db.execute(
+        select(Category)
+        .where(Category.id == item.category_id, Category.user_id == user_id)
+        .with_for_update()
+    )
+    category = category_result.scalar_one_or_none()
+    if category is None:
+        raise ValueError("Scheduled item category not found")
+    if category.type != item.type:
+        raise ValueError("Scheduled item category type must match item type")
+
     if item.currency.upper() != "PLN":
         raise ValueError(
             "Scheduled item confirmation supports PLN only until source amount and FX rate are available"

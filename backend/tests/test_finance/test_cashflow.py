@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
@@ -5,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database import get_db
 from app.finance import service as finance_service
@@ -384,6 +386,121 @@ async def test_confirming_non_pln_scheduled_item_rejects_unresolved_fx(db_sessio
 
     assert await row_count(db_session, FinancialTransaction) == 0
     assert await row_count(db_session, Posting) == 0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+@pytest.mark.parametrize("attribute", ["is_active", "is_budget_account"])
+async def test_confirmation_revalidates_changed_budget_account(db_session, attribute: str) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    item = await create_scheduled_item(
+        db_session, user_id, scheduled_item_data(account.id, category.id, due_day=14)
+    )
+    setattr(account, attribute, False)
+    await db_session.flush()
+
+    with pytest.raises(ValueError, match="active budget account"):
+        await confirm_scheduled_item(db_session, user_id, item.id, today=date(2026, 8, 14))
+
+    assert await row_count(db_session, FinancialTransaction) == 0
+    assert await row_count(db_session, Posting) == 0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_confirmation_revalidates_changed_category_type(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    item = await create_scheduled_item(
+        db_session, user_id, scheduled_item_data(account.id, category.id, due_day=14)
+    )
+    category.type = "income"
+    await db_session.flush()
+
+    with pytest.raises(ValueError, match="category type"):
+        await confirm_scheduled_item(db_session, user_id, item.id, today=date(2026, 8, 14))
+
+    assert await row_count(db_session, FinancialTransaction) == 0
+    assert await row_count(db_session, Posting) == 0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_concurrent_confirmations_create_exactly_one_transaction(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session, user_id, AccountCreate(name="Konto", type="checking")
+    )
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Czynsz", type="expense")
+    )
+    item = await create_scheduled_item(
+        db_session, user_id, scheduled_item_data(account.id, category.id, due_day=14)
+    )
+    await db_session.commit()
+
+    assert db_session.bind is not None
+    session_factory = async_sessionmaker(
+        db_session.bind, class_=AsyncSession, expire_on_commit=False
+    )
+
+    async def confirm_in_separate_transaction() -> FinancialTransaction | ValueError:
+        async with session_factory() as session:
+            try:
+                transaction = await confirm_scheduled_item(
+                    session, user_id, item.id, today=date(2026, 8, 14)
+                )
+                assert transaction is not None
+                await session.commit()
+                return transaction
+            except ValueError as error:
+                await session.rollback()
+                return error
+
+    results = await asyncio.wait_for(
+        asyncio.gather(confirm_in_separate_transaction(), confirm_in_separate_transaction()),
+        timeout=5,
+    )
+
+    assert sum(isinstance(result, FinancialTransaction) for result in results) == 1
+    assert sum(isinstance(result, ValueError) for result in results) == 1
+    transactions = list(
+        (
+            await db_session.execute(
+                select(FinancialTransaction).where(
+                    FinancialTransaction.user_id == user_id,
+                    FinancialTransaction.source == "scheduled_confirmation",
+                )
+            )
+        ).scalars()
+    )
+    assert len(transactions) == 1
+    postings = list(
+        (
+            await db_session.execute(
+                select(Posting).where(Posting.transaction_id == transactions[0].id)
+            )
+        ).scalars()
+    )
+    assert len(postings) == 2
+    assert (
+        sum(
+            posting.base_amount_pln if posting.direction == "debit" else -posting.base_amount_pln
+            for posting in postings
+        )
+        == 0
+    )
 
 
 @pytest.mark.integration
