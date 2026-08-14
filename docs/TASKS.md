@@ -72,6 +72,7 @@ Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, t
 - [x] Migracja produkcyjna wykonana (2026-08-11)
 - [x] Uzgodnienie kategorii/grup niezależne od księgowania importu i trwałe provenance kont/kategorii.
 - [~] Kontrolowana korekta produkcyjna legacy Actual: kod i quality gates gotowe; polecenie produkcyjne nie zostało uruchomione.
+- [x] Preflight korekty rozpoznaje wyłącznie historyczne, syntetyczne bilanse otwarcia Actual; lookalike, rekord ręczny i niezbilansowany BO są odrzucane.
 
 ### Task 7 — Próbne uzgodnienie Actual (2026-08-14)
 - [x] Uruchomiono pełny quality gate w worktree `actual-reconciliation`: lint, typecheck, backend pytest, frontend Vitest i production build.

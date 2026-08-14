@@ -13,6 +13,9 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Import Actual rozpoznaje sobotnio-niedzielne HTTP 404 z NBP Table A, używa poprzedniego opublikowanego kursu z ograniczonego zakresu i zapisuje źródło `nbp_previous_business_day` zamiast odrzucać transakcję lub używać kursu 1.0.
 - Reconciliation Actual wylicza oczekiwane salda kategorii bez `build_pa_postings`, raportuje agregaty grup kategorii i blokuje commit przy każdej różnicy grupy.
 - Konta i kategorie importowane z Actual mają trwałe `source='actual'`; tryb zastąpienia odrzuca transakcję poza wskazanym blobem i każde ręczne użycie kandydata legacy.
+- Preflight korekty legacy Actual rozpoznaje wyłącznie syntetyczny bilans otwarcia
+  `source='actual'` z prefiksem `[BO] Bilans otwarcia`, dwiema przeciwnymi nogami
+  tego samego konta i bez kategorii; każdy inny niepasujący rekord nadal blokuje korektę.
 
 ### Changed
 - `DB_SCHEMA.md` opisuje rzeczywiste statusy `ToolExecution`.

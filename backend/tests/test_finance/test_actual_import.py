@@ -612,6 +612,82 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 
+def _opening_balance_postings(
+    *,
+    debit_amount: int = 500,
+    credit_amount: int = 500,
+    debit_account_id: str = "account-1",
+    credit_account_id: str = "account-1",
+    debit_category_id: str | None = None,
+    credit_category_id: str | None = None,
+) -> list[SimpleNamespace]:
+    return [
+        SimpleNamespace(
+            account_id=debit_account_id,
+            category_id=debit_category_id,
+            base_amount_pln=debit_amount,
+            direction="debit",
+        ),
+        SimpleNamespace(
+            account_id=credit_account_id,
+            category_id=credit_category_id,
+            base_amount_pln=credit_amount,
+            direction="credit",
+        ),
+    ]
+
+
+class TestLegacyOpeningBalancePreflight:
+    @pytest.mark.parametrize(
+        ("source", "description", "postings", "expected"),
+        [
+            (
+                "actual",
+                "[BO] Bilans otwarcia",
+                _opening_balance_postings(),
+                True,
+            ),
+            (
+                "actual",
+                "[BO] Bilans poczatkowy",
+                _opening_balance_postings(),
+                False,
+            ),
+            (
+                "manual",
+                "[BO] Bilans otwarcia",
+                _opening_balance_postings(),
+                False,
+            ),
+            (
+                "actual",
+                "[BO] Bilans otwarcia",
+                _opening_balance_postings(credit_amount=499),
+                False,
+            ),
+            (
+                "actual",
+                "[BO] Bilans otwarcia",
+                _opening_balance_postings(debit_category_id="category-1"),
+                False,
+            ),
+            (
+                "actual",
+                "[BO] Bilans otwarcia",
+                _opening_balance_postings(credit_account_id="account-2"),
+                False,
+            ),
+        ],
+        ids=["allowed", "lookalike", "manual", "imbalanced", "categorized", "different_account"],
+    )
+    def test_recognizes_only_exact_legacy_opening_balance(
+        self, source, description, postings, expected
+    ):
+        from scripts import migrate_actual
+
+        assert migrate_actual._is_legacy_opening_balance(source, description, postings) is expected
+
+
 class TestNbpRates:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
