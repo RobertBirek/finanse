@@ -8,6 +8,10 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-13
 
 ### Added
+- **Frontend — contextual sidebar**: jedna konfiguracja danych zasila desktopowy
+  `IconRail`, menu kontekstowe i mobilny drawer; kontekst wybiera URL według
+  najdłuższego pasującego prefiksu. Przyszłe moduły nie mają route'ów i są
+  oznaczone jako „Wkrótce”.
 - **Finanse — prognoza płynności cyklu wypłaty**: ustawienia dnia wypłaty,
   konta wpływu, horyzontu i tolerancji opóźnienia; miesięczne pozycje
   przychodu/wydatku powiązane z kontem budżetowym i kategorią.
@@ -26,6 +30,9 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   UI nie oferuje akcji księgowania.
 
 ### Verified
+- Frontend: Vitest `12 passed`, ESLint, TypeScript typecheck i Vite production
+  build przeszły. Testy routingu obejmują najdłuższy prefiks URL, active state,
+  tooltip raila oraz zablokowane pozycje przyszłych modułów.
 - Migracja izolowanej bazy `finanse_test` na `127.0.0.1:55432` doszła do
   `8a6d0c1e2b3f`; nie uruchomiono migracji produkcyjnej.
 - `make VENV=/opt/finanse/backend/.venv/bin lint` i `typecheck`: PASS.

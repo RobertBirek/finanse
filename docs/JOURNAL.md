@@ -3,6 +3,46 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-14 — Sesja 18: Kontekstowy sidebar
+
+### Cel sesji
+Zastąpić płaską nawigację kontekstowym sidebarem bez zmiany aktualnych tras,
+autoryzacji, topbara, treści widoków ani ciemnej palety aplikacji.
+
+### Co zrobiono
+- Powstała jedna typowana konfiguracja siedmiu obszarów: `today`,
+  `organization`, `finance`, `advisor`, `knowledge`, `automation` i `system`.
+  Zachowuje obecne trasy, w tym `/finances`; moduły przyszłe nie mają `to` ani
+  route'ów i pokazują „Wkrótce”.
+- Dodano desktopowy `IconRail` z natywnymi tooltipami oraz
+  `ContextualSidebar` ze stałym nagłówkiem, menu aktualnego obszaru i dolnym
+  `UserPanel`. Mobilny drawer używa tego samego menu i zamyka się po nawigacji.
+- `Layout` ograniczono do kompozycji nowych komponentów. Obszar aktywny jest
+  wyliczany z `location.pathname` przez najdłuższy pasujący prefiks, bez local
+  state; nested `/projects/:id` zachowuje kontekst organizacji.
+
+### Weryfikacja
+- TDD: test konfiguracji najpierw nie rozwiązał nieistniejącego modułu, test
+  komponentów najpierw nie znalazł raila, a następnie oba przeszły po minimalnej
+  implementacji.
+- `npm run test`: `3` pliki, `12 passed`. Testy React Router zgłaszają wyłącznie
+  istniejące ostrzeżenia o przyszłych flagach v7.
+- `npm run lint`, `npm run typecheck` i `npm run build`: PASS.
+- Playwright smoke test na Vite z zamockowanym `GET /api/auth/me`: desktopowy
+  rail, menu Finanse, zablokowany Budżet i tooltip Automatyzacji są widoczne na
+  `/finances`.
+
+### Decyzje techniczne
+1. Kontekst jest funkcją URL, a nie lokalnego stanu, dzięki czemu direct linki i
+   trasy zagnieżdżone nie rozchodzą się z widocznym menu.
+2. Ikony pozostają lokalnymi SVG; wydzielono je do pliku eksportującego wyłącznie
+   komponenty, zgodnie z regułą Fast Refresh ESLint.
+
+### Następna sesja
+Po dodaniu przyszłego modułu trzeba dopisać trasę i element konfiguracji, zamiast
+tworzyć osobny model nawigacji.
+
+---
 ## 2026-08-14 — Sesja 17: Prognoza płynności cyklu wypłaty
 
 ### Cel sesji

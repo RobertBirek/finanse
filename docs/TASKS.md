@@ -80,6 +80,15 @@ Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, t
 - [x] Dodano testowany fallback NBP Table A dla soboty/niedzieli: poprzedni opublikowany kurs zachowuje datę efektywną w cache i źródło `nbp_previous_business_day` w postingach; brak kursu nadal odrzuca transakcję.
 - [x] Import DOM blobu z `--execute --require-reconciled` zakończył się kodem 0: 800 transakcji, 0 błędów, `is_reconciled=true`, 15 kont i 46 kategorii bez różnic. Nie wykonano operacji na produkcyjnym PA ani Actual.
 
+### Task 8 — Kontekstowy sidebar (2026-08-14)
+- [x] Zastąpiono płaski sidebar układem `IconRail + ContextualSidebar` opartym
+  o jedną, typowaną konfigurację nawigacji.
+- [x] Kontekst wynika z najdłuższego pasującego prefiksu URL; istniejące
+  `/finances` i pozostałe route'y, auth, topbar, treść stron oraz paleta pozostały bez zmian.
+- [x] Dodano tooltipy raila, dolny UserPanel i ten sam model danych dla desktopu
+  oraz mobilnego drawera; przyszłe pozycje są nieklikalne i oznaczone „Wkrótce”.
+- [x] Frontend quality gate: Vitest `12 passed`, ESLint, TypeScript i Vite build.
+
 ### Stirling PDF + OCR
 - [x] Worker async (Redis + ARQ)
 - [x] Pipeline: upload → SHA-256 → Stirling → OCR → tekst
