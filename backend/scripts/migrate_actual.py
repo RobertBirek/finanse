@@ -12,6 +12,7 @@ import argparse
 import asyncio
 import json
 import logging
+import re
 import sqlite3
 import sys
 import tempfile
@@ -24,6 +25,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -41,6 +43,10 @@ class ImportValidationError(ValueError):
     """Raised when an Actual transaction cannot be imported faithfully."""
 
 
+class LegacyActualMappingError(ImportValidationError):
+    """Raised when legacy Actual entities cannot be mapped without guessing."""
+
+
 async def extract_sqlite(blob_path: Path) -> Path:
     """Extract db.sqlite from Actual encrypted ZIP blob."""
     extract_dir = Path(tempfile.mkdtemp(prefix="actual_extract_"))
@@ -56,9 +62,12 @@ async def resolve_ids(
     db: Any,
     user_id: uuid.UUID,
     parser: ActualParser,
+    transactions: list[TransactionDict] | None = None,
 ) -> tuple[dict[str, uuid.UUID], dict[str, uuid.UUID], dict[str, str], dict[str, bool]]:
     """Create accounts and categories, return Actual ID -> PA ID mappings."""
     await db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"actual-import:{user_id}"))))
+    if transactions is not None:
+        await _backfill_legacy_mappings(db, user_id, parser, transactions)
     acct_map: dict[str, uuid.UUID] = {}
     cat_map: dict[str, uuid.UUID] = {}
     acct_currency: dict[str, str] = {}
@@ -117,6 +126,141 @@ async def resolve_ids(
         cat_map[c["actual_id"]] = pa_cat.id
 
     return acct_map, cat_map, acct_currency, acct_budget
+
+
+async def _get_mapping_id(
+    db: Any, user_id: uuid.UUID, entity_type: str, actual_id: str
+) -> uuid.UUID | None:
+    return await db.scalar(
+        select(ActualImportMapping.entity_id).where(
+            ActualImportMapping.user_id == user_id,
+            ActualImportMapping.entity_type == entity_type,
+            ActualImportMapping.actual_id == actual_id,
+        )
+    )
+
+
+async def _backfill_legacy_mappings(
+    db: Any,
+    user_id: uuid.UUID,
+    parser: ActualParser,
+    transactions: list[TransactionDict],
+) -> None:
+    """Backfill only mappings proven by legacy Actual transaction postings."""
+    transactions_by_actual_id = {
+        transaction["actual_id"]: transaction for transaction in transactions
+    }
+    legacy_result = await db.execute(
+        select(FinancialTransaction)
+        .options(selectinload(FinancialTransaction.postings))
+        .where(
+            FinancialTransaction.user_id == user_id,
+            FinancialTransaction.source == "actual",
+            FinancialTransaction.description.like("[actual:%"),
+        )
+    )
+    legacy_transactions: dict[str, FinancialTransaction] = {}
+    for transaction in legacy_result.scalars():
+        match = re.match(r"^\[actual:([^\]]+)\]", transaction.description)
+        if match is not None and match.group(1) in transactions_by_actual_id:
+            legacy_transactions[match.group(1)] = transaction
+    if not legacy_transactions:
+        return
+
+    account_candidates: dict[str, set[uuid.UUID]] = {}
+    category_candidates: dict[str, set[uuid.UUID]] = {}
+    for actual_id, legacy_transaction in legacy_transactions.items():
+        for source_posting in transactions_by_actual_id[actual_id]["postings"]:
+            legacy_postings = [
+                posting
+                for posting in legacy_transaction.postings
+                if posting.source_amount == source_posting["source_amount"]
+                and posting.source_currency == source_posting["source_currency"]
+                and posting.direction == source_posting["direction"]
+            ]
+            category_actual_id = source_posting["category_actual_id"]
+            if category_actual_id is None:
+                entity_ids = {
+                    posting.account_id
+                    for posting in legacy_postings
+                    if posting.account_id is not None and posting.category_id is None
+                }
+                account_candidates.setdefault(source_posting["account_actual_id"], set()).update(
+                    entity_ids
+                )
+            else:
+                entity_ids = {
+                    posting.category_id
+                    for posting in legacy_postings
+                    if posting.category_id is not None
+                }
+                category_candidates.setdefault(category_actual_id, set()).update(entity_ids)
+
+    accounts = parser.get_accounts()
+    categories = parser.get_categories()
+    unresolved: list[str] = []
+    account_mappings: dict[str, uuid.UUID] = {}
+    category_mappings: dict[str, uuid.UUID] = {}
+    for account in accounts:
+        actual_id = account["actual_id"]
+        existing_id = await _get_mapping_id(db, user_id, "account", actual_id)
+        candidate_ids = account_candidates.get(actual_id, set())
+        if existing_id is not None:
+            account_mappings[actual_id] = existing_id
+        elif len(candidate_ids) == 1:
+            account_mappings[actual_id] = next(iter(candidate_ids))
+        else:
+            unresolved.append(f"account:{actual_id}")
+    for category in categories:
+        actual_id = category["actual_id"]
+        existing_id = await _get_mapping_id(db, user_id, "category", actual_id)
+        candidate_ids = category_candidates.get(actual_id, set())
+        if existing_id is not None:
+            category_mappings[actual_id] = existing_id
+        elif len(candidate_ids) == 1:
+            category_mappings[actual_id] = next(iter(candidate_ids))
+        else:
+            unresolved.append(f"category:{actual_id}")
+
+    try:
+        category_groups = parser.get_category_groups()
+    except sqlite3.OperationalError:
+        category_groups = []
+    group_mappings: dict[str, uuid.UUID] = {}
+    for group in category_groups:
+        actual_id = group["actual_id"]
+        existing_id = await _get_mapping_id(db, user_id, "category_group", actual_id)
+        child_ids = [
+            category_mappings[category["actual_id"]]
+            for category in categories
+            if category["group_actual_id"] == actual_id
+            and category["actual_id"] in category_mappings
+        ]
+        parent_ids = set(
+            (
+                await db.execute(select(Category.parent_id).where(Category.id.in_(child_ids)))
+            ).scalars()
+        )
+        parent_ids.discard(None)
+        if existing_id is not None:
+            group_mappings[actual_id] = existing_id
+        elif len(child_ids) > 0 and len(parent_ids) == 1:
+            group_mappings[actual_id] = next(iter(parent_ids))
+        else:
+            unresolved.append(f"category_group:{actual_id}")
+
+    if unresolved:
+        raise LegacyActualMappingError(
+            "Cannot safely resume legacy Actual import; unresolved provenance: "
+            + ", ".join(sorted(unresolved))
+        )
+
+    for actual_id, entity_id in account_mappings.items():
+        await _store_mapping(db, user_id, "account", actual_id, entity_id)
+    for actual_id, entity_id in group_mappings.items():
+        await _store_mapping(db, user_id, "category_group", actual_id, entity_id)
+    for actual_id, entity_id in category_mappings.items():
+        await _store_mapping(db, user_id, "category", actual_id, entity_id)
 
 
 async def _get_mapped_entity(
@@ -465,7 +609,35 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
     # Phase 2: Write to DB
     async with async_session_factory() as db:
         print("Phase 2: Creating accounts and categories...")
-        acct_map, cat_map, acct_currency, acct_budget = await resolve_ids(db, user_id, parser)
+        try:
+            acct_map, cat_map, acct_currency, acct_budget = await resolve_ids(
+                db, user_id, parser, all_txns
+            )
+        except LegacyActualMappingError as error:
+            errors.append(str(error))
+            stats["errors"] += 1
+            report = generate_report(
+                {
+                    "accounts": len(accounts),
+                    "categories": len(categories),
+                    "transactions": len(simple_txns),
+                    "transfers": len(transfers),
+                    "splits": len(splits),
+                    "written": 0,
+                    "skipped": 0,
+                    "errors": len(errors),
+                },
+                errors,
+                warnings,
+                mapping,
+            )
+            output_dir = Path(tempfile.gettempdir()) / "actual_migration"
+            output_dir.mkdir(exist_ok=True)
+            (output_dir / "migration_report.txt").write_text(report)
+            print(report)
+            print("Legacy mapping failure report saved to scripts/output/")
+            await nbp.close()
+            raise
         stats["accounts"] = len(acct_map)
         stats["categories"] = len(cat_map)
         for actual_id, pa_id in acct_map.items():

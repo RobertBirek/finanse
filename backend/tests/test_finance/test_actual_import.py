@@ -958,6 +958,223 @@ class TestMigrationPipeline:
     pytestmark = pytest.mark.integration
 
     @pytest.mark.asyncio
+    async def test_legacy_actual_transactions_backfill_account_category_and_group_mappings(
+        self, db_session, monkeypatch
+    ):
+        from sqlalchemy import func, select
+
+        from app.finance.models import (
+            Account,
+            ActualImportMapping,
+            Category,
+            FinancialTransaction,
+            Posting,
+        )
+        from app.finance.schemas import AccountCreate, CategoryCreate
+        from app.finance.service import create_account, create_category
+        from scripts import migrate_actual
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'Actual ING', 0, 0, 0)",
+                "INSERT INTO category_groups VALUES ('group1', 'Actual Transport', 0)",
+                "INSERT INTO categories VALUES ('fuel', 'Actual Paliwo', 0, 'group1', 0)",
+                "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'fuel', -5000, NULL, NULL, 20260814, NULL, 0)",
+            ],
+        )
+        user_id = _uuid.uuid4()
+        account = await create_account(
+            db_session, user_id, AccountCreate(name="Legacy account", type="checking")
+        )
+        group = await create_category(
+            db_session, user_id, CategoryCreate(name="Legacy group", type="expense")
+        )
+        category = await create_category(
+            db_session,
+            user_id,
+            CategoryCreate(name="Legacy category", type="expense", parent_id=group.id),
+        )
+        transaction = FinancialTransaction(
+            user_id=user_id,
+            date=date(2026, 8, 14),
+            description="[actual:tx1] Legacy expense",
+            type="expense",
+            source="actual",
+        )
+        db_session.add(transaction)
+        await db_session.flush()
+        db_session.add_all(
+            [
+                Posting(
+                    transaction_id=transaction.id,
+                    account_id=account.id,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="credit",
+                ),
+                Posting(
+                    transaction_id=transaction.id,
+                    account_id=account.id,
+                    category_id=category.id,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="debit",
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        class SessionContext:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return None
+
+        monkeypatch.setattr(migrate_actual, "extract_sqlite", AsyncMock(return_value=db_path))
+        monkeypatch.setattr(migrate_actual, "async_session_factory", SessionContext)
+        monkeypatch.setattr(
+            migrate_actual,
+            "NbpRateProvider",
+            lambda: SimpleNamespace(close=AsyncMock()),
+        )
+
+        try:
+            await migrate_actual.migrate(Path("unused"), user_id)
+            counts = [
+                await db_session.scalar(
+                    select(func.count(model.id)).where(model.user_id == user_id)
+                )
+                for model in (Account, Category, FinancialTransaction, ActualImportMapping)
+            ]
+            assert counts == [1, 2, 1, 4]
+        finally:
+            os.unlink(db_path)
+
+    @pytest.mark.asyncio
+    async def test_unresolved_legacy_actual_mapping_fails_without_creating_entities(
+        self, db_session, monkeypatch
+    ):
+        from sqlalchemy import func, select
+
+        from app.finance.models import Account, Category, FinancialTransaction, Posting
+        from app.finance.schemas import AccountCreate, CategoryCreate
+        from app.finance.service import create_account, create_category
+        from scripts import migrate_actual
+
+        schema = """
+        CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
+        CREATE TABLE categories (id TEXT, name TEXT, is_income INTEGER, cat_group TEXT, tombstone INTEGER);
+        CREATE TABLE category_groups (id TEXT, name TEXT, tombstone INTEGER);
+        CREATE TABLE transactions (
+            id TEXT, isParent INTEGER, isChild INTEGER, parent_id TEXT,
+            acct TEXT, category TEXT, amount INTEGER, description TEXT,
+            notes TEXT, date INTEGER, transferred_id TEXT, tombstone INTEGER
+        );
+        CREATE TABLE payees (id TEXT, name TEXT);
+        CREATE TABLE payee_mapping (id TEXT, targetId TEXT, payeeId TEXT);
+        """
+        db_path = _make_actual_db(
+            schema,
+            [
+                "INSERT INTO accounts VALUES ('acc1', 'Actual ING', 0, 0, 0)",
+                "INSERT INTO accounts VALUES ('acc2', 'Actual Cash', 0, 0, 0)",
+                "INSERT INTO category_groups VALUES ('group1', 'Actual Transport', 0)",
+                "INSERT INTO categories VALUES ('fuel', 'Actual Paliwo', 0, 'group1', 0)",
+                "INSERT INTO transactions VALUES ('tx1', 0, 0, NULL, 'acc1', 'fuel', -5000, NULL, NULL, 20260814, NULL, 0)",
+            ],
+        )
+        user_id = _uuid.uuid4()
+        account = await create_account(
+            db_session, user_id, AccountCreate(name="Legacy account", type="checking")
+        )
+        category = await create_category(
+            db_session, user_id, CategoryCreate(name="Legacy category", type="expense")
+        )
+        transaction = FinancialTransaction(
+            user_id=user_id,
+            date=date(2026, 8, 14),
+            description="[actual:tx1] Legacy expense",
+            type="expense",
+            source="actual",
+        )
+        db_session.add(transaction)
+        await db_session.flush()
+        db_session.add_all(
+            [
+                Posting(
+                    transaction_id=transaction.id,
+                    account_id=account.id,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="credit",
+                ),
+                Posting(
+                    transaction_id=transaction.id,
+                    account_id=account.id,
+                    category_id=category.id,
+                    source_amount=5000,
+                    source_currency="PLN",
+                    base_amount_pln=5000,
+                    fx_rate=1.0,
+                    fx_rate_source="manual",
+                    direction="debit",
+                ),
+            ]
+        )
+        await db_session.flush()
+
+        class SessionContext:
+            async def __aenter__(self):
+                return db_session
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return None
+
+        monkeypatch.setattr(migrate_actual, "extract_sqlite", AsyncMock(return_value=db_path))
+        monkeypatch.setattr(migrate_actual, "async_session_factory", SessionContext)
+        monkeypatch.setattr(
+            migrate_actual,
+            "NbpRateProvider",
+            lambda: SimpleNamespace(close=AsyncMock()),
+        )
+
+        try:
+            with pytest.raises(migrate_actual.LegacyActualMappingError, match="acc2"):
+                await migrate_actual.migrate(Path("unused"), user_id)
+            counts = [
+                await db_session.scalar(
+                    select(func.count(model.id)).where(model.user_id == user_id)
+                )
+                for model in (Account, Category, FinancialTransaction)
+            ]
+            assert counts == [1, 1, 1]
+        finally:
+            os.unlink(db_path)
+
+    @pytest.mark.asyncio
     async def test_imported_expense_decreases_and_income_increases_account_balance(
         self, db_session, monkeypatch
     ):
