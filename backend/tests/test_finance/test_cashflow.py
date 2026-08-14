@@ -296,11 +296,98 @@ async def test_cashflow_api_exposes_settings_items_and_forecast(db_session) -> N
     assert forecast.json()["suggestions"][0]["name"] == "Czynsz"
 
 
-async def create_income(db_session, user_id, account_id, category_id, amount: int) -> None:
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_selected_reporting_month_excludes_future_transactions(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(
+        db_session,
+        user_id,
+        AccountCreate(name="Konto", type="checking"),
+    )
+    income_category = await create_category(
+        db_session,
+        user_id,
+        CategoryCreate(name="Wynagrodzenie", type="income"),
+    )
+    expense_category = await create_category(
+        db_session,
+        user_id,
+        CategoryCreate(name="Zakupy", type="expense"),
+    )
+    await create_income(
+        db_session,
+        user_id,
+        account.id,
+        income_category.id,
+        10_000,
+        date(2026, 8, 10),
+    )
+    await create_expense(
+        db_session,
+        user_id,
+        account.id,
+        expense_category.id,
+        2_500,
+        date(2026, 8, 12),
+    )
+    await create_income(
+        db_session,
+        user_id,
+        account.id,
+        income_category.id,
+        20_000,
+        date(2026, 9, 1),
+    )
+    await create_expense(
+        db_session,
+        user_id,
+        account.id,
+        expense_category.id,
+        5_000,
+        date(2026, 9, 2),
+    )
+
+    async def override_current_user():
+        return SimpleNamespace(id=user_id)
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            summary = await client.get("/api/finance/summary?month=8&year=2026")
+            category_summary = await client.get("/api/finance/category-summary?month=8&year=2026")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert summary.status_code == 200
+    assert summary.json()["income_total_pln"] == 10_000
+    assert summary.json()["expense_total_pln"] == 2_500
+    assert summary.json()["month"] == 8
+    assert category_summary.status_code == 200
+    assert category_summary.json()["month"] == 8
+    assert category_summary.json()["categories"] == [
+        {
+            "category_id": str(expense_category.id),
+            "name": "Zakupy",
+            "parent_id": None,
+            "total_pln": 2_500,
+        }
+    ]
+
+
+async def create_income(
+    db_session, user_id, account_id, category_id, amount: int, transaction_date: date | None = None
+) -> None:
     await create_transaction(
         db_session,
         user_id,
         TransactionCreate(
+            transaction_date=transaction_date,
             description="Wpływ",
             type="income",
             postings=[

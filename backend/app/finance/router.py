@@ -213,16 +213,20 @@ async def update_transaction_endpoint(
 async def get_summary(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    month: Annotated[int | None, Query(ge=1, le=12)] = None,
+    year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
 ):
-    return await get_financial_summary(db, current_user.id)
+    return await get_financial_summary(db, current_user.id, month=month, year=year)
 
 
 @router.get("/category-summary", response_model=CategorySummaryResponse)
 async def get_category_summary_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    month: Annotated[int | None, Query(ge=1, le=12)] = None,
+    year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
 ):
-    return await get_category_summary(db, current_user.id)
+    return await get_category_summary(db, current_user.id, month=month, year=year)
 
 
 @router.get("/cashflow/settings", response_model=FinanceSettingsResponse)

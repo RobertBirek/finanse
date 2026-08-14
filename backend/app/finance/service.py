@@ -40,6 +40,15 @@ def _local_today() -> date:
     return datetime.now(UTC).astimezone().date()
 
 
+def _month_bounds(month: int | None, year: int | None) -> tuple[int, int, date, date]:
+    now = datetime.now(UTC)
+    selected_month = now.month if month is None else month
+    selected_year = now.year if year is None else year
+    month_start = date(selected_year, selected_month, 1)
+    month_end = date(selected_year + (selected_month == 12), (selected_month % 12) + 1, 1)
+    return selected_month, selected_year, month_start, month_end
+
+
 async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCreate) -> Account:
     currency = data.currency.upper()
     if currency not in SUPPORTED_CURRENCIES:
@@ -306,11 +315,10 @@ async def update_transaction(
     return txn
 
 
-async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> FinancialSummary:
-    now = datetime.now(UTC)
-    current_month = now.month
-    current_year = now.year
-    month_start = date(current_year, current_month, 1)
+async def get_financial_summary(
+    db: AsyncSession, user_id: uuid.UUID, month: int | None = None, year: int | None = None
+) -> FinancialSummary:
+    selected_month, selected_year, month_start, month_end = _month_bounds(month, year)
 
     accounts_result = await db.execute(
         select(Account).where(
@@ -364,6 +372,7 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
             FinancialTransaction.user_id == user_id,
             FinancialTransaction.type == "income",
             FinancialTransaction.date >= month_start,
+            FinancialTransaction.date < month_end,
             Posting.category_id.is_not(None),
             Posting.account_id.is_(None),
             Account.is_budget_account.is_(True),
@@ -385,6 +394,7 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
             FinancialTransaction.user_id == user_id,
             FinancialTransaction.type == "expense",
             FinancialTransaction.date >= month_start,
+            FinancialTransaction.date < month_end,
             Posting.category_id.is_not(None),
             Posting.account_id.is_(None),
             Account.is_budget_account.is_(True),
@@ -397,15 +407,15 @@ async def get_financial_summary(db: AsyncSession, user_id: uuid.UUID) -> Financi
         income_total_pln=income_total,
         expense_total_pln=expense_total,
         net_total_pln=income_total - expense_total,
-        month=current_month,
-        year=current_year,
+        month=selected_month,
+        year=selected_year,
     )
 
 
-async def get_category_summary(db: AsyncSession, user_id: uuid.UUID) -> CategorySummaryResponse:
-    now = datetime.now(UTC)
-    month_start = date(now.year, now.month, 1)
-    month_end = date(now.year + (now.month == 12), (now.month % 12) + 1, 1)
+async def get_category_summary(
+    db: AsyncSession, user_id: uuid.UUID, month: int | None = None, year: int | None = None
+) -> CategorySummaryResponse:
+    selected_month, selected_year, month_start, month_end = _month_bounds(month, year)
 
     account_posting = aliased(Posting)
     result = await db.execute(
@@ -469,8 +479,8 @@ async def get_category_summary(db: AsyncSession, user_id: uuid.UUID) -> Category
     ]
 
     return CategorySummaryResponse(
-        month=now.month,
-        year=now.year,
+        month=selected_month,
+        year=selected_year,
         groups=groups,
         categories=categories,
     )
