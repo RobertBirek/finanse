@@ -4,6 +4,8 @@ from datetime import date
 from pathlib import Path
 from typing import TypedDict
 
+from app.finance.reconciliation import SourceBalance
+
 
 class AccountDict(TypedDict):
     actual_id: str
@@ -119,6 +121,28 @@ class ActualParser:
             }
             for r in rows
         ]
+
+    def get_account_balances(self) -> dict[str, SourceBalance]:
+        """Return active Actual account balances in their source currencies."""
+        rows = self._conn.execute(
+            "SELECT a.id, a.name, a.offbudget, COALESCE(SUM(t.amount), 0) AS amount "
+            "FROM accounts a "
+            f"LEFT JOIN {self._txn_table} t ON t.{self._txn_col_acct} = a.id "
+            f"AND t.tombstone = 0 AND t.{self._txn_col_is_child} = 0 "
+            "WHERE a.tombstone = 0 AND a.closed = 0 "
+            "GROUP BY a.id, a.name, a.offbudget "
+            "ORDER BY a.id"
+        ).fetchall()
+        return {
+            row["id"]: SourceBalance(
+                actual_id=row["id"],
+                name=row["name"],
+                currency=self._detect_currency(row["name"]),
+                is_budget_account=not bool(row["offbudget"]),
+                amount=row["amount"],
+            )
+            for row in rows
+        }
 
     def get_categories(self) -> list[CategoryDict]:
         rows = self._conn.execute(

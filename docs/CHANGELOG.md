@@ -15,6 +15,8 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - `DB_SCHEMA.md` opisuje rzeczywiste statusy `ToolExecution`.
 
 ### Added
+- Raport uzgodnieniowy importu Actual per konto i waluta źródłowa, zapisujący `reconciliation.json` oraz `reconciliation_report.txt`.
+- Flaga importera `--require-reconciled`, która blokuje zapis przy niezgodnym, niezamapowanym lub niespójnym walutowo/budżetowo koncie.
 - Testy pętli tool-calling Advisora: odpowiedź Level 0 po wykonaniu narzędzia, błędny JSON, nieznane narzędzie, błędy executora, limit iteracji oraz oczekiwanie na potwierdzenie Level 2.
 - Testy potwierdzania mutacji: blokada ponownego confirm/deny, izolacja użytkownika, odrzucenie błędnego wyniku oraz rollback częściowej mutacji, gdy executor lub audit log zakończy się błędem.
 - Izolowana baza PostgreSQL do testów integracyjnych na `127.0.0.1:55432`; fixture tworzy i usuwa schemat, a `make test-integration` sprząta kontener i sieć po zakończeniu.

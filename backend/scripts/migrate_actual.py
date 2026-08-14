@@ -22,7 +22,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
@@ -31,8 +31,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.database import async_session_factory
 from app.finance.actual_parser import ActualParser, TransactionDict
-from app.finance.models import Account, ActualImportMapping, Category, FinancialTransaction
+from app.finance.models import Account, ActualImportMapping, Category, FinancialTransaction, Posting
 from app.finance.nbp_rates import NbpRateProvider
+from app.finance.reconciliation import (
+    ReconciliationError,
+    ReconciliationReport,
+    SourceBalance,
+    reconcile_account_balances,
+)
+from app.finance.reconciliation import require_reconciled as ensure_reconciled
 from app.finance.schemas import AccountCreate, CategoryCreate, PostingCreate, TransactionCreate
 from app.finance.service import create_account, create_category, create_transaction
 
@@ -460,6 +467,55 @@ async def check_idempotent(db, user_id: uuid.UUID, actual_id: str) -> bool:
     return True
 
 
+async def get_pa_source_balances(
+    db: Any, user_id: uuid.UUID, account_map: dict[str, uuid.UUID]
+) -> dict[str, SourceBalance]:
+    """Return source balances for mapped PA financial accounts, keyed by Actual ID."""
+    pa_ids = set(account_map.values())
+    if len(pa_ids) != len(account_map):
+        raise ReconciliationError("Multiple Actual accounts map to the same PA account")
+    if not pa_ids:
+        return {}
+
+    account_result = await db.execute(
+        select(Account).where(Account.user_id == user_id, Account.id.in_(pa_ids))
+    )
+    accounts = {account.id: account for account in account_result.scalars().all()}
+    balance_result = await db.execute(
+        select(
+            Posting.account_id,
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Posting.direction == "credit", Posting.source_amount),
+                        else_=-Posting.source_amount,
+                    )
+                ),
+                0,
+            ).label("amount"),
+        )
+        .join(FinancialTransaction, FinancialTransaction.id == Posting.transaction_id)
+        .where(
+            FinancialTransaction.user_id == user_id,
+            Posting.account_id.in_(accounts),
+            Posting.category_id.is_(None),
+        )
+        .group_by(Posting.account_id)
+    )
+    amounts = {account_id: int(amount) for account_id, amount in balance_result.all()}
+    return {
+        actual_id: SourceBalance(
+            actual_id=actual_id,
+            name=accounts[pa_id].name,
+            currency=accounts[pa_id].currency,
+            is_budget_account=accounts[pa_id].is_budget_account,
+            amount=amounts.get(pa_id, 0),
+        )
+        for actual_id, pa_id in account_map.items()
+        if pa_id in accounts
+    }
+
+
 def generate_report(stats: dict, errors: list[str], warnings: list[str], mapping: dict) -> str:
     """Generate human-readable report."""
     lines = [
@@ -490,7 +546,19 @@ def generate_report(stats: dict, errors: list[str], warnings: list[str], mapping
     return "\n".join(lines)
 
 
-async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) -> None:
+def write_reconciliation_report(output_dir: Path, report: ReconciliationReport) -> None:
+    (output_dir / "reconciliation.json").write_text(
+        json.dumps(report.to_dict(), indent=2, ensure_ascii=False) + "\n"
+    )
+    (output_dir / "reconciliation_report.txt").write_text(report.to_text() + "\n")
+
+
+async def migrate(
+    blob_path: Path,
+    user_id: uuid.UUID,
+    dry_run: bool = False,
+    require_reconciled: bool = False,
+) -> None:
     """Main migration pipeline."""
     sqlite_path = await extract_sqlite(blob_path)
     parser = ActualParser(sqlite_path)
@@ -517,6 +585,7 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
     simple_txns = parser.get_transactions()
     transfers = parser.get_transfers()
     splits = parser.get_splits()
+    actual_balances = parser.get_account_balances()
     warnings.extend(parser.get_warnings())
     print(f"  Accounts: {len(accounts)}, Categories: {len(categories)}")
     print(f"  Simple: {len(simple_txns)}, Transfers: {len(transfers)}, Splits: {len(splits)}")
@@ -602,8 +671,13 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
                 default=str,
             )
         )
+        reconciliation = reconcile_account_balances(actual_balances, {})
+        write_reconciliation_report(output_dir, reconciliation)
+        print(reconciliation.to_text())
         print("Report saved to scripts/output/")
         await nbp.close()
+        if require_reconciled:
+            ensure_reconciled(reconciliation)
         return
 
     # Phase 2: Write to DB
@@ -726,11 +800,19 @@ async def migrate(blob_path: Path, user_id: uuid.UUID, dry_run: bool = False) ->
                 errors.append(f"Failed to write {txn['actual_id']}: {error}")
                 stats["errors"] += 1
 
-        report = generate_report(stats, errors, warnings, mapping)
-        print(report)
-
         output_dir = Path(tempfile.gettempdir()) / "actual_migration"
         output_dir.mkdir(exist_ok=True)
+        reconciliation = reconcile_account_balances(
+            actual_balances,
+            await get_pa_source_balances(db, user_id, acct_map),
+        )
+        write_reconciliation_report(output_dir, reconciliation)
+        print(reconciliation.to_text())
+        if require_reconciled:
+            ensure_reconciled(reconciliation)
+
+        report = generate_report(stats, errors, warnings, mapping)
+        print(report)
         (output_dir / "migration_report.txt").write_text(report)
         (output_dir / "migration_log.json").write_text(
             json.dumps(
@@ -764,6 +846,11 @@ async def main():
         "--dry-run", action="store_true", help="Validate and report only, no writes"
     )
     parser_args.add_argument("--execute", action="store_true", help="Actually write to database")
+    parser_args.add_argument(
+        "--require-reconciled",
+        action="store_true",
+        help="Fail unless all Actual account source balances reconcile with PA",
+    )
     args = parser_args.parse_args()
 
     if args.execute and args.dry_run:
@@ -779,7 +866,12 @@ async def main():
         sys.exit(1)
 
     user_id = uuid.UUID(args.user_id)
-    await migrate(blob_path, user_id, dry_run=args.dry_run)
+    await migrate(
+        blob_path,
+        user_id,
+        dry_run=args.dry_run,
+        require_reconciled=args.require_reconciled,
+    )
 
 
 if __name__ == "__main__":

@@ -388,7 +388,7 @@ git commit -m "fix: popraw księgowanie importu Actual"
 - Modify: `backend/scripts/migrate_actual.py`.
 - Create: `backend/tests/test_finance/test_reconciliation.py`.
 
-- [ ] **Step 1: Napisać failing test różnicy salda**
+- [x] **Step 1: Napisać failing test różnicy salda**
 
 W `test_reconciliation.py` utworzyć oczekiwane salda Actual:
 
@@ -403,7 +403,7 @@ expected = {
 
 oraz rekord PA `109800`; sprawdzić `difference == 5` i `report.is_reconciled is False`.
 
-- [ ] **Step 2: Uruchomić RED**
+- [x] **Step 2: Uruchomić RED**
 
 ```bash
 cd backend && /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_reconciliation.py -v
@@ -411,15 +411,15 @@ cd backend && /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_reco
 
 Expected: FAIL, moduł nie istnieje.
 
-- [ ] **Step 3: Zaimplementować czysty model raportu**
+- [x] **Step 3: Zaimplementować czysty model raportu**
 
 Zdefiniować dataclasses `SourceBalance`, `AccountReconciliation`, `ReconciliationReport`. `reconcile_account_balances(expected, actual)` zwraca stabilnie posortowane wiersze i `is_reconciled=True` tylko, gdy dla każdego mapowanego konta różnica wynosi zero, waluta jest zgodna, a nie ma kont niezamapowanych.
 
-- [ ] **Step 4: Dodać ekstrakcję sald Actual i PA**
+- [x] **Step 4: Dodać ekstrakcję sald Actual i PA**
 
 `ActualParser.get_account_balances()` sumuje aktywne nogi transakcji Actual per konto w walucie źródłowej. Funkcja importerowa `get_pa_source_balances(db, user_id, account_map)` sumuje `Posting.source_amount` ze znakiem direction wyłącznie dla postingów kontowych. Nie używać `base_amount_pln` do kryterium zgodności salda źródłowego.
 
-- [ ] **Step 5: Zapisać raport JSON i tekstowy**
+- [x] **Step 5: Zapisać raport JSON i tekstowy**
 
 `migrate_actual.py` po dry-run/import testowy zapisuje `reconciliation.json` i `reconciliation_report.txt` obok istniejącego raportu. Tekst zawiera wiersze:
 
@@ -429,11 +429,11 @@ ING | PLN | budget | Actual 109805 | PA 109805 | diff 0 | OK
 
 oraz listę braków kursowych, niezaimportowanych transakcji i różnic kategorii. Kod kończy się niezerowo w trybie `--require-reconciled`, jeśli `report.is_reconciled` jest fałszywe.
 
-- [ ] **Step 6: Dodać test blokady**
+- [x] **Step 6: Dodać test blokady**
 
 Sprawdzić, że raport z jedną różnicą powoduje wyjątek `ReconciliationError` przed wygenerowaniem komunikatu sukcesu; raport bez różnic przechodzi.
 
-- [ ] **Step 7: Uruchomić GREEN**
+- [x] **Step 7: Uruchomić GREEN**
 
 ```bash
 cd backend && /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_reconciliation.py -v
@@ -441,7 +441,7 @@ cd backend && /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_reco
 
 Expected: PASS dla zgodnego i rozbieżnego przypadku.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add backend/app/finance/reconciliation.py backend/scripts/migrate_actual.py backend/tests/test_finance/test_reconciliation.py

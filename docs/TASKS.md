@@ -6,6 +6,15 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 5 — Uzgodnienie importu Actual (2026-08-14)
+
+- [x] Dodano porównanie sald źródłowych Actual i PA per zmapowane konto, walutę oraz flagę budżetową.
+- [x] Parser Actual sumuje aktywne nogi transakcji, a importer agreguje wyłącznie account-side postings PA.
+- [x] Importer zapisuje raporty JSON i tekstowe oraz blokuje `--require-reconciled` przy każdej niezgodności.
+- [x] Zweryfikowano testy TDD, pełny backend pytest, Ruff i mypy bez dostępu do produkcji.
+
+---
+
 ## Task 6 — Spłata długu jakościowego (2026-08-12)
 
 - [x] Przejrzano 27 commitów z zakresu `f90a4d6..ab344ad` oraz aktualną dokumentację; wcześniejszy zapis o 17 commitach był nieaktualny.

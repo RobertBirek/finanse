@@ -3,6 +3,34 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-14 — Sesja 13: Raport uzgodnieniowy Actual
+
+### Cel sesji
+Zrealizować Task 5 planu uzgodnionej migracji Actual w izolowanym worktree bez dostępu do produkcji.
+
+### Co zrobiono
+- Dodano czysty moduł reconciliacji porównujący salda źródłowe per konto, wraz z JSON i raportem tekstowym.
+- `ActualParser.get_account_balances()` sumuje aktywne wpisy bez split children; importer agreguje wyłącznie account-side postings PA ze znakiem kierunku.
+- Importer zapisuje `reconciliation.json` i `reconciliation_report.txt`; `--require-reconciled` kończy proces błędem przy różnicy, braku mapowania, walucie lub fladze budżetowej niezgodnej z Actual.
+- Dodano testy TDD różnicy salda, fail gate, aktywnych wpisów Actual, raportów, CLI oraz agregacji PA.
+
+### Weryfikacja
+- `/opt/finanse/backend/.venv/bin/pytest -v` — PASS: `107 passed, 40 skipped, 5 warnings`.
+- `/opt/finanse/backend/.venv/bin/ruff check app/ scripts/ tests/` — PASS.
+- `/opt/finanse/backend/.venv/bin/mypy app/ scripts/` — PASS: 48 plików źródłowych; 2 istniejące noty z `nbp_rates.py`.
+- Nie uruchamiano migracji ani nie uzyskiwano dostępu do produkcji.
+
+### Decyzje techniczne
+1. Kryterium uzgodnienia używa `source_amount`, nie `base_amount_pln`, aby nie mieszać sald kont w różnych walutach z przeliczeniem do PLN.
+2. Tryb dry-run nie ma sald PA, dlatego z `--require-reconciled` fail-closed zapisuje raport i kończy się błędem dla każdego konta Actual; właściwa walidacja zapisu działa w izolowanej bazie przez `--execute`.
+
+### Znane problemy
+- Pełny pytest zachowuje istniejące ostrzeżenia `pytest-asyncio`, zależności kryptograficznych oraz mocka NBP.
+
+### Następna sesja
+1. Uruchomić import próbny na izolowanej PostgreSQL i przejrzeć wygenerowany raport przed każdą decyzją produkcyjną.
+
+---
 ## 2026-08-13 — Sesja 12: Merge i deploy produkcyjny
 
 ### Cel sesji
