@@ -12,8 +12,10 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import re
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import uuid
@@ -22,13 +24,15 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from app.config import settings
 from app.database import async_session_factory
 from app.finance.actual_parser import ActualParser, TransactionDict
 from app.finance.models import Account, ActualImportMapping, Category, FinancialTransaction, Posting
@@ -56,6 +60,147 @@ class LegacyActualMappingError(ImportValidationError):
     """Raised when legacy Actual entities cannot be mapped without guessing."""
 
 
+def create_verified_backup(backup_path: Path) -> None:
+    """Create a private PostgreSQL dump and verify it before publishing it."""
+    if backup_path.exists() or not backup_path.parent.is_dir():
+        raise ImportValidationError("Backup path must be new and its parent must exist")
+    url = make_url(settings.DATABASE_URL)
+    if not url.drivername.startswith("postgresql"):
+        raise ImportValidationError("Corrective replacement requires PostgreSQL")
+    temporary_path = backup_path.with_name(f".{backup_path.name}.partial")
+    if temporary_path.exists():
+        raise ImportValidationError("Temporary backup path already exists")
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "PGHOST": url.host or "",
+            "PGPORT": str(url.port or 5432),
+            "PGUSER": url.username or "",
+            "PGDATABASE": url.database or "",
+        }
+    )
+    if url.password is not None:
+        environment["PGPASSWORD"] = url.password
+    try:
+        subprocess.run(
+            [
+                "pg_dump",
+                "--format=custom",
+                "--no-owner",
+                "--no-privileges",
+                "--file",
+                str(temporary_path),
+            ],
+            env=environment,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        subprocess.run(
+            ["pg_restore", "--list", str(temporary_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        os.chmod(temporary_path, 0o600)
+        temporary_path.replace(backup_path)
+    except (OSError, subprocess.CalledProcessError) as error:
+        temporary_path.unlink(missing_ok=True)
+        raise ImportValidationError(f"PostgreSQL backup verification failed: {error}") from error
+
+
+async def replace_legacy_actual_data(
+    db: Any, user_id: uuid.UUID, blob_transaction_ids: set[str]
+) -> None:
+    """Delete only Actual-proven entities, rejecting any manual reference first."""
+    actual_rows = (
+        await db.execute(
+            select(FinancialTransaction.id, FinancialTransaction.description).where(
+                FinancialTransaction.user_id == user_id, FinancialTransaction.source == "actual"
+            )
+        )
+    ).all()
+    actual_transaction_ids: set[uuid.UUID] = set()
+    for transaction_id, description in actual_rows:
+        match = re.match(r"^\[actual:([^\]]+)\]", description)
+        if match is None or match.group(1) not in blob_transaction_ids:
+            raise LegacyActualMappingError(
+                "Cannot replace Actual import: transaction provenance does not match the supplied blob"
+            )
+        actual_transaction_ids.add(transaction_id)
+    actual_transactions = select(FinancialTransaction.id).where(
+        FinancialTransaction.user_id == user_id, FinancialTransaction.source == "actual"
+    )
+    account_ids = set(
+        (
+            await db.execute(
+                select(Posting.account_id).where(
+                    Posting.transaction_id.in_(actual_transactions), Posting.account_id.is_not(None)
+                )
+            )
+        ).scalars()
+    )
+    category_ids = set(
+        (
+            await db.execute(
+                select(Posting.category_id).where(
+                    Posting.transaction_id.in_(actual_transactions),
+                    Posting.category_id.is_not(None),
+                )
+            )
+        ).scalars()
+    )
+    if category_ids:
+        category_ids.update(
+            (
+                await db.execute(
+                    select(Category.parent_id).where(
+                        Category.id.in_(category_ids), Category.parent_id.is_not(None)
+                    )
+                )
+            ).scalars()
+        )
+    reference_filters = []
+    if account_ids:
+        reference_filters.append(Posting.account_id.in_(account_ids))
+    if category_ids:
+        reference_filters.append(Posting.category_id.in_(category_ids))
+    manual_reference = None
+    if reference_filters:
+        manual_reference = await db.scalar(
+            select(Posting.id)
+            .join(FinancialTransaction)
+            .where(
+                FinancialTransaction.user_id == user_id,
+                FinancialTransaction.source != "actual",
+                or_(*reference_filters),
+            )
+            .limit(1)
+        )
+    if manual_reference is not None:
+        raise LegacyActualMappingError(
+            "Cannot replace Actual import: legacy entity has a manual reference"
+        )
+    if account_ids:
+        await db.execute(update(Account).where(Account.id.in_(account_ids)).values(source="actual"))
+    if category_ids:
+        await db.execute(
+            update(Category).where(Category.id.in_(category_ids)).values(source="actual")
+        )
+    await db.execute(
+        delete(FinancialTransaction).where(FinancialTransaction.id.in_(actual_transaction_ids))
+    )
+    await db.execute(delete(ActualImportMapping).where(ActualImportMapping.user_id == user_id))
+    if category_ids:
+        await db.execute(
+            delete(Category).where(Category.id.in_(category_ids), Category.source == "actual")
+        )
+    if account_ids:
+        await db.execute(
+            delete(Account).where(Account.id.in_(account_ids), Account.source == "actual")
+        )
+
+
 async def extract_sqlite(blob_path: Path) -> Path:
     """Extract db.sqlite from Actual encrypted ZIP blob."""
     extract_dir = Path(tempfile.mkdtemp(prefix="actual_extract_"))
@@ -72,7 +217,13 @@ async def resolve_ids(
     user_id: uuid.UUID,
     parser: ActualParser,
     transactions: list[TransactionDict] | None = None,
-) -> tuple[dict[str, uuid.UUID], dict[str, uuid.UUID], dict[str, str], dict[str, bool]]:
+) -> tuple[
+    dict[str, uuid.UUID],
+    dict[str, uuid.UUID],
+    dict[str, uuid.UUID],
+    dict[str, str],
+    dict[str, bool],
+]:
     """Create accounts and categories, return Actual ID -> PA ID mappings."""
     await db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"actual-import:{user_id}"))))
     if transactions is not None:
@@ -96,6 +247,7 @@ async def resolve_ids(
                     is_budget_account=a["is_budget_account"],
                 ),
             )
+            pa_acct.source = "actual"
             await _store_mapping(db, user_id, "account", a["actual_id"], pa_acct.id)
         acct_map[a["actual_id"]] = pa_acct.id
         acct_currency[a["actual_id"]] = a["currency"]
@@ -116,6 +268,7 @@ async def resolve_ids(
                 user_id,
                 CategoryCreate(name=group["name"], type=group["type"]),
             )
+            pa_group.source = "actual"
             await _store_mapping(db, user_id, "category_group", group["actual_id"], pa_group.id)
         group_map[group["actual_id"]] = pa_group.id
 
@@ -131,10 +284,11 @@ async def resolve_ids(
                     parent_id=group_map.get(c["group_actual_id"]) if c["group_actual_id"] else None,
                 ),
             )
+            pa_cat.source = "actual"
             await _store_mapping(db, user_id, "category", c["actual_id"], pa_cat.id)
         cat_map[c["actual_id"]] = pa_cat.id
 
-    return acct_map, cat_map, acct_currency, acct_budget
+    return acct_map, cat_map, group_map, acct_currency, acct_budget
 
 
 async def _get_mapping_id(
@@ -566,50 +720,69 @@ async def get_pa_category_balances(
     }
 
 
+async def get_pa_category_group_balances(
+    db: Any,
+    user_id: uuid.UUID,
+    category_map: dict[str, uuid.UUID],
+    group_map: dict[str, uuid.UUID],
+) -> dict[str, CategoryBalance]:
+    """Aggregate mapped leaf postings to their mapped Actual category groups."""
+    leaf_balances = await get_pa_category_balances(db, user_id, category_map)
+    group_by_pa_id = {pa_id: actual_id for actual_id, pa_id in group_map.items()}
+    category_rows = await db.execute(
+        select(Category.id, Category.parent_id).where(Category.id.in_(category_map.values()))
+    )
+    amounts = {actual_id: 0 for actual_id in group_map}
+    leaf_by_pa_id = {pa_id: actual_id for actual_id, pa_id in category_map.items()}
+    for category_id, parent_id in category_rows.all():
+        group_actual_id = group_by_pa_id.get(parent_id)
+        leaf_actual_id = leaf_by_pa_id.get(category_id)
+        if group_actual_id is not None and leaf_actual_id is not None:
+            amounts[group_actual_id] += leaf_balances[leaf_actual_id].amount_pln
+    groups = await db.execute(select(Category).where(Category.id.in_(group_map.values())))
+    return {
+        actual_id: CategoryBalance(actual_id, group.name, group.type, amounts[actual_id])
+        for group in groups.scalars()
+        if (actual_id := group_by_pa_id.get(group.id)) is not None
+    }
+
+
 def get_actual_category_balances(
     transactions: list[TransactionDict],
     categories: list[Any],
+    groups: list[Any],
     account_map: dict[str, uuid.UUID],
     category_map: dict[str, uuid.UUID],
+    group_map: dict[str, uuid.UUID],
     account_currency: dict[str, str],
     fx_rates: dict[tuple[str, date], NbpRate],
     account_budget: dict[str, bool],
-) -> dict[str, CategoryBalance]:
-    """Calculate expected category PLN balances from importable Actual transactions."""
+) -> tuple[dict[str, CategoryBalance], dict[str, CategoryBalance]]:
+    """Calculate expected category values directly from Actual legs and verified FX."""
     categories_by_id = {category["actual_id"]: category for category in categories}
-    category_by_pa_id = {pa_id: actual_id for actual_id, pa_id in category_map.items()}
     amounts = {actual_id: 0 for actual_id in categories_by_id}
 
     for transaction in transactions:
         try:
-            fx_difference_kind = required_fx_difference_kind(
-                transaction, account_currency, fx_rates
-            )
-            postings = build_pa_postings(
-                transaction,
-                account_map,
-                category_map,
-                account_currency,
-                fx_rates,
-                account_budget,
-                {fx_difference_kind: uuid.uuid4()} if fx_difference_kind is not None else {},
-            )
+            for source_posting in transaction["postings"]:
+                category_id = source_posting["category_actual_id"]
+                if category_id is None:
+                    continue
+                account_id = source_posting["account_actual_id"]
+                if account_id not in account_map or category_id not in category_map:
+                    raise ImportValidationError(f"Missing category for {transaction['actual_id']}")
+                currency = source_posting.get("source_currency") or account_currency[account_id]
+                base_amount, _, _ = _posting_base_amount(
+                    source_posting["source_amount"], currency, transaction["date"], fx_rates
+                )
+                # Import reverses Actual's parser convention before persisting PA postings.
+                amounts[category_id] += (
+                    -base_amount if source_posting["direction"] == "debit" else base_amount
+                )
         except ImportValidationError:
             continue
-        for posting in postings:
-            if posting.category_id is None:
-                continue
-            actual_id = category_by_pa_id.get(posting.category_id)
-            if actual_id is None:
-                continue
-            amount = (
-                posting.base_amount_pln
-                if posting.direction == "debit"
-                else -posting.base_amount_pln
-            )
-            amounts[actual_id] += amount
 
-    return {
+    category_balances = {
         actual_id: CategoryBalance(
             actual_id=actual_id,
             name=category["name"],
@@ -617,6 +790,17 @@ def get_actual_category_balances(
             amount_pln=amounts[actual_id],
         )
         for actual_id, category in categories_by_id.items()
+    }
+    group_amounts = {group["actual_id"]: 0 for group in groups if group["actual_id"] in group_map}
+    for category in categories:
+        group_id = category["group_actual_id"]
+        if group_id in group_amounts:
+            group_amounts[group_id] += amounts[category["actual_id"]]
+    return category_balances, {
+        group_id: CategoryBalance(group_id, group["name"], group["type"], group_amounts[group_id])
+        for group in groups
+        if group["actual_id"] in group_amounts
+        for group_id in [group["actual_id"]]
     }
 
 
@@ -662,6 +846,7 @@ async def migrate(
     user_id: uuid.UUID,
     dry_run: bool = False,
     require_reconciled: bool = False,
+    replace_legacy_actual: bool = False,
 ) -> None:
     """Main migration pipeline."""
     sqlite_path = await extract_sqlite(blob_path)
@@ -700,6 +885,11 @@ async def migrate(
         acct_currency = parser._get_account_currency_map()
         acct_map = {account["actual_id"]: uuid.uuid4() for account in accounts}
         cat_map = {category["actual_id"]: uuid.uuid4() for category in categories}
+        try:
+            groups = parser.get_category_groups()
+        except sqlite3.OperationalError:
+            groups = []
+        group_map = {group["actual_id"]: uuid.uuid4() for group in groups}
         acct_budget = {account["actual_id"]: account["is_budget_account"] for account in accounts}
         fetched_fx_rates: dict[tuple[str, date], NbpRate] = {}
         fx_dates: set[tuple[str, date]] = set()
@@ -782,12 +972,14 @@ async def migrate(
                 get_actual_category_balances(
                     all_txns,
                     categories,
+                    groups,
                     acct_map,
                     cat_map,
+                    group_map,
                     acct_currency,
                     fetched_fx_rates,
                     acct_budget,
-                ),
+                )[0],
                 {},
             ),
             import_errors=tuple(errors),
@@ -803,8 +995,10 @@ async def migrate(
     # Phase 2: Write to DB
     async with async_session_factory() as db:
         print("Phase 2: Creating accounts and categories...")
+        if replace_legacy_actual:
+            await replace_legacy_actual_data(db, user_id, {txn["actual_id"] for txn in all_txns})
         try:
-            acct_map, cat_map, acct_currency, acct_budget = await resolve_ids(
+            acct_map, cat_map, group_map, acct_currency, acct_budget = await resolve_ids(
                 db, user_id, parser, all_txns
             )
         except LegacyActualMappingError as error:
@@ -857,11 +1051,17 @@ async def migrate(
                     if quote is not None:
                         fx_rates[(currency, txn["date"])] = quote
 
-        actual_category_balances = get_actual_category_balances(
+        try:
+            groups = parser.get_category_groups()
+        except sqlite3.OperationalError:
+            groups = []
+        actual_category_balances, actual_group_balances = get_actual_category_balances(
             all_txns,
             categories,
+            groups,
             acct_map,
             cat_map,
+            group_map,
             acct_currency,
             fx_rates,
             acct_budget,
@@ -950,6 +1150,10 @@ async def migrate(
                 actual_category_balances,
                 await get_pa_category_balances(db, user_id, cat_map),
             ),
+            category_groups=reconcile_category_balances(
+                actual_group_balances,
+                await get_pa_category_group_balances(db, user_id, cat_map, group_map),
+            ),
             import_errors=tuple(errors),
         )
         write_reconciliation_report(output_dir, reconciliation)
@@ -985,6 +1189,8 @@ async def main():
     parser_args.add_argument(
         "--blob-path", required=True, help="Path to Actual blob file (file-*.blob)"
     )
+    parser_args.add_argument("--replace-legacy-actual", action="store_true")
+    parser_args.add_argument("--backup-path")
     parser_args.add_argument(
         "--user-id", required=True, help="PA user UUID to assign imported data to"
     )
@@ -1005,6 +1211,11 @@ async def main():
     if not args.dry_run and not args.execute:
         print("Error: must specify --dry-run or --execute")
         sys.exit(1)
+    if args.replace_legacy_actual:
+        if not (args.execute and args.require_reconciled and args.backup_path and not args.dry_run):
+            print("Error: replacement requires --execute --require-reconciled and --backup-path")
+            sys.exit(1)
+        create_verified_backup(Path(args.backup_path))
 
     blob_path = Path(args.blob_path)
     if not blob_path.exists():
@@ -1012,12 +1223,13 @@ async def main():
         sys.exit(1)
 
     user_id = uuid.UUID(args.user_id)
-    await migrate(
-        blob_path,
-        user_id,
-        dry_run=args.dry_run,
-        require_reconciled=args.require_reconciled,
-    )
+    options: dict[str, Any] = {
+        "dry_run": args.dry_run,
+        "require_reconciled": args.require_reconciled,
+    }
+    if args.replace_legacy_actual:
+        options["replace_legacy_actual"] = True
+    await migrate(blob_path, user_id, **options)
 
 
 if __name__ == "__main__":

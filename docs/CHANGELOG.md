@@ -11,6 +11,8 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Domknięto historię tool calls Advisora dla kolejnych tur, walidację własności i walut transakcji w serwisie domenowym oraz oznaczenie sald `balance_pln` jako PLN.
 - Fixture testowej bazy wiąże aplikacyjny session factory z izolowanym silnikiem per test.
 - Import Actual rozpoznaje sobotnio-niedzielne HTTP 404 z NBP Table A, używa poprzedniego opublikowanego kursu z ograniczonego zakresu i zapisuje źródło `nbp_previous_business_day` zamiast odrzucać transakcję lub używać kursu 1.0.
+- Reconciliation Actual wylicza oczekiwane salda kategorii bez `build_pa_postings`, raportuje agregaty grup kategorii i blokuje commit przy każdej różnicy grupy.
+- Konta i kategorie importowane z Actual mają trwałe `source='actual'`; tryb zastąpienia odrzuca transakcję poza wskazanym blobem i każde ręczne użycie kandydata legacy.
 
 ### Changed
 - `DB_SCHEMA.md` opisuje rzeczywiste statusy `ToolExecution`.
@@ -19,6 +21,7 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Testy pętli tool-calling Advisora: odpowiedź Level 0 po wykonaniu narzędzia, błędny JSON, nieznane narzędzie, błędy executora, limit iteracji oraz oczekiwanie na potwierdzenie Level 2.
 - Testy potwierdzania mutacji: blokada ponownego confirm/deny, izolacja użytkownika, odrzucenie błędnego wyniku oraz rollback częściowej mutacji, gdy executor lub audit log zakończy się błędem.
 - Izolowana baza PostgreSQL do testów integracyjnych na `127.0.0.1:55432`; fixture tworzy i usuwa schemat, a `make test-integration` sprząta kontener i sieć po zakończeniu.
+- Flagi korekty `--replace-legacy-actual --backup-path`: wymagają `--execute --require-reconciled`, tworzą custom-format `pg_dump`, weryfikują go przez `pg_restore --list`, a dopiero potem otwierają transakcję zastąpienia.
 
 ### Changed
 - **Doradca — bezpieczne mutacje finansowe**: `create_transaction` wymaga jawnego `account_name`, akceptuje wyłącznie dodatnie kwoty całkowite i odrzuca niezgodność waluty konta oraz walutę bez zweryfikowanego kursu FX.

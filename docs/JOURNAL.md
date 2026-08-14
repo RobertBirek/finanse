@@ -3,6 +3,26 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-14 — Sesja 15: Kontrolowana korekta legacy Actual
+
+### Cel sesji
+Usunąć ostatnie blokady uzgodnienia oraz przygotować korektę legacy Actual bez uruchamiania jej na produkcji.
+
+### Co zrobiono
+- Oczekiwane wartości kategorii są liczone bezpośrednio z nóg parsera Actual i zweryfikowanych kursów; raport zawiera też agregaty grup kategorii i fail-closed obejmuje wszystkie trzy poziomy.
+- Dodano trwałe `source` dla `Account` i `Category` (`manual` domyślnie, `actual` tylko dla importera) oraz migrację `f2c8d4e6a1b9`.
+- Tryb `--replace-legacy-actual` wymaga `--execute --require-reconciled --backup-path`; wykonuje i weryfikuje backup `pg_dump` przed sesją zapisu. W transakcji odrzuca rekord Actual niepasujący do przekazanego blobu i każdy kandydat z referencją ręczną.
+
+### Weryfikacja
+- Backend: Ruff, mypy i testy kategorii/importu `47 passed, 11 skipped`.
+- Pełny zestaw: backend/frontend `make test` `116 passed, 41 skipped`; integracyjne `41 passed, 116 deselected`; frontend lint/typecheck/build przeszły; `git diff --check` bez błędów.
+- Nie wykonano migracji ani polecenia korekty na produkcji.
+
+### Następna sesja
+Po deployu migracji i kodu wykonać wyłącznie zatwierdzone polecenie produkcyjne z nową ścieżką backupu, sprawdzić `reconciliation.json`, a w razie niezerowego raportu nie wykonywać żadnego dalszego zapisu.
+
+---
+
 ## 2026-08-14 — Sesja 14: Weekendowe kursy NBP i domknięcie Task 7
 
 ### Cel sesji
