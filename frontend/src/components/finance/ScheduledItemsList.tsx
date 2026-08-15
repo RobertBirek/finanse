@@ -1,3 +1,4 @@
+import type { AxiosError } from "axios";
 import {
   cashflowStatusLabel,
   useDeleteScheduledFinanceItem,
@@ -6,6 +7,13 @@ import {
   type ScheduledFinanceItem,
 } from "../../api/finance";
 import { formatPLN } from "../../lib/format";
+
+function apiErrorDetail(error: unknown): string | null {
+  if (!error) return null;
+  return (
+    (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ?? null
+  );
+}
 
 const typeLabel = { income: "Przychód", expense: "Wydatek" } as const;
 const methodLabel = {
@@ -30,6 +38,9 @@ export function ScheduledItemsList({
 }: ScheduledItemsListProps) {
   const deleteMutation = useDeleteScheduledFinanceItem();
   const updateMutation = useUpdateScheduledFinanceItem();
+
+  const updateError = apiErrorDetail(updateMutation.error);
+  const deleteError = apiErrorDetail(deleteMutation.error);
 
   if (loading) {
     return (
@@ -67,6 +78,15 @@ export function ScheduledItemsList({
             : item.amount_method === "fixed" && item.fixed_amount_pln != null
               ? item.fixed_amount_pln
               : null;
+
+        const isTogglePending =
+          updateMutation.isPending && updateMutation.variables?.id === item.id;
+        const isDeletePending =
+          deleteMutation.isPending && deleteMutation.variables === item.id;
+        const toggleError =
+          updateMutation.variables?.id === item.id ? updateError : null;
+        const deleteErrorForItem =
+          deleteMutation.variables === item.id ? deleteError : null;
 
         function handleToggle() {
           updateMutation.mutate({
@@ -138,18 +158,25 @@ export function ScheduledItemsList({
               <button
                 type="button"
                 onClick={handleToggle}
-                className="btn-secondary px-3 py-1.5 text-sm"
+                disabled={isTogglePending || isDeletePending}
+                className="btn-secondary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {item.is_active ? "Dezaktywuj" : "Aktywuj"}
               </button>
               <button
                 type="button"
                 onClick={handleDelete}
-                className="btn-danger px-3 py-1.5 text-sm"
+                disabled={isTogglePending || isDeletePending}
+                className="btn-danger px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Usuń
               </button>
             </div>
+            {toggleError || deleteErrorForItem ? (
+              <p className="w-full text-xs text-red-400">
+                {toggleError ?? deleteErrorForItem}
+              </p>
+            ) : null}
           </div>
         );
       })}

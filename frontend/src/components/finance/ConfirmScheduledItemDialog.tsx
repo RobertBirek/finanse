@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { AxiosError } from "axios";
 import {
   canConfirmSuggestion,
@@ -5,6 +6,7 @@ import {
   type CashflowSuggestion,
   type ScheduledFinanceItem,
 } from "../../api/finance";
+import { localTodayIso } from "../../lib/date";
 import { formatPLN } from "../../lib/format";
 
 function apiErrorDetail(error: unknown): string | null {
@@ -28,14 +30,41 @@ export function ConfirmScheduledItemDialog({
   onClose,
 }: ConfirmScheduledItemDialogProps) {
   const confirmMutation = useConfirmScheduledFinanceItem();
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const canConfirm = canConfirmSuggestion(suggestion, todayIso);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const canConfirm = canConfirmSuggestion(suggestion, localTodayIso());
   const errorMessage = apiErrorDetail(confirmMutation.error);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="card w-full max-w-md border-advisor-500/30">
-        <h2 className="mb-1 text-lg font-semibold text-white">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-item-title"
+        tabIndex={-1}
+        className="card w-full max-w-md border-advisor-500/30 focus:outline-none"
+      >
+        <h2
+          id="confirm-item-title"
+          className="mb-1 text-lg font-semibold text-white"
+        >
           Potwierdź pozycję
         </h2>
         <p className="mb-4 text-sm text-gray-400">

@@ -10,6 +10,7 @@ import {
   type ScheduledFinanceItem,
 } from "../api/finance";
 import { formatPLN } from "../lib/format";
+import { localTodayIso } from "../lib/date";
 import { CashflowForecast } from "../components/finance/CashflowForecast";
 import { CashflowSettingsForm } from "../components/finance/CashflowSettingsForm";
 import { ConfirmScheduledItemDialog } from "../components/finance/ConfirmScheduledItemDialog";
@@ -28,7 +29,7 @@ export function FinanceCashflow() {
   const [suggestionForDialog, setSuggestionForDialog] =
     useState<CashflowSuggestion | null>(null);
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = localTodayIso();
   const allItems = items.data ?? [];
   const suggestions = forecast.data?.suggestions ?? [];
   const itemForDialog = suggestionForDialog
@@ -54,6 +55,7 @@ export function FinanceCashflow() {
           Zaplanowane pozycje
         </h2>
         <ScheduledItemForm
+          key={editingItem?.id ?? "create"}
           mode={editingItem ? "edit" : "create"}
           accounts={accounts.data ?? []}
           categories={categories.data ?? []}

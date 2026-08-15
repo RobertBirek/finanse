@@ -234,4 +234,117 @@ describe("FinanceCashflow", () => {
     expect(confirmMutate).toHaveBeenCalledTimes(1);
     expect(confirmMutate.mock.calls[0][0]).toBe("item-1");
   });
+
+  it("wypełnia pola formularza przy przejściu z trybu tworzenia do edycji", () => {
+    render(<FinanceCashflow />);
+
+    expect(screen.getByLabelText("Nazwa")).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edytuj" }));
+
+    expect(screen.getByLabelText("Nazwa")).toHaveValue("Czynsz");
+    expect(
+      (screen.getByLabelText("Dzień (1-28)") as HTMLInputElement).value,
+    ).toBe("5");
+    expect(screen.getByLabelText("Typ")).toHaveValue("expense");
+    expect(screen.getByLabelText("Typ")).toBeDisabled();
+    expect(screen.getByLabelText("Kwota (PLN)")).toHaveValue("2500.00");
+    expect(
+      screen.getByRole("button", { name: "Zapisz zmiany" }),
+    ).toBeInTheDocument();
+  });
+
+  it("dialog jest dostępny i przywraca focus do wyzwalacza", () => {
+    hooks.useCashflowForecast.mockReturnValue({
+      data: {
+        ...forecast,
+        suggestions: [
+          {
+            scheduled_item_id: "item-1",
+            name: "Czynsz",
+            type: "expense",
+            due_date: "2000-01-01",
+            amount_pln: 250000,
+            status: "due",
+            included_in_forecast: true,
+            actual_transaction_id: null,
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<FinanceCashflow />);
+
+    const trigger = screen.getByRole("button", { name: "Potwierdź" });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveAttribute("aria-labelledby", "confirm-item-title");
+    expect(
+      screen.getByRole("heading", { name: "Potwierdź pozycję" }),
+    ).toHaveAttribute("id", "confirm-item-title");
+    expect(dialog).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("wyłącza dezaktywację i usunięcie w trakcie mutacji", () => {
+    hooks.useUpdateScheduledFinanceItem.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+      error: null,
+      variables: { id: "item-1" },
+    });
+    hooks.useDeleteScheduledFinanceItem.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: true,
+      error: null,
+      variables: "item-1",
+    });
+
+    render(<FinanceCashflow />);
+
+    expect(screen.getByRole("button", { name: "Dezaktywuj" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Usuń" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Edytuj" })).toBeEnabled();
+  });
+
+  it("pokazuje błąd mutacji inline przy pozycji", () => {
+    hooks.useDeleteScheduledFinanceItem.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      error: {
+        response: { data: { detail: "Nie udało się usunąć pozycji." } },
+      },
+      variables: "item-1",
+    });
+
+    render(<FinanceCashflow />);
+
+    expect(
+      screen.getByText("Nie udało się usunąć pozycji."),
+    ).toBeInTheDocument();
+  });
+
+  it("nie zamienia pustych pól liczbowych na 0", () => {
+    render(<FinanceCashflow />);
+
+    const paydayDay = screen.getByLabelText(
+      "Dzień wypłaty",
+    ) as HTMLInputElement;
+    const dueDay = screen.getByLabelText("Dzień (1-28)") as HTMLInputElement;
+
+    fireEvent.change(paydayDay, { target: { value: "" } });
+    fireEvent.change(dueDay, { target: { value: "" } });
+
+    expect(paydayDay.value).toBe("");
+    expect(dueDay.value).toBe("");
+  });
 });

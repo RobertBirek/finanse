@@ -4,7 +4,6 @@ import {
   useAccounts,
   useCashflowSettings,
   useUpdateCashflowSettings,
-  type FinanceSettings,
 } from "../../api/finance";
 
 function apiErrorDetail(error: unknown): string | null {
@@ -14,12 +13,19 @@ function apiErrorDetail(error: unknown): string | null {
   );
 }
 
+type SettingsFormState = {
+  payday_day: number | "";
+  payday_account_id: string | null;
+  forecast_horizon_days: number | "";
+  overdue_grace_days: number | "";
+};
+
 export function CashflowSettingsForm() {
   const settingsQuery = useCashflowSettings();
   const accountsQuery = useAccounts();
   const updateMutation = useUpdateCashflowSettings();
 
-  const [form, setForm] = useState<FinanceSettings | null>(null);
+  const [form, setForm] = useState<SettingsFormState | null>(null);
 
   useEffect(() => {
     if (settingsQuery.data && form === null) {
@@ -52,9 +58,9 @@ export function CashflowSettingsForm() {
     (account) => account.is_budget_account && account.is_active,
   );
 
-  function setField<K extends keyof FinanceSettings>(
+  function setField<K extends keyof SettingsFormState>(
     key: K,
-    value: FinanceSettings[K],
+    value: SettingsFormState[K],
   ) {
     setForm((current) => (current ? { ...current, [key]: value } : current));
   }
@@ -63,10 +69,14 @@ export function CashflowSettingsForm() {
     event.preventDefault();
     if (!form) return;
     updateMutation.mutate({
-      payday_day: form.payday_day,
+      payday_day: form.payday_day === "" ? undefined : form.payday_day,
       payday_account_id: form.payday_account_id,
-      forecast_horizon_days: form.forecast_horizon_days,
-      overdue_grace_days: form.overdue_grace_days,
+      forecast_horizon_days:
+        form.forecast_horizon_days === ""
+          ? undefined
+          : form.forecast_horizon_days,
+      overdue_grace_days:
+        form.overdue_grace_days === "" ? undefined : form.overdue_grace_days,
     });
   }
 
@@ -94,7 +104,10 @@ export function CashflowSettingsForm() {
               className="input"
               value={form.payday_day}
               onChange={(event) =>
-                setField("payday_day", Number(event.target.value))
+                setField(
+                  "payday_day",
+                  event.target.value === "" ? "" : Number(event.target.value),
+                )
               }
             />
           </div>
@@ -136,7 +149,10 @@ export function CashflowSettingsForm() {
               className="input"
               value={form.forecast_horizon_days}
               onChange={(event) =>
-                setField("forecast_horizon_days", Number(event.target.value))
+                setField(
+                  "forecast_horizon_days",
+                  event.target.value === "" ? "" : Number(event.target.value),
+                )
               }
             />
           </div>
@@ -155,7 +171,10 @@ export function CashflowSettingsForm() {
               className="input"
               value={form.overdue_grace_days}
               onChange={(event) =>
-                setField("overdue_grace_days", Number(event.target.value))
+                setField(
+                  "overdue_grace_days",
+                  event.target.value === "" ? "" : Number(event.target.value),
+                )
               }
             />
           </div>

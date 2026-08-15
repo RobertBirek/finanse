@@ -43,7 +43,7 @@ export function ScheduledItemForm({
   );
   const [accountId, setAccountId] = useState(initialItem?.account_id ?? "");
   const [categoryId, setCategoryId] = useState(initialItem?.category_id ?? "");
-  const [dueDay, setDueDay] = useState(initialItem?.due_day ?? 1);
+  const [dueDay, setDueDay] = useState<number | "">(initialItem?.due_day ?? 1);
   const [amountMethod, setAmountMethod] = useState<"fixed" | "last_actual">(
     initialItem?.amount_method ?? "fixed",
   );
@@ -71,7 +71,11 @@ export function ScheduledItemForm({
   const amountValid =
     amountMethod === "last_actual" || parsePlnToGrosze(amount) !== null;
   const canSubmit =
-    name.trim().length > 0 && !!accountId && !!categoryId && amountValid;
+    name.trim().length > 0 &&
+    !!accountId &&
+    !!categoryId &&
+    dueDay !== "" &&
+    amountValid;
 
   function handleTypeChange(nextType: "income" | "expense") {
     setType(nextType);
@@ -82,6 +86,7 @@ export function ScheduledItemForm({
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (dueDay === "") return;
     const account = budgetAccounts.find((item) => item.id === accountId);
     const payload: ScheduledFinanceItemInput = {
       name: name.trim(),
@@ -212,7 +217,11 @@ export function ScheduledItemForm({
             max={28}
             className="input"
             value={dueDay}
-            onChange={(event) => setDueDay(Number(event.target.value))}
+            onChange={(event) =>
+              setDueDay(
+                event.target.value === "" ? "" : Number(event.target.value),
+              )
+            }
           />
         </div>
         <div>
