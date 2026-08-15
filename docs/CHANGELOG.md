@@ -8,6 +8,13 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-15
 
 ### Added
+- **Miesięczne budżety z limitami**: tabela `category_budgets` (limit `BIGINT > 0`
+  per kategoria, unikalny na użytkownika i kategorię) z migracją
+  `4340d1460982_category_budgets`. Endpointy `GET/POST /budgets`,
+  `PATCH/DELETE /budgets/{id}` oraz `GET /budget-status` (wydane i pozostało,
+  roll-up wydatków potomków dla kategorii-grup, kategorie z limitem i zerowymi
+  wydatkami nadal widoczne). Strona `/finances/budgets` pokazuje limity, wydane,
+  pozostało i pasek postępu z edycją inline, dodawaniem i usuwaniem.
 - **Finanse — podstrony i zarządzanie płynnością**: rozdzielono widok finansów
   na realne trasy `/finances`, `/finances/transactions`, `/finances/cashflow`,
   `/finances/budgets` i `/finances/reports`; kontekstowy sidebar prowadzi do
@@ -35,11 +42,12 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   znak transakcji per konto zgodnie z konwencją `balance = credit − debit`.
 
 ### Verified
-- Backend: `make lint` i `make typecheck` PASS. `make test`: `123 passed,
-  61 skipped, 3 warnings`. `make test-integration` na izolowanej bazie:
-  `61 passed, 123 deselected, 11 warnings`; kontener testowy usunięty.
+- Backend: `make lint` i `make typecheck` PASS. `make test`: `125 passed,
+  79 skipped, 3 warnings`. `make test-integration` na izolowanej bazie:
+  `79 passed, 125 deselected, 11 warnings`; migracja `4340d1460982` zastosowana,
+  kontener testowy usunięty.
 - Frontend: `npm run lint`, `npm run typecheck`, `npm run test` (`13 plików,
-  41 passed`) i `npm run build` PASS.
+  55 passed`) i `npm run build` PASS.
 - Nie wykonano migracji produkcyjnej ani deployu.
 
 ### Fixed

@@ -3,6 +3,45 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-15 — Sesja 21: Miesięczne budżety z limitami
+
+### Cel sesji
+Dodać kontrolę wydatków przez miesięczne limity na kategorie wydatkowe i
+porównanie planu z wykonaniem na stronie `/finances/budgets`.
+
+### Co zrobiono
+- Backend: model `CategoryBudget` (user_id, category_id FK RESTRICT, amount_pln
+  BIGINT > 0, unikalny (user, category)) + migracja `4340d1460982`.
+- Backend: serwis CRUD z walidacją własności i typu `expense`; `get_budget_status`
+  liczy wydane (roll-up potomków dla grup, własna kategoria zawsze wliczona) i
+  zwraca kategorie z limitem i zerowymi wydatkami.
+- Backend: endpointy `GET/POST /budgets`, `PATCH/DELETE /budgets/{id}`,
+  `GET /budget-status`; duplikat kategorii → 422 (IntegrityError złapany).
+- Frontend: typy/hooki budżetów, helper `budgetProgress`; strona budżetów z
+  listą, edycją inline limitu, formularzem dodawania (expense minus zbudżetowane),
+  usuwaniem z potwierdzeniem i sekcją „Wydatki bez budżetu".
+
+### Weryfikacja
+- TDD per zadanie z dwustopniowym przeglądem (spec + jakość) i re-review.
+- Backend: Ruff i mypy PASS; `make test` `125 passed, 79 skipped`;
+  `make test-integration` `79 passed, 125 deselected` (migracja zastosowana).
+- Frontend: `55 passed` (13 plików), ESLint, TypeScript i Vite build PASS.
+
+### Decyzje techniczne
+1. Budżet jest cykliczny miesięcznie (brak kolumny miesiąca) — domyślny limit;
+   nadpisania per miesiąc odroczone.
+2. Limit dotyczy wyłącznie kategorii `expense`; grupy sumują wydatki potomków
+   (rekurencyjnie), a własna kategoria jest zawsze wliczona do scope'u.
+3. Znane ograniczenie: drzewo „Wydatki bez budżetu" nie odejmuje kwot
+   kategorii-dzieci, gdy zbudżetowane jest tylko dziecko (możliwe podwójne
+   pokazanie na granicy grup) — zostawione świadomie.
+
+### Następna sesja
+Ręczne księgowanie transakcji (formularz przychodu/wydatku/transferu) jako krok
+do uczynienia PA główną księgą; ewentualnie integracja limitów z prognozą
+płynności.
+
+---
 ## 2026-08-15 — Sesja 20: Podstrony finansowe i zarządzanie płynnością
 
 ### Cel sesji

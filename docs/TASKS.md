@@ -6,6 +6,14 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 11 — Miesięczne budżety z limitami (2026-08-15)
+
+- [x] Backend: model `CategoryBudget` (limit > 0, unikalny per użytkownik+kategoria) + migracja `4340d1460982`.
+- [x] Backend: serwis CRUD z walidacją własności i typu `expense`; `get_budget_status` z roll-upem potomków i zerowymi wydatkami.
+- [x] Backend: endpointy `GET/POST /budgets`, `PATCH/DELETE /budgets/{id}`, `GET /budget-status`; duplikat → 422.
+- [x] Frontend: hooki budżetów + `budgetProgress`; strona `/finances/budgets` z listą, edycją inline, dodawaniem, usuwaniem i sekcją bez budżetu.
+- [x] Quality gate: backend `125 unit + 79 integracyjnych`, frontend `55 passed`, lint/typecheck/build PASS.
+
 ## Task 10 — Podstrony finansowe i zarządzanie płynnością (2026-08-15)
 
 - [x] Backend: parametryzowane okresowo raporty `summary` i `category-summary` (`month`/`year`).
