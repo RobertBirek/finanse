@@ -101,6 +101,26 @@ class ScheduledFinanceItem(Base):
     category: Mapped["Category"] = relationship("Category")
 
 
+class CategoryBudget(Base):
+    __tablename__ = "category_budgets"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    category_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("categories.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    amount_pln: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("amount_pln > 0", name="ck_category_budget_amount"),
+        UniqueConstraint("user_id", "category_id", name="uq_category_budget_user_category"),
+    )
+
+    category: Mapped["Category"] = relationship("Category")
+
+
 class ActualImportMapping(Base):
     __tablename__ = "actual_import_mappings"
 
