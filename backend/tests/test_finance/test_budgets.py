@@ -1,12 +1,16 @@
 """Tests for category budgets service."""
 
 import uuid
+from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime
+from types import SimpleNamespace
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 
+from app.database import get_db
 from app.finance.models import CategoryBudget
 from app.finance.schemas import (
     AccountCreate,
@@ -26,6 +30,8 @@ from app.finance.service import (
     get_budgets,
     update_budget,
 )
+from app.identity.router import get_current_user
+from app.main import app
 
 
 async def create_expense_transaction(
@@ -350,3 +356,165 @@ async def test_budget_status_sorts_items_by_name(db_session) -> None:
     status = await get_budget_status(db_session, user_id, month=8, year=2026)
 
     assert [item.name for item in status.items] == ["Zakupy", "Zdrowie"]
+
+
+@asynccontextmanager
+async def _budget_api_client(db_session, user_id):
+    async def override_current_user():
+        return SimpleNamespace(id=user_id)
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_db] = override_get_db
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            yield client
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_create_and_list_budget_api(db_session) -> None:
+    user_id = uuid.uuid4()
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Jedzenie", type="expense")
+    )
+
+    async with _budget_api_client(db_session, user_id) as client:
+        create_response = await client.post(
+            "/api/finance/budgets",
+            json={"category_id": str(category.id), "amount_pln": 50_000},
+        )
+        list_response = await client.get("/api/finance/budgets")
+
+    assert create_response.status_code == 201
+    assert create_response.json()["amount_pln"] == 50_000
+    assert create_response.json()["category_id"] == str(category.id)
+    assert list_response.status_code == 200
+    assert len(list_response.json()) == 1
+    assert list_response.json()[0]["id"] == create_response.json()["id"]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_create_budget_rejects_income_category_api(db_session) -> None:
+    user_id = uuid.uuid4()
+    income = await create_category(
+        db_session, user_id, CategoryCreate(name="Wynagrodzenie", type="income")
+    )
+
+    async with _budget_api_client(db_session, user_id) as client:
+        response = await client.post(
+            "/api/finance/budgets",
+            json={"category_id": str(income.id), "amount_pln": 50_000},
+        )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_create_budget_duplicate_category_api(db_session) -> None:
+    user_id = uuid.uuid4()
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Jedzenie", type="expense")
+    )
+
+    async with _budget_api_client(db_session, user_id) as client:
+        first = await client.post(
+            "/api/finance/budgets",
+            json={"category_id": str(category.id), "amount_pln": 50_000},
+        )
+        duplicate = await client.post(
+            "/api/finance/budgets",
+            json={"category_id": str(category.id), "amount_pln": 70_000},
+        )
+
+    assert first.status_code == 201
+    assert duplicate.status_code == 422
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_update_budget_api(db_session) -> None:
+    owner = uuid.uuid4()
+    other = uuid.uuid4()
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Zakupy", type="expense")
+    )
+    budget = await create_budget(
+        db_session, owner, CategoryBudgetCreate(category_id=category.id, amount_pln=50_000)
+    )
+
+    async with _budget_api_client(db_session, owner) as client:
+        updated = await client.patch(
+            f"/api/finance/budgets/{budget.id}",
+            json={"amount_pln": 80_000},
+        )
+
+    assert updated.status_code == 200
+    assert updated.json()["amount_pln"] == 80_000
+
+    async with _budget_api_client(db_session, other) as client:
+        foreign = await client.patch(
+            f"/api/finance/budgets/{budget.id}",
+            json={"amount_pln": 90_000},
+        )
+        missing = await client.patch(
+            f"/api/finance/budgets/{uuid.uuid4()}",
+            json={"amount_pln": 90_000},
+        )
+
+    assert foreign.status_code == 404
+    assert missing.status_code == 404
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_delete_budget_api(db_session) -> None:
+    owner = uuid.uuid4()
+    other = uuid.uuid4()
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Zakupy", type="expense")
+    )
+    budget = await create_budget(
+        db_session, owner, CategoryBudgetCreate(category_id=category.id, amount_pln=50_000)
+    )
+
+    async with _budget_api_client(db_session, other) as client:
+        foreign = await client.delete(f"/api/finance/budgets/{budget.id}")
+
+    assert foreign.status_code == 404
+
+    async with _budget_api_client(db_session, owner) as client:
+        deleted = await client.delete(f"/api/finance/budgets/{budget.id}")
+        list_response = await client.get("/api/finance/budgets")
+
+    assert deleted.status_code == 204
+    assert list_response.json() == []
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_budget_status_api(db_session) -> None:
+    user_id = uuid.uuid4()
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Zdrowie", type="expense")
+    )
+    await create_budget(
+        db_session, user_id, CategoryBudgetCreate(category_id=category.id, amount_pln=100_000)
+    )
+
+    async with _budget_api_client(db_session, user_id) as client:
+        response = await client.get("/api/finance/budget-status", params={"month": 8, "year": 2026})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["month"] == 8
+    assert body["year"] == 2026
+    assert len(body["items"]) == 1
+    assert body["items"][0]["remaining_pln"] == 100_000

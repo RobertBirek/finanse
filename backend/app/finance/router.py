@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,7 +14,11 @@ from app.finance.schemas import (
     AccountCreate,
     AccountResponse,
     AccountUpdate,
+    BudgetStatusResponse,
     CashflowForecastResponse,
+    CategoryBudgetCreate,
+    CategoryBudgetResponse,
+    CategoryBudgetUpdate,
     CategoryCreate,
     CategoryResponse,
     CategorySummaryResponse,
@@ -32,12 +37,16 @@ from app.finance.schemas import (
 from app.finance.service import (
     confirm_scheduled_item,
     create_account,
+    create_budget,
     create_category,
     create_scheduled_item,
     create_transaction,
+    delete_budget,
     delete_scheduled_item,
     get_account,
     get_accounts,
+    get_budget_status,
+    get_budgets,
     get_cashflow_forecast,
     get_categories,
     get_category_summary,
@@ -47,6 +56,7 @@ from app.finance.service import (
     get_transaction,
     get_transactions,
     update_account,
+    update_budget,
     update_category,
     update_finance_settings,
     update_scheduled_item,
@@ -335,3 +345,63 @@ async def get_cashflow_forecast_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     return await get_cashflow_forecast(db, current_user.id)
+
+
+@router.get("/budgets", response_model=list[CategoryBudgetResponse])
+async def list_budgets(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await get_budgets(db, current_user.id)
+
+
+@router.post("/budgets", response_model=CategoryBudgetResponse, status_code=status.HTTP_201_CREATED)
+async def create_budget_endpoint(
+    data: CategoryBudgetCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        return await create_budget(db, current_user.id, data)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Budget for this category already exists",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.patch("/budgets/{budget_id}", response_model=CategoryBudgetResponse)
+async def update_budget_endpoint(
+    budget_id: uuid.UUID,
+    data: CategoryBudgetUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    budget = await update_budget(db, current_user.id, budget_id, data)
+    if budget is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget not found")
+    return budget
+
+
+@router.delete("/budgets/{budget_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_budget_endpoint(
+    budget_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    deleted = await delete_budget(db, current_user.id, budget_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/budget-status", response_model=BudgetStatusResponse)
+async def get_budget_status_endpoint(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    month: Annotated[int | None, Query(ge=1, le=12)] = None,
+    year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
+):
+    return await get_budget_status(db, current_user.id, month=month, year=year)
