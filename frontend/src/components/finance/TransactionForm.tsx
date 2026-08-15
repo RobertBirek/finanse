@@ -315,7 +315,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
           className="btn-primary"
           disabled={create.isPending}
         >
-          Dodaj transakcję
+          Zapisz transakcję
         </button>
       </div>
     </form>

@@ -8,7 +8,7 @@ export function FinanceTransactions() {
   return (
     <div className="max-w-6xl">
       <h1 className="mb-6 text-2xl font-bold text-white">Transakcje</h1>
-      <section className="card mb-6">
+      <section className="mb-6">
         <h2 className="mb-4 text-lg font-semibold text-white">
           Dodaj transakcję
         </h2>

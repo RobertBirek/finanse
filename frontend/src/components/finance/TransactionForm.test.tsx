@@ -153,7 +153,7 @@ describe("TransactionForm", () => {
     fireEvent.change(screen.getByLabelText("Opis"), {
       target: { value: "test" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Dodaj transakcję" }));
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz transakcję" }));
 
     expect(mutate).toHaveBeenCalledTimes(1);
     const payload = mutate.mock.calls[0][0] as {
@@ -194,7 +194,7 @@ describe("TransactionForm", () => {
     fireEvent.change(screen.getByLabelText("Opis"), {
       target: { value: "test" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Dodaj transakcję" }));
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz transakcję" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Podaj kwotę większą od 0.",
