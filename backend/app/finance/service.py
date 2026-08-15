@@ -615,7 +615,7 @@ async def get_budget_status(
         budget_category = category_by_id.get(budget.category_id)
         if budget_category is None:
             continue
-        scope = descendants(budget_category.id)
+        scope = descendants(budget_category.id) | {budget_category.id}
         spent = sum(spent_by_category.get(category_id, 0) for category_id in scope)
         items.append(
             BudgetStatusItem(

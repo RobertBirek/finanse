@@ -273,6 +273,61 @@ async def test_budget_status_group_rolls_up_children(db_session) -> None:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+async def test_budget_status_leaf_counts_own_spending(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(db_session, user_id, AccountCreate(name="ING", type="checking"))
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Zdrowie", type="expense")
+    )
+    await create_budget(
+        db_session,
+        user_id,
+        CategoryBudgetCreate(category_id=category.id, amount_pln=100_000),
+    )
+    await create_expense_transaction(
+        db_session, user_id, account.id, category.id, amount=40_000, txn_date=date(2026, 8, 15)
+    )
+
+    status = await get_budget_status(db_session, user_id, month=8, year=2026)
+
+    assert len(status.items) == 1
+    item = status.items[0]
+    assert item.category_id == category.id
+    assert item.name == "Zdrowie"
+    assert item.budget_amount_pln == 100_000
+    assert item.spent_pln == 40_000
+    assert item.remaining_pln == 60_000
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_budget_status_group_counts_direct_spending(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(db_session, user_id, AccountCreate(name="ING", type="checking"))
+    group = await create_category(
+        db_session, user_id, CategoryCreate(name="Transport", type="expense")
+    )
+    await create_budget(
+        db_session,
+        user_id,
+        CategoryBudgetCreate(category_id=group.id, amount_pln=100_000),
+    )
+    await create_expense_transaction(
+        db_session, user_id, account.id, group.id, amount=25_000, txn_date=date(2026, 8, 12)
+    )
+
+    status = await get_budget_status(db_session, user_id, month=8, year=2026)
+
+    assert len(status.items) == 1
+    item = status.items[0]
+    assert item.category_id == group.id
+    assert item.budget_amount_pln == 100_000
+    assert item.spent_pln == 25_000
+    assert item.remaining_pln == 75_000
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_budget_status_sorts_items_by_name(db_session) -> None:
     user_id = uuid.uuid4()
     zakupy = await create_category(
