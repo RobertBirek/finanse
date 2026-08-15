@@ -201,7 +201,7 @@ function TransactionList({
         const posting = transaction.postings.find(
           (item) => item.account_id === accountId,
         );
-        const isIncome = posting?.direction === "debit";
+        const isIncome = posting?.direction === "credit";
         const amount = posting?.source_amount ?? 0;
 
         return (

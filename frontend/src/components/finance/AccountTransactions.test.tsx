@@ -63,4 +63,65 @@ describe("AccountTransactions", () => {
       screen.getByText("Brak transakcji dla tego konta."),
     ).toBeInTheDocument();
   });
+
+  it("renders income as a green plus and expense as a red minus", () => {
+    useAccountTransactions.mockReturnValue({
+      data: [
+        {
+          id: "tx-income",
+          transaction_date: "2026-08-14",
+          description: "Wynagrodzenie",
+          type: "income",
+          is_pending: false,
+          project_id: null,
+          source: "manual",
+          postings: [
+            {
+              id: "p-income",
+              transaction_id: "tx-income",
+              account_id: "budget-account",
+              category_id: null,
+              source_amount: 500000,
+              source_currency: "PLN",
+              base_amount_pln: 500000,
+              fx_rate: 1,
+              is_budget_impact: true,
+              direction: "credit",
+            },
+          ],
+        },
+        {
+          id: "tx-expense",
+          transaction_date: "2026-08-14",
+          description: "Czynsz",
+          type: "expense",
+          is_pending: false,
+          project_id: null,
+          source: "manual",
+          postings: [
+            {
+              id: "p-expense",
+              transaction_id: "tx-expense",
+              account_id: "budget-account",
+              category_id: null,
+              source_amount: 12300,
+              source_currency: "PLN",
+              base_amount_pln: 12300,
+              fx_rate: 1,
+              is_budget_impact: true,
+              direction: "debit",
+            },
+          ],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<AccountTransactions accounts={accounts} />);
+    fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));
+
+    expect(screen.getByText("+5000,00 PLN")).toHaveClass("text-green-400");
+    expect(screen.getByText("−123,00 PLN")).toHaveClass("text-red-400");
+  });
 });

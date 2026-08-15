@@ -6,6 +6,15 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 9 — Finalny przegląd: znak, invalidacja, non-PLN (2026-08-15)
+
+- [x] Poprawiono znak transakcji per konto: income → posting `credit` (zielony „+"), expense → `debit` (czerwony „−").
+- [x] Zweryfikowano i udokumentowano testem zakres invalidacji cashflow: prefiks `["finance","accounts"]` obejmuje transakcje per-konto (TanStack Query v5, prefix-match).
+- [x] Ograniczono selektor konta schedulera do aktywnych kont budżetowych w PLN i zablokowano walutę na „PLN".
+- [x] Quality gate frontendu: Vitest `41 passed`, ESLint, TypeScript typecheck i Vite production build.
+
+---
+
 ## Task 6 — Spłata długu jakościowego (2026-08-12)
 
 - [x] Przejrzano 27 commitów z zakresu `f90a4d6..ab344ad` oraz aktualną dokumentację; wcześniejszy zapis o 17 commitach był nieaktualny.

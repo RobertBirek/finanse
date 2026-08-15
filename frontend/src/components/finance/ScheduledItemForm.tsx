@@ -54,13 +54,13 @@ export function ScheduledItemForm({
   );
 
   const budgetAccounts = accounts.filter(
-    (account) => account.is_budget_account && account.is_active,
+    (account) =>
+      account.is_budget_account &&
+      account.is_active &&
+      account.currency === "PLN",
   );
   const filteredCategories = categories.filter(
     (category) => category.type === type,
-  );
-  const selectedAccount = budgetAccounts.find(
-    (account) => account.id === accountId,
   );
 
   const isPending =
@@ -87,13 +87,12 @@ export function ScheduledItemForm({
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (dueDay === "") return;
-    const account = budgetAccounts.find((item) => item.id === accountId);
     const payload: ScheduledFinanceItemInput = {
       name: name.trim(),
       type,
       account_id: accountId,
       category_id: categoryId,
-      currency: account?.currency ?? "PLN",
+      currency: "PLN",
       due_day: dueDay,
       amount_method: amountMethod,
       fixed_amount_pln:
@@ -178,7 +177,7 @@ export function ScheduledItemForm({
           <input
             id="item-currency"
             className="input opacity-60"
-            value={selectedAccount?.currency ?? ""}
+            value="PLN"
             disabled
           />
         </div>

@@ -1,3 +1,4 @@
+import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   buildCategoryTree,
@@ -126,6 +127,35 @@ describe("canConfirmSuggestion", () => {
         },
         "2026-08-14",
       ),
+    ).toBe(false);
+  });
+});
+
+describe("cashflow invalidation scope", () => {
+  it("invalidates per-account transactions via the accounts prefix", async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["finance", "accounts"], []);
+    queryClient.setQueryData(
+      ["finance", "accounts", "acc-1", "transactions"],
+      [],
+    );
+    queryClient.setQueryData(["finance", "transactions"], []);
+
+    await queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
+
+    expect(
+      queryClient.getQueryState(["finance", "accounts"])?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState([
+        "finance",
+        "accounts",
+        "acc-1",
+        "transactions",
+      ])?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(["finance", "transactions"])?.isInvalidated,
     ).toBe(false);
   });
 });

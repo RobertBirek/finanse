@@ -3,6 +3,47 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-15 — Sesja 19: Poprawki znaku, invalidacji i non-PLN schedulera
+
+### Cel sesji
+Wprowadzić trzy poprawki z finalnego przeglądu frontendu: odwrócony znak
+transakcji per konto, zakres invalidacji cashflow oraz selektor konta schedulera
+dopuszczający niepotwierdzalne konta non-PLN.
+
+### Co zrobiono
+- `AccountTransactions` rozpoznaje przychód po `direction === "credit"` (zamiast
+  `debit`), zgodnie z konwencją `balance = credit − debit`; wydatek pozostaje
+  `debit`. Dodano test regresyjny renderujący transakcje income/expense z
+  rzeczywistymi postingami i asercją znaku oraz klasy koloru.
+- Zweryfikowano zakres invalidacji cashflow zamiast zgadywać: w TanStack Query
+  v5 `invalidateQueries({ queryKey: ["finance","accounts"] })` używa domyślnego
+  prefix-match (`exact: false`), więc obejmuje również transakcje per-konto
+  (`["finance","accounts", id, "transactions", ...]`). Centralna invalidacja
+  `invalidateCashflowMutationQueries` jest kompletna — bez zmiany kodu. Dodano
+  test dokumentujący to zachowanie na realnym `QueryClient`.
+- `ScheduledItemForm` filtruje konta do `is_budget_account && is_active &&
+  currency === "PLN"`, a pole waluty jest zablokowane na „PLN" (hardcoded w
+  payload i polu). Dodano test: konto EUR nie pojawia się w selektorze.
+
+### Weryfikacja
+- TDD: testy znaku, selektora konta i waluty najpierw failowały (income jako
+  „−", EUR w selektorze, pusta waluta), potem przeszły po minimalnej zmianie.
+- `npm test`: `13` plików, `41 passed`. `npm run lint`, `npm run typecheck`,
+  `npm run build`: PASS.
+
+### Decyzje techniczne
+1. Punkt 2 (invalidacja) nie wymagał zmiany kodu — TanStack Query v5 domyślnie
+   dopasowuje klucze po prefiksie, więc `["finance","accounts"]` pokrywa
+   poddrzewo transakcji per-konto. Dodano test zabezpieczający przed regresją
+   przy ewentualnej zmianie wersji biblioteki.
+2. Waluta schedulera jest jawnie „PLN" zamiast wartości z konta — zapobiega to
+   pozycjom non-PLN, które backend confirm odrzuca.
+
+### Następna sesja
+Ewentualne rozszerzenie schedulera o konta walutowe wymaga najpierw wsparcia
+non-PLN po stronie confirm w backendzie.
+
+---
 ## 2026-08-14 — Sesja 18: Kontekstowy sidebar
 
 ### Cel sesji

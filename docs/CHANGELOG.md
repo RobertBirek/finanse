@@ -7,6 +7,18 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — 2026-08-13
 
+### Fixed
+- Odwrócony znak transakcji per konto (`AccountTransactions`): przychód
+  (income) z postingiem `credit` renderuje zielony „+", a wydatek (expense)
+  z `debit` czerwony „−", zgodnie z konwencją `balance = credit − debit`.
+- Formularz pozycji schedulera ogranicza wybór konta do aktywnych kont
+  budżetowych w walucie PLN i blokuje walutę na „PLN", eliminując pozycje
+  niemożliwe do potwierdzenia przez backend (non-PLN).
+- Udokumentowano testem zakres invalidacji cashflow: w TanStack Query v5
+  prefiks `["finance","accounts"]` obejmuje także transakcje per-konto
+  (`["finance","accounts", id, "transactions", ...]`), więc centralna
+  invalidacja po confirm/delete/create/update jest kompletna bez zmian.
+
 ### Added
 - **Frontend — contextual sidebar**: jedna konfiguracja danych zasila desktopowy
   `IconRail`, menu kontekstowe i mobilny drawer; kontekst wybiera URL według
