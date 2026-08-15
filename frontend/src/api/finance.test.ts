@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   budgetProgress,
   buildCategoryTree,
+  buildTransactionPostings,
   canConfirmSuggestion,
   cashflowStatusLabel,
   parsePlnToGrosze,
@@ -12,6 +13,7 @@ import {
   type Account,
   type CategorySummary,
   type FinancialPeriod,
+  type PostingInput,
 } from "./finance";
 
 const account = (id: string, is_budget_account: boolean): Account => ({
@@ -172,6 +174,97 @@ describe("cashflow invalidation scope", () => {
     expect(
       queryClient.getQueryState(["finance", "transactions"])?.isInvalidated,
     ).toBe(false);
+  });
+});
+
+const plnPosting = (overrides: Partial<PostingInput>): PostingInput => ({
+  account_id: null,
+  category_id: null,
+  source_amount: 2500,
+  source_currency: "PLN",
+  base_amount_pln: 2500,
+  fx_rate: 1,
+  fx_rate_source: "manual",
+  direction: "debit",
+  ...overrides,
+});
+
+describe("buildTransactionPostings", () => {
+  it("builds an income with the account credited and category debited", () => {
+    expect(
+      buildTransactionPostings({
+        type: "income",
+        accountId: "acc-1",
+        categoryId: "cat-income",
+        amountPlng: 2500,
+      }),
+    ).toEqual([
+      plnPosting({ account_id: "acc-1", direction: "credit" }),
+      plnPosting({ category_id: "cat-income", direction: "debit" }),
+    ]);
+  });
+
+  it("builds an expense with the account debited and category credited", () => {
+    expect(
+      buildTransactionPostings({
+        type: "expense",
+        accountId: "acc-1",
+        categoryId: "cat-expense",
+        amountPlng: 2500,
+      }),
+    ).toEqual([
+      plnPosting({ account_id: "acc-1", direction: "debit" }),
+      plnPosting({ category_id: "cat-expense", direction: "credit" }),
+    ]);
+  });
+
+  it("builds a transfer with the source debited and destination credited", () => {
+    expect(
+      buildTransactionPostings({
+        type: "transfer",
+        fromAccountId: "acc-from",
+        toAccountId: "acc-to",
+        amountPlng: 2500,
+      }),
+    ).toEqual([
+      plnPosting({ account_id: "acc-from", direction: "debit" }),
+      plnPosting({ account_id: "acc-to", direction: "credit" }),
+    ]);
+  });
+
+  it("balances postings to zero with debits positive and credits negative", () => {
+    const transactions = [
+      buildTransactionPostings({
+        type: "income",
+        accountId: "acc-1",
+        categoryId: "cat-income",
+        amountPlng: 2500,
+      }),
+      buildTransactionPostings({
+        type: "expense",
+        accountId: "acc-1",
+        categoryId: "cat-expense",
+        amountPlng: 2500,
+      }),
+      buildTransactionPostings({
+        type: "transfer",
+        fromAccountId: "acc-from",
+        toAccountId: "acc-to",
+        amountPlng: 2500,
+      }),
+    ];
+
+    for (const postings of transactions) {
+      const signed = postings.reduce(
+        (sum, posting) =>
+          sum +
+          (posting.direction === "debit"
+            ? posting.source_amount
+            : -posting.source_amount),
+        0,
+      );
+      expect(signed).toBe(0);
+    }
   });
 });
 

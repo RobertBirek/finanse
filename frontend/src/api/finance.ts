@@ -38,6 +38,17 @@ export interface Posting {
   direction: "debit" | "credit";
 }
 
+export interface PostingInput {
+  account_id: string | null;
+  category_id: string | null;
+  source_amount: number;
+  source_currency: string;
+  base_amount_pln: number;
+  fx_rate: number;
+  fx_rate_source: string;
+  direction: "debit" | "credit";
+}
+
 export interface Transaction {
   id: string;
   transaction_date: string;
@@ -235,6 +246,63 @@ export function parsePlnToGrosze(raw: string): number | null {
   const grosze = Number(whole) * 100 + Number(fractional.padEnd(2, "0"));
 
   return Number.isSafeInteger(grosze) && grosze > 0 ? grosze : null;
+}
+
+export function buildTransactionPostings(
+  input:
+    | {
+        type: "income" | "expense";
+        accountId: string;
+        categoryId: string;
+        amountPlng: number;
+      }
+    | {
+        type: "transfer";
+        fromAccountId: string;
+        toAccountId: string;
+        amountPlng: number;
+      },
+): PostingInput[] {
+  const base = {
+    source_amount: input.amountPlng,
+    source_currency: "PLN",
+    base_amount_pln: input.amountPlng,
+    fx_rate: 1,
+    fx_rate_source: "manual",
+  };
+
+  if (input.type === "transfer") {
+    return [
+      {
+        ...base,
+        account_id: input.fromAccountId,
+        category_id: null,
+        direction: "debit",
+      },
+      {
+        ...base,
+        account_id: input.toAccountId,
+        category_id: null,
+        direction: "credit",
+      },
+    ];
+  }
+
+  const accountCredited = input.type === "income";
+  return [
+    {
+      ...base,
+      account_id: input.accountId,
+      category_id: null,
+      direction: accountCredited ? "credit" : "debit",
+    },
+    {
+      ...base,
+      account_id: null,
+      category_id: input.categoryId,
+      direction: accountCredited ? "debit" : "credit",
+    },
+  ];
 }
 
 export function canConfirmSuggestion(
