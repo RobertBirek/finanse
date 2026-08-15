@@ -106,9 +106,9 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       {
         type,
         description: description.trim(),
-        date,
+        transaction_date: date,
         postings,
-      } as unknown as Parameters<typeof create.mutate>[0],
+      },
       {
         onSuccess: () => {
           setType(DEFAULT_TYPE);

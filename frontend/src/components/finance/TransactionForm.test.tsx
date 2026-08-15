@@ -159,7 +159,7 @@ describe("TransactionForm", () => {
     const payload = mutate.mock.calls[0][0] as {
       type: string;
       description: string;
-      date: string;
+      transaction_date: string;
       postings: Array<{
         account_id: string | null;
         category_id: string | null;
@@ -170,7 +170,8 @@ describe("TransactionForm", () => {
 
     expect(payload.type).toBe("expense");
     expect(payload.description).toBe("test");
-    expect(payload.date).toBe(localTodayIso());
+    expect(payload.transaction_date).toBe(localTodayIso());
+    expect(payload).not.toHaveProperty("date");
 
     const debit = payload.postings.find((p) => p.direction === "debit");
     expect(debit?.account_id).toBe("a1");

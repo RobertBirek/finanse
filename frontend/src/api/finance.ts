@@ -417,19 +417,12 @@ export function useCreateTransaction() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (tx: {
-      date?: string;
+      transaction_date?: string;
       description: string;
       type: string;
       is_pending?: boolean;
       project_id?: string;
-      postings: Array<{
-        account_id?: string | null;
-        category_id?: string;
-        source_amount: number;
-        source_currency?: string;
-        base_amount_pln: number;
-        direction: "debit" | "credit";
-      }>;
+      postings: PostingInput[];
     }) => {
       const { data } = await api.post<Transaction>("/finance/transactions", tx);
       return data;
