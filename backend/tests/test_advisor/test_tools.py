@@ -174,7 +174,7 @@ async def test_create_transaction_creates_balanced_pln_postings(monkeypatch):
     assert [posting.source_currency for posting in transaction_data.postings] == ["PLN", "PLN"]
     assert [posting.base_amount_pln for posting in transaction_data.postings] == [5000, 5000]
     assert [posting.fx_rate for posting in transaction_data.postings] == [1.0, 1.0]
-    assert [posting.direction for posting in transaction_data.postings] == ["credit", "debit"]
+    assert [posting.direction for posting in transaction_data.postings] == ["debit", "credit"]
     assert [posting.account_id for posting in transaction_data.postings] == [
         selected_account.id,
         None,
@@ -186,6 +186,34 @@ async def test_create_transaction_creates_balanced_pln_postings(monkeypatch):
         )
         == 0
     )
+
+
+@pytest.mark.asyncio
+async def test_create_transaction_income_credits_account(monkeypatch):
+    selected_account = account("ING")
+    income_category = category("Wypłata", "income")
+    result, _, _, create_transaction = await execute_transaction(
+        monkeypatch,
+        accounts=[selected_account],
+        categories=[income_category],
+        amount=10000,
+        type="income",
+        account_name="ing",
+        description="Wypłata",
+    )
+
+    assert result["type"] == "income"
+    create_transaction.assert_awaited_once()
+    transaction_data = create_transaction.await_args.args[2]
+    assert [posting.direction for posting in transaction_data.postings] == ["credit", "debit"]
+    assert [posting.account_id for posting in transaction_data.postings] == [
+        selected_account.id,
+        None,
+    ]
+    assert [posting.category_id for posting in transaction_data.postings] == [
+        None,
+        income_category.id,
+    ]
 
 
 @pytest.mark.integration

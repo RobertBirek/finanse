@@ -321,7 +321,7 @@ async def _execute_create_transaction(
                         base_amount_pln=amount,
                         fx_rate=1.0,
                         fx_rate_source="manual",
-                        direction="credit" if txn_type == "expense" else "debit",
+                        direction="debit" if txn_type == "expense" else "credit",
                     ),
                     PostingCreate(
                         account_id=None,
@@ -331,7 +331,7 @@ async def _execute_create_transaction(
                         base_amount_pln=amount,
                         fx_rate=1.0,
                         fx_rate_source="manual",
-                        direction="debit" if txn_type == "expense" else "credit",
+                        direction="credit" if txn_type == "expense" else "debit",
                     ),
                 ],
             ),
