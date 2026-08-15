@@ -241,3 +241,35 @@ class CashflowForecastResponse(BaseModel):
     lowest_balance_pln: int
     days: list[CashflowDay]
     suggestions: list[CashflowSuggestion]
+
+
+class CategoryBudgetCreate(BaseModel):
+    category_id: uuid.UUID
+    amount_pln: int = Field(gt=0)
+
+
+class CategoryBudgetUpdate(BaseModel):
+    amount_pln: int = Field(gt=0)
+
+
+class CategoryBudgetResponse(BaseModel):
+    id: uuid.UUID
+    category_id: uuid.UUID
+    amount_pln: int
+
+    model_config = {"from_attributes": True}
+
+
+class BudgetStatusItem(BaseModel):
+    category_id: uuid.UUID
+    name: str
+    parent_id: uuid.UUID | None
+    budget_amount_pln: int
+    spent_pln: int
+    remaining_pln: int
+
+
+class BudgetStatusResponse(BaseModel):
+    month: int
+    year: int
+    items: list[BudgetStatusItem]
