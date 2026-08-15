@@ -1,55 +1,128 @@
-import { useCashflowForecast } from "../api/finance";
-import { CashflowMetric } from "../components/finance/SummaryCard";
+import { useState } from "react";
+import {
+  canConfirmSuggestion,
+  cashflowStatusLabel,
+  useAccounts,
+  useCategories,
+  useCashflowForecast,
+  useScheduledFinanceItems,
+  type CashflowSuggestion,
+  type ScheduledFinanceItem,
+} from "../api/finance";
+import { formatPLN } from "../lib/format";
+import { CashflowForecast } from "../components/finance/CashflowForecast";
+import { CashflowSettingsForm } from "../components/finance/CashflowSettingsForm";
+import { ConfirmScheduledItemDialog } from "../components/finance/ConfirmScheduledItemDialog";
+import { ScheduledItemForm } from "../components/finance/ScheduledItemForm";
+import { ScheduledItemsList } from "../components/finance/ScheduledItemsList";
 
 export function FinanceCashflow() {
-  const cashflow = useCashflowForecast();
+  const accounts = useAccounts();
+  const categories = useCategories();
+  const items = useScheduledFinanceItems();
+  const forecast = useCashflowForecast();
+
+  const [editingItem, setEditingItem] = useState<ScheduledFinanceItem | null>(
+    null,
+  );
+  const [suggestionForDialog, setSuggestionForDialog] =
+    useState<CashflowSuggestion | null>(null);
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const allItems = items.data ?? [];
+  const suggestions = forecast.data?.suggestions ?? [];
+  const itemForDialog = suggestionForDialog
+    ? (allItems.find(
+        (item) => item.id === suggestionForDialog.scheduled_item_id,
+      ) ?? null)
+    : null;
 
   return (
     <div className="max-w-5xl">
       <h1 className="mb-6 text-2xl font-bold text-white">Płynność</h1>
-      {cashflow.isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-advisor-500 border-t-transparent" />
-        </div>
-      ) : cashflow.isError ? (
-        <p className="card text-sm text-red-400">
-          Nie udało się pobrać prognozy płynności.
-        </p>
-      ) : cashflow.data ? (
-        <section className="card border border-advisor-500/30 bg-gradient-to-br from-advisor-500/10 via-gray-900 to-gray-900">
-          <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-advisor-300">
-                Cykl wypłaty
-              </p>
-              <h2 className="text-lg font-semibold text-white">
-                Płynność do{" "}
-                {new Date(cashflow.data.next_payday).toLocaleDateString(
-                  "pl-PL",
-                )}
-              </h2>
-            </div>
-            <p className="text-xs text-gray-400">Prognoza, bez księgowania</p>
+
+      <CashflowForecast
+        forecast={forecast.data}
+        loading={forecast.isLoading}
+        error={forecast.isError}
+      />
+
+      <CashflowSettingsForm />
+
+      <section className="mb-6">
+        <h2 className="mb-4 text-lg font-semibold text-white">
+          Zaplanowane pozycje
+        </h2>
+        <ScheduledItemForm
+          mode={editingItem ? "edit" : "create"}
+          accounts={accounts.data ?? []}
+          categories={categories.data ?? []}
+          initialItem={editingItem ?? undefined}
+          onCancel={editingItem ? () => setEditingItem(null) : undefined}
+          onSuccess={() => setEditingItem(null)}
+        />
+        <ScheduledItemsList
+          items={allItems}
+          suggestions={suggestions}
+          loading={items.isLoading}
+          error={items.isError}
+          onEdit={setEditingItem}
+        />
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-lg font-semibold text-white">
+          Do potwierdzenia
+        </h2>
+        {suggestions.length === 0 ? (
+          <p className="card text-sm text-gray-500">
+            Brak pozycji wymagających potwierdzenia.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {suggestions.map((suggestion) => {
+              const canConfirm = canConfirmSuggestion(suggestion, todayIso);
+              return (
+                <div
+                  key={suggestion.scheduled_item_id}
+                  className="card flex items-center justify-between gap-3 p-4"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white">
+                      {suggestion.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {new Date(suggestion.due_date).toLocaleDateString(
+                        "pl-PL",
+                      )}{" "}
+                      · {cashflowStatusLabel(suggestion.status)}
+                      {suggestion.amount_pln != null
+                        ? ` · ${formatPLN(suggestion.amount_pln)} PLN`
+                        : ""}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={!canConfirm}
+                    onClick={() => setSuggestionForDialog(suggestion)}
+                  >
+                    Potwierdź
+                  </button>
+                </div>
+              );
+            })}
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <CashflowMetric
-              label="Przed wypłatą"
-              amount={cashflow.data.projected_balance_before_next_payday_pln}
-            />
-            <CashflowMetric
-              label="Najniższe saldo"
-              amount={cashflow.data.lowest_balance_pln}
-            />
-            <CashflowMetric
-              label="Bezpiecznie dziennie"
-              amount={cashflow.data.safe_daily_limit_pln}
-              neutral
-            />
-          </div>
-        </section>
-      ) : (
-        <p className="card text-sm text-gray-500">Brak prognozy płynności.</p>
-      )}
+        )}
+      </section>
+
+      {suggestionForDialog && itemForDialog ? (
+        <ConfirmScheduledItemDialog
+          suggestion={suggestionForDialog}
+          item={itemForDialog}
+          onClose={() => setSuggestionForDialog(null)}
+        />
+      ) : null}
     </div>
   );
 }

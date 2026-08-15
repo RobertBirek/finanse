@@ -449,8 +449,9 @@ export function useUpdateScheduledFinanceItem() {
   return useMutation({
     mutationFn: async ({
       id,
+      is_active,
       ...item
-    }: ScheduledFinanceItemInput & { id: string }) => {
+    }: ScheduledFinanceItemInput & { id: string; is_active?: boolean }) => {
       const normalizedItem = normalizeScheduledFinanceItemInput(item);
       const update = {
         name: normalizedItem.name,
@@ -460,6 +461,7 @@ export function useUpdateScheduledFinanceItem() {
         due_day: normalizedItem.due_day,
         amount_method: normalizedItem.amount_method,
         fixed_amount_pln: normalizedItem.fixed_amount_pln,
+        ...(is_active !== undefined ? { is_active } : {}),
       };
       const { data } = await api.patch<ScheduledFinanceItem>(
         `/finance/cashflow/items/${id}`,
