@@ -1,4 +1,5 @@
 import { useCashflowForecast } from "../api/finance";
+import { CashflowMetric } from "../components/finance/SummaryCard";
 
 export function FinanceCashflow() {
   const cashflow = useCashflowForecast();
@@ -31,15 +32,15 @@ export function FinanceCashflow() {
             <p className="text-xs text-gray-400">Prognoza, bez księgowania</p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Metric
+            <CashflowMetric
               label="Przed wypłatą"
               amount={cashflow.data.projected_balance_before_next_payday_pln}
             />
-            <Metric
+            <CashflowMetric
               label="Najniższe saldo"
               amount={cashflow.data.lowest_balance_pln}
             />
-            <Metric
+            <CashflowMetric
               label="Bezpiecznie dziennie"
               amount={cashflow.data.safe_daily_limit_pln}
               neutral
@@ -51,32 +52,4 @@ export function FinanceCashflow() {
       )}
     </div>
   );
-}
-
-function Metric({
-  label,
-  amount,
-  neutral = false,
-}: {
-  label: string;
-  amount: number;
-  neutral?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-gray-400">{label}</p>
-      <p
-        className={`mt-1 text-xl font-bold ${neutral ? "text-white" : amount >= 0 ? "text-green-400" : "text-red-400"}`}
-      >
-        {formatPLN(amount)} PLN
-      </p>
-    </div>
-  );
-}
-
-function formatPLN(amount: number) {
-  return new Intl.NumberFormat("pl-PL", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
 }

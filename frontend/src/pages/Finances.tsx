@@ -5,6 +5,8 @@ import {
   useCashflowForecast,
   useFinancialSummary,
 } from "../api/finance";
+import { CashflowMetric, SummaryCard } from "../components/finance/SummaryCard";
+import { formatPLN } from "../lib/format";
 
 export function Finances() {
   const accounts = useAccounts();
@@ -119,28 +121,6 @@ export function Finances() {
   );
 }
 
-function SummaryCard({
-  label,
-  amount,
-  tone,
-}: {
-  label: string;
-  amount: number;
-  tone: "income" | "expense" | "net";
-}) {
-  const color =
-    tone === "income" || (tone === "net" && amount >= 0)
-      ? "text-green-400"
-      : "text-red-400";
-
-  return (
-    <div className="card">
-      <p className="mb-1 text-xs text-gray-400">{label}</p>
-      <p className={`text-lg font-bold ${color}`}>{formatPLN(amount)} PLN</p>
-    </div>
-  );
-}
-
 function AccountCard({
   title,
   description,
@@ -152,7 +132,6 @@ function AccountCard({
     id: string;
     name: string;
     balance_pln: number;
-    currency: string;
   }>;
 }) {
   return (
@@ -176,7 +155,7 @@ function AccountCard({
               <span
                 className={`shrink-0 font-mono ${account.balance_pln >= 0 ? "text-green-400" : "text-red-400"}`}
               >
-                {formatPLN(account.balance_pln)} {account.currency}
+                {formatPLN(account.balance_pln)} PLN
               </span>
             </div>
           ))}
@@ -184,32 +163,4 @@ function AccountCard({
       )}
     </div>
   );
-}
-
-function CashflowMetric({
-  label,
-  amount,
-  neutral = false,
-}: {
-  label: string;
-  amount: number;
-  neutral?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-gray-400">{label}</p>
-      <p
-        className={`mt-1 text-xl font-bold ${neutral ? "text-white" : amount >= 0 ? "text-green-400" : "text-red-400"}`}
-      >
-        {formatPLN(amount)} PLN
-      </p>
-    </div>
-  );
-}
-
-function formatPLN(amount: number) {
-  return new Intl.NumberFormat("pl-PL", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
 }

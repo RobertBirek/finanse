@@ -3,34 +3,22 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { Finances } from "./Finances";
 
-const {
-  useAccounts,
-  useAccountTransactions,
-  useCashflowForecast,
-  useCategorySummary,
-  useFinancialSummary,
-  useScheduledFinanceItems,
-} = vi.hoisted(() => ({
-  useAccounts: vi.fn(),
-  useAccountTransactions: vi.fn(),
-  useCashflowForecast: vi.fn(),
-  useCategorySummary: vi.fn(),
-  useFinancialSummary: vi.fn(),
-  useScheduledFinanceItems: vi.fn(),
-}));
+const { useAccounts, useCashflowForecast, useFinancialSummary } = vi.hoisted(
+  () => ({
+    useAccounts: vi.fn(),
+    useCashflowForecast: vi.fn(),
+    useFinancialSummary: vi.fn(),
+  }),
+);
 
 vi.mock("../api/finance", () => ({
-  buildCategoryTree: () => [],
   splitAccounts: (accounts: Array<{ is_budget_account: boolean }>) => ({
     budget: accounts.filter((account) => account.is_budget_account),
     informational: accounts.filter((account) => !account.is_budget_account),
   }),
   useAccounts,
-  useAccountTransactions,
   useCashflowForecast,
-  useCategorySummary,
   useFinancialSummary,
-  useScheduledFinanceItems,
 }));
 
 describe("Finances", () => {
@@ -71,16 +59,10 @@ describe("Finances", () => {
         projected_balance_before_next_payday_pln: 450000,
         lowest_balance_pln: 300000,
         safe_daily_limit_pln: 10000,
-        suggestions: [],
       },
       isLoading: false,
       isError: false,
     });
-    useCategorySummary.mockReturnValue({ data: undefined });
-    useScheduledFinanceItems.mockReturnValue({
-      data: [{ id: "rent", name: "Czynsz" }],
-    });
-    useAccountTransactions.mockReturnValue({ data: [] });
 
     render(
       <MemoryRouter

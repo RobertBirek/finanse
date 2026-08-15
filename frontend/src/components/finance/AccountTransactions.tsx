@@ -5,6 +5,7 @@ import {
   type Account,
   type Transaction,
 } from "../../api/finance";
+import { formatPLN } from "../../lib/format";
 
 type AccountTransactionsProps = {
   accounts: Account[];
@@ -230,11 +231,4 @@ function TransactionList({
       })}
     </div>
   );
-}
-
-function formatPLN(amount: number) {
-  return new Intl.NumberFormat("pl-PL", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
 }

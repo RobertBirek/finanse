@@ -6,6 +6,7 @@ import {
 } from "../api/finance";
 import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
+import { SummaryCard } from "../components/finance/SummaryCard";
 
 function currentPeriod(): FinancialPeriod {
   const today = new Date();
@@ -64,33 +65,4 @@ export function FinanceReports() {
       />
     </div>
   );
-}
-
-function SummaryCard({
-  label,
-  amount,
-  tone,
-}: {
-  label: string;
-  amount: number;
-  tone: "income" | "expense" | "net";
-}) {
-  const color =
-    tone === "income" || (tone === "net" && amount >= 0)
-      ? "text-green-400"
-      : "text-red-400";
-
-  return (
-    <div className="card">
-      <p className="mb-1 text-xs text-gray-400">{label}</p>
-      <p className={`text-lg font-bold ${color}`}>{formatPLN(amount)} PLN</p>
-    </div>
-  );
-}
-
-function formatPLN(amount: number) {
-  return new Intl.NumberFormat("pl-PL", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
 }
