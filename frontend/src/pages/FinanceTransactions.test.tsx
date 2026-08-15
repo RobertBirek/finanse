@@ -10,6 +10,10 @@ vi.mock("../components/finance/AccountTransactions", () => ({
   AccountTransactions: () => <p>Lista kont</p>,
 }));
 
+vi.mock("../components/finance/TransactionForm", () => ({
+  TransactionForm: () => <p>Formularz transakcji</p>,
+}));
+
 describe("FinanceTransactions", () => {
   it("loads accounts and presents the transaction page", () => {
     useAccounts.mockReturnValue({ data: [], isLoading: false, isError: false });
@@ -19,6 +23,10 @@ describe("FinanceTransactions", () => {
     expect(
       screen.getByRole("heading", { name: "Transakcje" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Dodaj transakcję" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Formularz transakcji")).toBeInTheDocument();
     expect(screen.getByText("Lista kont")).toBeInTheDocument();
     expect(useAccounts).toHaveBeenCalledOnce();
   });
