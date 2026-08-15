@@ -6,6 +6,15 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 10 — Podstrony finansowe i zarządzanie płynnością (2026-08-15)
+
+- [x] Backend: parametryzowane okresowo raporty `summary` i `category-summary` (`month`/`year`).
+- [x] Backend: `DELETE /cashflow/items/{id}` oraz `POST /cashflow/items/{id}/confirm` — potwierdzenie tworzy zbilansowaną transakcję tylko dla `due`/`overdue`, odrzuca non-PLN/przyszłe/niepewne/zdublowane, blokada wiersza chroni przed podwójnym księgowaniem.
+- [x] Frontend: typowane hooki ustawień, mutacji schedulera, potwierdzenia i parametrowanych raportów; centralna invalidacja cache.
+- [x] Frontend: trasy `/finances`, `/finances/transactions`, `/finances/cashflow`, `/finances/budgets`, `/finances/reports` + realne linki sidebara.
+- [x] Frontend: strona cashflow z formularzami ustawień/schedulera, prognozą, listą pozycji i dialogiem potwierdzenia sugestii.
+- [x] Quality gate: backend `123 unit + 61 integracyjnych`, frontend `41 passed`, lint/typecheck/build PASS.
+
 ## Task 9 — Finalny przegląd: znak, invalidacja, non-PLN (2026-08-15)
 
 - [x] Poprawiono znak transakcji per konto: income → posting `credit` (zielony „+"), expense → `debit` (czerwony „−").

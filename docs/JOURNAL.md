@@ -3,6 +3,49 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-15 — Sesja 20: Podstrony finansowe i zarządzanie płynnością
+
+### Cel sesji
+Rozdzielić finanse na użyteczne podstrony oraz dodać kontrolowany przez
+użytkownika interfejs cyklu wynagrodzenia: ustawienia, harmonogram, prognozę i
+zatwierdzanie sugestii bez automatycznego księgowania.
+
+### Co zrobiono
+- Backend: raporty `summary` i `category-summary` przyjmują `month`/`year`;
+  helper `_month_bounds` daje zamknięty wybrany okres z zachowaniem bieżących
+  sald kont.
+- Backend: `delete_scheduled_item` (właściciel + flush) oraz
+  `confirm_scheduled_item` z blokadą wiersza, ponownym przeliczeniem prognozy i
+  walidacją powiązanego konta/kategorii. Potwierdzenie tworzy wyłącznie przez
+  `create_transaction` zbilansowaną transakcję `source="scheduled_confirmation"`;
+  odrzuca non-PLN, przyszłe, `overdue_uncertain`, `amount_unknown` i ponowne.
+- Frontend: typy/hooki (`FinanceSettings`, mutacje schedulera, potwierdzenie,
+  `parsePlnToGrosze`, `canConfirmSuggestion`) oraz centralna invalidacja cache.
+- Frontend: trasy `/finances`, `/finances/transactions`, `/finances/cashflow`,
+  `/finances/budgets`, `/finances/reports`; współdzielone komponenty
+  (`MonthPicker`, `CategorySpendTree`, `AccountTransactions`, `formatPLN`,
+  `SummaryCard`); strona cashflow z formularzami, prognozą i dialogiem.
+
+### Weryfikacja
+- TDD per zadanie: RED przed implementacją w każdej warstwie; poprawki po
+  dwustopniowym przeglądzie (spec + jakość) z re-review.
+- Backend: Ruff i mypy PASS; `make test` `123 passed, 61 skipped, 3 warnings`;
+  `make test-integration` `61 passed, 123 deselected, 11 warnings`.
+- Frontend: `41 passed` (13 plików), ESLint, TypeScript i Vite build PASS.
+
+### Decyzje techniczne
+1. Potwierdzenie przyjmuje wyłącznie `due`/`overdue` i nie akceptuje od klienta
+   kwoty/konta/kategorii/daty; dane pochodzą z ponownie wyliczonej sugestii.
+2. Scheduler obsługuje na razie wyłącznie PLN (kwota zawsze `fixed_amount_pln`);
+   konta walutowe wymagają najpierw wsparcia FX w confirm.
+3. Wydzielono współdzielone komponenty i helpery finansowe, aby uniknąć
+   duplikacji `formatPLN`/kart w pięciu plikach.
+
+### Następna sesja
+Limity budżetowe pozostają poza zakresem; ewentualne wsparcie kont walutowych w
+schedulerze wymaga rozszerzenia confirm o rzeczywisty kurs FX.
+
+---
 ## 2026-08-15 — Sesja 19: Poprawki znaku, invalidacji i non-PLN schedulera
 
 ### Cel sesji

@@ -5,7 +5,42 @@ Wszystkie istotne zmiany w projekcie.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — 2026-08-13
+## [Unreleased] — 2026-08-15
+
+### Added
+- **Finanse — podstrony i zarządzanie płynnością**: rozdzielono widok finansów
+  na realne trasy `/finances`, `/finances/transactions`, `/finances/cashflow`,
+  `/finances/budgets` i `/finances/reports`; kontekstowy sidebar prowadzi do
+  istniejących tras, a pozycje niezrealizowane pozostają oznaczone „Wkrótce".
+- **Cashflow — formularze**: ustawienia dnia wypłaty, konta wpływu, horyzontu i
+  tolerancji opóźnienia; CRUD miesięcznych pozycji przychodu/wydatku z metodą
+  kwoty `fixed` lub `last_actual`, dezaktywacja oraz jawne usuwanie.
+- **Cashflow — potwierdzanie sugestii**: endpoint
+  `POST /cashflow/items/{item_id}/confirm` przelicza sugestię po stronie serwera
+  i tworzy zbilansowaną transakcję wyłącznie przez serwis domeny finance;
+  blokada wiersza chroni przed równoległym podwójnym księgowaniem.
+- **Raporty z wyborem okresu**: `GET /summary` i `GET /category-summary`
+  przyjmują `month`/`year` (z walidacją zakresu) i zwracają wartości wyłącznie
+  wybranego miesiąca; domyślnie pozostaje bieżący miesiąc.
+- Endpoint `DELETE /cashflow/items/{item_id}` do jawnego usunięcia własnej pozycji.
+
+### Changed
+- Potwierdzenie schedulera odrzuca pozycje nie-PLN (brak zweryfikowanego kursu),
+  przyszłe, `overdue_uncertain`, `amount_unknown` i `matched_actual`; przyjmuje
+  wyłącznie `due`/`overdue` z wyliczoną kwotą i ponownie waliduje powiązane konto
+  i kategorię pod blokadą wiersza.
+- Formularz schedulera ogranicza konta do aktywnych kont budżetowych w PLN.
+- Wydzielono współdzielone komponenty finansowe (`formatPLN`, `SummaryCard`,
+  `MonthPicker`, `CategorySpendTree`, `AccountTransactions`) oraz poprawiono
+  znak transakcji per konto zgodnie z konwencją `balance = credit − debit`.
+
+### Verified
+- Backend: `make lint` i `make typecheck` PASS. `make test`: `123 passed,
+  61 skipped, 3 warnings`. `make test-integration` na izolowanej bazie:
+  `61 passed, 123 deselected, 11 warnings`; kontener testowy usunięty.
+- Frontend: `npm run lint`, `npm run typecheck`, `npm run test` (`13 plików,
+  41 passed`) i `npm run build` PASS.
+- Nie wykonano migracji produkcyjnej ani deployu.
 
 ### Fixed
 - Odwrócony znak transakcji per konto (`AccountTransactions`): przychód
