@@ -8,6 +8,12 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-15
 
 ### Added
+- **Ręczne księgowanie transakcji**: formularz na `/finances/transactions` tworzy
+  przychód, wydatek i transfer między kontami przez istniejący `POST
+  /finance/transactions` (double-entry zachowany po stronie serwisu). Helper
+  `buildTransactionPostings` koduje konwencję `balance = credit − debit`
+  (przychód: konto `credit`/kategoria `debit`; wydatek: odwrotnie; transfer:
+  źródło `debit`/cel `credit`). Kwoty w PLN.
 - **Miesięczne budżety z limitami**: tabela `category_budgets` (limit `BIGINT > 0`
   per kategoria, unikalny na użytkownika i kategorię) z migracją
   `4340d1460982_category_budgets`. Endpointy `GET/POST /budgets`,
@@ -46,9 +52,11 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   79 skipped, 3 warnings`. `make test-integration` na izolowanej bazie:
   `79 passed, 125 deselected, 11 warnings`; migracja `4340d1460982` zastosowana,
   kontener testowy usunięty.
-- Frontend: `npm run lint`, `npm run typecheck`, `npm run test` (`13 plików,
-  55 passed`) i `npm run build` PASS.
-- Nie wykonano migracji produkcyjnej ani deployu.
+- Frontend: `npm run lint`, `npm run typecheck`, `npm run test` (`14 plików,
+  63 passed`) i `npm run build` PASS.
+- Naprawiono przekazywanie `transaction_date` (wcześniej `date`) w
+  `useCreateTransaction` — wybrana data transakcji jest teraz zapisywana.
+- Nie wykonano migracji produkcyjnej ani deployu dla ręcznego księgowania.
 
 ### Fixed
 - Odwrócony znak transakcji per konto (`AccountTransactions`): przychód

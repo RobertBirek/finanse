@@ -6,6 +6,13 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 12 — Ręczne księgowanie transakcji (2026-08-15)
+
+- [x] Frontend: helper `buildTransactionPostings` (konwencja `balance = credit − debit` dla przychodu/wydatku/transferu).
+- [x] Frontend: formularz `TransactionForm` (typ, konto PLN, kategoria filtrowana, kwota, data, opis; walidacja i błąd inline).
+- [x] Frontend: integracja na `/finances/transactions` + naprawa `transaction_date` w `useCreateTransaction`.
+- [x] Quality gate: frontend `63 passed`, backend bez zmian (`125 unit + 79 integracyjnych`), lint/typecheck/build PASS.
+
 ## Task 11 — Miesięczne budżety z limitami (2026-08-15)
 
 - [x] Backend: model `CategoryBudget` (limit > 0, unikalny per użytkownik+kategoria) + migracja `4340d1460982`.

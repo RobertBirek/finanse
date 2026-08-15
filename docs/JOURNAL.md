@@ -3,6 +3,40 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-15 — Sesja 22: Ręczne księgowanie transakcji
+
+### Cel sesji
+Dodać ręczne wprowadzanie transakcji (przychód, wydatek, transfer) na stronie
+Transakcje, bez nowych modeli ani migracji.
+
+### Co zrobiono
+- Frontend: helper `buildTransactionPostings` kodujący konwencję
+  `balance = credit − debit` (przychód konto credit/kategoria debit; wydatek
+  odwrotnie; transfer źródło debit/cel credit), pokryty testami sumy zero.
+- Frontend: komponent `TransactionForm` z selektorem typu, kontami (aktywne PLN),
+  kategoriami filtrowanymi po typie, kwotą (parsePlnToGrosze), datą (domyślnie
+  dziś lokalnie) i opisem; walidacja, błąd inline, reset po sukcesie.
+- Frontend: montaż formularza na `/finances/transactions` nad listą transakcji.
+- Naprawiono kontrakt daty: `useCreateTransaction` wysyłał `date`, backend
+  oczekiwał `transaction_date` (Pydantic cicho odrzucał datę) — teraz data
+  wybrana przez użytkownika jest zapisywana.
+
+### Weryfikacja
+- TDD per zadanie z dwustopniowym przeglądem (spec + jakość) i re-review.
+- Frontend: `63 passed` (14 plików), ESLint, TypeScript, Vite build PASS.
+- Backend bez zmian: Ruff/mypy PASS, `125 passed, 79 skipped`, integracyjne
+  `79 passed`.
+
+### Decyzje techniczne
+1. Kierunki postingów buduje wyłącznie helper frontendowy, zgodny z konwencją
+   księgi; serwis `create_transaction` pozostaje autorytatywny dla invariantu.
+2. Zakres PLN-only (jak scheduler) — EUR/USD i przewalutowanie wymagają FX.
+
+### Następna sesja
+Edycja/usuwanie transakcji, przewalutowanie (exchange) z kursem NBP, ew. korekta
+odwróconego mapowania kierunków w narzędziu Doradcy (`advisor/tools/registry.py`).
+
+---
 ## 2026-08-15 — Sesja 21: Miesięczne budżety z limitami
 
 ### Cel sesji
