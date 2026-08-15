@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
+  budgetProgress,
   buildCategoryTree,
   canConfirmSuggestion,
   cashflowStatusLabel,
@@ -76,6 +77,20 @@ describe("buildCategoryTree", () => {
         ],
       },
     ]);
+  });
+});
+
+describe("budgetProgress", () => {
+  it("reports one-decimal percentage of a partially spent budget", () => {
+    expect(budgetProgress(4000, 2500)).toEqual({ percent: 62.5, over: false });
+  });
+
+  it("caps a fully spent budget at 100 percent without overspending", () => {
+    expect(budgetProgress(4000, 4000)).toEqual({ percent: 100, over: false });
+  });
+
+  it("clamps overspending at 100 percent and flags it as over", () => {
+    expect(budgetProgress(4000, 4500)).toEqual({ percent: 100, over: true });
   });
 });
 

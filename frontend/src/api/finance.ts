@@ -86,6 +86,27 @@ export interface CategoryGroup extends CategorySpend {
   children: CategorySpend[];
 }
 
+export interface CategoryBudget {
+  id: string;
+  category_id: string;
+  amount_pln: number;
+}
+
+export interface BudgetStatusItem {
+  category_id: string;
+  name: string;
+  parent_id: string | null;
+  budget_amount_pln: number;
+  spent_pln: number;
+  remaining_pln: number;
+}
+
+export interface BudgetStatusResponse {
+  month: number;
+  year: number;
+  items: BudgetStatusItem[];
+}
+
 export interface ScheduledFinanceItem {
   id: string;
   name: string;
@@ -170,6 +191,15 @@ export function splitAccounts(accounts: Account[]) {
     budget: accounts.filter((account) => account.is_budget_account),
     informational: accounts.filter((account) => !account.is_budget_account),
   };
+}
+
+export function budgetProgress(
+  budgetAmount: number,
+  spent: number,
+): { percent: number; over: boolean } {
+  const raw = Math.round((spent / budgetAmount) * 1000) / 10;
+  const percent = Math.max(0, Math.min(100, raw));
+  return { percent, over: spent > budgetAmount };
 }
 
 export function buildCategoryTree(summary: CategorySummary): CategoryGroup[] {
@@ -373,6 +403,83 @@ export function useCategorySummary(period?: FinancialPeriod) {
     queryFn: async () => {
       const { data } = await api.get<CategorySummary>(
         "/finance/category-summary",
+        { params: { month: m, year: y } },
+      );
+      return data;
+    },
+  });
+}
+
+function invalidateBudgetMutationQueries(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["finance", "budgets"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "budget-status"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "category-summary"] });
+}
+
+export function useBudgets() {
+  return useQuery({
+    queryKey: ["finance", "budgets"],
+    queryFn: async () => {
+      const { data } = await api.get<CategoryBudget[]>("/finance/budgets");
+      return data;
+    },
+  });
+}
+
+export function useCreateBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (budget: { category_id: string; amount_pln: number }) => {
+      const { data } = await api.post<CategoryBudget>(
+        "/finance/budgets",
+        budget,
+      );
+      return data;
+    },
+    onSuccess: () => invalidateBudgetMutationQueries(queryClient),
+  });
+}
+
+export function useUpdateBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      amount_pln,
+    }: {
+      id: string;
+      amount_pln: number;
+    }) => {
+      const { data } = await api.patch<CategoryBudget>(
+        `/finance/budgets/${id}`,
+        { amount_pln },
+      );
+      return data;
+    },
+    onSuccess: () => invalidateBudgetMutationQueries(queryClient),
+  });
+}
+
+export function useDeleteBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/finance/budgets/${id}`);
+    },
+    onSuccess: () => invalidateBudgetMutationQueries(queryClient),
+  });
+}
+
+export function useBudgetStatus(period?: FinancialPeriod) {
+  const now = new Date();
+  const m = period?.month ?? now.getMonth() + 1;
+  const y = period?.year ?? now.getFullYear();
+
+  return useQuery({
+    queryKey: ["finance", "budget-status", { month: m, year: y }],
+    queryFn: async () => {
+      const { data } = await api.get<BudgetStatusResponse>(
+        "/finance/budget-status",
         { params: { month: m, year: y } },
       );
       return data;
