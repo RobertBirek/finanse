@@ -51,6 +51,7 @@ export function FinanceBudgets() {
   const [amount, setAmount] = useState("");
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
+  const [editValidationError, setEditValidationError] = useState(false);
 
   const budgetsQuery = useBudgets();
   const statusQuery = useBudgetStatus(period);
@@ -79,6 +80,7 @@ export function FinanceBudgets() {
   const canSubmit = !!categoryId && amountInGrosze !== null;
 
   const createError = apiErrorDetail(createBudget.error);
+  const updateError = apiErrorDetail(updateBudget.error);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -95,6 +97,7 @@ export function FinanceBudgets() {
   }
 
   function handleDelete(budgetId: string, name: string) {
+    if (deleteBudget.isPending) return;
     if (window.confirm(`Usunąć budżet dla "${name}"?`)) {
       deleteBudget.mutate(budgetId);
     }
@@ -103,11 +106,15 @@ export function FinanceBudgets() {
   function startEdit(budgetId: string, currentAmount: number) {
     setEditingBudgetId(budgetId);
     setEditAmount((currentAmount / 100).toFixed(2));
+    setEditValidationError(false);
   }
 
   function handleSaveEdit(budgetId: string) {
     const grosze = parsePlnToGrosze(editAmount);
-    if (grosze === null) return;
+    if (grosze === null) {
+      setEditValidationError(true);
+      return;
+    }
     updateBudget.mutate(
       { id: budgetId, amount_pln: grosze },
       { onSuccess: () => setEditingBudgetId(null) },
@@ -123,6 +130,11 @@ export function FinanceBudgets() {
 
       <section className="card mb-4">
         <h2 className="mb-4 text-lg font-semibold text-white">Budżety</h2>
+        {budgetsQuery.isError ? (
+          <p className="mb-4 text-sm text-red-400">
+            Nie udało się pobrać budżetów — edycja i usuwanie są niedostępne.
+          </p>
+        ) : null}
         {statusQuery.isLoading ? (
           <div className="flex justify-center py-8">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-advisor-500 border-t-transparent" />
@@ -232,7 +244,8 @@ export function FinanceBudgets() {
                             <button
                               type="button"
                               aria-label={`Usuń budżet ${item.name}`}
-                              className="btn-secondary"
+                              className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                              disabled={deleteBudget.isPending}
                               onClick={() => handleDelete(budget.id, item.name)}
                             >
                               Usuń
@@ -242,7 +255,14 @@ export function FinanceBudgets() {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-800">
+                  <div
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={progress.percent}
+                    aria-label={`Postęp budżetu: ${item.name}`}
+                    className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-800"
+                  >
                     <div
                       data-testid={`budget-progress-${item.category_id}`}
                       className={`h-full rounded-full ${
@@ -255,6 +275,13 @@ export function FinanceBudgets() {
                     <p className="mt-2 text-sm text-red-400">
                       Przekroczono o {formatPLN(Math.abs(item.remaining_pln))}{" "}
                       PLN
+                    </p>
+                  ) : null}
+                  {isEditing && (editValidationError || updateError) ? (
+                    <p className="mt-2 text-sm text-red-400">
+                      {editValidationError
+                        ? "Podaj poprawną kwotę"
+                        : updateError}
                     </p>
                   ) : null}
                 </div>

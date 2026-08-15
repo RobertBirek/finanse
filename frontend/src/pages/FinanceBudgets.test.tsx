@@ -195,4 +195,77 @@ describe("FinanceBudgets", () => {
       expect.anything(),
     );
   });
+
+  it("exposes the progress bar with accessible attributes", () => {
+    render(<FinanceBudgets />);
+
+    const bar = screen.getByRole("progressbar", {
+      name: "Postęp budżetu: Jedzenie",
+    });
+
+    expect(bar).toHaveAttribute("aria-valuemin", "0");
+    expect(bar).toHaveAttribute("aria-valuemax", "100");
+    expect(bar).toHaveAttribute("aria-valuenow", "80");
+  });
+
+  it("shows a validation message for an invalid edited limit", () => {
+    render(<FinanceBudgets />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj limit Jedzenie" }),
+    );
+    fireEvent.change(screen.getByLabelText("Limit (PLN)"), {
+      target: { value: "abc" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz" }));
+
+    expect(screen.getByText("Podaj poprawną kwotę")).toBeInTheDocument();
+    expect(updateMutate).not.toHaveBeenCalled();
+  });
+
+  it("shows the update error at the row being edited", () => {
+    hooks.useUpdateBudget.mockReturnValue({
+      mutate: updateMutate,
+      isPending: false,
+      error: { response: { data: { detail: "Nie można zaktualizować" } } },
+    });
+
+    render(<FinanceBudgets />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj limit Jedzenie" }),
+    );
+
+    expect(screen.getByText("Nie można zaktualizować")).toBeInTheDocument();
+  });
+
+  it("disables the delete button while deletion is pending", () => {
+    hooks.useDeleteBudget.mockReturnValue({
+      mutate: deleteMutate,
+      isPending: true,
+      error: null,
+    });
+
+    render(<FinanceBudgets />);
+
+    expect(
+      screen.getByRole("button", { name: "Usuń budżet Jedzenie" }),
+    ).toBeDisabled();
+  });
+
+  it("shows a message when budgets fail to load", () => {
+    hooks.useBudgets.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    });
+
+    render(<FinanceBudgets />);
+
+    expect(
+      screen.getByText(
+        "Nie udało się pobrać budżetów — edycja i usuwanie są niedostępne.",
+      ),
+    ).toBeInTheDocument();
+  });
 });
