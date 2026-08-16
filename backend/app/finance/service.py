@@ -321,6 +321,17 @@ async def update_transaction(
     return txn
 
 
+async def delete_transaction(
+    db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID
+) -> bool:
+    txn = await get_transaction(db, user_id, transaction_id)
+    if txn is None:
+        return False
+    await db.delete(txn)
+    await db.flush()
+    return True
+
+
 async def get_financial_summary(
     db: AsyncSession, user_id: uuid.UUID, month: int | None = None, year: int | None = None
 ) -> FinancialSummary:

@@ -15,8 +15,10 @@ from app.finance.service import (
     create_account,
     create_category,
     create_transaction,
+    delete_transaction,
     get_category_summary,
     get_financial_summary,
+    get_transaction,
 )
 from app.identity.router import get_current_user
 from app.main import app
@@ -704,3 +706,91 @@ async def _count_transactions(db_session, user_id):
         .where(FinancialTransaction.user_id == user_id)
     )
     return result.scalar_one()
+
+
+async def _count_postings(db_session, transaction_id):
+    from sqlalchemy import func, select
+
+    from app.finance.models import Posting
+
+    result = await db_session.execute(
+        select(func.count()).select_from(Posting).where(Posting.transaction_id == transaction_id)
+    )
+    return result.scalar_one()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_delete_transaction_removes_transaction_and_postings(db_session):
+    user_id = uuid.uuid4()
+    account = await create_account(db_session, user_id, AccountCreate(name="ING", type="checking"))
+    category = await create_category(
+        db_session, user_id, CategoryCreate(name="Zakupy", type="expense")
+    )
+    transaction = await create_transaction(
+        db_session,
+        user_id,
+        TransactionCreate(
+            description="Wydatek",
+            type="expense",
+            postings=[
+                PostingCreate(
+                    account_id=account.id,
+                    source_amount=10000,
+                    base_amount_pln=10000,
+                    direction="debit",
+                ),
+                PostingCreate(
+                    category_id=category.id,
+                    source_amount=10000,
+                    base_amount_pln=10000,
+                    direction="credit",
+                ),
+            ],
+        ),
+    )
+
+    deleted = await delete_transaction(db_session, user_id, transaction.id)
+
+    assert deleted is True
+    assert await get_transaction(db_session, user_id, transaction.id) is None
+    assert await _count_postings(db_session, transaction.id) == 0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_delete_transaction_rejects_other_users_transaction(db_session):
+    owner_id = uuid.uuid4()
+    another_user_id = uuid.uuid4()
+    account = await create_account(db_session, owner_id, AccountCreate(name="ING", type="checking"))
+    category = await create_category(
+        db_session, owner_id, CategoryCreate(name="Zakupy", type="expense")
+    )
+    transaction = await create_transaction(
+        db_session,
+        owner_id,
+        TransactionCreate(
+            description="Wydatek",
+            type="expense",
+            postings=[
+                PostingCreate(
+                    account_id=account.id,
+                    source_amount=10000,
+                    base_amount_pln=10000,
+                    direction="debit",
+                ),
+                PostingCreate(
+                    category_id=category.id,
+                    source_amount=10000,
+                    base_amount_pln=10000,
+                    direction="credit",
+                ),
+            ],
+        ),
+    )
+
+    deleted = await delete_transaction(db_session, another_user_id, transaction.id)
+
+    assert deleted is False
+    assert await get_transaction(db_session, owner_id, transaction.id) is not None
+    assert await _count_postings(db_session, transaction.id) == 2

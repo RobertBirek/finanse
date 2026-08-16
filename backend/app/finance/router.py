@@ -43,6 +43,7 @@ from app.finance.service import (
     create_transaction,
     delete_budget,
     delete_scheduled_item,
+    delete_transaction,
     get_account,
     get_accounts,
     get_budget_status,
@@ -220,6 +221,18 @@ async def update_transaction_endpoint(
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
     return txn
+
+
+@router.delete("/transactions/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_transaction_endpoint(
+    transaction_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    deleted = await delete_transaction(db, current_user.id, transaction_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/summary", response_model=FinancialSummary)
