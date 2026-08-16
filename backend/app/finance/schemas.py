@@ -241,6 +241,12 @@ class CashflowSuggestion(BaseModel):
     actual_transaction_id: uuid.UUID | None = None
 
 
+class CashflowBudgetSummary(BaseModel):
+    total_budget_pln: int
+    total_spent_pln: int
+    remaining_pln: int
+
+
 class CashflowForecastResponse(BaseModel):
     last_payday: dt.date
     next_payday: dt.date
@@ -250,6 +256,7 @@ class CashflowForecastResponse(BaseModel):
     lowest_balance_pln: int
     days: list[CashflowDay]
     suggestions: list[CashflowSuggestion]
+    budgets: CashflowBudgetSummary
 
 
 class CategoryBudgetCreate(BaseModel):

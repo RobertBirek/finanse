@@ -13,6 +13,7 @@ from app.finance import service as finance_service
 from app.finance.models import FinanceSettings, FinancialTransaction, Posting
 from app.finance.schemas import (
     AccountCreate,
+    CategoryBudgetCreate,
     CategoryCreate,
     PostingCreate,
     ScheduledFinanceItemCreate,
@@ -21,6 +22,7 @@ from app.finance.schemas import (
 from app.finance.service import (
     confirm_scheduled_item,
     create_account,
+    create_budget,
     create_category,
     create_scheduled_item,
     create_transaction,
@@ -220,6 +222,42 @@ async def test_forecast_uses_budget_balance_fixed_and_last_actual_amounts(db_ses
         ("Czynsz", 4_000),
         ("Telefon", 1_234),
     ]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_forecast_includes_budget_summary(db_session) -> None:
+    user_id = uuid.uuid4()
+    food = await create_category(
+        db_session, user_id, CategoryCreate(name="Jedzenie", type="expense")
+    )
+    health = await create_category(
+        db_session, user_id, CategoryCreate(name="Zdrowie", type="expense")
+    )
+    await create_budget(
+        db_session, user_id, CategoryBudgetCreate(category_id=food.id, amount_pln=100_000)
+    )
+    await create_budget(
+        db_session, user_id, CategoryBudgetCreate(category_id=health.id, amount_pln=50_000)
+    )
+
+    forecast = await get_cashflow_forecast(db_session, user_id, today=date(2026, 8, 14))
+
+    assert forecast.budgets.total_budget_pln == 150_000
+    assert forecast.budgets.total_spent_pln == 0
+    assert forecast.budgets.remaining_pln == 150_000
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_forecast_budget_summary_is_zero_without_budgets(db_session) -> None:
+    user_id = uuid.uuid4()
+
+    forecast = await get_cashflow_forecast(db_session, user_id, today=date(2026, 8, 14))
+
+    assert forecast.budgets.total_budget_pln == 0
+    assert forecast.budgets.total_spent_pln == 0
+    assert forecast.budgets.remaining_pln == 0
 
 
 @pytest.mark.integration

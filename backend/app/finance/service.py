@@ -21,6 +21,7 @@ from app.finance.schemas import (
     AccountUpdate,
     BudgetStatusItem,
     BudgetStatusResponse,
+    CashflowBudgetSummary,
     CashflowDay,
     CashflowForecastResponse,
     CashflowSuggestion,
@@ -1007,6 +1008,12 @@ async def get_cashflow_forecast(
     before_payday = [day.projected_balance_pln for day in days if day.date < next_payday]
     projected_before_payday = before_payday[-1] if before_payday else opening_balance
     remaining_days = max((next_payday - today).days, 1)
+    budget_status = await get_budget_status(db, user_id, today.month, today.year)
+    budgets = CashflowBudgetSummary(
+        total_budget_pln=sum(item.budget_amount_pln for item in budget_status.items),
+        total_spent_pln=sum(item.spent_pln for item in budget_status.items),
+        remaining_pln=sum(item.remaining_pln for item in budget_status.items),
+    )
     return CashflowForecastResponse(
         last_payday=_payday_bounds(today, settings.payday_day)[0],
         next_payday=next_payday,
@@ -1018,6 +1025,7 @@ async def get_cashflow_forecast(
         suggestions=sorted(
             suggestions, key=lambda suggestion: (suggestion.due_date, suggestion.name)
         ),
+        budgets=budgets,
     )
 
 
