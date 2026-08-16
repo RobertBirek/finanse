@@ -413,6 +413,13 @@ export function useAccountTransactions(
   });
 }
 
+export function invalidateFinanceLedger(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["finance", "transactions"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "summary"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "category-summary"] });
+}
+
 export function useCreateTransaction() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -427,14 +434,39 @@ export function useCreateTransaction() {
       const { data } = await api.post<Transaction>("/finance/transactions", tx);
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["finance", "transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["finance", "summary"] });
-      queryClient.invalidateQueries({
-        queryKey: ["finance", "category-summary"],
-      });
+    onSuccess: () => invalidateFinanceLedger(queryClient),
+  });
+}
+
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      transaction_date,
+      description,
+    }: {
+      id: string;
+      transaction_date?: string;
+      description?: string;
+    }) => {
+      const { data } = await api.patch<Transaction>(
+        `/finance/transactions/${id}`,
+        { transaction_date, description },
+      );
+      return data;
     },
+    onSuccess: () => invalidateFinanceLedger(queryClient),
+  });
+}
+
+export function useDeleteTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/finance/transactions/${id}`);
+    },
+    onSuccess: () => invalidateFinanceLedger(queryClient),
   });
 }
 

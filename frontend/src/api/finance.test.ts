@@ -1,15 +1,22 @@
-import { QueryClient } from "@tanstack/react-query";
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { AxiosResponse } from "axios";
+import { createElement, type ReactNode } from "react";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import api from "../lib/api";
 import {
   budgetProgress,
   buildCategoryTree,
   buildTransactionPostings,
   canConfirmSuggestion,
   cashflowStatusLabel,
+  invalidateFinanceLedger,
   parsePlnToGrosze,
   splitAccounts,
   useCategorySummary,
+  useDeleteTransaction,
   useFinancialSummary,
+  useUpdateTransaction,
   type Account,
   type CategorySummary,
   type FinancialPeriod,
@@ -276,5 +283,88 @@ describe("financial period hook contracts", () => {
     expectTypeOf<Parameters<typeof useCategorySummary>>().toEqualTypeOf<
       [period?: FinancialPeriod]
     >();
+  });
+});
+
+function queryClientWrapper(queryClient: QueryClient) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      children,
+    );
+  };
+}
+
+describe("invalidateFinanceLedger", () => {
+  it("invalidates the transaction ledger queries", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["finance", "transactions"], []);
+    queryClient.setQueryData(["finance", "accounts"], []);
+    queryClient.setQueryData(["finance", "summary"], []);
+    queryClient.setQueryData(["finance", "category-summary"], []);
+
+    invalidateFinanceLedger(queryClient);
+
+    expect(
+      queryClient.getQueryState(["finance", "transactions"])?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(["finance", "accounts"])?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(["finance", "summary"])?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(["finance", "category-summary"])?.isInvalidated,
+    ).toBe(true);
+  });
+});
+
+describe("transaction mutation hooks", () => {
+  it("exports the update and delete hooks as functions", () => {
+    expect(useUpdateTransaction).toBeTypeOf("function");
+    expect(useDeleteTransaction).toBeTypeOf("function");
+  });
+
+  it("updates a transaction with its editable fields at its URL", async () => {
+    const patchSpy = vi
+      .spyOn(api, "patch")
+      .mockResolvedValue({
+        data: { id: "tx-123" },
+      } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useUpdateTransaction(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      id: "tx-123",
+      transaction_date: "2026-08-16",
+      description: "Zakupy",
+    });
+
+    expect(patchSpy).toHaveBeenCalledWith("/finance/transactions/tx-123", {
+      transaction_date: "2026-08-16",
+      description: "Zakupy",
+    });
+    patchSpy.mockRestore();
+  });
+
+  it("deletes a transaction via its id in the URL", async () => {
+    const deleteSpy = vi
+      .spyOn(api, "delete")
+      .mockResolvedValue({} as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useDeleteTransaction(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync("tx-123");
+
+    expect(deleteSpy).toHaveBeenCalledWith("/finance/transactions/tx-123");
+    deleteSpy.mockRestore();
   });
 });
