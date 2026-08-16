@@ -82,6 +82,11 @@ const forecast = {
   lowest_balance_pln: 50000,
   days: [{ date: "2026-08-01", projected_balance_pln: 100000 }],
   suggestions: [],
+  budgets: {
+    total_budget_pln: 200000,
+    total_spent_pln: 50000,
+    remaining_pln: 150000,
+  },
 };
 
 describe("FinanceCashflow", () => {

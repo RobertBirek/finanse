@@ -184,6 +184,12 @@ export interface CashflowSuggestion {
   actual_transaction_id: string | null;
 }
 
+export interface CashflowBudgetSummary {
+  total_budget_pln: number;
+  total_spent_pln: number;
+  remaining_pln: number;
+}
+
 export interface CashflowForecast {
   last_payday: string;
   next_payday: string;
@@ -193,6 +199,7 @@ export interface CashflowForecast {
   lowest_balance_pln: number;
   days: Array<{ date: string; projected_balance_pln: number }>;
   suggestions: CashflowSuggestion[];
+  budgets: CashflowBudgetSummary;
 }
 
 export function cashflowStatusLabel(status: CashflowStatus) {
