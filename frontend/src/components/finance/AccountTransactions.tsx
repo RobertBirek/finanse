@@ -1,11 +1,21 @@
-import { useState } from "react";
+import type { AxiosError } from "axios";
+import { useEffect, useState } from "react";
 import {
   splitAccounts,
   useAccountTransactions,
+  useDeleteTransaction,
+  useUpdateTransaction,
   type Account,
   type Transaction,
 } from "../../api/finance";
 import { formatPLN } from "../../lib/format";
+
+function apiErrorDetail(error: unknown): string | null {
+  if (!error) return null;
+  return (
+    (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ?? null
+  );
+}
 
 type AccountTransactionsProps = {
   accounts: Account[];
@@ -171,6 +181,48 @@ function TransactionList({
   loading: boolean;
   error: boolean;
 }) {
+  const updateMutation = useUpdateTransaction();
+  const deleteMutation = useDeleteTransaction();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
+
+  const updateError = apiErrorDetail(updateMutation.error);
+  const deleteError = apiErrorDetail(deleteMutation.error);
+
+  useEffect(() => {
+    if (
+      updateMutation.isSuccess &&
+      updateMutation.variables?.id === editingId
+    ) {
+      setEditingId(null);
+    }
+  }, [updateMutation.isSuccess, updateMutation.variables, editingId]);
+
+  function startEdit(transaction: Transaction) {
+    setEditingId(transaction.id);
+    setEditDescription(transaction.description);
+    setEditDate(transaction.transaction_date);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  function saveEdit(transaction: Transaction) {
+    updateMutation.mutate({
+      id: transaction.id,
+      transaction_date: editDate,
+      description: editDescription,
+    });
+  }
+
+  function removeTransaction(transaction: Transaction) {
+    if (window.confirm(`Usunąć transakcję "${transaction.description}"?`)) {
+      deleteMutation.mutate(transaction.id);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -203,6 +255,99 @@ function TransactionList({
         );
         const isIncome = posting?.direction === "credit";
         const amount = posting?.source_amount ?? 0;
+        const isEditing = editingId === transaction.id;
+        const isUpdating =
+          updateMutation.isPending &&
+          updateMutation.variables?.id === transaction.id;
+        const isDeleting =
+          deleteMutation.isPending &&
+          deleteMutation.variables === transaction.id;
+        const rowUpdateError =
+          updateMutation.variables?.id === transaction.id ? updateError : null;
+        const rowDeleteError =
+          deleteMutation.variables === transaction.id ? deleteError : null;
+
+        if (isEditing) {
+          return (
+            <div
+              key={transaction.id}
+              className="rounded bg-gray-800/30 p-2.5 transition-colors hover:bg-gray-800/50"
+            >
+              <div className="mb-2 flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-gray-200">
+                    {transaction.description}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(transaction.transaction_date).toLocaleDateString(
+                      "pl-PL",
+                    )}{" "}
+                    · {transaction.type}
+                  </p>
+                </div>
+                <p
+                  className={`shrink-0 font-mono text-sm font-medium ${isIncome ? "text-green-400" : "text-red-400"}`}
+                >
+                  {isIncome ? "+" : "−"}
+                  {formatPLN(amount)} PLN
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor={`transaction-description-${transaction.id}`}
+                    className="mb-1 block text-xs text-gray-400"
+                  >
+                    Opis
+                  </label>
+                  <input
+                    id={`transaction-description-${transaction.id}`}
+                    type="text"
+                    value={editDescription}
+                    onChange={(event) => setEditDescription(event.target.value)}
+                    className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={`transaction-date-${transaction.id}`}
+                    className="mb-1 block text-xs text-gray-400"
+                  >
+                    Data
+                  </label>
+                  <input
+                    id={`transaction-date-${transaction.id}`}
+                    type="date"
+                    value={editDate}
+                    onChange={(event) => setEditDate(event.target.value)}
+                    className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => saveEdit(transaction)}
+                  disabled={isUpdating}
+                  className="btn-primary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Zapisz
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  disabled={isUpdating}
+                  className="btn-secondary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Anuluj
+                </button>
+              </div>
+              {rowUpdateError ? (
+                <p className="mt-2 text-xs text-red-400">{rowUpdateError}</p>
+              ) : null}
+            </div>
+          );
+        }
 
         return (
           <div
@@ -226,6 +371,27 @@ function TransactionList({
               {isIncome ? "+" : "−"}
               {formatPLN(amount)} PLN
             </p>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={() => startEdit(transaction)}
+                disabled={isDeleting}
+                className="btn-secondary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Edytuj
+              </button>
+              <button
+                type="button"
+                onClick={() => removeTransaction(transaction)}
+                disabled={isDeleting}
+                className="btn-danger px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Usuń
+              </button>
+            </div>
+            {rowDeleteError ? (
+              <p className="w-full text-xs text-red-400">{rowDeleteError}</p>
+            ) : null}
           </div>
         );
       })}
