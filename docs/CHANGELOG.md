@@ -8,6 +8,9 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-15
 
 ### Added
+- **Budżety w prognozie płynności**: prognoza zawiera podsumowanie budżetów
+  bieżącego miesiąca (limit, wydano, pozostało) oraz ostrzeżenie, gdy pozostałe
+  budżety przekraczają prognozowane saldo przed wypłatą.
 - **Przewalutowanie (exchange)**: `POST /finance/transactions/exchange` z kursem
   NBP (automatycznym) lub ręcznym; zapisuje obie rzeczywiste kwoty i kurs jako
   transakcję `exchange` (PLN↔EUR/USD, suma zero zachowana). Formularz

@@ -3,6 +3,37 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-15 — Sesja 25: Budżety w prognozie płynności
+
+### Cel sesji
+Pokazać w prognozie płynności podsumowanie budżetów bieżącego miesiąca i
+ostrzegać, gdy pozostałe budżety przekraczają prognozowane saldo przed wypłatą.
+
+### Co zrobiono
+- Backend: `CashflowBudgetSummary` + pole `budgets` w `CashflowForecastResponse`,
+  liczone z `get_budget_status` (sumy limitów, wydatków, pozostałości; zera przy
+  braku budżetów).
+- Frontend: typ i karta „Budżety w tym miesiącu" w widoku cashflow (pasek
+  postępu, limit/wydano/pozostało) oraz ostrzeżenie, gdy `remaining_pln >
+  projected_balance_before_next_payday_pln`. Guard `budgetProgress` dla
+  zerowego limitu.
+
+### Weryfikacja
+- TDD per zadanie z dwustopniowym przeglądem (spec + jakość).
+- Backend: Ruff/mypy PASS; `133 unit`; integracyjne `91 passed`.
+- Frontend: `80 passed` (15 plików), ESLint, TypeScript, Vite build PASS.
+
+### Decyzje techniczne
+1. Porównanie pozostałych budżetów z prognozowanym saldem to miękki sygnał
+   dyscypliny (budżety to limity, nie zobowiązania), nie twardy zakaz.
+2. Integracja ograniczona do podsumowania; oś dzienna prognozy pozostaje
+   niezależna od limitów.
+
+### Następna sesja
+Opcjonalnie: przewalutowania krzyżowe EUR↔USD, nadpisania budżetów per miesiąc,
+integracja limitów z osią prognozy.
+
+---
 ## 2026-08-15 — Sesja 24: Przewalutowanie PLN↔EUR/USD
 
 ### Cel sesji

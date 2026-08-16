@@ -6,6 +6,12 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 15 — Budżety w prognozie płynności (2026-08-15)
+
+- [x] Backend: `CashflowBudgetSummary` + pole `budgets` w prognozie (z `get_budget_status`).
+- [x] Frontend: karta „Budżety w tym miesiącu" + ostrzeżenie o przekroczeniu płynności.
+- [x] Quality gate: backend `91 integracyjnych`, frontend `80 passed`, lint/typecheck/build PASS.
+
 ## Task 14 — Przewalutowanie PLN↔EUR/USD (2026-08-15)
 
 - [x] Backend: `create_exchange_transaction` (walidacja kont/walut, kurs NBP lub ręczny, suma zero) + `POST /transactions/exchange`.

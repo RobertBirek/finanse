@@ -224,6 +224,9 @@ export function budgetProgress(
   budgetAmount: number,
   spent: number,
 ): { percent: number; over: boolean } {
+  if (budgetAmount <= 0) {
+    return { percent: 0, over: false };
+  }
   const raw = Math.round((spent / budgetAmount) * 1000) / 10;
   const percent = Math.max(0, Math.min(100, raw));
   return { percent, over: spent > budgetAmount };
