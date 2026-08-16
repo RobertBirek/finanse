@@ -7,6 +7,7 @@ const hooks = vi.hoisted(() => ({
   useAccounts: vi.fn(),
   useCategories: vi.fn(),
   useCreateTransaction: vi.fn(),
+  useCreateExchange: vi.fn(),
 }));
 
 vi.mock("../../api/finance", async (importOriginal) => {
@@ -68,10 +69,12 @@ const categories = [
 
 describe("TransactionForm", () => {
   let mutate: ReturnType<typeof vi.fn>;
+  let exchangeMutate: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mutate = vi.fn();
+    exchangeMutate = vi.fn();
     hooks.useAccounts.mockReturnValue({
       data: accounts,
       isLoading: false,
@@ -84,6 +87,11 @@ describe("TransactionForm", () => {
     });
     hooks.useCreateTransaction.mockReturnValue({
       mutate,
+      isPending: false,
+      error: null,
+    });
+    hooks.useCreateExchange.mockReturnValue({
+      mutate: exchangeMutate,
       isPending: false,
       error: null,
     });
@@ -200,5 +208,113 @@ describe("TransactionForm", () => {
       "Podaj kwotę większą od 0.",
     );
     expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it("shows two account selects and optional rate without category for exchange", () => {
+    render(<TransactionForm />);
+
+    fireEvent.change(screen.getByLabelText("Typ"), {
+      target: { value: "exchange" },
+    });
+
+    expect(screen.queryByLabelText("Kategoria")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Z konta")).toBeInTheDocument();
+    expect(screen.getByLabelText("Na konto")).toBeInTheDocument();
+    expect(screen.getByLabelText("Kurs (opcjonalnie)")).toBeInTheDocument();
+
+    const fromSelect = screen.getByLabelText("Z konta");
+    expect(
+      within(fromSelect).getByRole("option", { name: "Konto EUR" }),
+    ).toBeInTheDocument();
+    expect(
+      within(fromSelect).queryByRole("option", {
+        name: "Konto USD (nieaktywne)",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("submits an exchange without manual rate", () => {
+    render(<TransactionForm />);
+
+    fireEvent.change(screen.getByLabelText("Typ"), {
+      target: { value: "exchange" },
+    });
+    fireEvent.change(screen.getByLabelText("Z konta"), {
+      target: { value: "a1" },
+    });
+    fireEvent.change(screen.getByLabelText("Na konto"), {
+      target: { value: "eur" },
+    });
+    fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
+      target: { value: "43" },
+    });
+    fireEvent.change(screen.getByLabelText("Opis"), {
+      target: { value: "wymiana" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz transakcję" }));
+
+    expect(exchangeMutate).toHaveBeenCalledTimes(1);
+    expect(exchangeMutate.mock.calls[0][0]).toEqual({
+      from_account_id: "a1",
+      to_account_id: "eur",
+      from_amount: 4300,
+      transaction_date: localTodayIso(),
+      description: "wymiana",
+    });
+  });
+
+  it("submits an exchange with manual rate as float", () => {
+    render(<TransactionForm />);
+
+    fireEvent.change(screen.getByLabelText("Typ"), {
+      target: { value: "exchange" },
+    });
+    fireEvent.change(screen.getByLabelText("Z konta"), {
+      target: { value: "a1" },
+    });
+    fireEvent.change(screen.getByLabelText("Na konto"), {
+      target: { value: "eur" },
+    });
+    fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
+      target: { value: "43" },
+    });
+    fireEvent.change(screen.getByLabelText("Kurs (opcjonalnie)"), {
+      target: { value: "4.3" },
+    });
+    fireEvent.change(screen.getByLabelText("Opis"), {
+      target: { value: "wymiana" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz transakcję" }));
+
+    expect(exchangeMutate).toHaveBeenCalledTimes(1);
+    expect(exchangeMutate.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ fx_rate: 4.3 }),
+    );
+  });
+
+  it("shows a message and does not submit when both accounts are PLN", () => {
+    render(<TransactionForm />);
+
+    fireEvent.change(screen.getByLabelText("Typ"), {
+      target: { value: "exchange" },
+    });
+    fireEvent.change(screen.getByLabelText("Z konta"), {
+      target: { value: "a1" },
+    });
+    fireEvent.change(screen.getByLabelText("Na konto"), {
+      target: { value: "a2" },
+    });
+    fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
+      target: { value: "43" },
+    });
+    fireEvent.change(screen.getByLabelText("Opis"), {
+      target: { value: "wymiana" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz transakcję" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Przewalutowanie wymaga jednego konta w PLN i drugiego w obcej walucie.",
+    );
+    expect(exchangeMutate).not.toHaveBeenCalled();
   });
 });

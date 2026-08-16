@@ -5,6 +5,7 @@ import {
   parsePlnToGrosze,
   useAccounts,
   useCategories,
+  useCreateExchange,
   useCreateTransaction,
 } from "../../api/finance";
 import { localTodayIso } from "../../lib/date";
@@ -16,7 +17,7 @@ function apiErrorDetail(error: unknown): string | null {
   );
 }
 
-type TransactionType = "income" | "expense" | "transfer";
+type TransactionType = "income" | "expense" | "transfer" | "exchange";
 
 type TransactionFormProps = {
   onSuccess?: () => void;
@@ -28,12 +29,14 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const accountsQuery = useAccounts();
   const categoriesQuery = useCategories();
   const create = useCreateTransaction();
+  const exchange = useCreateExchange();
 
   const [type, setType] = useState<TransactionType>(DEFAULT_TYPE);
   const [accountId, setAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
+  const [fxRate, setFxRate] = useState("");
   const [date, setDate] = useState(localTodayIso());
   const [description, setDescription] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -44,16 +47,35 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const activePlnAccounts = accounts.filter(
     (account) => account.is_active && account.currency === "PLN",
   );
+  const activeAccounts = accounts.filter((account) => account.is_active);
   const filteredCategories = categories.filter(
     (category) => category.type === type,
   );
 
-  const errorMessage = apiErrorDetail(create.error);
+  const errorMessage =
+    apiErrorDetail(create.error) ?? apiErrorDetail(exchange.error);
+
+  const sourceAccount = accounts.find((account) => account.id === accountId);
+  const amountCurrency =
+    type === "exchange" ? (sourceAccount?.currency ?? "PLN") : "PLN";
+
+  function resetForm() {
+    setType(DEFAULT_TYPE);
+    setAccountId("");
+    setToAccountId("");
+    setCategoryId("");
+    setFxRate("");
+    setAmount("");
+    setDate(localTodayIso());
+    setDescription("");
+    setValidationError(null);
+  }
 
   function handleTypeChange(nextType: TransactionType) {
     setType(nextType);
     setCategoryId("");
     setToAccountId("");
+    setFxRate("");
     setValidationError(null);
   }
 
@@ -69,6 +91,56 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       setValidationError("Podaj opis.");
       return;
     }
+    if (type === "exchange") {
+      if (!accountId || !toAccountId) {
+        setValidationError("Wybierz konto źródłowe i docelowe.");
+        return;
+      }
+      const from = accounts.find((account) => account.id === accountId);
+      const to = accounts.find((account) => account.id === toAccountId);
+      if (
+        !from ||
+        !to ||
+        from.id === to.id ||
+        (from.currency === "PLN") === (to.currency === "PLN")
+      ) {
+        setValidationError(
+          "Przewalutowanie wymaga jednego konta w PLN i drugiego w obcej walucie.",
+        );
+        return;
+      }
+
+      let fxRateValue: number | undefined;
+      const fxRateRaw = fxRate.trim();
+      if (fxRateRaw) {
+        const parsed = Number(fxRateRaw.replace(",", "."));
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+          setValidationError("Podaj poprawny kurs.");
+          return;
+        }
+        fxRateValue = parsed;
+      }
+
+      setValidationError(null);
+      exchange.mutate(
+        {
+          from_account_id: accountId,
+          to_account_id: toAccountId,
+          from_amount: amountGrosze,
+          ...(fxRateValue !== undefined ? { fx_rate: fxRateValue } : {}),
+          transaction_date: date,
+          description: description.trim(),
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+            onSuccess?.();
+          },
+        },
+      );
+      return;
+    }
+
     if (type === "transfer") {
       if (!accountId || !toAccountId) {
         setValidationError("Wybierz konto źródłowe i docelowe.");
@@ -111,14 +183,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       },
       {
         onSuccess: () => {
-          setType(DEFAULT_TYPE);
-          setAccountId("");
-          setToAccountId("");
-          setCategoryId("");
-          setAmount("");
-          setDate(localTodayIso());
-          setDescription("");
-          setValidationError(null);
+          resetForm();
           onSuccess?.();
         },
       },
@@ -162,6 +227,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             <option value="expense">Wydatek</option>
             <option value="income">Przychód</option>
             <option value="transfer">Transfer</option>
+            <option value="exchange">Przewalutowanie</option>
           </select>
         </div>
         <div>
@@ -223,6 +289,68 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
               </select>
             </div>
           </>
+        ) : type === "exchange" ? (
+          <>
+            <div>
+              <label
+                htmlFor="tx-from-account"
+                className="mb-1 block text-sm text-gray-400"
+              >
+                Z konta
+              </label>
+              <select
+                id="tx-from-account"
+                className="input"
+                value={accountId}
+                onChange={(event) => setAccountId(event.target.value)}
+              >
+                <option value="">Wybierz konto</option>
+                {activeAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="tx-to-account"
+                className="mb-1 block text-sm text-gray-400"
+              >
+                Na konto
+              </label>
+              <select
+                id="tx-to-account"
+                className="input"
+                value={toAccountId}
+                onChange={(event) => setToAccountId(event.target.value)}
+              >
+                <option value="">Wybierz konto</option>
+                {activeAccounts
+                  .filter((account) => account.id !== accountId)
+                  .map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="tx-fx-rate"
+                className="mb-1 block text-sm text-gray-400"
+              >
+                Kurs (opcjonalnie)
+              </label>
+              <input
+                id="tx-fx-rate"
+                className="input"
+                value={fxRate}
+                onChange={(event) => setFxRate(event.target.value)}
+                placeholder="np. 4,30"
+              />
+            </div>
+          </>
         ) : (
           <>
             <div>
@@ -274,7 +402,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
             htmlFor="tx-amount"
             className="mb-1 block text-sm text-gray-400"
           >
-            Kwota (PLN)
+            Kwota ({amountCurrency})
           </label>
           <input
             id="tx-amount"
@@ -313,7 +441,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         <button
           type="submit"
           className="btn-primary"
-          disabled={create.isPending}
+          disabled={create.isPending || exchange.isPending}
         >
           Zapisz transakcję
         </button>
