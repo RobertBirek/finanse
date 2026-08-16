@@ -8,6 +8,8 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-15
 
 ### Added
+- **Edycja i usuwanie transakcji**: `DELETE /transactions/{id}` (kaskada postingów)
+  oraz edycja inline opisu i daty w liście transakcji; usunięcie z potwierdzeniem.
 - **Ręczne księgowanie transakcji**: formularz na `/finances/transactions` tworzy
   przychód, wydatek i transfer między kontami przez istniejący `POST
   /finance/transactions` (double-entry zachowany po stronie serwisu). Helper

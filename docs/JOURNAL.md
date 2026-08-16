@@ -3,6 +3,36 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-15 — Sesja 23: Edycja i usuwanie transakcji
+
+### Cel sesji
+Dodać korektę i usuwanie transakcji z listy, domykając cykl życia transakcji.
+
+### Co zrobiono
+- Backend: `delete_transaction` (właściciel, `db.delete` + flush; postingi usuwane
+  kaskadowo przez relację + `ondelete=CASCADE`) oraz `DELETE /transactions/{id}`
+  (204, brak/cudza → 404).
+- Frontend: hooki `useUpdateTransaction` (PATCH opis/data) i `useDeleteTransaction`
+  (DELETE) z centralną invalidacją `invalidateFinanceLedger`.
+- Frontend: w liście transakcji per wiersz akcje „Edytuj"/„Usuń"; edycja inline
+  opisu i daty (jeden wiersz naraz, Zapisz/Anuluj, pending-disable, błąd inline);
+  usunięcie z `window.confirm`.
+
+### Weryfikacja
+- TDD per zadanie z dwustopniowym przeglądem (spec + jakość).
+- Backend: Ruff/mypy PASS; `128 passed, 79 skipped`; integracyjne `81 passed`.
+- Frontend: `70 passed` (14 plików), ESLint, TypeScript, Vite build PASS.
+
+### Decyzje techniczne
+1. Edycja obejmuje opis i datę; zmiana kwoty/konta/kategorii to usuń + dodaj
+   ponownie (postingi nie są edytowane w miejscu).
+2. Edycja opisu transakcji z Actual usuwa znacznik `[actual:{uuid}]` idempotentności
+   re-importu — udokumentowane, nie blokowane.
+
+### Następna sesja
+Przewalutowanie (exchange) z kursem NBP i obsługa EUR/USD.
+
+---
 ## 2026-08-15 — Sesja 22: Ręczne księgowanie transakcji
 
 ### Cel sesji

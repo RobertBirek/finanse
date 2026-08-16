@@ -6,6 +6,13 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 13 — Edycja i usuwanie transakcji (2026-08-15)
+
+- [x] Backend: `delete_transaction` (kaskada postingów) + `DELETE /transactions/{id}` (204/404).
+- [x] Frontend: hooki `useUpdateTransaction`/`useDeleteTransaction` + `invalidateFinanceLedger`.
+- [x] Frontend: edycja inline opisu/daty i usuwanie z potwierdzeniem w liście transakcji.
+- [x] Quality gate: backend `128 unit + 81 integracyjnych`, frontend `70 passed`, lint/typecheck/build PASS.
+
 ## Task 12 — Ręczne księgowanie transakcji (2026-08-15)
 
 - [x] Frontend: helper `buildTransactionPostings` (konwencja `balance = credit − debit` dla przychodu/wydatku/transferu).
