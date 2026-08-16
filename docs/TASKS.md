@@ -6,6 +6,12 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 14 — Przewalutowanie PLN↔EUR/USD (2026-08-15)
+
+- [x] Backend: `create_exchange_transaction` (walidacja kont/walut, kurs NBP lub ręczny, suma zero) + `POST /transactions/exchange`.
+- [x] Frontend: hook `useCreateExchange` i typ „Przewalutowanie" w formularzu (dwa konta, opcjonalny kurs).
+- [x] Quality gate: backend `89 integracyjnych`, frontend `76 passed`, lint/typecheck/build PASS.
+
 ## Task 13 — Edycja i usuwanie transakcji (2026-08-15)
 
 - [x] Backend: `delete_transaction` (kaskada postingów) + `DELETE /transactions/{id}` (204/404).

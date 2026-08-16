@@ -8,6 +8,10 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-15
 
 ### Added
+- **Przewalutowanie (exchange)**: `POST /finance/transactions/exchange` z kursem
+  NBP (automatycznym) lub ręcznym; zapisuje obie rzeczywiste kwoty i kurs jako
+  transakcję `exchange` (PLN↔EUR/USD, suma zero zachowana). Formularz
+  „Przewalutowanie" w `/finances/transactions`.
 - **Edycja i usuwanie transakcji**: `DELETE /transactions/{id}` (kaskada postingów)
   oraz edycja inline opisu i daty w liście transakcji; usunięcie z potwierdzeniem.
 - **Ręczne księgowanie transakcji**: formularz na `/finances/transactions` tworzy

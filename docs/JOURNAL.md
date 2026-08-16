@@ -3,6 +3,36 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ---
+## 2026-08-15 — Sesja 24: Przewalutowanie PLN↔EUR/USD
+
+### Cel sesji
+Dodać ręczne przewalutowanie między kontem PLN a EUR/USD z kursem NBP lub ręcznym.
+
+### Co zrobiono
+- Backend: `create_exchange_transaction` — waliduje konta (własność, aktywne,
+  różne, różne waluty, dokładnie jedno PLN), rozwiązuje kurs (ręczny `manual`
+  albo `NbpRateProvider`), liczy `base` i `to_amount` (obie nogi z tym samym
+  `base_amount_pln`), buduje postings debit/credit i deleguje do `create_transaction`.
+- Backend: `POST /finance/transactions/exchange` (201; ValueError→422), zarejestrowany
+  przed trasą dynamiczną.
+- Frontend: hook `useCreateExchange` i czwarty typ „Przewalutowanie" w
+  `TransactionForm` (dwa konta wszystkich walut, opcjonalny kurs ręczny, brak
+  kategorii, walidacja pary).
+
+### Weryfikacja
+- TDD per zadanie z dwustopniowym przeglądem (spec + jakość).
+- Backend: Ruff/mypy PASS; `130 unit`; integracyjne `89 passed`.
+- Frontend: `76 passed` (14 plików), ESLint, TypeScript, Vite build PASS.
+
+### Decyzje techniczne
+1. Przewalutowania krzyżowe EUR↔USD poza zakresem (wymagają kursu krzyżowego).
+2. Kurs jest zawsze PLN-per-jednostkę waluty obcej; noga PLN ma `fx_rate=1.0`.
+3. Prowizja nie jest częścią exchange — to osobny koszt.
+
+### Następna sesja
+Integracja budżetów z prognozą płynności; przewalutowania krzyżowe.
+
+---
 ## 2026-08-15 — Sesja 23: Edycja i usuwanie transakcji
 
 ### Cel sesji
