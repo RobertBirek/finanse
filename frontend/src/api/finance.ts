@@ -38,6 +38,15 @@ export interface Posting {
   direction: "debit" | "credit";
 }
 
+export interface ExchangeInput {
+  from_account_id: string;
+  to_account_id: string;
+  from_amount: number;
+  fx_rate?: number | null;
+  transaction_date?: string;
+  description: string;
+}
+
 export interface PostingInput {
   account_id: string | null;
   category_id: string | null;
@@ -432,6 +441,26 @@ export function useCreateTransaction() {
       postings: PostingInput[];
     }) => {
       const { data } = await api.post<Transaction>("/finance/transactions", tx);
+      return data;
+    },
+    onSuccess: () => invalidateFinanceLedger(queryClient),
+  });
+}
+
+export function useCreateExchange() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: ExchangeInput) => {
+      const { fx_rate, transaction_date, ...rest } = input;
+      const payload = {
+        ...rest,
+        ...(fx_rate != null ? { fx_rate } : {}),
+        ...(transaction_date !== undefined ? { transaction_date } : {}),
+      };
+      const { data } = await api.post<Transaction>(
+        "/finance/transactions/exchange",
+        payload,
+      );
       return data;
     },
     onSuccess: () => invalidateFinanceLedger(queryClient),

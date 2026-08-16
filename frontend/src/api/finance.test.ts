@@ -14,6 +14,7 @@ import {
   parsePlnToGrosze,
   splitAccounts,
   useCategorySummary,
+  useCreateExchange,
   useDeleteTransaction,
   useFinancialSummary,
   useUpdateTransaction,
@@ -328,11 +329,9 @@ describe("transaction mutation hooks", () => {
   });
 
   it("updates a transaction with its editable fields at its URL", async () => {
-    const patchSpy = vi
-      .spyOn(api, "patch")
-      .mockResolvedValue({
-        data: { id: "tx-123" },
-      } as unknown as AxiosResponse);
+    const patchSpy = vi.spyOn(api, "patch").mockResolvedValue({
+      data: { id: "tx-123" },
+    } as unknown as AxiosResponse);
     const queryClient = new QueryClient();
 
     const { result } = renderHook(() => useUpdateTransaction(), {
@@ -366,5 +365,66 @@ describe("transaction mutation hooks", () => {
 
     expect(deleteSpy).toHaveBeenCalledWith("/finance/transactions/tx-123");
     deleteSpy.mockRestore();
+  });
+});
+
+describe("exchange transaction hook", () => {
+  it("posts an exchange to its URL with the input payload", async () => {
+    const postSpy = vi
+      .spyOn(api, "post")
+      .mockResolvedValue({
+        data: { id: "tx-456" },
+      } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useCreateExchange(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      from_account_id: "acc-from",
+      to_account_id: "acc-to",
+      from_amount: 2500,
+      transaction_date: "2026-08-16",
+      description: "Przewalutowanie",
+    });
+
+    expect(postSpy).toHaveBeenCalledWith("/finance/transactions/exchange", {
+      from_account_id: "acc-from",
+      to_account_id: "acc-to",
+      from_amount: 2500,
+      transaction_date: "2026-08-16",
+      description: "Przewalutowanie",
+    });
+    postSpy.mockRestore();
+  });
+
+  it("omits the fx_rate key when it is not provided", async () => {
+    const postSpy = vi
+      .spyOn(api, "post")
+      .mockResolvedValue({
+        data: { id: "tx-456" },
+      } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useCreateExchange(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      from_account_id: "acc-from",
+      to_account_id: "acc-to",
+      from_amount: 2500,
+      fx_rate: null,
+      description: "Przewalutowanie",
+    });
+
+    expect(postSpy).toHaveBeenCalledWith("/finance/transactions/exchange", {
+      from_account_id: "acc-from",
+      to_account_id: "acc-to",
+      from_amount: 2500,
+      description: "Przewalutowanie",
+    });
+    postSpy.mockRestore();
   });
 });
