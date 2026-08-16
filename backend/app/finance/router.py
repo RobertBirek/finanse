@@ -23,6 +23,7 @@ from app.finance.schemas import (
     CategoryResponse,
     CategorySummaryResponse,
     CategoryUpdate,
+    ExchangeCreate,
     FinanceSettingsResponse,
     FinanceSettingsUpdate,
     FinancialSummary,
@@ -39,6 +40,7 @@ from app.finance.service import (
     create_account,
     create_budget,
     create_category,
+    create_exchange_transaction,
     create_scheduled_item,
     create_transaction,
     delete_budget,
@@ -196,6 +198,22 @@ async def list_transactions(
     type: Annotated[str | None, Query()] = None,
 ):
     return await get_transactions(db, current_user.id, limit=limit, offset=offset, txn_type=type)
+
+
+@router.post(
+    "/transactions/exchange",
+    response_model=TransactionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_exchange_endpoint(
+    data: ExchangeCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        return await create_exchange_transaction(db, current_user.id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
 
 @router.get("/transactions/{transaction_id}", response_model=TransactionResponse)

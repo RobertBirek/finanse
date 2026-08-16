@@ -15,6 +15,7 @@ from app.finance.models import (
     Posting,
     ScheduledFinanceItem,
 )
+from app.finance.nbp_rates import NbpRateProvider
 from app.finance.schemas import (
     AccountCreate,
     AccountUpdate,
@@ -29,6 +30,7 @@ from app.finance.schemas import (
     CategorySpendResponse,
     CategorySummaryResponse,
     CategoryUpdate,
+    ExchangeCreate,
     FinanceSettingsUpdate,
     FinancialSummary,
     PostingCreate,
@@ -274,6 +276,77 @@ async def create_transaction(
         .where(FinancialTransaction.id == txn.id)
     )
     return result.scalar_one()
+
+
+async def create_exchange_transaction(
+    db: AsyncSession, user_id: uuid.UUID, data: ExchangeCreate
+) -> FinancialTransaction:
+    accounts = {account.id: account for account in await get_accounts(db, user_id)}
+
+    from_account = accounts.get(data.from_account_id)
+    to_account = accounts.get(data.to_account_id)
+    if from_account is None or to_account is None:
+        raise ValueError("Exchange account not found")
+    if not from_account.is_active or not to_account.is_active:
+        raise ValueError("Exchange account is not active")
+    if from_account.id == to_account.id:
+        raise ValueError("Exchange accounts must be different")
+
+    from_currency = str(from_account.currency).upper()
+    to_currency = str(to_account.currency).upper()
+    if from_currency == to_currency:
+        raise ValueError("Exchange accounts must have different currencies")
+    if from_currency != "PLN" and to_currency != "PLN":
+        raise ValueError("Cross-currency exchange is not supported")
+
+    foreign_currency = from_currency if to_currency == "PLN" else to_currency
+    effective_date = data.transaction_date or _local_today()
+
+    if data.fx_rate is not None:
+        rate = float(data.fx_rate)
+        rate_source = "manual"
+    else:
+        quote = await NbpRateProvider().get_rate(foreign_currency, effective_date)
+        if quote is None:
+            raise ValueError(f"No FX rate available for {foreign_currency} on {effective_date}")
+        rate = quote.rate
+        rate_source = quote.source
+
+    fx_rate_from = 1.0 if from_currency == "PLN" else rate
+    fx_rate_to = 1.0 if to_currency == "PLN" else rate
+
+    base = round(data.from_amount * fx_rate_from)
+    to_amount = round(base / fx_rate_to)
+
+    return await create_transaction(
+        db,
+        user_id,
+        TransactionCreate(
+            transaction_date=effective_date,
+            description=data.description,
+            type="exchange",
+            postings=[
+                PostingCreate(
+                    account_id=from_account.id,
+                    source_amount=data.from_amount,
+                    source_currency=from_currency,
+                    base_amount_pln=base,
+                    fx_rate=fx_rate_from,
+                    fx_rate_source=rate_source,
+                    direction="debit",
+                ),
+                PostingCreate(
+                    account_id=to_account.id,
+                    source_amount=to_amount,
+                    source_currency=to_currency,
+                    base_amount_pln=base,
+                    fx_rate=fx_rate_to,
+                    fx_rate_source=rate_source,
+                    direction="credit",
+                ),
+            ],
+        ),
+    )
 
 
 async def get_transactions(

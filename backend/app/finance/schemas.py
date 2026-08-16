@@ -102,6 +102,15 @@ class TransactionCreate(BaseModel):
     postings: list[PostingCreate] = Field(min_length=2)
 
 
+class ExchangeCreate(BaseModel):
+    from_account_id: uuid.UUID
+    to_account_id: uuid.UUID
+    from_amount: int = Field(gt=0, description="Amount in source currency minor units")
+    fx_rate: float | None = Field(default=None, gt=0)
+    transaction_date: dt.date | None = None
+    description: str = Field(min_length=1)
+
+
 class TransactionUpdate(BaseModel):
     transaction_date: dt.date | None = None
     description: str | None = None
