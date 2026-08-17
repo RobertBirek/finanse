@@ -53,6 +53,7 @@ class Category(Base):
     )
     type: Mapped[str] = mapped_column(String(20), nullable=False)
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     parent: Mapped["Category | None"] = relationship(
         "Category", remote_side="Category.id", backref="children"

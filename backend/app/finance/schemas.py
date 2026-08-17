@@ -48,6 +48,7 @@ class CategoryUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     parent_id: uuid.UUID | None = None
     type: str | None = Field(default=None, pattern=r"^(income|expense|transfer)$")
+    is_active: bool | None = None
 
 
 class CategoryResponse(BaseModel):
@@ -56,6 +57,7 @@ class CategoryResponse(BaseModel):
     name: str
     parent_id: uuid.UUID | None
     type: str
+    is_active: bool
     created_at: dt.datetime
     updated_at: dt.datetime
 

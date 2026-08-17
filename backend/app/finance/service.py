@@ -122,6 +122,23 @@ async def update_account(
     return account
 
 
+async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID) -> bool:
+    account = await get_account(db, user_id, account_id)
+    if account is None:
+        return False
+    posting = await db.execute(select(Posting.id).where(Posting.account_id == account_id).limit(1))
+    scheduled = await db.execute(
+        select(ScheduledFinanceItem.id)
+        .where(ScheduledFinanceItem.account_id == account_id)
+        .limit(1)
+    )
+    if posting.first() is not None or scheduled.first() is not None:
+        raise ValueError("Account has records; deactivate it instead of deleting")
+    await db.delete(account)
+    await db.flush()
+    return True
+
+
 async def create_category(db: AsyncSession, user_id: uuid.UUID, data: CategoryCreate) -> Category:
     category = Category(user_id=user_id, **data.model_dump())
     db.add(category)
@@ -150,6 +167,32 @@ async def update_category(
         setattr(category, key, value)
     await db.flush()
     return category
+
+
+async def delete_category(db: AsyncSession, user_id: uuid.UUID, category_id: uuid.UUID) -> bool:
+    result = await db.execute(
+        select(Category).where(Category.id == category_id, Category.user_id == user_id)
+    )
+    category = result.scalar_one_or_none()
+    if category is None:
+        return False
+    posting = await db.execute(
+        select(Posting.id).where(Posting.category_id == category_id).limit(1)
+    )
+    scheduled = await db.execute(
+        select(ScheduledFinanceItem.id)
+        .where(ScheduledFinanceItem.category_id == category_id)
+        .limit(1)
+    )
+    budget = await db.execute(
+        select(CategoryBudget.id).where(CategoryBudget.category_id == category_id).limit(1)
+    )
+    child = await db.execute(select(Category.id).where(Category.parent_id == category_id).limit(1))
+    if any(result.first() is not None for result in (posting, scheduled, budget, child)):
+        raise ValueError("Category has records; deactivate it instead of deleting")
+    await db.delete(category)
+    await db.flush()
+    return True
 
 
 def _validate_posting_sum(postings: list, txn_type: str) -> None:
@@ -199,8 +242,13 @@ async def _validate_transaction_postings(
         account = accounts.get(posting.account_id) if posting.account_id is not None else None
         if posting.account_id is not None and account is None:
             raise ValueError("Account not found")
-        if posting.category_id is not None and posting.category_id not in categories:
+        if account is not None and not account.is_active:
+            raise ValueError("Account is inactive")
+        category = categories.get(posting.category_id) if posting.category_id is not None else None
+        if posting.category_id is not None and category is None:
             raise ValueError("Category not found")
+        if category is not None and not category.is_active:
+            raise ValueError("Category is inactive")
 
         source_currency = str(posting.source_currency).upper()
         if source_currency not in SUPPORTED_CURRENCIES:
@@ -588,6 +636,8 @@ async def _require_expense_category(
         raise ValueError("Budget category not found")
     if category.type != "expense":
         raise ValueError("Budget category must be an expense category")
+    if not category.is_active:
+        raise ValueError("Budget category is inactive")
     return category
 
 
@@ -780,6 +830,8 @@ async def _validate_scheduled_item_links(
     category = category_result.scalar_one_or_none()
     if category is None:
         raise ValueError("Scheduled item category not found")
+    if not category.is_active:
+        raise ValueError("Scheduled item category is inactive")
     if category.type != item_type:
         raise ValueError("Scheduled item category type must match item type")
 

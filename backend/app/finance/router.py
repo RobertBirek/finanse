@@ -43,7 +43,9 @@ from app.finance.service import (
     create_exchange_transaction,
     create_scheduled_item,
     create_transaction,
+    delete_account,
     delete_budget,
+    delete_category,
     delete_scheduled_item,
     delete_transaction,
     get_account,
@@ -116,6 +118,21 @@ async def update_account_endpoint(
     return account
 
 
+@router.delete("/accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account_endpoint(
+    account_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    try:
+        deleted = await delete_account(db, current_user.id, account_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/accounts/{account_id}/transactions")
 async def get_account_transactions(
     account_id: uuid.UUID,
@@ -172,7 +189,23 @@ async def update_category_endpoint(
     category = await update_category(db, current_user.id, category_id, data)
     if category is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    await db.refresh(category)
     return category
+
+
+@router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_category_endpoint(
+    category_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    try:
+        deleted = await delete_category(db, current_user.id, category_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(
