@@ -6,6 +6,13 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 16 — Usuwanie i dezaktywacja kont i kategorii (2026-08-17)
+
+- [x] Model: `categories.is_active` (Boolean NOT NULL, default true) + migracja `1dbfe88dfb1b` (upgrade/downgrade zweryfikowane na izolowanej bazie).
+- [x] Serwis: `delete_account`/`delete_category` (blokada przy powiązanych rekordach, ValueError z sugestią dezaktywacji), odrzucanie nieaktywnych kont/kategorii w transakcjach, budżetach i schedulerze.
+- [x] API: `DELETE /accounts/{id}` i `DELETE /categories/{id}` (204/404/409) oraz `is_active` w `PATCH /categories/{id}`.
+- [x] Quality gate: focused `17 passed`, pełny `test_finance` `155 passed`, backend unit `126 passed, 108 skipped`; ruff/mypy PASS.
+
 ## Task 15 — Budżety w prognozie płynności (2026-08-15)
 
 - [x] Backend: `CashflowBudgetSummary` + pole `budgets` w prognozie (z `get_budget_status`).

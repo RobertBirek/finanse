@@ -8,6 +8,13 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-15
 
 ### Added
+- **Usuwanie i dezaktywacja kont i kategorii**: kolumna `categories.is_active`
+  (migracja `1dbfe88dfb1b`), `DELETE /accounts/{id}` i `DELETE /categories/{id}`
+  (204; brak/cudzy → 404; rekordy powiązane → 409 z sugestią dezaktywacji),
+  dezaktywacja kategorii przez `PATCH /categories/{id}` (`is_active`).
+  Usunięcie blokuje się przy istniejących postingach/pozycjach schedulera/
+  budżetach/kategoriach-dzieciach; nieaktywne konta i kategorie są odrzucane
+  przy tworzeniu transakcji, budżetów i pozycji schedulera.
 - **Budżety w prognozie płynności**: prognoza zawiera podsumowanie budżetów
   bieżącego miesiąca (limit, wydano, pozostało) oraz ostrzeżenie, gdy pozostałe
   budżety przekraczają prognozowane saldo przed wypłatą.

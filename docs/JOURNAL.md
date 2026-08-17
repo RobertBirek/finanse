@@ -1,8 +1,44 @@
 # Journal
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
+---
+
+## 2026-08-17 — Sesja 26: Usuwanie i dezaktywacja kont i kategorii
+
+### Cel sesji
+Domknąć cykl życia encji finansowych: usuwanie kont i kategorii (gdy brak
+powiązań) oraz dezaktywacja kategorii, z ochroną rekordów księgi.
+
+### Co zrobiono
+- Backend: kolumna `categories.is_active` + migracja `1dbfe88dfb1b`.
+- Serwis: `delete_account`/`delete_category` zwracają False dla brakującej/cudzej
+  encji i ValueError przy powiązanych rekordach (postingi, pozycje schedulera,
+  budżety, kategorie-dzieci); nieaktywne konta/kategorie są odrzucane w
+  `_validate_transaction_postings`, `_validate_scheduled_item_links` i
+  `_require_expense_category`.
+- API: `DELETE /accounts/{id}`, `DELETE /categories/{id}` (204/404/409),
+  `is_active` w `PATCH /categories/{id}`; dodano `db.refresh` w PATCH kategorii
+  (naprawa MissingGreenlet na `updated_at` po flush UPDATE).
+
+### Weryfikacja
+- TDD: RED (ImportError brakującego `delete_account`) → GREEN po implementacji.
+- Focused `test_entities_crud.py`: `17 passed`; pełny `test_finance`: `155 passed`;
+  backend unit: `126 passed, 108 skipped`; ruff/mypy PASS.
+- Migracja zweryfikowana upgrade/downgrade/upgrade na izolowanej bazie
+  `127.0.0.1:55432`; kontener testowy usunięty.
+
+### Decyzje techniczne
+1. Usuwanie encji z historią jest blokowane (409 z sugestią dezaktywacji),
+   zgodnie z niezmiennością księgi — kasowanie czystych encji pozostaje jawne.
+2. `PATCH /accounts/{id}` ma ten sam latentny problem `updated_at`
+   (MissingGreenlet) co naprawiona kategoria — poza zakresem zadania.
+
+### Następna sesja
+Ewentualna naprawa PATCH kont/transakcji (`db.refresh`), frontend dezaktywacji
+kategorii, `closed_at` przy dezaktywacji konta.
 
 ---
+
 ## 2026-08-15 — Sesja 25: Budżety w prognozie płynności
 
 ### Cel sesji
