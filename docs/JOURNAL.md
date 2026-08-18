@@ -3,6 +3,28 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-08-17 — Sesja 27: Refresh konta po aktualizacji
+
+### Cel sesji
+Naprawić latentny MissingGreenlet w `PATCH /accounts/{id}` — ten sam problem,
+który Sesja 26 naprawiła dla kategorii.
+
+### Co zrobiono
+- `update_account_endpoint` dostaje `db.refresh(account)` przed returnem;
+  wcześniej walidacja `AccountResponse.updated_at` po flush UPDATE kończyła się
+  `ResponseValidationError` (MissingGreenlet).
+- TDD: nowy test API PATCH konta (`is_active=False`, asercja `updated_at`)
+  najpierw odtworzył błąd, potem przeszedł.
+
+### Weryfikacja
+- Focused `test_entities_crud.py`: `18 passed`; pełny `test_finance`: `156 passed`;
+  ruff/mypy `app/finance` PASS. Kontener testowy usunięty.
+
+### Następna sesja
+Frontend dezaktywacji kategorii, `closed_at` przy dezaktywacji konta.
+
+---
+
 ## 2026-08-17 — Sesja 26: Usuwanie i dezaktywacja kont i kategorii
 
 ### Cel sesji

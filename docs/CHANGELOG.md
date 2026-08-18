@@ -75,6 +75,9 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Nie wykonano migracji produkcyjnej ani deployu dla ręcznego księgowania.
 
 ### Fixed
+- `PATCH /accounts/{id}` odświeża konto przed zwróceniem odpowiedzi
+  (`db.refresh`), eliminując MissingGreenlet na `updated_at` po flush UPDATE
+  (analogicznie do naprawionego wcześniej PATCH kategorii).
 - Odwrócony znak transakcji per konto (`AccountTransactions`): przychód
   (income) z postingiem `credit` renderuje zielony „+", a wydatek (expense)
   z `debit` czerwony „−", zgodnie z konwencją `balance = credit − debit`.
