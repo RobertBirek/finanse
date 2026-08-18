@@ -14,6 +14,8 @@ import {
   parsePlnToGrosze,
   splitAccounts,
   useCategorySummary,
+  useCreateAccount,
+  useCreateCategory,
   useCreateExchange,
   useDeleteAccount,
   useDeleteCategory,
@@ -374,6 +376,32 @@ describe("transaction mutation hooks", () => {
 });
 
 describe("account mutation hooks", () => {
+  it("passes is_budget_account through when creating an account", async () => {
+    const postSpy = vi.spyOn(api, "post").mockResolvedValue({
+      data: { id: "acc-1" },
+    } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useCreateAccount(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      name: "Portfel",
+      type: "cash",
+      currency: "PLN",
+      is_budget_account: false,
+    });
+
+    expect(postSpy).toHaveBeenCalledWith("/finance/accounts", {
+      name: "Portfel",
+      type: "cash",
+      currency: "PLN",
+      is_budget_account: false,
+    });
+    postSpy.mockRestore();
+  });
+
   it("updates an account with its editable fields at its URL", async () => {
     const patchSpy = vi
       .spyOn(api, "patch")
@@ -452,6 +480,53 @@ describe("account mutation hooks", () => {
 });
 
 describe("category mutation hooks", () => {
+  it("creates a category via its URL with the input payload", async () => {
+    const postSpy = vi.spyOn(api, "post").mockResolvedValue({
+      data: { id: "cat-1" },
+    } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useCreateCategory(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      name: "Paliwo",
+      type: "expense",
+      parent_id: null,
+    });
+
+    expect(postSpy).toHaveBeenCalledWith("/finance/categories", {
+      name: "Paliwo",
+      type: "expense",
+      parent_id: null,
+    });
+    postSpy.mockRestore();
+  });
+
+  it("invalidates categories and category-summary after creating a category", async () => {
+    const postSpy = vi.spyOn(api, "post").mockResolvedValue({
+      data: { id: "cat-1" },
+    } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["finance", "categories"], []);
+    queryClient.setQueryData(["finance", "category-summary"], []);
+
+    const { result } = renderHook(() => useCreateCategory(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({ name: "Paliwo", type: "expense" });
+
+    expect(
+      queryClient.getQueryState(["finance", "categories"])?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(["finance", "category-summary"])?.isInvalidated,
+    ).toBe(true);
+    postSpy.mockRestore();
+  });
+
   it("updates a category with its editable fields at its URL", async () => {
     const patchSpy = vi
       .spyOn(api, "patch")

@@ -396,6 +396,7 @@ export function useCreateAccount() {
       name: string;
       type: string;
       currency?: string;
+      is_budget_account?: boolean;
     }) => {
       const { data } = await api.post<Account>("/finance/accounts", account);
       return data;
@@ -452,6 +453,24 @@ function invalidateCategoryMutationQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["finance", "categories"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "category-summary"] });
   invalidateFinanceLedger(queryClient);
+}
+
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (category: {
+      name: string;
+      parent_id?: string | null;
+      type: string;
+    }) => {
+      const { data } = await api.post<Category>(
+        "/finance/categories",
+        category,
+      );
+      return data;
+    },
+    onSuccess: () => invalidateCategoryMutationQueries(queryClient),
+  });
 }
 
 export function useUpdateCategory() {

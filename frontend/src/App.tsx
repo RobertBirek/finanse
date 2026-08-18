@@ -10,6 +10,7 @@ import { Projects } from "./pages/Projects";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Calendar } from "./pages/Calendar";
 import { Finances } from "./pages/Finances";
+import { FinanceAccounts } from "./pages/FinanceAccounts";
 import { FinanceTransactions } from "./pages/FinanceTransactions";
 import { FinanceCashflow } from "./pages/FinanceCashflow";
 import { FinanceBudgets } from "./pages/FinanceBudgets";
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/finances" element={<Finances />} />
+        <Route path="/finances/accounts" element={<FinanceAccounts />} />
         <Route
           path="/finances/transactions"
           element={<FinanceTransactions />}

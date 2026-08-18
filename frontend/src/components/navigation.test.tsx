@@ -53,6 +53,18 @@ describe("isMenuItemActive", () => {
     expect(isMenuItemActive(reports, "/finances/reports")).toBe(true);
     expect(isMenuItemActive(reports, "/finances/budgets")).toBe(false);
   });
+
+  it("places Konta right after Finanse in the finance menu", () => {
+    const finance = navigationContexts.find(
+      (context) => context.id === "finance",
+    )!;
+    const labels = finance.items.map((item) => item.label);
+
+    expect(labels.indexOf("Konta")).toBe(labels.indexOf("Finanse") + 1);
+    expect(finance.items.find((item) => item.label === "Konta")?.to).toBe(
+      "/finances/accounts",
+    );
+  });
 });
 
 describe("contextual navigation components", () => {
@@ -77,6 +89,10 @@ describe("contextual navigation components", () => {
       .find((link) => link.hasAttribute("title"));
 
     expect(financeRailLink).toHaveAttribute("title", "Finanse");
+    expect(screen.getByRole("link", { name: "Konta" })).toHaveAttribute(
+      "href",
+      "/finances/accounts",
+    );
     expect(screen.getByRole("link", { name: "Transakcje" })).toHaveAttribute(
       "href",
       "/finances/transactions",

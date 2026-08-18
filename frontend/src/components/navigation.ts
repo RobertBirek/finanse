@@ -61,6 +61,7 @@ export const navigationContexts: NavigationContext[] = [
     routePrefixes: ["/finances"],
     items: [
       { label: "Finanse", to: "/finances" },
+      { label: "Konta", to: "/finances/accounts" },
       { label: "Transakcje", to: "/finances/transactions" },
       { label: "Płynność", to: "/finances/cashflow" },
       { label: "Budżet", to: "/finances/budgets" },
