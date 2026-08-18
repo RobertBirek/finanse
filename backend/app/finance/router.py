@@ -115,6 +115,7 @@ async def update_account_endpoint(
     account = await update_account(db, current_user.id, account_id, data)
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+    await db.refresh(account)
     return account
 
 

@@ -368,6 +368,24 @@ async def test_delete_account_api_204_404_409(db_session) -> None:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+async def test_update_account_api_returns_updated_account(db_session) -> None:
+    user_id = uuid.uuid4()
+    account = await create_account(db_session, user_id, AccountCreate(name="ING", type="checking"))
+
+    async with _api_client(db_session, user_id) as client:
+        response = await client.patch(
+            f"/api/finance/accounts/{account.id}", json={"is_active": False}
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["is_active"] is False
+    assert body["updated_at"] is not None
+    assert await get_account(db_session, user_id, account.id) is not None
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_delete_category_api_204_404_409(db_session) -> None:
     owner = uuid.uuid4()
     other = uuid.uuid4()
