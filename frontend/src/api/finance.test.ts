@@ -15,10 +15,15 @@ import {
   splitAccounts,
   useCategorySummary,
   useCreateExchange,
+  useDeleteAccount,
+  useDeleteCategory,
   useDeleteTransaction,
   useFinancialSummary,
+  useUpdateAccount,
+  useUpdateCategory,
   useUpdateTransaction,
   type Account,
+  type Category,
   type CategorySummary,
   type FinancialPeriod,
   type PostingInput,
@@ -368,13 +373,158 @@ describe("transaction mutation hooks", () => {
   });
 });
 
+describe("account mutation hooks", () => {
+  it("updates an account with its editable fields at its URL", async () => {
+    const patchSpy = vi
+      .spyOn(api, "patch")
+      .mockResolvedValue({ data: { id: "acc-1" } } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useUpdateAccount(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      id: "acc-1",
+      is_active: false,
+      is_budget_account: true,
+    });
+
+    expect(patchSpy).toHaveBeenCalledWith("/finance/accounts/acc-1", {
+      is_active: false,
+      is_budget_account: true,
+    });
+    patchSpy.mockRestore();
+  });
+
+  it("passes a closed_at date through when closing an account", async () => {
+    const patchSpy = vi
+      .spyOn(api, "patch")
+      .mockResolvedValue({ data: { id: "acc-1" } } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useUpdateAccount(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({ id: "acc-1", closed_at: "2026-08-17" });
+
+    expect(patchSpy).toHaveBeenCalledWith("/finance/accounts/acc-1", {
+      closed_at: "2026-08-17",
+    });
+    patchSpy.mockRestore();
+  });
+
+  it("deletes an account via its id in the URL", async () => {
+    const deleteSpy = vi
+      .spyOn(api, "delete")
+      .mockResolvedValue({} as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useDeleteAccount(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync("acc-1");
+
+    expect(deleteSpy).toHaveBeenCalledWith("/finance/accounts/acc-1");
+    deleteSpy.mockRestore();
+  });
+
+  it("invalidates the accounts list after a mutation", async () => {
+    const patchSpy = vi
+      .spyOn(api, "patch")
+      .mockResolvedValue({ data: { id: "acc-1" } } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["finance", "accounts"], []);
+
+    const { result } = renderHook(() => useUpdateAccount(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({ id: "acc-1", is_active: false });
+
+    expect(
+      queryClient.getQueryState(["finance", "accounts"])?.isInvalidated,
+    ).toBe(true);
+    patchSpy.mockRestore();
+  });
+});
+
+describe("category mutation hooks", () => {
+  it("updates a category with its editable fields at its URL", async () => {
+    const patchSpy = vi
+      .spyOn(api, "patch")
+      .mockResolvedValue({ data: { id: "cat-1" } } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useUpdateCategory(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({ id: "cat-1", is_active: false });
+
+    expect(patchSpy).toHaveBeenCalledWith("/finance/categories/cat-1", {
+      is_active: false,
+    });
+    patchSpy.mockRestore();
+  });
+
+  it("deletes a category via its id in the URL", async () => {
+    const deleteSpy = vi
+      .spyOn(api, "delete")
+      .mockResolvedValue({} as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+
+    const { result } = renderHook(() => useDeleteCategory(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync("cat-1");
+
+    expect(deleteSpy).toHaveBeenCalledWith("/finance/categories/cat-1");
+    deleteSpy.mockRestore();
+  });
+
+  it("invalidates the category queries after a mutation", async () => {
+    const patchSpy = vi
+      .spyOn(api, "patch")
+      .mockResolvedValue({ data: { id: "cat-1" } } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["finance", "categories"], []);
+    queryClient.setQueryData(["finance", "category-summary"], []);
+    queryClient.setQueryData(["finance", "summary"], []);
+
+    const { result } = renderHook(() => useUpdateCategory(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({ id: "cat-1", is_active: false });
+
+    expect(
+      queryClient.getQueryState(["finance", "categories"])?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(["finance", "category-summary"])?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(["finance", "summary"])?.isInvalidated,
+    ).toBe(true);
+    patchSpy.mockRestore();
+  });
+});
+
+describe("Category type", () => {
+  it("exposes is_active on the category response", () => {
+    expectTypeOf<Category["is_active"]>().toEqualTypeOf<boolean>();
+  });
+});
+
 describe("exchange transaction hook", () => {
   it("posts an exchange to its URL with the input payload", async () => {
-    const postSpy = vi
-      .spyOn(api, "post")
-      .mockResolvedValue({
-        data: { id: "tx-456" },
-      } as unknown as AxiosResponse);
+    const postSpy = vi.spyOn(api, "post").mockResolvedValue({
+      data: { id: "tx-456" },
+    } as unknown as AxiosResponse);
     const queryClient = new QueryClient();
 
     const { result } = renderHook(() => useCreateExchange(), {
@@ -400,11 +550,9 @@ describe("exchange transaction hook", () => {
   });
 
   it("omits the fx_rate key when it is not provided", async () => {
-    const postSpy = vi
-      .spyOn(api, "post")
-      .mockResolvedValue({
-        data: { id: "tx-456" },
-      } as unknown as AxiosResponse);
+    const postSpy = vi.spyOn(api, "post").mockResolvedValue({
+      data: { id: "tx-456" },
+    } as unknown as AxiosResponse);
     const queryClient = new QueryClient();
 
     const { result } = renderHook(() => useCreateExchange(), {

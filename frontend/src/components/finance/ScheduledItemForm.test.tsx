@@ -53,7 +53,16 @@ const categories: Array<{
   name: string;
   parent_id: string | null;
   type: "income" | "expense" | "transfer";
-}> = [{ id: "c-expense", name: "Czynsz", parent_id: null, type: "expense" }];
+  is_active: boolean;
+}> = [
+  {
+    id: "c-expense",
+    name: "Czynsz",
+    parent_id: null,
+    type: "expense",
+    is_active: true,
+  },
+];
 
 describe("ScheduledItemForm", () => {
   beforeEach(() => {

@@ -23,6 +23,22 @@ export interface Category {
   name: string;
   parent_id: string | null;
   type: "income" | "expense" | "transfer";
+  is_active: boolean;
+}
+
+export interface AccountUpdateInput {
+  name?: string;
+  type?: string;
+  is_active?: boolean;
+  is_budget_account?: boolean;
+  closed_at?: string | null;
+}
+
+export interface CategoryUpdateInput {
+  name?: string;
+  parent_id?: string | null;
+  type?: "income" | "expense" | "transfer";
+  is_active?: boolean;
 }
 
 export interface Posting {
@@ -390,6 +406,38 @@ export function useCreateAccount() {
   });
 }
 
+function invalidateAccountMutationQueries(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
+  invalidateFinanceLedger(queryClient);
+}
+
+export function useUpdateAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...update
+    }: AccountUpdateInput & { id: string }) => {
+      const { data } = await api.patch<Account>(
+        `/finance/accounts/${id}`,
+        update,
+      );
+      return data;
+    },
+    onSuccess: () => invalidateAccountMutationQueries(queryClient),
+  });
+}
+
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/finance/accounts/${id}`);
+    },
+    onSuccess: () => invalidateAccountMutationQueries(queryClient),
+  });
+}
+
 export function useCategories() {
   return useQuery({
     queryKey: ["finance", "categories"],
@@ -397,6 +445,39 @@ export function useCategories() {
       const { data } = await api.get<Category[]>("/finance/categories");
       return data;
     },
+  });
+}
+
+function invalidateCategoryMutationQueries(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["finance", "categories"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "category-summary"] });
+  invalidateFinanceLedger(queryClient);
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...update
+    }: CategoryUpdateInput & { id: string }) => {
+      const { data } = await api.patch<Category>(
+        `/finance/categories/${id}`,
+        update,
+      );
+      return data;
+    },
+    onSuccess: () => invalidateCategoryMutationQueries(queryClient),
+  });
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/finance/categories/${id}`);
+    },
+    onSuccess: () => invalidateCategoryMutationQueries(queryClient),
   });
 }
 
