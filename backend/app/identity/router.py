@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit.service import log_security_event
 from app.config import settings
 from app.database import get_db
 from app.identity.models import User
@@ -17,6 +18,7 @@ from app.identity.service import (
     get_user_by_id,
     revoke_session,
 )
+from app.security.rate_limit import RateLimitUnavailable, check_rate_limit
 
 router = APIRouter()
 
@@ -52,14 +54,19 @@ async def get_current_user(
     session_token: Annotated[str | None, Cookie(alias=COOKIE_NAME)] = None,
 ) -> User:
     if session_token is None:
+        await log_security_event("session_rejected", "missing-session")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     session = await get_active_session(db, session_token)
     if session is None:
+        from app.identity.service import hash_session_token
+
+        await log_security_event("session_rejected", hash_session_token(session_token))
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     user = await get_user_by_id(db, session.user_id)
     if user is None or not user.is_active:
+        await log_security_event("session_rejected", str(session.id))
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     session.last_seen_at = datetime.now(UTC)
@@ -86,7 +93,37 @@ async def register(
 
 
 @router.post("/login", status_code=status.HTTP_204_NO_CONTENT)
-async def login(data: UserLogin, response: Response, db: Annotated[AsyncSession, Depends(get_db)]):
+async def login(
+    data: UserLogin,
+    response: Response,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    client_ip = request.client.host if request.client is not None else "unknown"
+    identifier = f"{client_ip}|{data.email.strip().lower()}"
+    try:
+        limit = await check_rate_limit(
+            "login",
+            identifier,
+            settings.LOGIN_RATE_LIMIT,
+            settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS,
+        )
+    except RateLimitUnavailable:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service unavailable"
+        )
+    if not limit.allowed:
+        await log_security_event(
+            "rate_limited",
+            limit.identifier_hash,
+            state={"scope": "login", "identifier_hash": limit.identifier_hash},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Request limit exceeded",
+            headers={"Retry-After": str(limit.retry_after)},
+        )
+
     user = await authenticate(db, data.email, data.password)
     if user is None:
         raise HTTPException(
@@ -95,6 +132,7 @@ async def login(data: UserLogin, response: Response, db: Annotated[AsyncSession,
 
     session_token, csrf_token, _ = await create_session(db, user.id)
     set_session_cookies(response, session_token, csrf_token)
+    await log_security_event("login_success", str(user.id), user_id=user.id)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -104,7 +142,10 @@ async def logout(
     session_token: Annotated[str | None, Cookie(alias=COOKIE_NAME)] = None,
 ):
     if session_token is not None:
+        session = await get_active_session(db, session_token)
         await revoke_session(db, session_token)
+        if session is not None:
+            await log_security_event("logout", str(session.user_id), user_id=session.user_id)
     response.delete_cookie(key=COOKIE_NAME)
     response.delete_cookie(key=CSRF_COOKIE_NAME)
 

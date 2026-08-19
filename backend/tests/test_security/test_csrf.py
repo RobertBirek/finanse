@@ -17,8 +17,15 @@ FORBIDDEN_DETAIL = "Forbidden"
 
 @pytest.fixture
 def production_csrf_settings(monkeypatch):
+    from app.security import rate_limit
+
+    class RedisForCsrf:
+        async def eval(self, _script, _key_count, _key, _window_seconds):
+            return [1, 60]
+
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
     monkeypatch.setattr(settings, "_trusted_origins", (TRUSTED_ORIGIN,))
+    monkeypatch.setattr(rate_limit, "get_redis_client", RedisForCsrf)
 
 
 @pytest.mark.integration

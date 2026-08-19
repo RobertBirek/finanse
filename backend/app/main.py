@@ -6,11 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import engine
+from app.security.rate_limit import close_redis_client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
+    await close_redis_client()
     await engine.dispose()
 
 
