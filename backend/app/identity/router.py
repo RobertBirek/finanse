@@ -22,7 +22,6 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 COOKIE_NAME = "advisor_session"
-COOKIE_MAX_AGE = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 
 async def get_current_user(
@@ -53,6 +52,9 @@ async def get_current_user(
 async def register(
     data: UserCreate, response: Response, db: Annotated[AsyncSession, Depends(get_db)]
 ):
+    if not settings.registration_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
     existing = await get_user_by_email(db, data.email)
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
@@ -66,7 +68,7 @@ async def register(
         httponly=True,
         secure=settings.ENVIRONMENT == "production",
         samesite="strict",
-        max_age=COOKIE_MAX_AGE,
+        max_age=settings.SESSION_EXPIRE_MINUTES * 60,
     )
 
     return user
@@ -88,7 +90,7 @@ async def login(data: UserLogin, response: Response, db: Annotated[AsyncSession,
         httponly=True,
         secure=settings.ENVIRONMENT == "production",
         samesite="strict",
-        max_age=COOKIE_MAX_AGE,
+        max_age=settings.SESSION_EXPIRE_MINUTES * 60,
     )
 
     return TokenResponse(access_token=token)

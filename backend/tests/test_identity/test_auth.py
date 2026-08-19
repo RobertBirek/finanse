@@ -1,5 +1,7 @@
 """Tests for identity domain."""
 
+from unittest.mock import AsyncMock
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -134,3 +136,39 @@ class TestRegisterAndLogin:
                 },
             )
             assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_register_returns_not_found_in_production_before_user_creation(monkeypatch):
+    from app.config import Settings
+    from app.database import get_db
+    from app.identity import router as identity_router
+
+    get_user_by_email = AsyncMock()
+    create_user = AsyncMock()
+    production_settings = Settings(ENVIRONMENT="production", SECRET_KEY="s" * 32)
+
+    async def override_get_db():
+        yield object()
+
+    monkeypatch.setattr(identity_router, "settings", production_settings)
+    monkeypatch.setattr(identity_router, "get_user_by_email", get_user_by_email)
+    monkeypatch.setattr(identity_router, "create_user", create_user)
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        transport = ASGITransport(app=app, raise_app_exceptions=False)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/auth/register",
+                json={
+                    "email": "production@example.com",
+                    "password": "TestPass123!",
+                    "display_name": "Production User",
+                },
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    get_user_by_email.assert_not_awaited()
+    create_user.assert_not_awaited()
