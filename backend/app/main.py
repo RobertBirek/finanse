@@ -1,7 +1,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
@@ -40,11 +40,22 @@ from app.documents.router import router as documents_router
 from app.finance.router import router as finance_router
 from app.identity.router import router as identity_router
 from app.inbox.router import router as inbox_router
+from app.security.csrf import require_csrf
 from app.work.router import router as work_router
 
-app.include_router(identity_router, prefix="/api/auth", tags=["identity"])
-app.include_router(finance_router, prefix="/api/finance", tags=["finance"])
-app.include_router(work_router, prefix="/api/work", tags=["work"])
-app.include_router(inbox_router, prefix="/api/inbox", tags=["inbox"])
-app.include_router(advisor_router, prefix="/api/advisor", tags=["advisor"])
-app.include_router(documents_router, prefix="/api/documents", tags=["documents"])
+csrf_dependency = [Depends(require_csrf)]
+
+app.include_router(
+    identity_router, prefix="/api/auth", tags=["identity"], dependencies=csrf_dependency
+)
+app.include_router(
+    finance_router, prefix="/api/finance", tags=["finance"], dependencies=csrf_dependency
+)
+app.include_router(work_router, prefix="/api/work", tags=["work"], dependencies=csrf_dependency)
+app.include_router(inbox_router, prefix="/api/inbox", tags=["inbox"], dependencies=csrf_dependency)
+app.include_router(
+    advisor_router, prefix="/api/advisor", tags=["advisor"], dependencies=csrf_dependency
+)
+app.include_router(
+    documents_router, prefix="/api/documents", tags=["documents"], dependencies=csrf_dependency
+)

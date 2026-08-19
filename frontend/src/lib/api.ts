@@ -8,6 +8,29 @@ const api = axios.create({
   },
 });
 
+const unsafeMethods = new Set(["post", "patch", "put", "delete"]);
+
+function getCookie(name: string): string | undefined {
+  const prefix = `${name}=`;
+  return document.cookie
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(prefix))
+    ?.slice(prefix.length);
+}
+
+api.interceptors.request.use((config) => {
+  if (!unsafeMethods.has(config.method?.toLowerCase() ?? "")) {
+    return config;
+  }
+
+  const csrfToken = getCookie("advisor_csrf");
+  if (csrfToken) {
+    config.headers.set("X-CSRF-Token", csrfToken);
+  }
+  return config;
+});
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -18,7 +41,7 @@ api.interceptors.response.use(
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

@@ -60,12 +60,12 @@
 - Create: `backend/app/security/__init__.py`, `backend/app/security/csrf.py`, `backend/tests/test_security/test_csrf.py`
 - Modify: `backend/app/main.py`, `backend/app/identity/router.py`, `frontend/src/lib/api.ts`
 
-- [ ] **Step 1: Write failing integration tests.** Authenticated `POST`, `PATCH` and `DELETE` without `X-CSRF-Token` return 403. Matching CSRF cookie/header and trusted Origin succeed. Foreign/missing Origin returns 403 in production. Login accepts trusted Origin without session.
-- [ ] **Step 2: Implement middleware.** Protect unsafe HTTP methods except preflight. For authenticated mutations look up active session and compare header hash to `csrf_token_hash`; reject missing/mismatched tokens. Validate Origin against `settings.trusted_origins`. Use a generic 403 message.
-- [ ] **Step 3: Issue and clear CSRF cookie.** Use `advisor_csrf`, `secure=settings.ENVIRONMENT == "production"`, `samesite="strict"`, same lifetime and path as session.
-- [ ] **Step 4: Configure Axios.** Read only `advisor_csrf` and set `X-CSRF-Token` for unsafe requests through a request interceptor; never place session token in JavaScript.
-- [ ] **Step 5: Run focused backend/frontend tests.**
-- [ ] **Step 6: Commit.** `git commit -m "feat: chroń mutacje tokenem CSRF"`
+- [x] **Step 1: Write failing integration tests.** Authenticated `POST`, `PATCH` and `DELETE` without `X-CSRF-Token` return 403. Matching CSRF cookie/header and trusted Origin succeed. Foreign/missing Origin returns 403 in production. Login accepts trusted Origin without session.
+- [x] **Step 2: Implement middleware.** Protect unsafe HTTP methods except preflight. For authenticated mutations look up active session and compare header hash to `csrf_token_hash`; reject missing/mismatched tokens. Validate Origin against `settings.trusted_origins`. Use a generic 403 message.
+- [x] **Step 3: Issue and clear CSRF cookie.** Use `advisor_csrf`, `secure=settings.ENVIRONMENT == "production"`, `samesite="strict"`, same lifetime and path as session.
+- [x] **Step 4: Configure Axios.** Read only `advisor_csrf` and set `X-CSRF-Token` for unsafe requests through a request interceptor; never place session token in JavaScript.
+- [x] **Step 5: Run focused backend/frontend tests.**
+- [x] **Step 6: Commit.** `git commit -m "feat: chroń mutacje tokenem CSRF"`
 
 ### Task 5: Redis rate limiting i security audit
 
