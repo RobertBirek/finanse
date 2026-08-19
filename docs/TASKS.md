@@ -20,7 +20,13 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Model: `categories.is_active` (Boolean NOT NULL, default true) + migracja `1dbfe88dfb1b` (upgrade/downgrade zweryfikowane na izolowanej bazie).
 - [x] Serwis: `delete_account`/`delete_category` (blokada przy powiązanych rekordach, ValueError z sugestią dezaktywacji), odrzucanie nieaktywnych kont/kategorii w transakcjach, budżetach i schedulerze.
 - [x] API: `DELETE /accounts/{id}` i `DELETE /categories/{id}` (204/404/409) oraz `is_active` w `PATCH /categories/{id}`.
-- [x] Quality gate: focused `17 passed`, pełny `test_finance` `155 passed`, backend unit `126 passed, 108 skipped`; ruff/mypy PASS.
+- [x] Frontend: hooki tworzenia/edycji/usuwania, strona `/finances/accounts` i
+  link „Konta” w sidebarze; nieaktywne encje są wygaszone, a pełna lista
+  pozostaje dostępna tylko na stronie zarządzania.
+- [x] Quality gate: `make test` — backend `126 passed, 109 skipped`, frontend
+  `106 passed`; `make test-integration` — `109 passed`; lint/typecheck/build PASS.
+- [x] Produkcja: migracja `1dbfe88dfb1b`, deploy backendu/frontendu/workera i
+  smoke test `GET /api/health` (HTTP 200).
 
 ## Task 15 — Budżety w prognozie płynności (2026-08-15)
 

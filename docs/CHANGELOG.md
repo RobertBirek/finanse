@@ -14,7 +14,11 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   dezaktywacja kategorii przez `PATCH /categories/{id}` (`is_active`).
   Usunięcie blokuje się przy istniejących postingach/pozycjach schedulera/
   budżetach/kategoriach-dzieciach; nieaktywne konta i kategorie są odrzucane
-  przy tworzeniu transakcji, budżetów i pozycji schedulera.
+   przy tworzeniu transakcji, budżetów i pozycji schedulera.
+- **Zarządzanie kontami i kategoriami**: strona `/finances/accounts` umożliwia
+  tworzenie, edycję, aktywację/dezaktywację i bezpieczne usuwanie kont oraz
+  kategorii. Dodano hooki TanStack Query dla tych operacji, link „Konta” w
+  sidebarze i komunikaty o blokadzie usunięcia rekordów z historią.
 - **Budżety w prognozie płynności**: prognoza zawiera podsumowanie budżetów
   bieżącego miesiąca (limit, wydano, pozostało) oraz ostrzeżenie, gdy pozostałe
   budżety przekraczają prognozowane saldo przed wypłatą.
@@ -66,6 +70,12 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   znak transakcji per konto zgodnie z konwencją `balance = credit − debit`.
 
 ### Verified
+- CRUD kont i kategorii: `make test` — backend `126 passed, 109 skipped` i
+  frontend `106 passed`; `make test-integration` — `109 passed`; `make lint`,
+  `make typecheck` i frontendowy production build PASS.
+- Produkcja: migracja `1dbfe88dfb1b` zastosowana, backend/frontend/worker
+  przebudowane i uruchomione; `https://finanse.birek.online/api/health` zwraca
+  HTTP 200.
 - Backend: `make lint` i `make typecheck` PASS. `make test`: `125 passed,
   79 skipped, 3 warnings`. `make test-integration` na izolowanej bazie:
   `79 passed, 125 deselected, 11 warnings`; migracja `4340d1460982` zastosowana,

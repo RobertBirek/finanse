@@ -3,6 +3,37 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-08-19 — Sesja 29: Deploy CRUD kont i kategorii
+
+### Cel sesji
+Domknąć wdrożenie CRUD kont i kategorii: quality gate, migrację produkcyjną,
+deploy oraz smoke test.
+
+### Co zrobiono
+- Uruchomiono pełny quality gate: backend `126 passed, 109 skipped`, frontend
+  `106 passed`; integracyjne `109 passed`; Ruff, mypy, ESLint, TypeScript i
+  Vite build przeszły.
+- Zastosowano na produkcji migrację `1dbfe88dfb1b` (`categories.is_active`) i
+  przebudowano/usługowo uruchomiono backend, frontend oraz worker.
+- Dodano override produkcyjny workera w `/docker/finanse/compose.prod.yaml`:
+  `arq app.worker.WorkerSettings` bez niepoprawnego `--watch`; worker wrócił do
+  stanu `Up` i przetwarza funkcję `process_document`.
+- Smoke test `https://finanse.birek.online/api/health` zwrócił HTTP 200.
+- Konfiguracja projektu OpenCode korzysta z modeli OpenAI: główny
+  `gpt-5.6-sol`, implementacja/ogólne zadania `gpt-5.6-terra`, lekkie role
+  `gpt-5.6-luna`.
+
+### Decyzje techniczne
+1. Lista zarządzania na `/finances/accounts` celowo pozostaje pełna, a filtry
+   nieaktywnych encji działają wyłącznie w operacyjnych widokach i formularzach.
+2. Worker produkcyjny nie używa trybu watch; jest przeznaczony do stabilnego
+   przetwarzania zadań ARQ.
+
+### Następna sesja
+Brak otwartych działań dla CRUD kont i kategorii.
+
+---
+
 ## 2026-08-19 — Sesja 28: Operacyjne listy bez nieaktywnych encji
 
 ### Cel sesji
