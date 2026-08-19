@@ -7,6 +7,29 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
+TASK2_ENVIRONMENT_VARIABLES = (
+    "TRUSTED_ORIGINS",
+    "CORS_ORIGINS",
+    "ENVIRONMENT",
+    "REGISTRATION_ENABLED",
+    "SESSION_EXPIRE_MINUTES",
+    "LOGIN_RATE_LIMIT",
+    "LOGIN_RATE_LIMIT_WINDOW_SECONDS",
+    "ADVISOR_RATE_LIMIT",
+    "ADVISOR_RATE_LIMIT_WINDOW_SECONDS",
+    "UPLOAD_RATE_LIMIT",
+    "UPLOAD_RATE_LIMIT_WINDOW_SECONDS",
+    "SECRET_KEY",
+)
+
+
+@pytest.fixture
+def task2_environment(monkeypatch):
+    for variable in TASK2_ENVIRONMENT_VARIABLES:
+        monkeypatch.delenv(variable, raising=False)
+
+    return monkeypatch
+
 
 @pytest.fixture
 def auth_service():
@@ -139,7 +162,7 @@ class TestRegisterAndLogin:
 
 
 @pytest.mark.asyncio
-async def test_register_returns_not_found_in_production_before_user_creation(monkeypatch):
+async def test_register_returns_not_found_in_production_before_user_creation(task2_environment):
     from app.config import Settings
     from app.database import get_db
     from app.identity import router as identity_router
@@ -150,15 +173,15 @@ async def test_register_returns_not_found_in_production_before_user_creation(mon
         _env_file=None,
         ENVIRONMENT="production",
         SECRET_KEY="s" * 32,
-        TRUSTED_ORIGINS=["https://app.example"],
+        TRUSTED_ORIGINS="https://app.example",
     )
 
     async def override_get_db():
         yield object()
 
-    monkeypatch.setattr(identity_router, "settings", production_settings)
-    monkeypatch.setattr(identity_router, "get_user_by_email", get_user_by_email)
-    monkeypatch.setattr(identity_router, "create_user", create_user)
+    task2_environment.setattr(identity_router, "settings", production_settings)
+    task2_environment.setattr(identity_router, "get_user_by_email", get_user_by_email)
+    task2_environment.setattr(identity_router, "create_user", create_user)
     app.dependency_overrides[get_db] = override_get_db
     try:
         transport = ASGITransport(app=app, raise_app_exceptions=False)

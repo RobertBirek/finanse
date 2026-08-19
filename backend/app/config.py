@@ -1,8 +1,10 @@
+import ipaddress
 import json
+import re
 from typing import Any
 from urllib.parse import urlsplit
 
-from pydantic import PositiveInt, field_validator, model_validator
+from pydantic import PositiveInt, PrivateAttr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_CORS_ORIGINS = "http://localhost:5173"
@@ -28,51 +30,59 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str = "https://api.deepseek.com"
     LLM_MODEL: str = "deepseek-v4-pro"
     CORS_ORIGINS: str = DEFAULT_CORS_ORIGINS
-    TRUSTED_ORIGINS: list[str] = []
+    TRUSTED_ORIGINS: str | None = None
     ENVIRONMENT: str = "development"
     STIRLING_PDF_URL: str = "http://stirling-pdf:8080"
 
-    @model_validator(mode="before")
-    @classmethod
-    def populate_trusted_origins(cls, values: Any) -> Any:
-        if not isinstance(values, dict):
-            return values
-
-        data = dict(values)
-        if "TRUSTED_ORIGINS" not in data:
-            data["TRUSTED_ORIGINS"] = cls._parse_legacy_cors_origins(
-                data.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
-            )
-        return data
+    _trusted_origins: tuple[str, ...] = PrivateAttr(default=())
 
     @staticmethod
-    def _parse_legacy_cors_origins(value: Any) -> list[str]:
+    def _parse_origins(value: Any, setting_name: str) -> list[str]:
         if not isinstance(value, str):
-            raise TypeError("CORS_ORIGINS must be a comma-separated string or JSON list")
+            raise TypeError(f"{setting_name} must be a comma-separated string or JSON list")
 
         stripped = value.strip()
         if stripped.startswith(("[", "{", '"')):
             try:
                 parsed = json.loads(stripped)
             except json.JSONDecodeError as error:
-                raise ValueError("CORS_ORIGINS must contain valid JSON") from error
+                raise ValueError(f"{setting_name} must contain valid JSON") from error
             if not isinstance(parsed, list) or not all(
                 isinstance(origin, str) for origin in parsed
             ):
-                raise ValueError("CORS_ORIGINS JSON must be a list of strings")
+                raise ValueError(f"{setting_name} JSON must be a list of strings")
             return parsed
         return value.split(",")
 
-    @field_validator("TRUSTED_ORIGINS")
+    @staticmethod
+    def _normalize_hostname(hostname: str) -> str:
+        host = hostname.lower()
+        if host == "localhost":
+            return host
+
+        try:
+            ipaddress.ip_address(host)
+            return host
+        except ValueError:
+            pass
+
+        if host.replace(".", "").isdigit() or len(host) > 253:
+            raise ValueError("TRUSTED_ORIGINS contains an invalid hostname")
+
+        label_pattern = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?")
+        if not all(label_pattern.fullmatch(label) for label in host.split(".")):
+            raise ValueError("TRUSTED_ORIGINS contains an invalid hostname")
+        return host
+
     @classmethod
-    def validate_trusted_origins(cls, origins: list[str]) -> list[str]:
+    def _validate_trusted_origins(cls, origins: list[str]) -> tuple[str, ...]:
         if not origins:
             raise ValueError("TRUSTED_ORIGINS must contain at least one origin")
 
         normalized: list[str] = []
         for origin in origins:
             value = origin.strip()
-            if not value:
+            if not value or "%" in value or "\\" in value:
                 raise ValueError("TRUSTED_ORIGINS cannot contain empty origins")
 
             try:
@@ -89,10 +99,11 @@ class Settings(BaseSettings):
                 or parsed.fragment
                 or parsed.username is not None
                 or parsed.password is not None
+                or port == 0
             ):
                 raise ValueError("TRUSTED_ORIGINS contains an invalid origin")
 
-            host = parsed.hostname.lower()
+            host = cls._normalize_hostname(parsed.hostname)
             if ":" in host:
                 host = f"[{host}]"
             normalized_origin = f"{parsed.scheme.lower()}://{host}"
@@ -102,10 +113,19 @@ class Settings(BaseSettings):
                 raise ValueError("TRUSTED_ORIGINS cannot contain duplicate origins")
             normalized.append(normalized_origin)
 
-        return normalized
+        return tuple(normalized)
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
+        raw_origins = self.TRUSTED_ORIGINS
+        source_name = "TRUSTED_ORIGINS"
+        if raw_origins is None:
+            raw_origins = self.CORS_ORIGINS
+            source_name = "CORS_ORIGINS"
+        self._trusted_origins = self._validate_trusted_origins(
+            self._parse_origins(raw_origins, source_name)
+        )
+
         if self.ENVIRONMENT == "production":
             insecure_keys = {
                 "",
@@ -117,7 +137,7 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "SECRET_KEY must be a non-placeholder value of at least 32 characters"
                 )
-            if any(not origin.startswith("https://") for origin in self.TRUSTED_ORIGINS):
+            if any(not origin.startswith("https://") for origin in self.trusted_origins):
                 raise ValueError("TRUSTED_ORIGINS must use HTTPS in production")
         return self
 
@@ -127,11 +147,11 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        return self.TRUSTED_ORIGINS
+        return list(self.trusted_origins)
 
     @property
-    def trusted_origins(self) -> list[str]:
-        return self.TRUSTED_ORIGINS
+    def trusted_origins(self) -> tuple[str, ...]:
+        return self._trusted_origins
 
 
 settings = Settings()
