@@ -42,11 +42,25 @@ def upgrade() -> None:
         )
 
     op.alter_column("sessions", "csrf_token_hash", nullable=False)
+    op.alter_column(
+        "sessions",
+        "token_hash",
+        existing_type=sa.String(length=255),
+        type_=sa.String(length=64),
+        postgresql_using="token_hash::varchar(64)",
+    )
     op.create_index("ix_sessions_token_hash", "sessions", ["token_hash"], unique=True)
 
 
 def downgrade() -> None:
     op.drop_index("ix_sessions_token_hash", table_name="sessions")
+    op.alter_column(
+        "sessions",
+        "token_hash",
+        existing_type=sa.String(length=64),
+        type_=sa.String(length=255),
+        postgresql_using="token_hash::varchar(255)",
+    )
     op.drop_column("sessions", "last_seen_at")
     op.drop_column("sessions", "revoked_at")
     op.drop_column("sessions", "csrf_token_hash")

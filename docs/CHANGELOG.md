@@ -8,9 +8,10 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-15
 
 ### Added
-- **Sesje serwerowe — zmiana niekompatybilna**: publiczne uwierzytelnianie Bearer
-  JWT zostało celowo usunięte na rzecz ciasteczka `advisor_session`; audyt repozytorium
-  nie wykazał zewnętrznych konsumentów wymagających kompatybilności.
+- **Sesje serwerowe — zmiana niekompatybilna**: migracja unieważnia wszystkie
+  historyczne ciasteczka przeglądarkowe JWT i po wdrożeniu wymusza ponowne logowanie.
+  Publiczne uwierzytelnianie Bearer JWT zostało usunięte na rzecz ciasteczka
+  `advisor_session`; audyt repozytorium nie wykazał zewnętrznych konsumentów.
 - **Security baseline -- backup and restore verification**: versioned scripts
   `ops/backup.sh` and `ops/restore-verify.sh` create encrypted Restic snapshots
   of PostgreSQL and uploads, retain 7 daily/4 weekly/6 monthly snapshots, and

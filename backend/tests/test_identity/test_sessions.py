@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import event, select, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.identity.models import Session, User
 from app.identity.service import create_session, get_active_session, revoke_session
@@ -31,6 +31,35 @@ def run_alembic(*arguments: str) -> None:
         capture_output=True,
         text=True,
     )
+
+
+async def get_session_schema(
+    db_session: AsyncSession,
+) -> tuple[dict[str, tuple[str, str, int | None]], set[str]]:
+    columns = {
+        row.column_name: (row.data_type, row.is_nullable, row.character_maximum_length)
+        for row in (
+            await db_session.execute(
+                text(
+                    "SELECT column_name, data_type, is_nullable, character_maximum_length "
+                    "FROM information_schema.columns "
+                    "WHERE table_schema = current_schema() AND table_name = 'sessions'"
+                )
+            )
+        )
+    }
+    indexes = {
+        row.indexname
+        for row in (
+            await db_session.execute(
+                text(
+                    "SELECT indexname FROM pg_indexes "
+                    "WHERE schemaname = current_schema() AND tablename = 'sessions'"
+                )
+            )
+        )
+    }
+    return columns, indexes
 
 
 @pytest.mark.integration
@@ -141,6 +170,12 @@ async def test_authenticated_transaction_holds_session_lock_until_domain_mutatio
 async def test_server_side_session_migration_backfills_legacy_rows_and_cycles(db_session):
     run_alembic("stamp", SESSION_REVISION)
     run_alembic("downgrade", SESSION_PREDECESSOR)
+    predecessor_columns, predecessor_indexes = await get_session_schema(db_session)
+    assert predecessor_columns["token_hash"] == ("character varying", "NO", 255)
+    assert "csrf_token_hash" not in predecessor_columns
+    assert "revoked_at" not in predecessor_columns
+    assert "last_seen_at" not in predecessor_columns
+    assert "ix_sessions_token_hash" not in predecessor_indexes
 
     await db_session.execute(
         text(
@@ -172,6 +207,12 @@ async def test_server_side_session_migration_backfills_legacy_rows_and_cycles(db
     assert {row.token_hash for row in rows} != {"legacy-token"}
     assert len({row.token_hash for row in rows}) == 2
     assert all(row.csrf_token_hash and row.revoked_at for row in rows)
+    upgraded_columns, upgraded_indexes = await get_session_schema(db_session)
+    assert upgraded_columns["token_hash"] == ("character varying", "NO", 64)
+    assert upgraded_columns["csrf_token_hash"] == ("character varying", "NO", 64)
+    assert upgraded_columns["revoked_at"] == ("timestamp with time zone", "YES", None)
+    assert upgraded_columns["last_seen_at"] == ("timestamp with time zone", "YES", None)
+    assert "ix_sessions_token_hash" in upgraded_indexes
 
     with pytest.raises(IntegrityError):
         async with db_session.begin_nested():
@@ -186,7 +227,20 @@ async def test_server_side_session_migration_backfills_legacy_rows_and_cycles(db
 
     await db_session.rollback()
     run_alembic("downgrade", SESSION_PREDECESSOR)
+    downgraded_columns, downgraded_indexes = await get_session_schema(db_session)
+    assert downgraded_columns["token_hash"] == ("character varying", "NO", 255)
+    assert "csrf_token_hash" not in downgraded_columns
+    assert "revoked_at" not in downgraded_columns
+    assert "last_seen_at" not in downgraded_columns
+    assert "ix_sessions_token_hash" not in downgraded_indexes
+
     run_alembic("upgrade", SESSION_REVISION)
+    upgraded_again_columns, upgraded_again_indexes = await get_session_schema(db_session)
+    assert upgraded_again_columns["token_hash"] == ("character varying", "NO", 64)
+    assert upgraded_again_columns["csrf_token_hash"] == ("character varying", "NO", 64)
+    assert upgraded_again_columns["revoked_at"] == ("timestamp with time zone", "YES", None)
+    assert upgraded_again_columns["last_seen_at"] == ("timestamp with time zone", "YES", None)
+    assert "ix_sessions_token_hash" in upgraded_again_indexes
     assert (
         await db_session.execute(text("SELECT count(*) FROM sessions WHERE revoked_at IS NOT NULL"))
     ).scalar_one() == 2

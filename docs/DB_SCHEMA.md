@@ -33,9 +33,14 @@ Schemat bazy danych PostgreSQL dla Personal Advisor.
 | Kolumna | Typ | Opis |
 |---------|-----|------|
 | id | UUID PK | |
-| user_id | UUID FK → users.id NOT NULL | |
-| token_hash | VARCHAR(255) NOT NULL | |
+| user_id | UUID FK → users.id NOT NULL | `ON DELETE CASCADE`, indexed |
+| token_hash | VARCHAR(64) NOT NULL | SHA-256 surowego tokenu; unique index `ix_sessions_token_hash` |
+| csrf_token_hash | VARCHAR(64) NOT NULL | SHA-256 tokenu CSRF; walidacja CSRF jest osobnym etapem |
 | expires_at | TIMESTAMPTZ NOT NULL | |
+| revoked_at | TIMESTAMPTZ | Ustawiane przy wylogowaniu; rekord nie może już uwierzytelnić żądania |
+| last_seen_at | TIMESTAMPTZ | Aktualizowane po poprawnym uwierzytelnieniu |
+| created_at | TIMESTAMPTZ NOT NULL | |
+| updated_at | TIMESTAMPTZ NOT NULL | |
 
 ---
 
@@ -232,7 +237,7 @@ Schemat bazy danych PostgreSQL dla Personal Advisor.
 ## Indeksy
 
 - `users(email)`, `users(household_id)`
-- `sessions(token_hash)`, `sessions(user_id)`, `sessions(expires_at)`
+- `sessions(token_hash)` UNIQUE, `sessions(user_id)`
 - `accounts(user_id)`, `accounts(currency)`
 - `categories(user_id, type)`
 - `financial_transactions(user_id, date)`, `financial_transactions(project_id)`
