@@ -1,10 +1,11 @@
+import os
 import stat
+import subprocess
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 BACKUP_SCRIPT = REPOSITORY_ROOT / "ops" / "backup.sh"
 RESTORE_SCRIPT = REPOSITORY_ROOT / "ops" / "restore-verify.sh"
-INFRA_MAKEFILE = Path("/docker/finanse/Makefile")
 
 
 def read_script(path: Path) -> str:
@@ -33,19 +34,20 @@ def test_backup_script_requires_inputs_and_creates_versioned_snapshot():
         "UPLOAD_DIR",
         "RESTIC_REPOSITORY",
         "RESTIC_PASSWORD_FILE",
+        "PGPASSFILE",
     ):
         assert f'require_env "{variable}"' in content
 
-    assert (
-        'pg_dump --format=custom --file "$snapshot_dir/postgres.dump" "$DATABASE_URL_SYNC"'
-        in content
-    )
+    assert 'parse_postgres_url "$DATABASE_URL_SYNC"' in content
+    assert "ops/postgres_connection.py" in content
+    assert 'pg_dump --format=custom --file "$snapshot_dir/postgres.dump"' in content
+    assert '"$DATABASE_URL_SYNC"' not in content.split("pg_dump", maxsplit=1)[1]
     assert (
         'tar --sort=name --mtime="UTC 1970-01-01" --owner=0 --group=0 --numeric-owner '
         '-C "$UPLOAD_DIR" -czf "$snapshot_dir/uploads.tar.gz" .'
     ) in content
     assert 'git -C "$repo_root" rev-parse HEAD' in content
-    assert '"$repo_root/backend/.venv/bin/alembic" current' in content
+    assert "SELECT version_num FROM alembic_version" in content
     for field in (
         "created_at_utc",
         "git_sha",
@@ -78,14 +80,16 @@ def test_restore_script_is_executable_and_fails_closed_before_restore():
     assert "set -euo pipefail" in content
     assert "umask 077" in content
     assert 'snapshot_id="${1:-latest}"' in content
-    assert '[[ "$host" == "127.0.0.1" || "$host" == "localhost" ]]' in content
-    assert '[[ "$database_name" =~ ^.+_(restore|test)$ ]]' in content
+    assert 'parse_postgres_url "$RESTORE_DATABASE_URL_SYNC"' in content
+    assert '[[ "$pg_host" == "127.0.0.1" || "$pg_host" == "localhost" ]]' in content
+    assert '[[ "$pg_database" =~ ^.+_(restore|test)$ ]]' in content
+    assert 'require_private_pgpassfile "$PGPASSFILE"' in content
     assert empty_restore_dir_guard in content
-    assert content.index('[[ "$host" == "127.0.0.1" || "$host" == "localhost" ]]') < content.index(
+    assert content.index(
+        '[[ "$pg_host" == "127.0.0.1" || "$pg_host" == "localhost" ]]'
+    ) < content.index('restic restore "$snapshot_id"')
+    assert content.index('[[ "$pg_database" =~ ^.+_(restore|test)$ ]]') < content.index(
         'restic restore "$snapshot_id"'
-    )
-    assert content.index('[[ "$database_name" =~ ^.+_(restore|test)$ ]]') < content.index(
-        'pg_restore --clean --if-exists --no-owner --dbname "$RESTORE_DATABASE_URL_SYNC"'
     )
     assert content.index(empty_restore_dir_guard) < content.index('restic restore "$snapshot_id"')
 
@@ -97,13 +101,10 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
     assert 'verify_checksum "postgres.dump" "$expected_postgres_sha256"' in content
     assert 'verify_checksum "uploads.tar.gz" "$expected_uploads_sha256"' in content
     assert 'tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$RESTORE_DIR/uploads"' in content
-    assert (
-        'pg_restore --clean --if-exists --no-owner --dbname "$RESTORE_DATABASE_URL_SYNC"' in content
-    )
-    assert (
-        'DATABASE_URL="$async_database_url" "$repo_root/backend/.venv/bin/alembic" upgrade head'
-        in content
-    )
+    assert 'pg_restore --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"' in content
+    assert '"$RESTORE_DATABASE_URL_SYNC"' not in content.split("pg_restore", maxsplit=1)[1]
+    assert '"$repo_root/backend/.venv/bin/alembic" heads' in content
+    assert "upgrade must be executed separately using controlled runtime configuration" in content
     assert "FROM financial_transactions transaction" in content
     assert "LEFT JOIN postings posting ON posting.transaction_id = transaction.id" in content
     assert "GROUP BY transaction.id" in content
@@ -118,16 +119,72 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
     ) < content.index('tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$RESTORE_DIR/uploads"')
     assert content.index(
         'verify_checksum "postgres.dump" "$expected_postgres_sha256"'
-    ) < content.index(
-        'pg_restore --clean --if-exists --no-owner --dbname "$RESTORE_DATABASE_URL_SYNC"'
-    )
+    ) < content.index('pg_restore --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"')
     assert "eval" not in content
 
 
-def test_infrastructure_makefile_exposes_backup_and_restore_verification():
-    content = INFRA_MAKEFILE.read_text()
+def restore_environment(
+    tmp_path: Path, database_url: str, pgpass_mode: int
+) -> tuple[dict[str, str], Path]:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    marker = tmp_path / "restic-ran"
+    fake_restic = fake_bin / "restic"
+    fake_restic.write_text('#!/usr/bin/env bash\n: > "$RESTIC_MARKER"\n')
+    fake_restic.chmod(0o700)
+    pgpassfile = tmp_path / "pgpass"
+    pgpassfile.write_text("localhost:5432:*:user:password\n")
+    pgpassfile.chmod(pgpass_mode)
+    restore_dir = tmp_path / "restore"
+    restore_dir.mkdir()
+    environment = os.environ | {
+        "PATH": f"{fake_bin}:{os.environ['PATH']}",
+        "RESTIC_MARKER": str(marker),
+        "RESTIC_REPOSITORY": "test-repository",
+        "RESTIC_PASSWORD_FILE": str(pgpassfile),
+        "RESTORE_DATABASE_URL_SYNC": database_url,
+        "RESTORE_DIR": str(restore_dir),
+        "PGPASSFILE": str(pgpassfile),
+    }
+    return environment, marker
 
-    assert ".PHONY: up down restart logs ps backup restore-verify" in content
-    assert "bash /opt/finanse/ops/backup.sh" in content
-    assert 'bash /opt/finanse/ops/restore-verify.sh "$(snapshot)"' in content
-    assert "sudo" not in content
+
+def test_restore_rejects_uri_query_before_restic_runs(tmp_path: Path):
+    environment, marker = restore_environment(
+        tmp_path,
+        "postgresql://user@localhost/finanse_restore?host=%2Ftmp%2Fsocket",
+        0o600,
+    )
+
+    result = subprocess.run(
+        [str(RESTORE_SCRIPT)], env=environment, capture_output=True, check=False, text=True
+    )
+
+    assert result.returncode != 0
+    assert not marker.exists()
+
+
+def test_restore_rejects_uri_password_before_restic_runs(tmp_path: Path):
+    environment, marker = restore_environment(
+        tmp_path, "postgresql://user:secret@localhost/finanse_restore", 0o600
+    )
+
+    result = subprocess.run(
+        [str(RESTORE_SCRIPT)], env=environment, capture_output=True, check=False, text=True
+    )
+
+    assert result.returncode != 0
+    assert not marker.exists()
+
+
+def test_restore_rejects_non_private_pgpassfile_before_restic_runs(tmp_path: Path):
+    environment, marker = restore_environment(
+        tmp_path, "postgresql://user@localhost/finanse_restore", 0o644
+    )
+
+    result = subprocess.run(
+        [str(RESTORE_SCRIPT)], env=environment, capture_output=True, check=False, text=True
+    )
+
+    assert result.returncode != 0
+    assert not marker.exists()

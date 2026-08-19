@@ -23,6 +23,12 @@ require_readable_file() {
     [[ -f "$path" && -r "$path" ]] || fail "A required file is unavailable."
 }
 
+require_private_pgpassfile() {
+    local path="$1"
+    require_readable_file "$path"
+    [[ "$(stat -c '%a' -- "$path")" == "600" ]] || fail "PGPASSFILE must have mode 0600."
+}
+
 restore_workdir=""
 cleanup() {
     if [[ -n "$restore_workdir" && -d "$restore_workdir" ]]; then
@@ -35,27 +41,33 @@ require_env "RESTIC_REPOSITORY"
 require_env "RESTIC_PASSWORD_FILE"
 require_env "RESTORE_DATABASE_URL_SYNC"
 require_env "RESTORE_DIR"
+require_env "PGPASSFILE"
 require_readable_file "$RESTIC_PASSWORD_FILE"
+require_private_pgpassfile "$PGPASSFILE"
 require_directory "$RESTORE_DIR"
 [[ -z "$(find "$RESTORE_DIR" -mindepth 1 -maxdepth 1 -print -quit)" ]] \
     || fail "Restore directory must be empty."
 
-database_url_without_scheme="${RESTORE_DATABASE_URL_SYNC#*://}"
-[[ "$database_url_without_scheme" != "$RESTORE_DATABASE_URL_SYNC" && "$database_url_without_scheme" == */* ]] \
-    || fail "Restore database target is invalid."
-authority="${database_url_without_scheme%%/*}"
-host_port="${authority##*@}"
-host="${host_port%%:*}"
-database_name="${database_url_without_scheme#*/}"
-database_name="${database_name%%\?*}"
+repo_root="$(git -C "$(dirname "${BASH_SOURCE[0]}")/.." rev-parse --show-toplevel)"
+parse_postgres_url() {
+    local connection_parts
+    mapfile -t connection_parts < <(
+        POSTGRES_CONNECTION_URL="$1" python3 "$repo_root/ops/postgres_connection.py"
+    )
+    [[ ${#connection_parts[@]} -eq 4 ]] || fail "PostgreSQL connection URL is invalid."
+    pg_host="${connection_parts[0]}"
+    pg_port="${connection_parts[1]}"
+    pg_user="${connection_parts[2]}"
+    pg_database="${connection_parts[3]}"
+}
+parse_postgres_url "$RESTORE_DATABASE_URL_SYNC"
 
-[[ "$host" == "127.0.0.1" || "$host" == "localhost" ]] \
+[[ "$pg_host" == "127.0.0.1" || "$pg_host" == "localhost" ]] \
     || fail "Restore database host is not allowed."
-[[ "$database_name" =~ ^.+_(restore|test)$ ]] \
+[[ "$pg_database" =~ ^.+_(restore|test)$ ]] \
     || fail "Restore database name is not allowed."
 
 snapshot_id="${1:-latest}"
-repo_root="$(git -C "$(dirname "${BASH_SOURCE[0]}")/.." rev-parse --show-toplevel)"
 restore_workdir="$(mktemp -d "${TMPDIR:-/tmp}/personal-advisor-restore.XXXXXXXX")"
 
 printf '%s\n' "Restoring snapshot"
@@ -101,20 +113,19 @@ printf '%s\n' "Extracting uploads"
 tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$RESTORE_DIR/uploads"
 
 printf '%s\n' "Restoring database"
-pg_restore --clean --if-exists --no-owner --dbname "$RESTORE_DATABASE_URL_SYNC" "$snapshot_dir/postgres.dump"
+PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
+    pg_restore --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"
 
-async_database_url="$RESTORE_DATABASE_URL_SYNC"
-if [[ "$async_database_url" == postgresql://* ]]; then
-    async_database_url="postgresql+asyncpg://${async_database_url#postgresql://}"
-fi
-printf '%s\n' "Applying migrations"
-(
-    cd "$repo_root/backend"
-    DATABASE_URL="$async_database_url" "$repo_root/backend/.venv/bin/alembic" upgrade head
-)
+printf '%s\n' "Checking schema revision"
+restored_alembic_revision="$(PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
+    psql --set=ON_ERROR_STOP=1 --no-align --tuples-only -c "SELECT version_num FROM alembic_version")"
+current_alembic_revision="$(cd "$repo_root/backend" && "$repo_root/backend/.venv/bin/alembic" heads | cut -d ' ' -f 1)"
+[[ "$restored_alembic_revision" == "$current_alembic_revision" ]] \
+    || fail "Schema revision differs; upgrade must be executed separately using controlled runtime configuration."
 
 printf '%s\n' "Checking ledger invariants"
-psql "$RESTORE_DATABASE_URL_SYNC" --set=ON_ERROR_STOP=1 <<'SQL'
+PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
+    psql --set=ON_ERROR_STOP=1 <<'SQL'
 DO $$
 BEGIN
     IF EXISTS (
