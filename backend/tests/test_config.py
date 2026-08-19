@@ -132,14 +132,35 @@ def test_localhost_and_valid_ip_literals_are_trusted_origins(make_settings) -> N
     )
 
 
-def test_explicit_legacy_cors_origins_are_not_shadowed_by_ambient_trusted_origins(
-    make_settings, monkeypatch
+def test_explicit_constructor_legacy_cors_origins_override_ambient_trusted_origins(
+    monkeypatch,
 ) -> None:
     monkeypatch.setenv("TRUSTED_ORIGINS", "https://ambient.example")
 
-    settings = make_settings(CORS_ORIGINS="https://legacy.example")
+    settings = Settings(_env_file=None, CORS_ORIGINS="https://legacy.example")
 
     assert settings.trusted_origins == ("https://legacy.example",)
+
+
+def test_explicit_constructor_trusted_origins_override_ambient_trusted_origins(monkeypatch) -> None:
+    monkeypatch.setenv("TRUSTED_ORIGINS", "https://ambient.example")
+
+    settings = Settings(
+        _env_file=None,
+        CORS_ORIGINS="https://legacy.example",
+        TRUSTED_ORIGINS="https://explicit.example",
+    )
+
+    assert settings.trusted_origins == ("https://explicit.example",)
+
+
+def test_runtime_trusted_origins_override_runtime_legacy_cors_origins(monkeypatch) -> None:
+    monkeypatch.setenv("TRUSTED_ORIGINS", "https://canonical.example")
+    monkeypatch.setenv("CORS_ORIGINS", "https://legacy.example")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.trusted_origins == ("https://canonical.example",)
 
 
 @pytest.mark.parametrize(

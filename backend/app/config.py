@@ -13,6 +13,11 @@ DEFAULT_CORS_ORIGINS = "http://localhost:5173"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
+    def __init__(self, **values: Any) -> None:
+        if "CORS_ORIGINS" in values and "TRUSTED_ORIGINS" not in values:
+            values["TRUSTED_ORIGINS"] = values["CORS_ORIGINS"]
+        super().__init__(**values)
+
     DATABASE_URL: str = "postgresql+asyncpg://finanse:finanse@localhost:5432/finanse"
     REDIS_URL: str = "redis://localhost:6379/0"
     SECRET_KEY: str = "change-me-in-production-use-a-real-secret-key"
