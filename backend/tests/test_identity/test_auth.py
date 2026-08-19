@@ -1,5 +1,6 @@
 """Integration tests for identity authentication endpoints."""
 
+from datetime import timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -8,7 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app.database import get_db
-from app.identity.models import User
+from app.identity.models import Session, User
 from app.identity.service import create_session, revoke_session
 from app.main import app
 
@@ -119,6 +120,30 @@ class TestRegisterAndLogin:
         )
         assert response.status_code == 401
         assert response.json()["detail"] == "Not authenticated"
+
+    async def test_me_persists_last_seen_at_for_valid_session(self, identity_client, db_session):
+        await identity_client.post(
+            "/api/auth/register",
+            json={
+                "email": "last-seen@example.com",
+                "password": "TestPass123!",
+                "display_name": "Last Seen User",
+            },
+        )
+        session = (await db_session.execute(select(Session))).scalar_one()
+        assert session.last_seen_at is None
+        session_id = session.id
+        await db_session.commit()
+
+        response = await identity_client.get("/api/auth/me")
+        assert response.status_code == 200
+
+        await db_session.commit()
+        db_session.expire_all()
+        persisted = await db_session.get(Session, session_id)
+        assert persisted is not None
+        assert persisted.last_seen_at is not None
+        assert persisted.last_seen_at.utcoffset() == timedelta(0)
 
     async def test_expired_and_revoked_session_cookies_return_generic_unauthorized(
         self, identity_client, db_session
