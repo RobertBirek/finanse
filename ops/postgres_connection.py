@@ -4,7 +4,7 @@
 import os
 import re
 import sys
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 
 def fail() -> None:
@@ -17,6 +17,7 @@ def valid_component(value: str) -> bool:
 
 
 url = os.environ.get("POSTGRES_CONNECTION_URL", "")
+passfile = os.environ.get("POSTGRES_PASSFILE", "")
 parsed = urlsplit(url)
 if (
     parsed.scheme != "postgresql"
@@ -40,6 +41,7 @@ if (
     or not valid_component(hostname)
     or not valid_component(database)
     or parsed.path != f"/{database}"
+    or not passfile
     or not isinstance(port, int)
     or not 1 <= port <= 65535
 ):
@@ -49,3 +51,6 @@ print(hostname)
 print(port)
 print(username)
 print(database)
+print(
+    f"postgresql+asyncpg://{username}@{hostname}:{port}/{database}?passfile={quote(passfile, safe='')}"
+)

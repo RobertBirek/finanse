@@ -60,10 +60,11 @@ restore and before `pg_restore`, preventing a production restore target.
 
 The script restores into a private temporary directory, verifies manifest SHA-256
 checksums before extracting uploads or touching the database, restores with
-`pg_restore --clean --if-exists --no-owner`, then compares the restored Alembic
-revision with the repository's static `alembic heads` result. A mismatch fails
-with an instruction to run an upgrade separately through controlled runtime
-configuration; this script does not create an async command-line DSN. It also
-checks that every financial transaction has at least two postings and a zero
+`pg_restore --clean --if-exists --no-owner`, then verifies that the restored
+database revision equals the snapshot manifest revision. It upgrades the isolated
+target to the repository's single current Alembic head using a password-free
+asyncpg URL with an encoded `passfile` parameter in the Alembic process
+environment, and verifies the upgraded database revision equals that head. It
+then checks that every financial transaction has at least two postings and a zero
 base-PLN balance. `RESTORE_DIR/uploads` must not already exist, preventing an
 existing upload set from being overwritten.

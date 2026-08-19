@@ -53,13 +53,15 @@ repo_root="$(git -C "$(dirname "${BASH_SOURCE[0]}")/.." rev-parse --show-topleve
 parse_postgres_url() {
     local connection_parts
     mapfile -t connection_parts < <(
-        POSTGRES_CONNECTION_URL="$1" python3 "$repo_root/ops/postgres_connection.py"
+        POSTGRES_CONNECTION_URL="$1" POSTGRES_PASSFILE="$PGPASSFILE" \
+            python3 "$repo_root/ops/postgres_connection.py"
     )
-    [[ ${#connection_parts[@]} -eq 4 ]] || fail "PostgreSQL connection URL is invalid."
+    [[ ${#connection_parts[@]} -eq 5 ]] || fail "PostgreSQL connection URL is invalid."
     pg_host="${connection_parts[0]}"
     pg_port="${connection_parts[1]}"
     pg_user="${connection_parts[2]}"
     pg_database="${connection_parts[3]}"
+    async_database_url="${connection_parts[4]}"
 }
 parse_postgres_url "$DATABASE_URL_SYNC"
 snapshot_dir="$(mktemp -d "$BACKUP_WORKDIR/backup.XXXXXXXX")"

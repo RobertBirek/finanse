@@ -52,13 +52,15 @@ repo_root="$(git -C "$(dirname "${BASH_SOURCE[0]}")/.." rev-parse --show-topleve
 parse_postgres_url() {
     local connection_parts
     mapfile -t connection_parts < <(
-        POSTGRES_CONNECTION_URL="$1" python3 "$repo_root/ops/postgres_connection.py"
+        POSTGRES_CONNECTION_URL="$1" POSTGRES_PASSFILE="$PGPASSFILE" \
+            python3 "$repo_root/ops/postgres_connection.py"
     )
-    [[ ${#connection_parts[@]} -eq 4 ]] || fail "PostgreSQL connection URL is invalid."
+    [[ ${#connection_parts[@]} -eq 5 ]] || fail "PostgreSQL connection URL is invalid."
     pg_host="${connection_parts[0]}"
     pg_port="${connection_parts[1]}"
     pg_user="${connection_parts[2]}"
     pg_database="${connection_parts[3]}"
+    async_database_url="${connection_parts[4]}"
 }
 parse_postgres_url "$RESTORE_DATABASE_URL_SYNC"
 
@@ -106,6 +108,8 @@ expected_postgres_sha256="$(manifest_field "postgres_dump_sha256")"
 expected_uploads_sha256="$(manifest_field "uploads_tar_gz_sha256")"
 verify_checksum "postgres.dump" "$expected_postgres_sha256"
 verify_checksum "uploads.tar.gz" "$expected_uploads_sha256"
+manifest_alembic_revision="$(manifest_field "alembic_revision")"
+[[ -n "$manifest_alembic_revision" ]] || fail "Snapshot manifest has no Alembic revision."
 
 [[ ! -e "$RESTORE_DIR/uploads" ]] || fail "Restore uploads directory already exists."
 mkdir "$RESTORE_DIR/uploads"
@@ -119,9 +123,22 @@ PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" 
 printf '%s\n' "Checking schema revision"
 restored_alembic_revision="$(PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
     psql --set=ON_ERROR_STOP=1 --no-align --tuples-only -c "SELECT version_num FROM alembic_version")"
-current_alembic_revision="$(cd "$repo_root/backend" && "$repo_root/backend/.venv/bin/alembic" heads | cut -d ' ' -f 1)"
-[[ "$restored_alembic_revision" == "$current_alembic_revision" ]] \
-    || fail "Schema revision differs; upgrade must be executed separately using controlled runtime configuration."
+[[ "$restored_alembic_revision" == "$manifest_alembic_revision" ]] \
+    || fail "Restored database revision does not match the snapshot manifest."
+
+printf '%s\n' "Applying migrations"
+(
+    cd "$repo_root/backend"
+    DATABASE_URL="$async_database_url" "$repo_root/backend/.venv/bin/alembic" upgrade head
+)
+
+mapfile -t alembic_heads < <(cd "$repo_root/backend" && "$repo_root/backend/.venv/bin/alembic" heads)
+[[ ${#alembic_heads[@]} -eq 1 ]] || fail "Repository must have exactly one Alembic head."
+current_alembic_revision="$(cut -d ' ' -f 1 <<<"${alembic_heads[0]}")"
+upgraded_alembic_revision="$(PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
+    psql --set=ON_ERROR_STOP=1 --no-align --tuples-only -c "SELECT version_num FROM alembic_version")"
+[[ "$upgraded_alembic_revision" == "$current_alembic_revision" ]] \
+    || fail "Migrated database revision does not match the repository head."
 
 printf '%s\n' "Checking ledger invariants"
 PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
