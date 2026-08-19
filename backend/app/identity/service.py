@@ -1,13 +1,15 @@
+import hashlib
+import hmac
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.identity.models import User
+from app.identity.models import Session, User
 from app.identity.schemas import UserCreate
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -21,18 +23,42 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(user_id: uuid.UUID) -> str:
-    expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+def hash_session_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def decode_access_token(token: str) -> uuid.UUID | None:
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        return uuid.UUID(payload["sub"])
-    except (JWTError, KeyError, ValueError):
+async def create_session(db: AsyncSession, user_id: uuid.UUID) -> tuple[str, str, Session]:
+    raw_session_token = secrets.token_urlsafe(32)
+    raw_csrf_token = secrets.token_urlsafe(32)
+    session = Session(
+        user_id=user_id,
+        token_hash=hash_session_token(raw_session_token),
+        csrf_token_hash=hash_session_token(raw_csrf_token),
+        expires_at=datetime.now(UTC) + timedelta(minutes=settings.SESSION_EXPIRE_MINUTES),
+    )
+    db.add(session)
+    await db.flush()
+    return raw_session_token, raw_csrf_token, session
+
+
+async def get_active_session(db: AsyncSession, raw_token: str) -> Session | None:
+    token_hash = hash_session_token(raw_token)
+    result = await db.execute(select(Session).where(Session.token_hash == token_hash))
+    session = result.scalar_one_or_none()
+    if session is None or not hmac.compare_digest(session.token_hash, token_hash):
         return None
+    if session.revoked_at is not None or session.expires_at <= datetime.now(UTC):
+        return None
+    return session
+
+
+async def revoke_session(db: AsyncSession, raw_token: str) -> bool:
+    session = await get_active_session(db, raw_token)
+    if session is None:
+        return False
+    session.revoked_at = datetime.now(UTC)
+    await db.flush()
+    return True
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
