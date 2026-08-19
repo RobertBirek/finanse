@@ -47,12 +47,12 @@
 - Modify: `backend/app/identity/models.py`, `backend/app/identity/service.py`, `backend/app/identity/schemas.py`, `backend/app/identity/router.py`
 - Create: `backend/migrations/versions/<revision>_server_side_sessions.py`, `backend/tests/test_identity/test_sessions.py`
 
-- [ ] **Step 1: Write failing integration tests.** Login returns 204 and both cookies, no JSON token. A request with cookie authenticates. Logout causes the exact same cookie to return 401. A second session for the user remains valid. Expired or revoked session returns 401.
-- [ ] **Step 2: Implement model and migration.** Add `token_hash` unique index, `csrf_token_hash`, `revoked_at`, `last_seen_at`; backfill existing rows safely and make new fields non-null only after backfill.
-- [ ] **Step 3: Implement service helpers.** `create_session`, `get_active_session`, `revoke_session`, `hash_secret`; use `secrets.token_urlsafe(32)`, SHA-256 and constant-time comparison. Never log or persist raw values.
-- [ ] **Step 4: Replace JWT auth.** Login and register create sessions; `get_current_user` accepts only `advisor_session`; logout revokes the session. Remove `TokenResponse`, OAuth2 bearer dependency and JWT helpers once tests prove no consumer remains.
-- [ ] **Step 5: Run integration tests against isolated PostgreSQL, then migration upgrade/downgrade/upgrade.**
-- [ ] **Step 6: Commit.** `git commit -m "feat: dodaj unieważnialne sesje serwerowe"`
+- [x] **Step 1: Write failing integration tests.** Login returns 204 and both cookies, no JSON token. A request with cookie authenticates. Logout causes the exact same cookie to return 401. A second session for the user remains valid. Expired or revoked session returns 401.
+- [x] **Step 2: Implement model and migration.** Add `token_hash` unique index, `csrf_token_hash`, `revoked_at`, `last_seen_at`; backfill existing rows safely and make new fields non-null only after backfill.
+- [x] **Step 3: Implement service helpers.** `create_session`, `get_active_session`, `revoke_session`, `hash_secret`; use `secrets.token_urlsafe(32)`, SHA-256 and constant-time comparison. Never log or persist raw values.
+- [x] **Step 4: Replace JWT auth.** Login and register create sessions; `get_current_user` accepts only `advisor_session`; logout revokes the session. Remove `TokenResponse`, OAuth2 bearer dependency and JWT helpers once tests prove no consumer remains.
+- [x] **Step 5: Run integration tests against isolated PostgreSQL, then migration upgrade/downgrade/upgrade.**
+- [x] **Step 6: Commit.** `git commit -m "feat: dodaj unieważnialne sesje serwerowe"`
 
 ### Task 4: CSRF i Origin middleware
 
