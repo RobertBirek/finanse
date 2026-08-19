@@ -1,6 +1,7 @@
 ---
 description: Agent dla projektu Personal Advisor. Używaj do WSZYSTKICH zadań w /opt/finanse.
 mode: primary
+model: openai/gpt-5.6-sol
 permission:
   edit: allow
   lsp: allow
