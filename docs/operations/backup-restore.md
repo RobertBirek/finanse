@@ -1,8 +1,8 @@
 # Backup And Restore Verification
 
-`ops/backup.sh` creates an encrypted, offsite Restic snapshot of PostgreSQL and
-the upload directory. Restic repository configuration and credentials are
-intentionally kept outside Git.
+`ops/backup.sh` can send PostgreSQL and uploads snapshots to a configured
+encrypted Restic repository. No Restic credentials are configured, and no
+backup or restore has been performed.
 
 ## Setup
 
