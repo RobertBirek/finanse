@@ -146,7 +146,12 @@ async def test_register_returns_not_found_in_production_before_user_creation(mon
 
     get_user_by_email = AsyncMock()
     create_user = AsyncMock()
-    production_settings = Settings(ENVIRONMENT="production", SECRET_KEY="s" * 32)
+    production_settings = Settings(
+        _env_file=None,
+        ENVIRONMENT="production",
+        SECRET_KEY="s" * 32,
+        TRUSTED_ORIGINS=["https://app.example"],
+    )
 
     async def override_get_db():
         yield object()

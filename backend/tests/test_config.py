@@ -6,31 +6,52 @@ from pydantic import ValidationError
 from app.config import Settings
 
 
+@pytest.fixture
+def make_settings():
+    def factory(**values: object) -> Settings:
+        return Settings(_env_file=None, **values)
+
+    return factory
+
+
 @pytest.mark.parametrize(
     "secret_key",
     ["", "change-me-in-production-use-a-real-secret-key", "x" * 31],
 )
-def test_production_requires_a_strong_non_placeholder_secret(secret_key: str) -> None:
+def test_production_requires_a_strong_non_placeholder_secret(
+    make_settings, secret_key: str
+) -> None:
     with pytest.raises(ValidationError):
-        Settings(ENVIRONMENT="production", SECRET_KEY=secret_key)
+        make_settings(
+            ENVIRONMENT="production",
+            SECRET_KEY=secret_key,
+            TRUSTED_ORIGINS=["https://app.example"],
+        )
 
 
-def test_production_accepts_a_distinct_32_character_secret() -> None:
-    settings = Settings(ENVIRONMENT="production", SECRET_KEY="s" * 32)
+def test_production_accepts_a_distinct_32_character_secret(make_settings) -> None:
+    settings = make_settings(
+        ENVIRONMENT="production", SECRET_KEY="s" * 32, TRUSTED_ORIGINS=["https://app.example"]
+    )
 
     assert settings.SECRET_KEY == "s" * 32
 
 
-def test_production_always_disables_registration() -> None:
-    settings = Settings(ENVIRONMENT="production", SECRET_KEY="s" * 32, REGISTRATION_ENABLED=True)
+def test_production_always_disables_registration(make_settings) -> None:
+    settings = make_settings(
+        ENVIRONMENT="production",
+        SECRET_KEY="s" * 32,
+        REGISTRATION_ENABLED=True,
+        TRUSTED_ORIGINS=["https://app.example"],
+    )
 
     assert settings.registration_enabled is False
 
 
-def test_development_registration_defaults_to_enabled_and_can_be_disabled() -> None:
-    assert Settings(ENVIRONMENT="development").registration_enabled is True
+def test_development_registration_defaults_to_enabled_and_can_be_disabled(make_settings) -> None:
+    assert make_settings(ENVIRONMENT="development").registration_enabled is True
     assert (
-        Settings(ENVIRONMENT="development", REGISTRATION_ENABLED=False).registration_enabled
+        make_settings(ENVIRONMENT="development", REGISTRATION_ENABLED=False).registration_enabled
         is False
     )
 
@@ -48,26 +69,53 @@ def test_development_registration_defaults_to_enabled_and_can_be_disabled() -> N
         ),
     ],
 )
-def test_trusted_origins_preserve_comma_and_json_cors_parsing(
-    value: str, expected: list[str]
+def test_legacy_cors_origins_populate_the_typed_trusted_allowlist(
+    make_settings, value: str, expected: list[str]
 ) -> None:
-    settings = Settings(CORS_ORIGINS=value)
+    settings = make_settings(CORS_ORIGINS=value)
 
-    assert settings.cors_origins_list == expected
-    assert settings.trusted_origins == expected
-
-
-def test_invalid_json_cors_origins_fails_closed() -> None:
-    settings = Settings(CORS_ORIGINS="[")
-
-    with pytest.raises(json.JSONDecodeError):
-        _ = settings.trusted_origins
+    assert settings.TRUSTED_ORIGINS == expected
+    assert settings.cors_origins_list == settings.TRUSTED_ORIGINS
 
 
-def test_empty_cors_origins_exposes_no_trusted_origins() -> None:
-    settings = Settings(CORS_ORIGINS="")
+def test_typed_trusted_origins_are_normalized(make_settings) -> None:
+    settings = make_settings(TRUSTED_ORIGINS=[" HTTPS://App.Example:8443 "])
 
-    assert settings.trusted_origins == []
+    assert settings.TRUSTED_ORIGINS == ["https://app.example:8443"]
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"CORS_ORIGINS": ""},
+        {"CORS_ORIGINS": "[]"},
+        {"CORS_ORIGINS": "["},
+        {"CORS_ORIGINS": '{"origin":"https://app.example"}'},
+        {"TRUSTED_ORIGINS": []},
+        {"TRUSTED_ORIGINS": [""]},
+        {"TRUSTED_ORIGINS": ["https://app.example", "https://APP.example"]},
+        {"TRUSTED_ORIGINS": ["ftp://app.example"]},
+        {"TRUSTED_ORIGINS": ["https://"]},
+        {"TRUSTED_ORIGINS": ["https://app.example/path"]},
+        {"TRUSTED_ORIGINS": ["https://app.example?query=true"]},
+        {"TRUSTED_ORIGINS": ["https://app.example#fragment"]},
+        {"TRUSTED_ORIGINS": ["https://user@app.example"]},
+    ],
+)
+def test_unsafe_trusted_origin_configuration_fails_during_construction(
+    make_settings, values
+) -> None:
+    with pytest.raises(ValidationError):
+        make_settings(**values)
+
+
+def test_production_requires_https_trusted_origins(make_settings) -> None:
+    with pytest.raises(ValidationError):
+        make_settings(
+            ENVIRONMENT="production",
+            SECRET_KEY="s" * 32,
+            TRUSTED_ORIGINS=["http://app.example"],
+        )
 
 
 @pytest.mark.parametrize(
@@ -82,6 +130,6 @@ def test_empty_cors_origins_exposes_no_trusted_origins() -> None:
         "UPLOAD_RATE_LIMIT_WINDOW_SECONDS",
     ],
 )
-def test_security_time_and_rate_settings_must_be_positive(setting_name: str) -> None:
+def test_security_time_and_rate_settings_must_be_positive(make_settings, setting_name: str) -> None:
     with pytest.raises(ValidationError):
-        Settings(**{setting_name: 0})
+        make_settings(**{setting_name: 0})

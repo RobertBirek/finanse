@@ -1,7 +1,11 @@
 import json
+from typing import Any
+from urllib.parse import urlsplit
 
-from pydantic import PositiveInt, model_validator
+from pydantic import PositiveInt, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DEFAULT_CORS_ORIGINS = "http://localhost:5173"
 
 
 class Settings(BaseSettings):
@@ -23,9 +27,82 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://api.deepseek.com"
     LLM_MODEL: str = "deepseek-v4-pro"
-    CORS_ORIGINS: str = "http://localhost:5173"
+    CORS_ORIGINS: str = DEFAULT_CORS_ORIGINS
+    TRUSTED_ORIGINS: list[str] = []
     ENVIRONMENT: str = "development"
     STIRLING_PDF_URL: str = "http://stirling-pdf:8080"
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_trusted_origins(cls, values: Any) -> Any:
+        if not isinstance(values, dict):
+            return values
+
+        data = dict(values)
+        if "TRUSTED_ORIGINS" not in data:
+            data["TRUSTED_ORIGINS"] = cls._parse_legacy_cors_origins(
+                data.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
+            )
+        return data
+
+    @staticmethod
+    def _parse_legacy_cors_origins(value: Any) -> list[str]:
+        if not isinstance(value, str):
+            raise TypeError("CORS_ORIGINS must be a comma-separated string or JSON list")
+
+        stripped = value.strip()
+        if stripped.startswith(("[", "{", '"')):
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError as error:
+                raise ValueError("CORS_ORIGINS must contain valid JSON") from error
+            if not isinstance(parsed, list) or not all(
+                isinstance(origin, str) for origin in parsed
+            ):
+                raise ValueError("CORS_ORIGINS JSON must be a list of strings")
+            return parsed
+        return value.split(",")
+
+    @field_validator("TRUSTED_ORIGINS")
+    @classmethod
+    def validate_trusted_origins(cls, origins: list[str]) -> list[str]:
+        if not origins:
+            raise ValueError("TRUSTED_ORIGINS must contain at least one origin")
+
+        normalized: list[str] = []
+        for origin in origins:
+            value = origin.strip()
+            if not value:
+                raise ValueError("TRUSTED_ORIGINS cannot contain empty origins")
+
+            try:
+                parsed = urlsplit(value)
+                port = parsed.port
+            except ValueError as error:
+                raise ValueError("TRUSTED_ORIGINS contains an invalid origin") from error
+
+            if (
+                parsed.scheme.lower() not in {"http", "https"}
+                or not parsed.hostname
+                or parsed.path
+                or parsed.query
+                or parsed.fragment
+                or parsed.username is not None
+                or parsed.password is not None
+            ):
+                raise ValueError("TRUSTED_ORIGINS contains an invalid origin")
+
+            host = parsed.hostname.lower()
+            if ":" in host:
+                host = f"[{host}]"
+            normalized_origin = f"{parsed.scheme.lower()}://{host}"
+            if port is not None:
+                normalized_origin = f"{normalized_origin}:{port}"
+            if normalized_origin in normalized:
+                raise ValueError("TRUSTED_ORIGINS cannot contain duplicate origins")
+            normalized.append(normalized_origin)
+
+        return normalized
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
@@ -40,6 +117,8 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "SECRET_KEY must be a non-placeholder value of at least 32 characters"
                 )
+            if any(not origin.startswith("https://") for origin in self.TRUSTED_ORIGINS):
+                raise ValueError("TRUSTED_ORIGINS must use HTTPS in production")
         return self
 
     @property
@@ -48,13 +127,11 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        if self.CORS_ORIGINS.startswith("["):
-            return json.loads(self.CORS_ORIGINS)
-        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        return self.TRUSTED_ORIGINS
 
     @property
     def trusted_origins(self) -> list[str]:
-        return self.cors_origins_list
+        return self.TRUSTED_ORIGINS
 
 
 settings = Settings()
