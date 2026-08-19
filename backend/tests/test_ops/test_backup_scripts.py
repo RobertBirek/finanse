@@ -104,10 +104,13 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
         'DATABASE_URL="$async_database_url" "$repo_root/backend/.venv/bin/alembic" upgrade head'
         in content
     )
-    assert "count(p.id) < 2" in content
+    assert "FROM financial_transactions transaction" in content
+    assert "LEFT JOIN postings posting ON posting.transaction_id = transaction.id" in content
+    assert "GROUP BY transaction.id" in content
+    assert "count(posting.id) < 2" in content
     assert (
-        "sum(CASE WHEN p.direction = 'debit' THEN p.base_amount_pln ELSE -p.base_amount_pln END) <> 0"
-        in content
+        "COALESCE(SUM(CASE WHEN posting.direction = 'debit' THEN posting.base_amount_pln "
+        "ELSE -posting.base_amount_pln END), 0) <> 0" in content
     )
     assert "RAISE EXCEPTION 'ledger invariant violation'" in content
     assert content.index(

@@ -119,10 +119,11 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1
-        FROM postings p
-        GROUP BY p.transaction_id
-        HAVING count(p.id) < 2
-            OR sum(CASE WHEN p.direction = 'debit' THEN p.base_amount_pln ELSE -p.base_amount_pln END) <> 0
+        FROM financial_transactions transaction
+        LEFT JOIN postings posting ON posting.transaction_id = transaction.id
+        GROUP BY transaction.id
+        HAVING count(posting.id) < 2
+            OR COALESCE(SUM(CASE WHEN posting.direction = 'debit' THEN posting.base_amount_pln ELSE -posting.base_amount_pln END), 0) <> 0
     ) THEN
         RAISE EXCEPTION 'ledger invariant violation';
     END IF;
