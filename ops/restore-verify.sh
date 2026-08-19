@@ -30,12 +30,20 @@ require_private_pgpassfile() {
 }
 
 restore_workdir=""
+created_uploads_dir=""
 cleanup() {
+    local exit_code="$?"
+    if [[ "$exit_code" -ne 0 && -n "$created_uploads_dir" ]]; then
+        rm -rf -- "$created_uploads_dir"
+    fi
     if [[ -n "$restore_workdir" && -d "$restore_workdir" ]]; then
         rm -rf -- "$restore_workdir"
     fi
+    return "$exit_code"
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 require_env "RESTIC_REPOSITORY"
 require_env "RESTIC_PASSWORD_FILE"
@@ -64,7 +72,7 @@ parse_postgres_url() {
 }
 parse_postgres_url "$RESTORE_DATABASE_URL_SYNC"
 
-[[ "$pg_host" == "127.0.0.1" || "$pg_host" == "localhost" ]] \
+[[ "$pg_host" == "127.0.0.1" ]] \
     || fail "Restore database host is not allowed."
 [[ "$pg_database" =~ ^.+_(restore|test)$ ]] \
     || fail "Restore database name is not allowed."
@@ -113,6 +121,7 @@ manifest_alembic_revision="$(manifest_field "alembic_revision")"
 
 [[ ! -e "$RESTORE_DIR/uploads" ]] || fail "Restore uploads directory already exists."
 mkdir "$RESTORE_DIR/uploads"
+created_uploads_dir="$RESTORE_DIR/uploads"
 printf '%s\n' "Extracting uploads"
 tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$RESTORE_DIR/uploads"
 

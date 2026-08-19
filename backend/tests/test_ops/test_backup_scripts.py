@@ -1,3 +1,5 @@
+import hashlib
+import json
 import os
 import stat
 import subprocess
@@ -40,7 +42,10 @@ def test_backup_script_requires_inputs_and_creates_versioned_snapshot():
 
     assert 'parse_postgres_url "$DATABASE_URL_SYNC"' in content
     assert "ops/postgres_connection.py" in content
-    assert 'pg_dump --format=custom --file "$snapshot_dir/postgres.dump"' in content
+    assert (
+        'pg_dump --serializable-deferrable --format=custom --file "$snapshot_dir/postgres.dump"'
+        in content
+    )
     assert '"$DATABASE_URL_SYNC"' not in content.split("pg_dump", maxsplit=1)[1]
     assert (
         'tar --sort=name --mtime="UTC 1970-01-01" --owner=0 --group=0 --numeric-owner '
@@ -48,6 +53,7 @@ def test_backup_script_requires_inputs_and_creates_versioned_snapshot():
     ) in content
     assert 'git -C "$repo_root" rev-parse HEAD' in content
     assert "SELECT version_num FROM alembic_version" in content
+    assert 'flock "$UPLOAD_DIR/.backup.lock" tar' in content
     for field in (
         "created_at_utc",
         "git_sha",
@@ -81,13 +87,15 @@ def test_restore_script_is_executable_and_fails_closed_before_restore():
     assert "umask 077" in content
     assert 'snapshot_id="${1:-latest}"' in content
     assert 'parse_postgres_url "$RESTORE_DATABASE_URL_SYNC"' in content
-    assert '[[ "$pg_host" == "127.0.0.1" || "$pg_host" == "localhost" ]]' in content
+    assert '[[ "$pg_host" == "127.0.0.1" ]]' in content
     assert '[[ "$pg_database" =~ ^.+_(restore|test)$ ]]' in content
     assert 'require_private_pgpassfile "$PGPASSFILE"' in content
     assert empty_restore_dir_guard in content
-    assert content.index(
-        '[[ "$pg_host" == "127.0.0.1" || "$pg_host" == "localhost" ]]'
-    ) < content.index('restic restore "$snapshot_id"')
+    assert 'created_uploads_dir=""' in content
+    assert 'if [[ "$exit_code" -ne 0 && -n "$created_uploads_dir" ]]' in content
+    assert content.index('[[ "$pg_host" == "127.0.0.1" ]]') < content.index(
+        'restic restore "$snapshot_id"'
+    )
     assert content.index('[[ "$pg_database" =~ ^.+_(restore|test)$ ]]') < content.index(
         'restic restore "$snapshot_id"'
     )
@@ -178,6 +186,19 @@ def test_restore_rejects_uri_query_before_restic_runs(tmp_path: Path):
     assert not marker.exists()
 
 
+def test_restore_rejects_localhost_before_restic_runs(tmp_path: Path):
+    environment, marker = restore_environment(
+        tmp_path, "postgresql://user@localhost/finanse_restore", 0o600
+    )
+
+    result = subprocess.run(
+        [str(RESTORE_SCRIPT)], env=environment, capture_output=True, check=False, text=True
+    )
+
+    assert result.returncode != 0
+    assert not marker.exists()
+
+
 def test_restore_rejects_uri_password_before_restic_runs(tmp_path: Path):
     environment, marker = restore_environment(
         tmp_path, "postgresql://user:secret@localhost/finanse_restore", 0o600
@@ -195,6 +216,132 @@ def test_restore_rejects_non_private_pgpassfile_before_restic_runs(tmp_path: Pat
     environment, marker = restore_environment(
         tmp_path, "postgresql://user@localhost/finanse_restore", 0o644
     )
+
+    result = subprocess.run(
+        [str(RESTORE_SCRIPT)], env=environment, capture_output=True, check=False, text=True
+    )
+
+    assert result.returncode != 0
+    assert not marker.exists()
+
+
+def write_fake_command(directory: Path, name: str, body: str) -> None:
+    command = directory / name
+    command.write_text(f"#!/usr/bin/env bash\nset -euo pipefail\n{body}\n")
+    command.chmod(0o700)
+
+
+def test_backup_mocked_commands_run_in_snapshot_order_without_secrets(tmp_path: Path):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    order_log = tmp_path / "order"
+    manifest_copy = tmp_path / "manifest.json"
+    write_fake_command(
+        fake_bin,
+        "pg_dump",
+        'for ((i=1; i <= $#; i++)); do if [[ "${!i}" == "--file" ]]; then j=$((i + 1)); printf dump > "${!j}"; fi; done\nprintf "pg_dump\\n" >> "$ORDER_LOG"',
+    )
+    write_fake_command(
+        fake_bin,
+        "tar",
+        'for ((i=1; i <= $#; i++)); do if [[ "${!i}" == "-czf" ]]; then j=$((i + 1)); printf uploads > "${!j}"; fi; done\nprintf "tar\\n" >> "$ORDER_LOG"',
+    )
+    write_fake_command(fake_bin, "psql", "printf oldrev\n")
+    write_fake_command(
+        fake_bin,
+        "restic",
+        'printf "restic\\n" >> "$ORDER_LOG"\nif [[ "$1" == "backup" ]]; then cp "$2/manifest.json" "$MANIFEST_COPY"; fi',
+    )
+    uploads = tmp_path / "uploads"
+    uploads.mkdir()
+    pgpass = tmp_path / "pgpass"
+    pgpass.write_text("127.0.0.1:5432:*:user:secret\n")
+    pgpass.chmod(0o600)
+    environment = os.environ | {
+        "PATH": f"{fake_bin}:{os.environ['PATH']}",
+        "ORDER_LOG": str(order_log),
+        "MANIFEST_COPY": str(manifest_copy),
+        "BACKUP_WORKDIR": str(tmp_path),
+        "DATABASE_URL_SYNC": "postgresql://user@127.0.0.1/finanse",
+        "UPLOAD_DIR": str(uploads),
+        "RESTIC_REPOSITORY": "test-repository",
+        "RESTIC_PASSWORD_FILE": str(pgpass),
+        "PGPASSFILE": str(pgpass),
+    }
+
+    result = subprocess.run(
+        [str(BACKUP_SCRIPT)], env=environment, capture_output=True, check=False, text=True
+    )
+
+    assert result.returncode == 0
+    assert order_log.read_text().splitlines()[:3] == ["pg_dump", "tar", "restic"]
+    assert "secret" not in manifest_copy.read_text()
+
+
+def test_failed_pg_restore_removes_only_created_uploads(tmp_path: Path):
+    environment, _ = restore_environment(
+        tmp_path, "postgresql://user@127.0.0.1/finanse_restore", 0o600
+    )
+    fake_bin = Path(environment["PATH"].split(":", maxsplit=1)[0])
+    payload = tmp_path / "payload"
+    payload.mkdir()
+    dump = payload / "postgres.dump"
+    archive = payload / "uploads.tar.gz"
+    dump.write_bytes(b"dump")
+    archive.write_bytes(b"uploads")
+    (payload / "manifest.json").write_text(
+        json.dumps(
+            {
+                "alembic_revision": "oldrev",
+                "postgres_dump_sha256": hashlib.sha256(dump.read_bytes()).hexdigest(),
+                "uploads_tar_gz_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+            }
+        )
+    )
+    write_fake_command(
+        fake_bin,
+        "restic",
+        'target=""; for ((i=1; i <= $#; i++)); do if [[ "${!i}" == "--target" ]]; then j=$((i + 1)); target="${!j}"; fi; done\nmkdir -p "$target/snapshot"\ncp "$RESTIC_PAYLOAD"/* "$target/snapshot/"',
+    )
+    write_fake_command(fake_bin, "tar", "exit 0")
+    write_fake_command(fake_bin, "pg_restore", "exit 1")
+    environment["RESTIC_PAYLOAD"] = str(payload)
+
+    result = subprocess.run(
+        [str(RESTORE_SCRIPT)], env=environment, capture_output=True, check=False, text=True
+    )
+
+    assert result.returncode != 0
+    assert not (Path(environment["RESTORE_DIR"]) / "uploads").exists()
+
+
+def test_checksum_mismatch_prevents_pg_restore(tmp_path: Path):
+    environment, _ = restore_environment(
+        tmp_path, "postgresql://user@127.0.0.1/finanse_restore", 0o600
+    )
+    fake_bin = Path(environment["PATH"].split(":", maxsplit=1)[0])
+    payload = tmp_path / "payload"
+    payload.mkdir()
+    (payload / "postgres.dump").write_bytes(b"changed")
+    (payload / "uploads.tar.gz").write_bytes(b"uploads")
+    (payload / "manifest.json").write_text(
+        json.dumps(
+            {
+                "alembic_revision": "oldrev",
+                "postgres_dump_sha256": "0" * 64,
+                "uploads_tar_gz_sha256": hashlib.sha256(b"uploads").hexdigest(),
+            }
+        )
+    )
+    marker = tmp_path / "pg-restore-ran"
+    write_fake_command(
+        fake_bin,
+        "restic",
+        'target=""; for ((i=1; i <= $#; i++)); do if [[ "${!i}" == "--target" ]]; then j=$((i + 1)); target="${!j}"; fi; done\nmkdir -p "$target/snapshot"\ncp "$RESTIC_PAYLOAD"/* "$target/snapshot/"',
+    )
+    write_fake_command(fake_bin, "pg_restore", ': > "$PG_RESTORE_MARKER"')
+    environment["RESTIC_PAYLOAD"] = str(payload)
+    environment["PG_RESTORE_MARKER"] = str(marker)
 
     result = subprocess.run(
         [str(RESTORE_SCRIPT)], env=environment, capture_output=True, check=False, text=True

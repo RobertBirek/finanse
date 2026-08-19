@@ -68,10 +68,10 @@ snapshot_dir="$(mktemp -d "$BACKUP_WORKDIR/backup.XXXXXXXX")"
 
 printf '%s\n' "Creating database snapshot"
 PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
-    pg_dump --format=custom --file "$snapshot_dir/postgres.dump"
+    pg_dump --serializable-deferrable --format=custom --file "$snapshot_dir/postgres.dump"
 
 printf '%s\n' "Archiving uploads"
-tar --sort=name --mtime="UTC 1970-01-01" --owner=0 --group=0 --numeric-owner -C "$UPLOAD_DIR" -czf "$snapshot_dir/uploads.tar.gz" .
+flock "$UPLOAD_DIR/.backup.lock" tar --sort=name --mtime="UTC 1970-01-01" --owner=0 --group=0 --numeric-owner -C "$UPLOAD_DIR" -czf "$snapshot_dir/uploads.tar.gz" .
 
 printf '%s\n' "Writing manifest"
 git_sha="$(git -C "$repo_root" rev-parse HEAD)"

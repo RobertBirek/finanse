@@ -34,6 +34,13 @@ The archive command is:
 tar --sort=name --mtime="UTC 1970-01-01" --owner=0 --group=0 --numeric-owner -C "$UPLOAD_DIR" -czf "$snapshot_dir/uploads.tar.gz" .
 ```
 
+The database dump is captured first with `--serializable-deferrable`. The upload
+archive is then created while holding an exclusive `flock` on
+`$UPLOAD_DIR/.backup.lock`. Document writes use the same lock while creating the
+content-addressed file. A document row is flushed only after its content exists;
+document deletion currently does not remove stored content. This append-only
+ordering prevents a backup database reference without its archived file.
+
 This produces deterministic upload archives, including for an empty directory.
 Each snapshot includes a JSON manifest with the UTC creation timestamp, Git SHA,
 the exact Alembic revision queried from the backup target through `psql`, and
@@ -54,7 +61,7 @@ The verification script requires `RESTIC_REPOSITORY`, `RESTIC_PASSWORD_FILE`,
 must be password-free `postgresql://` URLs with a user, host, and database.
 Query strings, fragments, and embedded passwords are rejected. `PGPASSFILE`
 must be readable and mode `0600`. The restore script additionally refuses to
-continue unless the database host is exactly `127.0.0.1` or `localhost`, and the
+continue unless the database host is exactly `127.0.0.1`, and the
 database name ends in `_restore` or `_test`. These guards run before Restic
 restore and before `pg_restore`, preventing a production restore target.
 
@@ -67,4 +74,6 @@ asyncpg URL with an encoded `passfile` parameter in the Alembic process
 environment, and verifies the upgraded database revision equals that head. It
 then checks that every financial transaction has at least two postings and a zero
 base-PLN balance. `RESTORE_DIR/uploads` must not already exist, preventing an
-existing upload set from being overwritten.
+existing upload set from being overwritten. If a failure occurs after the script
+creates that directory, its cleanup trap removes only that created directory;
+successful verification keeps it.

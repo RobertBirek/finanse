@@ -1,3 +1,5 @@
+import asyncio
+import fcntl
 import hashlib
 import uuid
 from datetime import UTC, datetime
@@ -20,10 +22,23 @@ def _storage_path(sha256_hash: str) -> str:
     return f"{sha256_hash[:2]}/{sha256_hash}"
 
 
-def _ensure_storage_dir(sha256_hash: str):
+def _ensure_storage_dir(sha256_hash: str) -> Path:
     dir_path = UPLOAD_DIR / sha256_hash[:2]
     dir_path.mkdir(parents=True, exist_ok=True)
     return dir_path
+
+
+def _write_document_content(sha256_hash: str, content: bytes) -> None:
+    lock_path = UPLOAD_DIR / ".backup.lock"
+    with lock_path.open("a+b") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            storage_dir = _ensure_storage_dir(sha256_hash)
+            file_path = storage_dir / sha256_hash
+            if not file_path.exists():
+                file_path.write_bytes(content)
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 async def upload_document(
@@ -34,17 +49,13 @@ async def upload_document(
     mime_type: str,
 ) -> Document:
     sha256_hash = compute_sha256(content)
+    await asyncio.to_thread(_write_document_content, sha256_hash, content)
     existing = await db.execute(
         select(Document).where(Document.user_id == user_id, Document.sha256_hash == sha256_hash)
     )
     existing_doc = existing.scalar_one_or_none()
     if existing_doc is not None:
         return existing_doc
-
-    storage_dir = _ensure_storage_dir(sha256_hash)
-    file_path = storage_dir / sha256_hash
-    if not file_path.exists():
-        file_path.write_bytes(content)
 
     doc = Document(
         user_id=user_id,
@@ -61,7 +72,9 @@ async def upload_document(
     return doc
 
 
-async def update_document_status(db: AsyncSession, document_id: uuid.UUID, status: str) -> Document | None:
+async def update_document_status(
+    db: AsyncSession, document_id: uuid.UUID, status: str
+) -> Document | None:
     result = await db.execute(select(Document).where(Document.id == document_id))
     doc = result.scalar_one_or_none()
     if doc is None:
@@ -86,7 +99,11 @@ async def save_extracted_text(
 
 
 async def get_documents(
-    db: AsyncSession, user_id: uuid.UUID, limit: int = 50, offset: int = 0, status: str | None = None
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    limit: int = 50,
+    offset: int = 0,
+    status: str | None = None,
 ) -> list[Document]:
     stmt = select(Document).where(Document.user_id == user_id).order_by(Document.created_at.desc())
     if status:
@@ -96,8 +113,12 @@ async def get_documents(
     return list(result.scalars().all())
 
 
-async def get_document(db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID) -> Document | None:
-    result = await db.execute(select(Document).where(Document.id == document_id, Document.user_id == user_id))
+async def get_document(
+    db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID
+) -> Document | None:
+    result = await db.execute(
+        select(Document).where(Document.id == document_id, Document.user_id == user_id)
+    )
     return result.scalar_one_or_none()
 
 
