@@ -37,6 +37,8 @@ require_env "RESTORE_DATABASE_URL_SYNC"
 require_env "RESTORE_DIR"
 require_readable_file "$RESTIC_PASSWORD_FILE"
 require_directory "$RESTORE_DIR"
+[[ -z "$(find "$RESTORE_DIR" -mindepth 1 -maxdepth 1 -print -quit)" ]] \
+    || fail "Restore directory must be empty."
 
 database_url_without_scheme="${RESTORE_DATABASE_URL_SYNC#*://}"
 [[ "$database_url_without_scheme" != "$RESTORE_DATABASE_URL_SYNC" && "$database_url_without_scheme" == */* ]] \

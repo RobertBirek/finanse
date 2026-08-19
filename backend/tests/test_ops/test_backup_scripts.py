@@ -69,6 +69,9 @@ def test_backup_script_sends_snapshot_to_restic_and_applies_retention():
 
 def test_restore_script_is_executable_and_fails_closed_before_restore():
     content = read_script(RESTORE_SCRIPT)
+    empty_restore_dir_guard = (
+        '[[ -z "$(find "$RESTORE_DIR" -mindepth 1 -maxdepth 1 -print -quit)" ]]'
+    )
 
     assert RESTORE_SCRIPT.stat().st_mode & stat.S_IXUSR
     assert "#!/usr/bin/env bash" in content
@@ -77,12 +80,14 @@ def test_restore_script_is_executable_and_fails_closed_before_restore():
     assert 'snapshot_id="${1:-latest}"' in content
     assert '[[ "$host" == "127.0.0.1" || "$host" == "localhost" ]]' in content
     assert '[[ "$database_name" =~ ^.+_(restore|test)$ ]]' in content
+    assert empty_restore_dir_guard in content
     assert content.index('[[ "$host" == "127.0.0.1" || "$host" == "localhost" ]]') < content.index(
         'restic restore "$snapshot_id"'
     )
     assert content.index('[[ "$database_name" =~ ^.+_(restore|test)$ ]]') < content.index(
         'pg_restore --clean --if-exists --no-owner --dbname "$RESTORE_DATABASE_URL_SYNC"'
     )
+    assert content.index(empty_restore_dir_guard) < content.index('restic restore "$snapshot_id"')
 
 
 def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
