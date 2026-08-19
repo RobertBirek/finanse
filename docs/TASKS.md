@@ -6,6 +6,18 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 1 -- Security Baseline: backup i weryfikacja odtworzenia (2026-08-19)
+
+- [x] Wersjonowane skrypty Restic wykonują prywatny snapshot PostgreSQL i uploads
+  z manifestem SHA-256, tagami oraz retencją 7/4/6.
+- [x] Izolowana weryfikacja odtworzenia wymaga loopbackowego DSN do bazy
+  `_restore`/`_test`, weryfikuje checksumy przed ekstrakcją lub `pg_restore`,
+  uruchamia migracje i kontrolę invariantów księgi.
+- [x] Dokumentacja operacyjna, targety Makefile oraz statyczne testy zostały
+  dodane; nie skonfigurowano credentiali i nie uruchomiono backupu produkcyjnego.
+
+---
+
 ## Task 17 — Ukrywanie nieaktywnych kont i kategorii (2026-08-19)
 
 - [x] Formularze transakcji, schedulera i budżetów pokazują wyłącznie aktywne

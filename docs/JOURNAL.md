@@ -3,6 +3,42 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-08-19 -- Sesja 30: Security Baseline Task 1
+
+### Cel sesji
+Zrealizować wyłącznie pierwszy zatwierdzony krok Security Baseline: wersjonowane
+backupy Restic oraz izolowaną weryfikację odtworzenia, bez credentiali i bez
+operacji na produkcji.
+
+### Co zrobiono
+- Dodano `ops/backup.sh`: prywatny katalog tymczasowy, custom `pg_dump`,
+  deterministyczne archiwum uploads, manifest SHA-256/Git/Alembic oraz Restic
+  backup i retencję 7 dziennych, 4 tygodniowych i 6 miesięcznych snapshotów.
+- Dodano `ops/restore-verify.sh`: bezwzględny guard hosta loopback i nazwy bazy
+  `_restore`/`_test`, checksumy przed zmianą uploads/DB, migracje i SQL fail-closed
+  dla invariantów postings.
+- Dodano dokumentację operacyjną, testy TDD statycznie sprawdzające guardy,
+  komendy, manifest, retencję i tryb wykonywalny oraz targety w
+  `/docker/finanse/Makefile`.
+
+### Weryfikacja
+- RED: `6 failed` z powodu brakujących skryptów i poprzednich targetów Makefile.
+- GREEN: focused `test_backup_scripts.py` -- `6 passed`; pełny backend:
+  `132 passed, 109 skipped, 3 warnings`; Ruff i `bash -n` PASS.
+- ShellCheck nie jest zainstalowany. Nie skonfigurowano Restic, nie wykonano
+  backupu, restore, migracji ani deployu produkcyjnego.
+
+### Decyzje techniczne
+1. Snapshot zawiera manifest w tym samym prywatnym katalogu, a katalog jest
+   usuwany trapem po każdej ścieżce wyjścia.
+2. Weryfikacja odmawia ekstrakcji do istniejącego `RESTORE_DIR/uploads`, aby nie
+   nadpisywać istniejących dokumentów.
+
+### Następna sesja
+Kolejne zatwierdzone zadanie Security Baseline, jeśli zostanie zlecone osobno.
+
+---
+
 ## 2026-08-19 — Sesja 29: Deploy CRUD kont i kategorii
 
 ### Cel sesji

@@ -8,6 +8,13 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-15
 
 ### Added
+- **Security baseline -- backup and restore verification**: versioned scripts
+  `ops/backup.sh` and `ops/restore-verify.sh` create encrypted Restic snapshots
+  of PostgreSQL and uploads, retain 7 daily/4 weekly/6 monthly snapshots, and
+  perform a checksum-verified restore only to a loopback `_restore`/`_test`
+  database. Operations documentation describes external credential setup, the
+  monthly drill, RPO 24h and RTO 2h. The external Docker Makefile exposes
+  `backup` and `restore-verify` targets.
 - **Usuwanie i dezaktywacja kont i kategorii**: kolumna `categories.is_active`
   (migracja `1dbfe88dfb1b`), `DELETE /accounts/{id}` i `DELETE /categories/{id}`
   (204; brak/cudzy → 404; rekordy powiązane → 409 z sugestią dezaktywacji),
@@ -70,6 +77,10 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   znak transakcji per konto zgodnie z konwencją `balance = credit − debit`.
 
 ### Verified
+- Backup/restore static tests: `6 passed`; full backend unit suite:
+  `132 passed, 109 skipped, 3 warnings`; Ruff and `bash -n` pass.
+  ShellCheck is not installed. No Restic credentials, production backup,
+  production restore, migration, or deploy was run.
 - CRUD kont i kategorii: `make test` — backend `126 passed, 109 skipped` i
   frontend `106 passed`; `make test-integration` — `109 passed`; `make lint`,
   `make typecheck` i frontendowy production build PASS.
