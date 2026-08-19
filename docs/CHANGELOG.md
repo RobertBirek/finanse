@@ -54,6 +54,8 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Endpoint `DELETE /cashflow/items/{item_id}` do jawnego usunięcia własnej pozycji.
 
 ### Changed
+- Operacyjne listy finansowe ukrywają nieaktywne konta i kategorie; strona
+  `/finances/accounts` pozostaje bez zmian i nadal pokazuje pełną listę zarządzania.
 - Potwierdzenie schedulera odrzuca pozycje nie-PLN (brak zweryfikowanego kursu),
   przyszłe, `overdue_uncertain`, `amount_unknown` i `matched_actual`; przyjmuje
   wyłącznie `due`/`overdue` z wyliczoną kwotą i ponownie waliduje powiązane konto

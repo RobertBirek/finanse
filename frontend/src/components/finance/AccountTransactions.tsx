@@ -23,12 +23,15 @@ type AccountTransactionsProps = {
 
 export function AccountTransactions({ accounts }: AccountTransactionsProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const groups = splitAccounts(accounts);
+  const visibleAccounts = accounts.filter(
+    (account) => account.is_active !== false || account.id === selectedId,
+  );
+  const groups = splitAccounts(visibleAccounts);
   const selected =
     accounts.find((account) => account.id === selectedId) ?? null;
   const transactions = useAccountTransactions(selectedId);
 
-  if (accounts.length === 0) {
+  if (visibleAccounts.length === 0) {
     return (
       <p className="card py-8 text-center text-sm text-gray-500">Brak kont.</p>
     );

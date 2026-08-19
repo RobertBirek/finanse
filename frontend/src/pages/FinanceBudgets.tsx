@@ -70,7 +70,7 @@ export function FinanceBudgets() {
   );
 
   const expenseCategories = (categoriesQuery.data ?? []).filter(
-    (category) => category.type === "expense",
+    (category) => category.is_active !== false && category.type === "expense",
   );
   const availableCategories = expenseCategories.filter(
     (category) => !budgetedCategoryIds.has(category.id),

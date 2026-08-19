@@ -62,6 +62,13 @@ const categories: Array<{
     type: "expense",
     is_active: true,
   },
+  {
+    id: "c-inactive",
+    name: "Stara kategoria",
+    parent_id: null,
+    type: "expense",
+    is_active: false,
+  },
 ];
 
 describe("ScheduledItemForm", () => {
@@ -110,5 +117,23 @@ describe("ScheduledItemForm", () => {
     );
 
     expect(screen.getByLabelText("Waluta")).toHaveValue("PLN");
+  });
+
+  it("hides inactive categories while keeping the type filter", () => {
+    render(
+      <ScheduledItemForm
+        mode="create"
+        accounts={accounts}
+        categories={categories}
+      />,
+    );
+
+    const categorySelect = screen.getByLabelText("Kategoria");
+    expect(
+      within(categorySelect).getByRole("option", { name: "Czynsz" }),
+    ).toBeInTheDocument();
+    expect(
+      within(categorySelect).queryByRole("option", { name: "Stara kategoria" }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -45,11 +45,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
   const categories = categoriesQuery.data ?? [];
 
   const activePlnAccounts = accounts.filter(
-    (account) => account.is_active && account.currency === "PLN",
+    (account) => account.is_active !== false && account.currency === "PLN",
   );
-  const activeAccounts = accounts.filter((account) => account.is_active);
+  const activeAccounts = accounts.filter(
+    (account) => account.is_active !== false,
+  );
   const filteredCategories = categories.filter(
-    (category) => category.type === type,
+    (category) => category.is_active !== false && category.type === type,
   );
 
   const errorMessage =

@@ -12,7 +12,9 @@ export function Finances() {
   const accounts = useAccounts();
   const summary = useFinancialSummary();
   const cashflow = useCashflowForecast();
-  const accountGroups = splitAccounts(accounts.data ?? []);
+  const accountGroups = splitAccounts(
+    (accounts.data ?? []).filter((account) => account.is_active !== false),
+  );
 
   return (
     <div className="max-w-6xl">

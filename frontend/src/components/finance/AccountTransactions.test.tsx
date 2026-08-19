@@ -42,6 +42,17 @@ const accounts = [
     opened_at: "2026-01-01",
     closed_at: null,
   },
+  {
+    id: "inactive-account",
+    name: "Stare konto",
+    type: "bank",
+    currency: "PLN",
+    is_active: false,
+    is_budget_account: true,
+    balance_pln: 0,
+    opened_at: "2026-01-01",
+    closed_at: null,
+  },
 ];
 
 const incomeTransaction = {
@@ -125,6 +136,7 @@ describe("AccountTransactions", () => {
     expect(screen.getByText("Konta budżetowe")).toBeInTheDocument();
     expect(screen.getByText("Konta informacyjne")).toBeInTheDocument();
     expect(screen.getByText("wyłączone z analiz")).toBeInTheDocument();
+    expect(screen.queryByText("Stare konto")).not.toBeInTheDocument();
     expect(screen.getByText(/1.*234,56 PLN/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));

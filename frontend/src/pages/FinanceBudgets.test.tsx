@@ -24,6 +24,13 @@ vi.mock("../components/finance/CategorySpendTree", () => ({
 const categories = [
   { id: "c-food", name: "Jedzenie", parent_id: null, type: "expense" },
   { id: "c-rent", name: "Czynsz", parent_id: null, type: "expense" },
+  {
+    id: "c-inactive",
+    name: "Stara kategoria",
+    parent_id: null,
+    type: "expense",
+    is_active: false,
+  },
   { id: "c-salary", name: "Wynagrodzenie", parent_id: null, type: "income" },
 ];
 
@@ -136,6 +143,9 @@ describe("FinanceBudgets", () => {
     ).not.toBeInTheDocument();
     expect(
       within(categorySelect).queryByRole("option", { name: "Wynagrodzenie" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(categorySelect).queryByRole("option", { name: "Stara kategoria" }),
     ).not.toBeInTheDocument();
   });
 

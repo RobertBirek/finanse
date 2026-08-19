@@ -6,6 +6,15 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 17 — Ukrywanie nieaktywnych kont i kategorii (2026-08-19)
+
+- [x] Formularze transakcji, schedulera i budżetów pokazują wyłącznie aktywne
+  encje, zachowując filtrowanie typu i ograniczenie kont schedulera do PLN.
+- [x] Dashboard finansów i nawigacja transakcji ukrywają nieaktywne konta;
+  wybrane wcześniej konto nie jest usuwane z istniejącego widoku.
+- [x] `FinanceAccounts` i API pozostawiono bez zmian.
+- [x] Quality gate: frontend `106 passed`, lint/typecheck/build PASS.
+
 ## Task 16 — Usuwanie i dezaktywacja kont i kategorii (2026-08-17)
 
 - [x] Model: `categories.is_active` (Boolean NOT NULL, default true) + migracja `1dbfe88dfb1b` (upgrade/downgrade zweryfikowane na izolowanej bazie).

@@ -3,6 +3,38 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-08-19 — Sesja 28: Operacyjne listy bez nieaktywnych encji
+
+### Cel sesji
+Zrealizować autoryzowane Zadanie 4: ukryć nieaktywne konta i kategorie z
+operacyjnych list/selectów bez zmiany strony zarządzania ani API.
+
+### Co zrobiono
+- `TransactionForm` filtruje aktywne konta i kategorie, zachowując filtr typu
+  oraz obsługę kont walutowych dla przewalutowania.
+- `ScheduledItemForm` pokazuje aktywne konta budżetowe PLN i aktywne kategorie.
+- `FinanceBudgets` pokazuje aktywne kategorie wydatkowe.
+- `Finances` oraz `AccountTransactions` ukrywają nieaktywne konta. Nawigacja
+  zachowuje konto, jeśli było już wybrane przed dezaktywacją.
+- Dodano testy regresyjne dla TransactionForm, ScheduledItemForm,
+  FinanceBudgets, Finances i AccountTransactions. Warunek `!== false` zachowuje
+  kompatybilność z mockami bez pola `is_active`.
+
+### Weryfikacja
+- TDD: testy RED wykazały 5 braków, następnie focused GREEN: `5 plików,
+  29 testów`.
+- Pełny frontend: `npm run test` — `16 plików, 106 passed`.
+- `npm run lint`, `npm run typecheck`, `npm run build` — PASS.
+
+### Decyzje techniczne
+1. Filtrowanie pozostaje lokalne w komponentach korzystających z list; API i
+   `FinanceAccounts` nadal zwracają/pokazują pełny zbiór encji.
+
+### Następna sesja
+Brak dalszych działań dla tego zakresu.
+
+---
+
 ## 2026-08-17 — Sesja 27: Refresh konta po aktualizacji
 
 ### Cel sesji

@@ -65,6 +65,13 @@ const accounts = [
 const categories = [
   { id: "c1", name: "Czynsz", parent_id: null, type: "expense" as const },
   { id: "c2", name: "Wynagrodzenie", parent_id: null, type: "income" as const },
+  {
+    id: "c-inactive",
+    name: "Stara kategoria",
+    parent_id: null,
+    type: "expense" as const,
+    is_active: false,
+  },
 ];
 
 describe("TransactionForm", () => {
@@ -107,6 +114,9 @@ describe("TransactionForm", () => {
     expect(
       within(categorySelect).getByRole("option", { name: "Czynsz" }),
     ).toBeInTheDocument();
+    expect(
+      within(categorySelect).queryByRole("option", { name: "Stara kategoria" }),
+    ).not.toBeInTheDocument();
     expect(
       within(categorySelect).queryByRole("option", { name: "Wynagrodzenie" }),
     ).not.toBeInTheDocument();

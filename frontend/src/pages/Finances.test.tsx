@@ -41,6 +41,15 @@ describe("Finances", () => {
           type: "card",
           currency: "PLN",
         },
+        {
+          id: "inactive",
+          name: "Stare konto",
+          is_active: false,
+          is_budget_account: true,
+          balance_pln: 99999,
+          type: "bank",
+          currency: "PLN",
+        },
       ],
       isLoading: false,
       isError: false,
@@ -77,6 +86,7 @@ describe("Finances", () => {
     ).toHaveAttribute("href", "/finances/cashflow");
     expect(screen.getByText("Konta budżetowe")).toBeInTheDocument();
     expect(screen.getByText("Konta informacyjne")).toBeInTheDocument();
+    expect(screen.queryByText("Stare konto")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Planowane wpływy i wydatki"),
     ).not.toBeInTheDocument();

@@ -56,11 +56,11 @@ export function ScheduledItemForm({
   const budgetAccounts = accounts.filter(
     (account) =>
       account.is_budget_account &&
-      account.is_active &&
+      account.is_active !== false &&
       account.currency === "PLN",
   );
   const filteredCategories = categories.filter(
-    (category) => category.type === type,
+    (category) => category.is_active !== false && category.type === type,
   );
 
   const isPending =
