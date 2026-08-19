@@ -89,5 +89,5 @@ printf '%s\n' "Uploading encrypted snapshot"
 restic backup "$snapshot_dir" --tag personal-advisor --tag postgres --tag uploads
 
 printf '%s\n' "Applying retention"
-restic forget --prune --keep-daily 7 --keep-weekly 4 --keep-monthly 6
+restic forget --prune --tag personal-advisor --group-by tags --keep-daily 7 --keep-weekly 4 --keep-monthly 6
 printf '%s\n' "Backup complete"

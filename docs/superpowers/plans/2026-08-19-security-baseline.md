@@ -17,15 +17,15 @@
 - Modify: `/docker/finanse/Makefile`
 - Test: `backend/tests/test_ops/test_backup_scripts.py`
 
-- [ ] **Step 1: Write failing static tests.** Assert scripts require `RESTIC_REPOSITORY` and `RESTIC_PASSWORD_FILE`, run `pg_dump --format=custom`, save an Alembic revision and commit SHA in `manifest.json`, and use the approved Restic retention flags.
-- [ ] **Step 2: Run the focused test.**
+- [x] **Step 1: Write failing static tests.** Assert scripts require `RESTIC_REPOSITORY` and `RESTIC_PASSWORD_FILE`, run `pg_dump --format=custom`, save an Alembic revision and commit SHA in `manifest.json`, and use the approved Restic retention flags.
+- [x] **Step 2: Run the focused test.**
   Run: `cd backend && .venv/bin/pytest tests/test_ops/test_backup_scripts.py -v`
   Expected: FAIL because files do not exist.
-- [ ] **Step 3: Implement `ops/backup.sh`.** Use `set -euo pipefail`; require `BACKUP_WORKDIR`, `DATABASE_URL_SYNC`, `UPLOAD_DIR`, `RESTIC_REPOSITORY`, `RESTIC_PASSWORD_FILE`; create a private temporary directory; run `pg_dump --format=custom --file "$workdir/postgres.dump" "$DATABASE_URL_SYNC"`; archive upload files; run `alembic current` in backend; write a JSON manifest with `git rev-parse HEAD`, revision and `sha256sum`; call `restic backup`; call `restic forget --prune --keep-daily 7 --keep-weekly 4 --keep-monthly 6`; always remove the temporary directory.
-- [ ] **Step 4: Implement `ops/restore-verify.sh`.** Require `RESTIC_*`, `RESTORE_DATABASE_URL_SYNC` and an empty `RESTORE_DIR`; restore a chosen snapshot into the private workdir; execute `pg_restore --clean --if-exists` only against the explicitly named isolated database; run `alembic upgrade head`; run SQL checks that every transaction has at least two postings and signed posting total zero; verify archived upload checksums against manifest.
-- [ ] **Step 5: Add Makefile targets.** Add `backup` and `restore-verify` targets that execute only versioned scripts and never interpolate secret values into output.
-- [ ] **Step 6: Run focused tests and ShellCheck if installed.**
-- [ ] **Step 7: Commit.** `git commit -m "feat: dodaj backup i weryfikację odtworzenia"`
+- [x] **Step 3: Implement `ops/backup.sh`.** Use `set -euo pipefail`; require `BACKUP_WORKDIR`, `DATABASE_URL_SYNC`, `UPLOAD_DIR`, `RESTIC_REPOSITORY`, `RESTIC_PASSWORD_FILE`; create a private temporary directory; run `pg_dump --format=custom --file "$workdir/postgres.dump" "$DATABASE_URL_SYNC"`; archive upload files; run `alembic current` in backend; write a JSON manifest with `git rev-parse HEAD`, revision and `sha256sum`; call `restic backup`; call `restic forget --prune --keep-daily 7 --keep-weekly 4 --keep-monthly 6`; always remove the temporary directory.
+- [x] **Step 4: Implement `ops/restore-verify.sh`.** Require `RESTIC_*`, `RESTORE_DATABASE_URL_SYNC` and an empty `RESTORE_DIR`; restore a chosen snapshot into the private workdir; execute `pg_restore --clean --if-exists` only against the explicitly named isolated database; run `alembic upgrade head`; run SQL checks that every transaction has at least two postings and signed posting total zero; verify archived upload checksums against manifest.
+- [x] **Step 5: Add Makefile targets.** Add `backup` and `restore-verify` targets that execute only versioned scripts and never interpolate secret values into output.
+- [x] **Step 6: Run focused tests and ShellCheck if installed.**
+- [x] **Step 7: Commit.** `git commit -m "feat: dodaj backup i weryfikację odtworzenia"`
 
 ### Task 2: Fail-fast settings i zamknięcie rejestracji
 

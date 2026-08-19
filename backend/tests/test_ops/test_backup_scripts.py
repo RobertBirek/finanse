@@ -71,7 +71,10 @@ def test_backup_script_sends_snapshot_to_restic_and_applies_retention():
         'restic backup "$snapshot_dir" --tag personal-advisor --tag postgres --tag uploads'
         in content
     )
-    assert "restic forget --prune --keep-daily 7 --keep-weekly 4 --keep-monthly 6" in content
+    assert (
+        "restic forget --prune --tag personal-advisor --group-by tags --keep-daily 7 "
+        "--keep-weekly 4 --keep-monthly 6"
+    ) in content
     assert "eval" not in content
 
 
