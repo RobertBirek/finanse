@@ -91,8 +91,8 @@ def test_restore_script_is_executable_and_fails_closed_before_restore():
     assert '[[ "$pg_database" =~ ^.+_(restore|test)$ ]]' in content
     assert 'require_private_pgpassfile "$PGPASSFILE"' in content
     assert empty_restore_dir_guard in content
-    assert 'created_uploads_dir=""' in content
-    assert 'if [[ "$exit_code" -ne 0 && -n "$created_uploads_dir" ]]' in content
+    assert 'restore_staging_dir="$(mktemp -d "$RESTORE_DIR/.restore-run.XXXXXX")"' in content
+    assert 'if [[ "$exit_code" -ne 0 && -n "$restore_staging_dir" ]]' in content
     assert content.index('[[ "$pg_host" == "127.0.0.1" ]]') < content.index(
         'restic restore "$snapshot_id"'
     )
@@ -108,7 +108,7 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
     assert 'restic restore "$snapshot_id" --target "$restore_workdir"' in content
     assert 'verify_checksum "postgres.dump" "$expected_postgres_sha256"' in content
     assert 'verify_checksum "uploads.tar.gz" "$expected_uploads_sha256"' in content
-    assert 'tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$RESTORE_DIR/uploads"' in content
+    assert 'tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$restore_staging_dir/uploads"' in content
     assert 'pg_restore --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"' in content
     assert '"$RESTORE_DATABASE_URL_SYNC"' not in content.split("pg_restore", maxsplit=1)[1]
     assert '"$repo_root/backend/.venv/bin/alembic" heads' in content
@@ -138,7 +138,7 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
     assert "RAISE EXCEPTION 'ledger invariant violation'" in content
     assert content.index(
         'verify_checksum "uploads.tar.gz" "$expected_uploads_sha256"'
-    ) < content.index('tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$RESTORE_DIR/uploads"')
+    ) < content.index('tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$restore_staging_dir/uploads"')
     assert content.index(
         'verify_checksum "postgres.dump" "$expected_postgres_sha256"'
     ) < content.index('pg_restore --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"')
@@ -174,7 +174,7 @@ def restore_environment(
 def test_restore_rejects_uri_query_before_restic_runs(tmp_path: Path):
     environment, marker = restore_environment(
         tmp_path,
-        "postgresql://user@localhost/finanse_restore?host=%2Ftmp%2Fsocket",
+        "postgresql://user@127.0.0.1/finanse_restore?host=%2Ftmp%2Fsocket",
         0o600,
     )
 
@@ -201,7 +201,7 @@ def test_restore_rejects_localhost_before_restic_runs(tmp_path: Path):
 
 def test_restore_rejects_uri_password_before_restic_runs(tmp_path: Path):
     environment, marker = restore_environment(
-        tmp_path, "postgresql://user:secret@localhost/finanse_restore", 0o600
+        tmp_path, "postgresql://user:secret@127.0.0.1/finanse_restore", 0o600
     )
 
     result = subprocess.run(
@@ -304,7 +304,11 @@ def test_failed_pg_restore_removes_only_created_uploads(tmp_path: Path):
         'target=""; for ((i=1; i <= $#; i++)); do if [[ "${!i}" == "--target" ]]; then j=$((i + 1)); target="${!j}"; fi; done\nmkdir -p "$target/snapshot"\ncp "$RESTIC_PAYLOAD"/* "$target/snapshot/"',
     )
     write_fake_command(fake_bin, "tar", "exit 0")
-    write_fake_command(fake_bin, "pg_restore", "exit 1")
+    write_fake_command(
+        fake_bin,
+        "pg_restore",
+        'mkdir -p "$RESTORE_DIR/uploads"; : > "$RESTORE_DIR/uploads/sentinel"; exit 1',
+    )
     environment["RESTIC_PAYLOAD"] = str(payload)
 
     result = subprocess.run(
@@ -312,7 +316,7 @@ def test_failed_pg_restore_removes_only_created_uploads(tmp_path: Path):
     )
 
     assert result.returncode != 0
-    assert not (Path(environment["RESTORE_DIR"]) / "uploads").exists()
+    assert (Path(environment["RESTORE_DIR"]) / "uploads" / "sentinel").exists()
 
 
 def test_checksum_mismatch_prevents_pg_restore(tmp_path: Path):

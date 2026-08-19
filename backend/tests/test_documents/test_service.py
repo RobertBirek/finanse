@@ -1,8 +1,12 @@
+import asyncio
+import fcntl
 import hashlib
 import uuid
+from pathlib import Path
 
 import pytest
 
+from app.documents import service
 from app.documents.service import compute_sha256, get_document, get_documents, upload_document
 
 
@@ -16,6 +20,53 @@ class TestComputeSha256:
 
     def test_different_content_different_hash(self):
         assert compute_sha256(b"a") != compute_sha256(b"b")
+
+
+@pytest.mark.asyncio
+async def test_upload_waits_for_backup_lock_without_blocking_event_loop(
+    tmp_path: Path, monkeypatch
+):
+    class Result:
+        def scalar_one_or_none(self):
+            return None
+
+    class Database:
+        flushed = False
+
+        async def execute(self, _statement):
+            return Result()
+
+        def add(self, _document):
+            pass
+
+        async def flush(self):
+            self.flushed = True
+
+    monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
+    lock_path = tmp_path / ".backup.lock"
+    lock_path.touch()
+    lock_file = lock_path.open("a+b")
+    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+    database = Database()
+    upload_task = asyncio.create_task(
+        upload_document(database, uuid.uuid4(), b"locked content", "test.pdf", "application/pdf")
+    )
+    await asyncio.sleep(0.05)
+    ticker_ran = False
+
+    async def tick():
+        nonlocal ticker_ran
+        await asyncio.sleep(0)
+        ticker_ran = True
+
+    await tick()
+    assert ticker_ran
+    assert not database.flushed
+    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    lock_file.close()
+    document = await upload_task
+    assert (tmp_path / document.storage_path).read_bytes() == b"locked content"
+    assert database.flushed
 
 
 class TestDocumentService:

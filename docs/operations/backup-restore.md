@@ -73,7 +73,8 @@ target to the repository's single current Alembic head using a password-free
 asyncpg URL with an encoded `passfile` parameter in the Alembic process
 environment, and verifies the upgraded database revision equals that head. It
 then checks that every financial transaction has at least two postings and a zero
-base-PLN balance. `RESTORE_DIR/uploads` must not already exist, preventing an
-existing upload set from being overwritten. If a failure occurs after the script
-creates that directory, its cleanup trap removes only that created directory;
-successful verification keeps it.
+base-PLN balance. `RESTORE_DIR` must be empty. Uploads are extracted into a
+private `.restore-run.*` staging directory under it; only after all database and
+ledger checks pass is that staging `uploads` directory moved into
+`RESTORE_DIR/uploads`. On failure, cleanup removes only the exact staging
+directory and never a pre-existing or concurrently created user path.

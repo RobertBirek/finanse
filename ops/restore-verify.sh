@@ -30,11 +30,11 @@ require_private_pgpassfile() {
 }
 
 restore_workdir=""
-created_uploads_dir=""
+restore_staging_dir=""
 cleanup() {
     local exit_code="$?"
-    if [[ "$exit_code" -ne 0 && -n "$created_uploads_dir" ]]; then
-        rm -rf -- "$created_uploads_dir"
+    if [[ "$exit_code" -ne 0 && -n "$restore_staging_dir" ]]; then
+        rm -rf -- "$restore_staging_dir"
     fi
     if [[ -n "$restore_workdir" && -d "$restore_workdir" ]]; then
         rm -rf -- "$restore_workdir"
@@ -119,11 +119,10 @@ verify_checksum "uploads.tar.gz" "$expected_uploads_sha256"
 manifest_alembic_revision="$(manifest_field "alembic_revision")"
 [[ -n "$manifest_alembic_revision" ]] || fail "Snapshot manifest has no Alembic revision."
 
-[[ ! -e "$RESTORE_DIR/uploads" ]] || fail "Restore uploads directory already exists."
-mkdir "$RESTORE_DIR/uploads"
-created_uploads_dir="$RESTORE_DIR/uploads"
+restore_staging_dir="$(mktemp -d "$RESTORE_DIR/.restore-run.XXXXXX")"
+mkdir "$restore_staging_dir/uploads"
 printf '%s\n' "Extracting uploads"
-tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$RESTORE_DIR/uploads"
+tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$restore_staging_dir/uploads"
 
 printf '%s\n' "Restoring database"
 PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
@@ -167,4 +166,8 @@ BEGIN
 END
 $$;
 SQL
+[[ ! -e "$RESTORE_DIR/uploads" ]] || fail "Restore uploads directory appeared during verification."
+mv "$restore_staging_dir/uploads" "$RESTORE_DIR/uploads"
+rmdir "$restore_staging_dir"
+restore_staging_dir=""
 printf '%s\n' "Restore verification complete"
