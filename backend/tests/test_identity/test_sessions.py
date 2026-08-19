@@ -1,16 +1,20 @@
 """Server-side session service tests."""
 
+import asyncio
 import os
 import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from sqlalchemy import select, text
+from sqlalchemy import event, select, text
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.identity.models import Session, User
 from app.identity.service import create_session, get_active_session, revoke_session
+from app.work.schemas import ProjectCreate
+from app.work.service import create_project
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 SESSION_REVISION = "c9d8e7f6a5b4"
@@ -69,6 +73,68 @@ async def test_expired_and_revoked_sessions_are_not_active(db_session):
     assert await get_active_session(db_session, raw_expired) is None
     assert await get_active_session(db_session, raw_revoked) is None
     assert not await revoke_session(db_session, "not-a-session")
+
+
+@pytest.mark.integration
+async def test_authenticated_transaction_holds_session_lock_until_domain_mutation_commits(
+    test_database,
+):
+    session_factory = async_sessionmaker(test_database, expire_on_commit=False)
+    async with session_factory() as setup_session:
+        user = User(email="locked@example.com", password_hash="hash", display_name="Locked User")
+        setup_session.add(user)
+        await setup_session.flush()
+        raw_token, _, _ = await create_session(setup_session, user.id)
+        await setup_session.commit()
+
+    authenticated = asyncio.Event()
+    revoke_started = asyncio.Event()
+    revoke_lock_attempted = asyncio.Event()
+    allow_commit = asyncio.Event()
+    revoked = asyncio.Event()
+    loop = asyncio.get_running_loop()
+
+    def observe_revoke_lock(
+        connection, cursor, statement, parameters, context, executemany
+    ) -> None:
+        if "FROM sessions" in statement and "FOR UPDATE" in statement:
+            loop.call_soon_threadsafe(revoke_lock_attempted.set)
+
+    async def protected_mutation() -> None:
+        async with session_factory() as protected_session:
+            session = await get_active_session(protected_session, raw_token)
+            assert session is not None
+            await create_project(
+                protected_session, session.user_id, ProjectCreate(name="Locked project")
+            )
+            authenticated.set()
+            await allow_commit.wait()
+            await protected_session.commit()
+
+    async def logout() -> None:
+        await authenticated.wait()
+        revoke_started.set()
+        async with session_factory() as logout_session:
+            assert await revoke_session(logout_session, raw_token)
+            await logout_session.commit()
+        revoked.set()
+
+    protected_task = asyncio.create_task(protected_mutation())
+    await asyncio.wait_for(authenticated.wait(), timeout=1)
+    event.listen(test_database.sync_engine, "before_cursor_execute", observe_revoke_lock)
+    logout_task = asyncio.create_task(logout())
+    try:
+        await asyncio.wait_for(revoke_started.wait(), timeout=1)
+        await asyncio.wait_for(revoke_lock_attempted.wait(), timeout=1)
+        with pytest.raises(TimeoutError):
+            await asyncio.wait_for(revoked.wait(), timeout=0.1)
+    finally:
+        allow_commit.set()
+        await asyncio.wait_for(asyncio.gather(protected_task, logout_task), timeout=1)
+        event.remove(test_database.sync_engine, "before_cursor_execute", observe_revoke_lock)
+
+    async with session_factory() as verification_session:
+        assert await get_active_session(verification_session, raw_token) is None
 
 
 @pytest.mark.integration

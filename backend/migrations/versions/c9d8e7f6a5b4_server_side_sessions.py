@@ -18,7 +18,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def _legacy_hash(session_id: object, purpose: str) -> str:
-    return hashlib.sha256(f"legacy-session:{purpose}:{session_id}".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"legacy-session:{purpose}:{session_id}".encode()).hexdigest()
 
 
 def upgrade() -> None:

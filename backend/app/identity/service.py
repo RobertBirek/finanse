@@ -43,7 +43,9 @@ async def create_session(db: AsyncSession, user_id: uuid.UUID) -> tuple[str, str
 
 async def get_active_session(db: AsyncSession, raw_token: str) -> Session | None:
     token_hash = hash_session_token(raw_token)
-    result = await db.execute(select(Session).where(Session.token_hash == token_hash))
+    result = await db.execute(
+        select(Session).where(Session.token_hash == token_hash).with_for_update()
+    )
     session = result.scalar_one_or_none()
     if session is None or not hmac.compare_digest(session.token_hash, token_hash):
         return None
