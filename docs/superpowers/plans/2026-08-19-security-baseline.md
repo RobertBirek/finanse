@@ -34,12 +34,12 @@
 - Create: `backend/tests/test_config.py`
 - Modify: `backend/tests/test_identity/test_auth.py`
 
-- [ ] **Step 1: Write failing tests.** Production settings with missing, placeholder or shorter-than-32-byte `SECRET_KEY` must raise validation error. Production register must return 404; development register must retain its current flow.
-- [ ] **Step 2: Implement typed settings.** Add `SESSION_EXPIRE_MINUTES`, `REGISTRATION_ENABLED`, allowlisted `TRUSTED_ORIGINS`, and limit settings. In a `model_validator`, fail in production for unsafe secret and force `REGISTRATION_ENABLED=False` unless explicitly overridden only for tests.
-- [ ] **Step 3: Gate registration.** Return 404 before email lookup when registration is disabled. Preserve development and test registration.
-- [ ] **Step 4: Update `.env.example` without real secrets.** Document every required setting and use non-deployable placeholders.
-- [ ] **Step 5: Run focused tests, Ruff and mypy.**
-- [ ] **Step 6: Commit.** `git commit -m "fix: wymuś bezpieczną konfigurację produkcji"`
+- [x] **Step 1: Write failing tests.** Production settings with missing, placeholder or shorter-than-32-byte `SECRET_KEY` must raise validation error. Production register must return 404; development register must retain its current flow.
+- [x] **Step 2: Implement typed settings.** Add `SESSION_EXPIRE_MINUTES`, `REGISTRATION_ENABLED`, allowlisted `TRUSTED_ORIGINS`, and limit settings. In a `model_validator`, fail in production for unsafe secret and force `REGISTRATION_ENABLED=False` unless explicitly overridden only for tests.
+- [x] **Step 3: Gate registration.** Return 404 before email lookup when registration is disabled. Preserve development and test registration.
+- [x] **Step 4: Update `.env.example` without real secrets.** Document every required setting and use non-deployable placeholders.
+- [x] **Step 5: Run focused tests, Ruff and mypy.**
+- [x] **Step 6: Commit.** `git commit -m "fix: wymuś bezpieczną konfigurację produkcji"`
 
 ### Task 3: Unieważnialne sesje
 
