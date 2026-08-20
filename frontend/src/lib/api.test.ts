@@ -1,6 +1,6 @@
 import { AxiosHeaders, type InternalAxiosRequestConfig } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import api from "./api";
+import api, { resetUnauthorizedRedirect } from "./api";
 
 const requestInterceptor = api.interceptors.request.handlers?.[0]?.fulfilled;
 const responseErrorInterceptor =
@@ -17,6 +17,7 @@ async function applyRequestInterceptor(method: string) {
 }
 
 afterEach(() => {
+  resetUnauthorizedRedirect();
   document.cookie = "advisor_csrf=; Max-Age=0; path=/";
   document.cookie = "not_advisor_csrf=; Max-Age=0; path=/";
 });
@@ -98,4 +99,26 @@ describe("authentication response interceptor", () => {
       }
     },
   );
+
+  it("redirects concurrent 401 responses only once", async () => {
+    const originalLocation = window.location;
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { pathname: "/finances", search: "", hash: "", assign },
+    });
+
+    try {
+      await Promise.allSettled([
+        responseErrorInterceptor?.({ response: { status: 401 } }),
+        responseErrorInterceptor?.({ response: { status: 401 } }),
+      ]);
+      expect(assign).toHaveBeenCalledOnce();
+    } finally {
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
+  });
 });

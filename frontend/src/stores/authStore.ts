@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import api from "../lib/api";
+import api, { resetUnauthorizedRedirect } from "../lib/api";
 
 interface User {
   id: string;
@@ -10,6 +10,16 @@ interface User {
 
 type AuthStatus =
   "loading" | "authenticated" | "unauthenticated" | "unavailable";
+let authRequestVersion = 0;
+
+function startAuthRequest(): number {
+  authRequestVersion += 1;
+  return authRequestVersion;
+}
+
+function isCurrentAuthRequest(requestVersion: number): boolean {
+  return requestVersion === authRequestVersion;
+}
 
 function getResponseStatus(error: unknown): number | undefined {
   if (typeof error !== "object" || error === null || !("response" in error)) {
@@ -46,8 +56,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   login: async (email: string, password: string) => {
+    const requestVersion = startAuthRequest();
     await api.post("/auth/login", { email, password });
+    if (!isCurrentAuthRequest(requestVersion)) return;
+
     const { data } = await api.get<User>("/auth/me");
+    if (!isCurrentAuthRequest(requestVersion)) return;
+
+    resetUnauthorizedRedirect();
     set({
       user: data,
       authStatus: "authenticated",
@@ -57,11 +73,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    const requestVersion = startAuthRequest();
     try {
       await api.post("/auth/logout");
     } catch {
       // ignore
     }
+    if (!isCurrentAuthRequest(requestVersion)) return;
+
     set({
       user: null,
       authStatus: "unauthenticated",
@@ -71,8 +90,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   fetchUser: async () => {
+    const requestVersion = startAuthRequest();
     try {
       const { data } = await api.get<User>("/auth/me");
+      if (!isCurrentAuthRequest(requestVersion)) return;
+
       set({
         user: data,
         authStatus: "authenticated",
@@ -80,6 +102,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
       });
     } catch (error) {
+      if (!isCurrentAuthRequest(requestVersion)) return;
+
       if (getResponseStatus(error) === 401) {
         set({
           user: null,

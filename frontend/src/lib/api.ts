@@ -9,6 +9,11 @@ const api = axios.create({
 });
 
 const unsafeMethods = new Set(["post", "patch", "put", "delete"]);
+let unauthorizedRedirectInProgress = false;
+
+export function resetUnauthorizedRedirect() {
+  unauthorizedRedirectInProgress = false;
+}
 
 function getCookie(name: string): string | undefined {
   const prefix = `${name}=`;
@@ -36,7 +41,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const isLoginPage = window.location.pathname === "/login";
-      if (!isLoginPage) {
+      if (isLoginPage) {
+        resetUnauthorizedRedirect();
+      } else if (!unauthorizedRedirectInProgress) {
+        unauthorizedRedirectInProgress = true;
         const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
         window.location.assign(
           `/login?returnTo=${encodeURIComponent(returnTo)}`,

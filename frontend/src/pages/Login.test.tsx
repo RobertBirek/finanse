@@ -87,4 +87,17 @@ describe("Login", () => {
       });
     },
   );
+
+  it("falls back to today instead of returning to login after successful login", async () => {
+    mutate.mockImplementation((_values, options) => {
+      options.onSuccess();
+    });
+    renderLogin("/login");
+
+    submitLogin();
+
+    await waitFor(() => {
+      expect(screen.getByText("/today")).toBeInTheDocument();
+    });
+  });
 });

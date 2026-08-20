@@ -3,6 +3,19 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useLogin } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
 
+function getSafeReturnTo(returnTo: string | null): string {
+  if (
+    !returnTo ||
+    !/^\/(?!\/)/.test(returnTo) ||
+    returnTo.includes("\\") ||
+    returnTo.split(/[?#]/)[0] === "/login"
+  ) {
+    return "/today";
+  }
+
+  return returnTo;
+}
+
 export function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,10 +29,7 @@ export function Login() {
     response?: { data?: { detail?: string } };
   } | null;
   const returnTo = new URLSearchParams(location.search).get("returnTo");
-  const destination =
-    returnTo && /^\/(?!\/)/.test(returnTo) && !returnTo.includes("\\")
-      ? returnTo
-      : "/today";
+  const destination = getSafeReturnTo(returnTo);
 
   useEffect(() => {
     if (!submitted.current && !isLoading && isAuthenticated) {
