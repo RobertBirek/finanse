@@ -87,11 +87,11 @@
 - Create: `frontend/src/stores/authStore.test.ts`, `frontend/src/components/ProtectedRoute.test.tsx`
 - Modify: `frontend/src/pages/Login.test.tsx`
 
-- [ ] **Step 1: Write failing tests.** `/auth/me` 500 keeps an infrastructure error state instead of redirecting; 401 redirects to `/login?returnTo=<local path>`; a successful login returns to that validated local path; `//host` and external return URLs fall back to `/today`.
-- [ ] **Step 2: Implement explicit auth states.** Distinguish `unauthenticated` from `unavailable`; retain current route on 401; display retry state for 5xx/network errors.
-- [ ] **Step 3: Update Login and ProtectedRoute.** Safely parse local `returnTo`; preserve a11y labels and current loading behavior.
-- [ ] **Step 4: Run frontend tests, lint, typecheck and build.**
-- [ ] **Step 5: Commit.** `git commit -m "fix: popraw obsługę wygaśniętej sesji"`
+- [x] **Step 1: Write failing tests.** `/auth/me` 500 keeps an infrastructure error state instead of redirecting; 401 redirects to `/login?returnTo=<local path>`; a successful login returns to that validated local path; `//host` and external return URLs fall back to `/today`.
+- [x] **Step 2: Implement explicit auth states.** Distinguish `unauthenticated` from `unavailable`; retain current route on 401; display retry state for 5xx/network errors.
+- [x] **Step 3: Update Login and ProtectedRoute.** Safely parse local `returnTo`; preserve a11y labels and current loading behavior.
+- [x] **Step 4: Run frontend tests, lint, typecheck and build.**
+- [x] **Step 5: Commit.** `git commit -m "fix: popraw obsługę wygaśniętej sesji"`
 
 ### Task 7: Verification i production release
 
