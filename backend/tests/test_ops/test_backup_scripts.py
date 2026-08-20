@@ -120,10 +120,8 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
     assert '"$repo_root/backend/.venv/bin/alembic" heads' in content
     assert 'manifest_alembic_revision="$(manifest_field "alembic_revision")"' in content
     assert '[[ "$restored_alembic_revision" == "$manifest_alembic_revision" ]]' in content
-    assert (
-        'DATABASE_URL="$async_database_url" "$repo_root/backend/.venv/bin/alembic" upgrade head'
-        in content
-    )
+    assert 'env -i PATH="$PATH" HOME="${HOME:-/tmp}" DATABASE_URL="$async_database_url"' in content
+    assert '"$repo_root/backend/.venv/bin/alembic" upgrade head' in content
     assert '[[ "$upgraded_alembic_revision" == "$current_alembic_revision" ]]' in content
     assert content.index(
         'manifest_alembic_revision="$(manifest_field "alembic_revision")"'
@@ -132,9 +130,7 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
     )
     assert content.index(
         '[[ "$restored_alembic_revision" == "$manifest_alembic_revision" ]]'
-    ) < content.index(
-        'DATABASE_URL="$async_database_url" "$repo_root/backend/.venv/bin/alembic" upgrade head'
-    )
+    ) < content.index('env -i PATH="$PATH" HOME="${HOME:-/tmp}" DATABASE_URL="$async_database_url"')
     assert "FROM financial_transactions transaction" in content
     assert "LEFT JOIN postings posting ON posting.transaction_id = transaction.id" in content
     assert "GROUP BY transaction.id" in content

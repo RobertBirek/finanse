@@ -137,7 +137,8 @@ restored_alembic_revision="$(PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_use
 printf '%s\n' "Applying migrations"
 (
     cd "$repo_root/backend"
-    DATABASE_URL="$async_database_url" "$repo_root/backend/.venv/bin/alembic" upgrade head
+    env -i PATH="$PATH" HOME="${HOME:-/tmp}" DATABASE_URL="$async_database_url" \
+        "$repo_root/backend/.venv/bin/alembic" upgrade head
 )
 
 mapfile -t alembic_heads < <(cd "$repo_root/backend" && "$repo_root/backend/.venv/bin/alembic" heads)
