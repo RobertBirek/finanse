@@ -9,6 +9,7 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 BACKUP_SCRIPT = REPOSITORY_ROOT / "ops" / "backup.sh"
 RESTORE_SCRIPT = REPOSITORY_ROOT / "ops" / "restore-verify.sh"
+RESTORE_VERIFY_RUNNER = REPOSITORY_ROOT / "ops" / "run-restore-verify.sh"
 SYSTEMD_DIRECTORY = REPOSITORY_ROOT / "ops" / "systemd"
 RESTORE_DRILL_WRAPPER = SYSTEMD_DIRECTORY / "run-restore-drill.sh"
 BACKUP_TIMER = SYSTEMD_DIRECTORY / "finanse-backup.timer"
@@ -140,6 +141,10 @@ def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> 
         'dropdb --if-exists --host "$restore_host" --port "$restore_port" '
         '--username "$restore_user" "$restore_database"'
     )
+    restore_command = (
+        "FINANSE_OPERATION_LOCK_HELD=1 RESTORE_SNAPSHOT_ID=latest make -C "
+        '"$COMPOSE_DIRECTORY" restore-verify'
+    )
 
     assert RESTORE_DRILL_WRAPPER.stat().st_mode & stat.S_IXUSR
     assert "set -euo pipefail" in content
@@ -153,17 +158,15 @@ def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> 
         'createdb --host "$restore_host" --port "$restore_port" '
         '--username "$restore_user" "$restore_database"'
     ) in content
-    assert (
-        'FINANSE_OPERATION_LOCK_HELD=1 make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest'
-    ) in content
+    assert restore_command in content
     assert content.index('[[ "$RESTORE_DIR" == "$RESTORE_DIRECTORY" ]]') < content.index("createdb")
     assert content.index('[[ "$restore_host" == "127.0.0.1" ]]') < content.index("createdb")
     assert content.index('[[ "$restore_database" == "$RESTORE_DATABASE" ]]') < content.index(
         "createdb"
     )
     assert content.index(empty_restore_directory_guard) < content.index("createdb")
-    assert content.index("createdb") < content.index("restore-verify snapshot=latest")
-    assert content.index("restore-verify snapshot=latest") < content.rindex(guarded_dropdb)
+    assert content.index("createdb") < content.index(restore_command)
+    assert content.index(restore_command) < content.rindex(guarded_dropdb)
     assert content.rindex(guarded_dropdb) < content.rindex('rm -rf -- "$RESTORE_DIRECTORY/uploads"')
     assert content.rindex('rm -rf -- "$RESTORE_DIRECTORY/uploads"') < content.rindex(
         "restore_database_created=false"
@@ -188,6 +191,83 @@ def test_restore_drill_wrapper_refuses_any_unexpected_restore_target() -> None:
     assert '[[ "$restore_host" == "127.0.0.1" ]]' in content
     assert '[[ "$restore_database" == "$RESTORE_DATABASE" ]]' in content
     assert 'find "$RESTORE_DIRECTORY" -mindepth 1 -maxdepth 1' in content
+
+
+def test_restore_verify_runner_executes_only_valid_snapshot_ids(tmp_path: Path) -> None:
+    fake_restore = tmp_path / "restore-verify.sh"
+    fake_restore.write_text(
+        '#!/usr/bin/env bash\nset -euo pipefail\nprintf "%s" "$1" > "$RESTORE_VERIFY_MARKER"\n'
+    )
+    fake_restore.chmod(0o700)
+    runner = tmp_path / "run-restore-verify.sh"
+    runner.write_text(
+        read_script(RESTORE_VERIFY_RUNNER).replace(
+            "/opt/finanse/ops/restore-verify.sh", str(fake_restore)
+        )
+    )
+    runner.chmod(0o700)
+
+    for snapshot_id in ("latest", "deadbeef", "f" * 64):
+        marker = tmp_path / f"{snapshot_id}.marker"
+        result = subprocess.run(
+            [str(runner)],
+            env=os.environ
+            | {
+                "RESTORE_SNAPSHOT_ID": snapshot_id,
+                "RESTORE_VERIFY_MARKER": str(marker),
+            },
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        assert marker.read_text() == snapshot_id
+
+
+def test_restore_verify_runner_rejects_injection_before_invoking_restore(tmp_path: Path) -> None:
+    fake_restore = tmp_path / "restore-verify.sh"
+    fake_restore.write_text('#!/usr/bin/env bash\n: > "$RESTORE_VERIFY_MARKER"\n')
+    fake_restore.chmod(0o700)
+    runner = tmp_path / "run-restore-verify.sh"
+    runner.write_text(
+        read_script(RESTORE_VERIFY_RUNNER).replace(
+            "/opt/finanse/ops/restore-verify.sh", str(fake_restore)
+        )
+    )
+    runner.chmod(0o700)
+    marker = tmp_path / "restore-ran"
+    injected = tmp_path / "injected"
+
+    result = subprocess.run(
+        [str(runner)],
+        env=os.environ
+        | {
+            "RESTORE_SNAPSHOT_ID": f'x"; touch {injected}; #',
+            "RESTORE_VERIFY_MARKER": str(marker),
+        },
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert result.stderr == "Invalid restore snapshot identifier.\n"
+    assert not marker.exists()
+    assert not injected.exists()
+
+
+def test_restore_verify_runner_is_fail_closed_and_make_independent() -> None:
+    content = read_script(RESTORE_VERIFY_RUNNER)
+
+    assert RESTORE_VERIFY_RUNNER.stat().st_mode & stat.S_IXUSR
+    assert "set -euo pipefail" in content
+    assert "umask 077" in content
+    assert 'snapshot_id="${RESTORE_SNAPSHOT_ID:-latest}"' in content
+    assert "^[0-9a-f]{8,64}$" in content
+    assert "Invalid restore snapshot identifier." in content
+    assert 'exec /opt/finanse/ops/restore-verify.sh "$snapshot_id"' in content
+    assert "eval" not in content
 
 
 def test_backup_script_is_executable_and_uses_private_temporary_snapshot():

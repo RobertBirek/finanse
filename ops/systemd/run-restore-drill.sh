@@ -50,7 +50,7 @@ trap cleanup EXIT
 
 createdb --host "$restore_host" --port "$restore_port" --username "$restore_user" "$restore_database"
 restore_database_created=true
-FINANSE_OPERATION_LOCK_HELD=1 make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest
+FINANSE_OPERATION_LOCK_HELD=1 RESTORE_SNAPSHOT_ID=latest make -C "$COMPOSE_DIRECTORY" restore-verify
 dropdb --if-exists --host "$restore_host" --port "$restore_port" --username "$restore_user" "$restore_database"
 [[ -d "$RESTORE_DIRECTORY/uploads" ]] || fail "Restore uploads are missing."
 [[ -z "$(find "$RESTORE_DIRECTORY" -mindepth 1 -maxdepth 1 ! -name uploads -print -quit)" ]] || fail "Unexpected restore output."
