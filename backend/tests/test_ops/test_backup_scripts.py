@@ -127,6 +127,13 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
 
 def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> None:
     content = read_script(RESTORE_DRILL_WRAPPER)
+    empty_restore_directory_guard = (
+        '[[ -z "$(find "$RESTORE_DIRECTORY" -mindepth 1 -maxdepth 1 -print -quit)" ]]'
+    )
+    guarded_dropdb = (
+        'dropdb --if-exists --host "$restore_host" --port "$restore_port" '
+        '--username "$restore_user" "$restore_database"'
+    )
 
     assert RESTORE_DRILL_WRAPPER.stat().st_mode & stat.S_IXUSR
     assert "set -euo pipefail" in content
@@ -134,6 +141,8 @@ def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> 
     assert 'readonly COMPOSE_DIRECTORY="/docker/finanse"' in content
     assert 'readonly RESTORE_DIRECTORY="$COMPOSE_DIRECTORY/data/restore-drill"' in content
     assert 'readonly RESTORE_DATABASE="finanse_restore"' in content
+    assert '[[ -d "$RESTORE_DIRECTORY" ]]' in content
+    assert empty_restore_directory_guard in content
     assert (
         'createdb --host "$restore_host" --port "$restore_port" '
         '--username "$restore_user" "$restore_database"'
@@ -144,9 +153,18 @@ def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> 
     assert content.index('[[ "$restore_database" == "$RESTORE_DATABASE" ]]') < content.index(
         "createdb"
     )
+    assert content.index(empty_restore_directory_guard) < content.index("createdb")
     assert content.index("createdb") < content.index("restore-verify snapshot=latest")
-    assert content.index("restore-verify snapshot=latest") < content.index("dropdb")
-    assert content.index("dropdb") < content.index('rm -rf -- "$RESTORE_DIRECTORY/uploads"')
+    assert content.index("restore-verify snapshot=latest") < content.rindex(guarded_dropdb)
+    assert content.rindex(guarded_dropdb) < content.rindex('rm -rf -- "$RESTORE_DIRECTORY/uploads"')
+    assert "restore_database_created=false" in content
+    assert "restore_database_created=true" in content
+    assert "trap cleanup EXIT" in content
+    cleanup_content = content[content.index("cleanup() {") : content.index("trap cleanup EXIT")]
+    assert '[[ "$exit_code" -ne 0 && "$restore_database_created" == true ]]' in cleanup_content
+    assert guarded_dropdb in cleanup_content
+    assert '[[ -d "$RESTORE_DIRECTORY/uploads" ]]' in cleanup_content
+    assert 'rm -rf -- "$RESTORE_DIRECTORY/uploads"' in cleanup_content
     assert "--if-not-exists" not in content
     assert "eval" not in content
     assert 'rmdir "$RESTORE_DIRECTORY"' not in content

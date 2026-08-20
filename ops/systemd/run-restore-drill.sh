@@ -30,10 +30,30 @@ restore_database="${restore_parts[3]}"
 [[ "$RESTORE_DIR" == "$RESTORE_DIRECTORY" ]] || fail "Restore directory is not allowed."
 [[ "$restore_host" == "127.0.0.1" ]] || fail "Restore host is not allowed."
 [[ "$restore_database" == "$RESTORE_DATABASE" ]] || fail "Restore database is not allowed."
+[[ -d "$RESTORE_DIRECTORY" ]] || fail "Restore directory is unavailable."
+[[ -z "$(find "$RESTORE_DIRECTORY" -mindepth 1 -maxdepth 1 -print -quit)" ]] || fail "Restore directory is not empty."
+
+restore_database_created=false
+cleanup() {
+  local exit_code=$?
+
+  if [[ "$exit_code" -ne 0 && "$restore_database_created" == true ]]; then
+    dropdb --if-exists --host "$restore_host" --port "$restore_port" --username "$restore_user" "$restore_database" || true
+    if [[ -d "$RESTORE_DIRECTORY/uploads" ]]; then
+      rm -rf -- "$RESTORE_DIRECTORY/uploads" || true
+    fi
+  fi
+
+  return "$exit_code"
+}
+trap cleanup EXIT
 
 createdb --host "$restore_host" --port "$restore_port" --username "$restore_user" "$restore_database"
+restore_database_created=true
 make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest
 dropdb --if-exists --host "$restore_host" --port "$restore_port" --username "$restore_user" "$restore_database"
+restore_database_created=false
 [[ -d "$RESTORE_DIRECTORY/uploads" ]] || fail "Restore uploads are missing."
 [[ -z "$(find "$RESTORE_DIRECTORY" -mindepth 1 -maxdepth 1 ! -name uploads -print -quit)" ]] || fail "Unexpected restore output."
 rm -rf -- "$RESTORE_DIRECTORY/uploads"
+trap - EXIT
