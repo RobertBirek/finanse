@@ -15,11 +15,25 @@ RESTORE_TIMER = SYSTEMD_DIRECTORY / "finanse-restore-verify.timer"
 BACKUP_SERVICE = SYSTEMD_DIRECTORY / "finanse-backup.service"
 RESTORE_SERVICE = SYSTEMD_DIRECTORY / "finanse-restore-verify.service"
 FAILURE_SERVICE = SYSTEMD_DIRECTORY / "finanse-operation-failure@.service"
+INSTALLER = SYSTEMD_DIRECTORY / "install-timers.sh"
 
 
 def read_script(path: Path) -> str:
     assert path.is_file(), f"missing script: {path}"
     return path.read_text()
+
+
+def test_timer_installer_verifies_then_installs_only_known_units() -> None:
+    content = read_script(INSTALLER)
+
+    assert "set -euo pipefail" in content
+    assert '[[ "$(id -u)" -eq 0 ]]' in content
+    assert "systemd-analyze verify" in content
+    assert "install -o root -g root -m 0644" in content
+    assert "systemctl daemon-reload" in content
+    assert "systemctl enable --now finanse-backup.timer finanse-restore-verify.timer" in content
+    assert "rm -rf" not in content
+    assert "secrets/" not in content
 
 
 def test_backup_timer_has_daily_schedule_and_service():
