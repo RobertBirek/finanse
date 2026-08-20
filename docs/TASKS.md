@@ -117,6 +117,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Przywrócono lokalną datę transakcji (`7cc1973`): brak jawnej daty używa bieżącego dnia użytkownika, nie dnia UTC.
 - [x] Zapisano dokładne wyniki i ograniczenia w CHANGELOG/JOURNAL; porządkowe zmiany `backend/migrations/` przywrócono do `f90a4d6` bez zmiany schematu.
 - [x] Frontend lint: dodano konfigurację ESLint i usunięto 7 błędów wykrytych w kodzie.
+- [x] Frontend auth: rozróżniono sesję uwierzytelnioną, nieuwierzytelnioną i niedostępny backend; błędy 5xx/sieci nie czyszczą znanego użytkownika, a widok awarii udostępnia ponowienie.
+- [x] Frontend auth: 401 zachowuje wyłącznie lokalny `returnTo`; logowanie waliduje powrót i odrzuca adresy zewnętrzne. Vitest `122 passed`, ESLint, TypeScript i Vite build przeszły; bez deployu.
 
 Pozostały ostrzeżenia zależności/testów, ograniczenie streamingu bez SSE, trzy daty USD bez kursu NBP oraz brak rzeczywistych danych split transactions w testach. Nie wykonano deployu ani migracji produkcyjnej.
 

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useLogin } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
 
@@ -8,17 +8,24 @@ export function Login() {
   const [password, setPassword] = useState("");
   const loginMutation = useLogin();
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const submitted = useRef(false);
   const loginError = loginMutation.error as {
     response?: { data?: { detail?: string } };
   } | null;
+  const returnTo = new URLSearchParams(location.search).get("returnTo");
+  const destination =
+    returnTo && /^\/(?!\/)/.test(returnTo) && !returnTo.includes("\\")
+      ? returnTo
+      : "/today";
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate("/today", { replace: true });
+    if (!submitted.current && !isLoading && isAuthenticated) {
+      navigate(destination, { replace: true });
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [destination, isAuthenticated, isLoading, navigate]);
 
   if (isLoading) {
     return (
@@ -31,7 +38,11 @@ export function Login() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
-    loginMutation.mutate({ email, password });
+    submitted.current = true;
+    loginMutation.mutate(
+      { email, password },
+      { onSuccess: () => navigate(destination, { replace: true }) },
+    );
   };
 
   return (
@@ -55,11 +66,15 @@ export function Login() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-300 mb-1.5"
+              >
                 Email
               </label>
               <input
                 type="email"
+                id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="twoj@email.com"
@@ -70,11 +85,15 @@ export function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-300 mb-1.5"
+              >
                 Hasło
               </label>
               <input
                 type="password"
+                id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Wprowadź hasło"
