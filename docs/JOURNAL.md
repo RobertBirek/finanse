@@ -3,6 +3,31 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-08-20 -- Sesja 32: Task 5 forwarded-IP re-review fix
+
+### Cel sesji
+Usunąć możliwość wyboru lewego elementu łańcucha `X-Forwarded-For` przez backend.
+
+### Co zrobiono
+- Nginx frontendu ufa wyłącznie subnetowi npmplus `172.22.0.0/16`, rekurencyjnie
+  normalizuje adres klienta i przekazuje backendowi tylko `$remote_addr` jako
+  `X-Forwarded-For` oraz `X-Real-IP`.
+- Backend przyjmuje od zaufanego frontendu wyłącznie pojedynczy literal IP bez
+  przecinka ani whitespace; każdy łańcuch lub błędna wartość wraca do peera.
+- Statyczny test zabezpiecza kolejność/opcje realip i nagłówki proxy; test backendu
+  obejmuje pojedynczy adres i odrzucony łańcuch.
+
+### Weryfikacja
+- TDD RED: 2 testy ujawniły akceptację łańcucha i brak konfiguracji realip;
+  focused rate tests PASS. Frontend build i obraz Docker PASS; `nginx -t` PASS z
+  mapowaniem Compose-only upstream `backend`. Backend Ruff/mypy i Compose config PASS.
+- Nie wykonano deployu ani uruchomienia produkcyjnych usług.
+
+### Następna sesja
+Deploy pozostaje osobno autoryzowaną operacją.
+
+---
+
 ## 2026-08-20 -- Sesja 31: Security Baseline Task 5 review fixes
 
 ### Cel sesji

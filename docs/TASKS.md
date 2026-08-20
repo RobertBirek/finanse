@@ -8,8 +8,9 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Task 5 — Security Baseline: limity i audyt za reverse proxy (2026-08-20)
 
-- [x] Backend przyjmuje `X-Forwarded-For` wyłącznie od adresu DNS zaufanego
-  kontenera frontend; błędny/spoofowany łańcuch wraca do peera.
+- [x] npmplus przekazuje łańcuch wyłącznie do Nginx frontendu, który normalizuje
+  go do jednego adresu; backend przyjmuje tylko ścisły literal IP od zaufanego
+  kontenera frontend, a łańcuch/spoof wraca do peera.
 - [x] Limity loginu, Advisora i uploadu są zależnościami FastAPI; odrzucenia 429
   zapisują niezależny, zredagowany event audytu.
 - [x] Backend jest wyłącznie na `internal`; frontend jest jedynym serwisem na

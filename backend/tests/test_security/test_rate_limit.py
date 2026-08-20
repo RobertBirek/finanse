@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -36,14 +37,22 @@ def trusted_proxy_resolver(_hosts: tuple[str, ...]) -> set[str]:
     return {"172.20.0.3"}
 
 
-def test_trusted_frontend_uses_the_first_forwarded_client_ip(monkeypatch):
+def test_trusted_frontend_uses_a_single_forwarded_client_ip(monkeypatch):
+    from app.security import rate_limit
+
+    monkeypatch.setattr(rate_limit, "resolve_trusted_proxy_hosts", trusted_proxy_resolver)
+
+    assert rate_limit.get_client_ip(request_from("172.20.0.3", "198.51.100.8")) == "198.51.100.8"
+
+
+def test_trusted_frontend_chain_falls_back_to_peer(monkeypatch):
     from app.security import rate_limit
 
     monkeypatch.setattr(rate_limit, "resolve_trusted_proxy_hosts", trusted_proxy_resolver)
 
     assert (
         rate_limit.get_client_ip(request_from("172.20.0.3", "198.51.100.8, 10.0.0.4"))
-        == "198.51.100.8"
+        == "172.20.0.3"
     )
 
 
@@ -64,6 +73,18 @@ def test_malformed_forwarded_chain_falls_back_to_trusted_peer(monkeypatch):
         rate_limit.get_client_ip(request_from("172.20.0.3", "198.51.100.8, invalid"))
         == "172.20.0.3"
     )
+
+
+def test_frontend_normalizes_npmplus_client_ip_before_backend() -> None:
+    config = (Path(__file__).parents[3] / "frontend" / "nginx.conf").read_text()
+
+    assert "set_real_ip_from 172.22.0.0/16;" in config
+    assert "real_ip_header X-Forwarded-For;" in config
+    assert "real_ip_recursive on;" in config
+    assert config.index("set_real_ip_from") < config.index("location / {")
+    assert "proxy_set_header X-Forwarded-For $remote_addr;" in config
+    assert "proxy_set_header X-Real-IP $remote_addr;" in config
+    assert "$proxy_add_x_forwarded_for" not in config
 
 
 @pytest.mark.asyncio

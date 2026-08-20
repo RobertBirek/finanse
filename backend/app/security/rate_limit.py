@@ -84,17 +84,13 @@ def get_client_ip(request: Request) -> str:
         return normalized_peer
 
     forwarded_for = request.headers.get("X-Forwarded-For")
-    if not forwarded_for:
+    if not forwarded_for or "," in forwarded_for or any(char.isspace() for char in forwarded_for):
         return normalized_peer
 
-    entries = forwarded_for.split(",")
     try:
-        chain = [str(ipaddress.ip_address(entry.strip())) for entry in entries]
+        return str(ipaddress.ip_address(forwarded_for))
     except ValueError:
         return normalized_peer
-    if not chain or any(not entry.strip() for entry in entries):
-        return normalized_peer
-    return chain[0]
 
 
 async def check_rate_limit(
