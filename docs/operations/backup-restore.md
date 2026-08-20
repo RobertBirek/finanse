@@ -4,6 +4,23 @@
 encrypted Restic repository. No Restic credentials are configured, and no
 backup or restore has been performed.
 
+## Ingress Network Rollout
+
+The final Task 7 rollout uses the external bridge `finanse_ingress`
+(`172.24.0.0/24`). NPMplus has the fixed address `172.24.0.2`; only
+`finanse-frontend` and NPMplus join this network. The frontend also joins
+`finanse_internal`, while `finanse-backend` joins only `finanse_internal`.
+Do not attach or recreate running containers while preparing this configuration.
+
+Before the approved rollout, verify both persistent stacks without printing
+their secrets:
+
+```bash
+docker compose -f /docker/npmplus/compose.yaml --env-file /docker/npmplus/.env config > /dev/null
+docker compose -f /docker/finanse/compose.yaml -f /docker/finanse/compose.prod.yaml --env-file /docker/finanse/.env config > /dev/null
+docker network inspect finanse_ingress
+```
+
 ## Setup
 
 Install `restic`, PostgreSQL client tools, GNU tar, and configure the following

@@ -3,6 +3,21 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-08-20 -- Sesja 33: Isolacja ingress dla finanse
+
+### Co zrobiono
+- Utworzono pustą sieć `finanse_ingress` (`172.24.0.0/24`) po kontroli kolizji.
+- Przygotowano oba Compose: npmplus dostaje `172.24.0.2`, frontend ingress+internal,
+  backend tylko internal. Nie dołączono ani nie odtworzono kontenerów.
+- Nginx ufa tylko statycznemu adresowi npmplus; repo zawiera kontrakt topology i
+  testy niezależne od zewnętrznych ścieżek Compose.
+
+### Weryfikacja
+- Focused security `11 passed, 6 skipped`; frontend build, `nginx -t`, oba Compose
+  config i `docker network inspect finanse_ingress` PASS. Runtime pozostaje bez zmian.
+
+---
+
 ## 2026-08-20 -- Sesja 32: Task 5 forwarded-IP re-review fix
 
 ### Cel sesji

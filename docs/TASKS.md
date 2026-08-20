@@ -14,7 +14,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Limity loginu, Advisora i uploadu są zależnościami FastAPI; odrzucenia 429
   zapisują niezależny, zredagowany event audytu.
 - [x] Backend jest wyłącznie na `internal`; frontend jest jedynym serwisem na
-  `proxy` i `internal`. Zweryfikowano konfigurację Compose bez deployu.
+  dedykowanych `finanse_ingress` i `internal`; npmplus ma tam stałe `172.24.0.2`.
+  Zweryfikowano konfigurację Compose bez deployu; runtime czeka na Task 7.
 
 ---
 

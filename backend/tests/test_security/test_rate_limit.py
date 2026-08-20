@@ -78,7 +78,7 @@ def test_malformed_forwarded_chain_falls_back_to_trusted_peer(monkeypatch):
 def test_frontend_normalizes_npmplus_client_ip_before_backend() -> None:
     config = (Path(__file__).parents[3] / "frontend" / "nginx.conf").read_text()
 
-    assert "set_real_ip_from 172.22.0.0/16;" in config
+    assert "set_real_ip_from 172.24.0.2;" in config
     assert "real_ip_header X-Forwarded-For;" in config
     assert "real_ip_recursive on;" in config
     assert config.index("set_real_ip_from") < config.index("location / {")

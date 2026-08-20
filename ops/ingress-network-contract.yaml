@@ -1,0 +1,8 @@
+network:
+  name: finanse_ingress
+  subnet: 172.24.0.0/24
+services:
+  npmplus: 172.24.0.2
+  finanse-frontend: [finanse_ingress, finanse_internal]
+  finanse-backend: [finanse_internal]
+  shared_proxy: []

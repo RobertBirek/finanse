@@ -102,6 +102,9 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Nie wykonano migracji produkcyjnej ani deployu dla ręcznego księgowania.
 
 ### Fixed
+- **Ingress isolation**: final Task 7 rollout now has a documented dedicated
+  `finanse_ingress` bridge (`172.24.0.0/24`), where only static npmplus
+  `172.24.0.2` is trusted by the frontend. Backend remains internal-only.
 - **Security baseline — limity za reverse proxy**: npmplus może przekazać łańcuch
   wyłącznie do frontendu, który normalizuje go modułem Nginx realip i wysyła do
   backendu pojedynczy adres. Backend akceptuje tylko jeden ścisły literal IP od
