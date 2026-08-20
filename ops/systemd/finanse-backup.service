@@ -19,5 +19,6 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/docker/finanse/data/backups /docker/finanse/data/uploads /run/lock
+Environment=RESTIC_CACHE_DIR=/docker/finanse/data/restic-cache
+ReadWritePaths=/docker/finanse/data/backups /docker/finanse/data/uploads /docker/finanse/data/restic-cache /run/lock
 ExecStart=/usr/bin/env FINANSE_OPERATION_LOCK_HELD=1 /usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock /usr/bin/make -C /docker/finanse backup

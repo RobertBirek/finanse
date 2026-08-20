@@ -59,6 +59,10 @@ def test_timer_installer_verifies_then_installs_only_known_units() -> None:
         "install -d -o root -g root -m 0700 /docker/finanse/data/restore-drill"
     )
     assert content.index(restore_directory_install) < content.index("systemctl enable --now")
+    restic_cache_directory_install = (
+        "install -d -o root -g root -m 0700 /docker/finanse/data/restic-cache"
+    )
+    assert content.index(restic_cache_directory_install) < content.index("systemctl enable --now")
     assert "chmod 0750" not in content
     assert re.search(r"(?m)^\s*rm(?:\s|$)", content) is None
     assert "secrets/" not in content
@@ -103,6 +107,7 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
         assert "PrivateTmp=true" in content
         assert "ProtectSystem=strict" in content
         assert "ProtectHome=true" in content
+        assert "Environment=RESTIC_CACHE_DIR=/docker/finanse/data/restic-cache" in content
         assert "UMask=0077" in content
         assert "OnFailure=finanse-operation-failure@%n.service" in content
 
@@ -113,8 +118,8 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
         "/usr/bin/make -C /docker/finanse backup"
     ) in backup_content
     assert (
-        "ReadWritePaths=/docker/finanse/data/backups /docker/finanse/data/uploads /run/lock"
-        in backup_content
+        "ReadWritePaths=/docker/finanse/data/backups /docker/finanse/data/uploads "
+        "/docker/finanse/data/restic-cache /run/lock" in backup_content
     )
 
     restore_content = read_script(RESTORE_SERVICE)
@@ -123,7 +128,10 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
         "/run/lock/finanse-backup-restore.lock "
         "/usr/local/lib/finanse/run-restore-drill.sh"
     ) in restore_content
-    assert "ReadWritePaths=/docker/finanse/data/restore-drill /run/lock" in restore_content
+    assert (
+        "ReadWritePaths=/docker/finanse/data/restore-drill /docker/finanse/data/restic-cache "
+        "/run/lock" in restore_content
+    )
 
     failure_content = read_script(FAILURE_SERVICE)
     assert (
