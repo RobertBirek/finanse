@@ -3,9 +3,13 @@ Description=Personal Advisor restore verification
 Wants=network-online.target
 After=docker.service network-online.target
 OnFailure=finanse-operation-failure@%n.service
+StartLimitIntervalSec=3h
+StartLimitBurst=3
 
 [Service]
 Type=oneshot
+Restart=on-failure
+RestartSec=15min
 User=root
 Group=root
 WorkingDirectory=/docker/finanse
@@ -16,4 +20,4 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/docker/finanse/data/restore-drill /run/lock
-ExecStart=/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock /usr/local/lib/finanse/run-restore-drill.sh
+ExecStart=/usr/bin/env FINANSE_OPERATION_LOCK_HELD=1 /usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock /usr/local/lib/finanse/run-restore-drill.sh

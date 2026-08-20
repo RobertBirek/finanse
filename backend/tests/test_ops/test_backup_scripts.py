@@ -93,6 +93,10 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
         content = read_script(service)
 
         assert "/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock" in content
+        assert "Restart=on-failure" in content
+        assert "RestartSec=15min" in content
+        assert "StartLimitIntervalSec=3h" in content
+        assert "StartLimitBurst=3" in content
         assert "TimeoutStartSec=2h" in content
         assert "NoNewPrivileges=true" in content
         assert "PrivateTmp=true" in content
@@ -103,7 +107,8 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
 
     backup_content = read_script(BACKUP_SERVICE)
     assert (
-        "ExecStart=/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock "
+        "ExecStart=/usr/bin/env FINANSE_OPERATION_LOCK_HELD=1 /usr/bin/flock -w 900 "
+        "/run/lock/finanse-backup-restore.lock "
         "/usr/bin/make -C /docker/finanse backup"
     ) in backup_content
     assert (
@@ -113,7 +118,8 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
 
     restore_content = read_script(RESTORE_SERVICE)
     assert (
-        "ExecStart=/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock "
+        "ExecStart=/usr/bin/env FINANSE_OPERATION_LOCK_HELD=1 /usr/bin/flock -w 900 "
+        "/run/lock/finanse-backup-restore.lock "
         "/usr/local/lib/finanse/run-restore-drill.sh"
     ) in restore_content
     assert "ReadWritePaths=/docker/finanse/data/restore-drill /run/lock" in restore_content
@@ -147,7 +153,9 @@ def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> 
         'createdb --host "$restore_host" --port "$restore_port" '
         '--username "$restore_user" "$restore_database"'
     ) in content
-    assert 'make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest' in content
+    assert (
+        'FINANSE_OPERATION_LOCK_HELD=1 make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest'
+    ) in content
     assert content.index('[[ "$RESTORE_DIR" == "$RESTORE_DIRECTORY" ]]') < content.index("createdb")
     assert content.index('[[ "$restore_host" == "127.0.0.1" ]]') < content.index("createdb")
     assert content.index('[[ "$restore_database" == "$RESTORE_DATABASE" ]]') < content.index(
