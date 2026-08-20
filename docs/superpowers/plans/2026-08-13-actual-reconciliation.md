@@ -84,7 +84,7 @@ assert transaction.postings[1].account_id is None
 Run:
 
 ```bash
-cd backend && TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_ledger.py::test_category_only_posting_is_persisted -v
+cd backend && TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_ledger.py::test_category_only_posting_is_persisted -v
 ```
 
 Expected: FAIL, ponieważ `PostingCreate.account_id` i kolumna `postings.account_id` są obecnie wymagane.
@@ -132,8 +132,8 @@ Nie zabraniać historycznych postingów z jednoczesnym `account_id` i `category_
 
 ```bash
 docker compose -f /docker/finanse/compose.test.yaml up -d --wait postgres-test
-cd backend && DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/alembic upgrade head
-TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_ledger.py -v
+cd backend && DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/alembic upgrade head
+TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_ledger.py -v
 docker compose -f /docker/finanse/compose.test.yaml down
 ```
 
@@ -167,7 +167,7 @@ assert [account["name"] for account in summary.accounts] == ["ING"]
 - [ ] **Step 2: Uruchomić RED**
 
 ```bash
-cd backend && TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_ledger.py::test_summary_excludes_offbudget_account_and_category_impact -v
+cd backend && TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_ledger.py::test_summary_excludes_offbudget_account_and_category_impact -v
 ```
 
 Expected: FAIL, ponieważ obecne summary wybiera wszystkie aktywne konta i liczy postingi bez flagi budżetowej.
@@ -213,7 +213,7 @@ Utworzyć kategorię `Transport`, dziecko `Paliwo`, transakcję `5000`; sprawdzi
 - [ ] **Step 6: Uruchomić GREEN**
 
 ```bash
-cd backend && TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_ledger.py -v
+cd backend && TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_ledger.py -v
 ```
 
 Expected: wszystkie testy ledgeru PASS.
@@ -522,7 +522,7 @@ git commit -m "feat: pokaż konta pozabudżetowe i grupy kategorii"
 ```bash
 docker compose -f /docker/finanse/compose.test.yaml up -d --wait postgres-test
 cd backend
-DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/alembic upgrade head
+DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/alembic upgrade head
 ```
 
 - [ ] **Step 2: Utworzyć wyłącznie testowego użytkownika**
@@ -532,7 +532,7 @@ W testowej bazie utworzyć użytkownika przez istniejący endpoint/repozytorium 
 - [ ] **Step 3: Uruchomić importer przeciwko testowej bazie**
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test \
+DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test \
 /opt/finanse/backend/.venv/bin/python scripts/migrate_actual.py \
   --blob-path /docker/actualbudget/data/user-files/file-1bdc93e7-2c30-473e-b538-740a6b6021dc.blob \
   --user-id "$TEST_USER_ID" --execute --require-reconciled
@@ -561,7 +561,7 @@ Porównać z `reconciliation.json`; różnica większa od zero jest blokadą dla
 cd /opt/finanse
 make lint
 make typecheck
-TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test make test
+TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test make test
 ```
 
 Expected: wszystkie komendy kończą się kodem 0. W razie niedostępnego lokalnego venv użyć jawnej ścieżki `/opt/finanse/backend/.venv/bin` i zapisać faktyczny wynik.

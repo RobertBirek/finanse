@@ -872,7 +872,7 @@ Przejrzeć historię Task 1-5, wykonać pełną dostępną weryfikację i udokum
 - `make typecheck` — FAIL, kod 127: brak `backend/.venv/bin/mypy`.
 - `make test` — FAIL, kod 127: brak `backend/.venv/bin/pytest`.
 - `make test-integration` — FAIL, kod 127 bez override `VENV`; baza wystartowała, ale brak lokalnego pytest.
-- `TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest -v` (w `backend`) — PASS: `81 passed, 15 warnings`.
+- `TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest -v` (w `backend`) — PASS: `81 passed, 15 warnings`; hasło pochodzi wyłącznie z root-only passfile lub środowiska.
 - `make VENV=/opt/finanse/backend/.venv/bin test` — PASS: backend `66 passed, 15 skipped`; frontend `4 passed` (uruchomienie równoległe z integracją zatrzymało bazę po zakończeniu integracji).
 - `make VENV=/opt/finanse/backend/.venv/bin test-integration` — PASS: `15 passed, 66 deselected`.
 - `make VENV=/opt/finanse/backend/.venv/bin lint` — FAIL w ówczesnym uruchomieniu: ruff zgłaszał 20 błędów; późniejsze commity spłaciły ten dług.

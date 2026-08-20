@@ -217,7 +217,7 @@ Expected: PASS.
 
 - [ ] **Step 1: Validate the Alembic migration in the isolated test database**
 
-Run: `cd backend && TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test ../backend/.venv/bin/alembic upgrade head`
+Run: `cd backend && TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test ../backend/.venv/bin/alembic upgrade head`
 
 Expected: migration reaches the new revision without using production credentials.
 

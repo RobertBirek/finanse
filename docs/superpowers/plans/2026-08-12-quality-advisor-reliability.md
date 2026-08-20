@@ -270,7 +270,7 @@ W `conftest.py` ustawić:
 ```python
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql+asyncpg://finanse:finanse@localhost:5432/finanse_test",
+    "postgresql+asyncpg://<user>@localhost:5432/finanse_test",
 )
 ```
 
@@ -287,7 +287,7 @@ test-db-up:
 
 test-integration: test-db-up
 
-	cd backend && TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@localhost:55432/finanse_test $(VENV)/pytest -v -m integration
+	cd backend && TEST_DATABASE_URL=postgresql+asyncpg://<user>@localhost:55432/finanse_test $(VENV)/pytest -v -m integration
 ```
 
 Istniejący `make test` nadal uruchamia cały test suite; testy integracyjne oznaczyć markerem `integration`, a domyślny fallback 5432 zachować dla lokalnego środowiska.
@@ -300,7 +300,7 @@ W testach korzystających z `db_session` dodać `@pytest.mark.integration`; w `[
 
 ```bash
 make test-db-up
-TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@localhost:55432/finanse_test make test-integration
+TEST_DATABASE_URL=postgresql+asyncpg://<user>@localhost:55432/finanse_test make test-integration
 docker compose -f /docker/finanse/compose.test.yaml down
 ```
 
@@ -406,7 +406,7 @@ Expected: backend mypy i frontend `tsc --noEmit` PASS.
 
 ```bash
 make test-db-up
-TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@localhost:55432/finanse_test make test
+TEST_DATABASE_URL=postgresql+asyncpg://<user>@localhost:55432/finanse_test make test
 docker compose -f /docker/finanse/compose.test.yaml down
 ```
 

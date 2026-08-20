@@ -41,7 +41,7 @@ assert manual_category.source == "manual"
 
 - [ ] **Step 2: Run the focused test to verify RED**
 
-Run: `TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_actual_import.py::TestMigrationPipeline::test_import_persists_actual_entity_provenance -v`
+Run: `TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_actual_import.py::TestMigrationPipeline::test_import_persists_actual_entity_provenance -v`
 
 Expected: FAIL because `Account` and `Category` do not expose `source`.
 
@@ -138,7 +138,7 @@ Add a second test that references the legacy account or category from a manual t
 
 - [ ] **Step 2: Run focused replacement tests to verify RED**
 
-Run: `TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_actual_import.py -k "replace_legacy_actual" -v`
+Run: `TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_actual_import.py -k "replace_legacy_actual" -v`
 
 Expected: FAIL because replacement mode does not exist.
 

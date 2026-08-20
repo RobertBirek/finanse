@@ -55,7 +55,7 @@
 
 - [ ] **Step 2: Run the focused test to verify it fails.**
 
-  Run: `TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_cashflow.py -k selected_reporting_month -v`
+  Run: `TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_cashflow.py -k selected_reporting_month -v`
 
   Expected: FAIL because `/summary` and `/category-summary` ignore month/year and include later transactions.
 
@@ -138,7 +138,7 @@
 
 - [ ] **Step 2: Run focused tests to verify they fail.**
 
-  Run: `TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_cashflow.py -k "confirm_scheduled or delete_scheduled" -v`
+  Run: `TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_cashflow.py -k "confirm_scheduled or delete_scheduled" -v`
 
   Expected: FAIL because the service functions and endpoints do not exist.
 
@@ -209,7 +209,7 @@
 
   Run the Step 2 command and then:
 
-  `TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_cashflow.py -v`
+  `TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_cashflow.py -v`
 
   Expected: PASS; no confirmation can create an unbalanced or duplicate transaction.
 

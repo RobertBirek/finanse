@@ -63,7 +63,7 @@
 
   ```bash
   cd /opt/finanse/backend && \
-  DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test \
+  DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test \
   /opt/finanse/backend/.venv/bin/alembic revision --autogenerate -m "category budgets"
   ```
 
@@ -95,7 +95,7 @@
 
 - [ ] **Step 4: Run the smoke test.**
 
-  Run: `TEST_DATABASE_URL=postgresql+asyncpg://finanse:finanse@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_budgets.py -k unique -v`
+  Run: `TEST_DATABASE_URL=postgresql+asyncpg://<user>@127.0.0.1:55432/finanse_test /opt/finanse/backend/.venv/bin/pytest tests/test_finance/test_budgets.py -k unique -v`
 
   Expected: PASS (the fixture applies migrations to the isolated database).
 
