@@ -32,7 +32,22 @@ def test_timer_installer_verifies_then_installs_only_known_units() -> None:
     assert "install -o root -g root -m 0644" in content
     assert "systemctl daemon-reload" in content
     assert "systemctl enable --now finanse-backup.timer finanse-restore-verify.timer" in content
+    assert (
+        "systemctl list-timers --all finanse-backup.timer finanse-restore-verify.timer" in content
+    )
+    for unit in (
+        "finanse-backup.service",
+        "finanse-backup.timer",
+        "finanse-restore-verify.service",
+        "finanse-restore-verify.timer",
+        "finanse-operation-failure@.service",
+    ):
+        assert unit in content
+    assert content.index('[[ -f "${UNIT_SOURCE_DIRECTORY}/${unit}" ]]') < content.index(
+        "systemd-analyze verify"
+    )
     assert "rm -rf" not in content
+    assert "rm " not in content
     assert "secrets/" not in content
 
 
