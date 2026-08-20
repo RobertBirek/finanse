@@ -16,4 +16,4 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/docker/finanse/data/restore-drill /run/lock
-ExecStart=/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock /opt/finanse/ops/systemd/run-restore-drill.sh
+ExecStart=/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock /usr/local/lib/finanse/run-restore-drill.sh

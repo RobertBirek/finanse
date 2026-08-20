@@ -49,7 +49,12 @@ def test_timer_installer_verifies_then_installs_only_known_units() -> None:
     )
     verify_index = content.index("systemd-analyze verify")
     assert content.index('[[ -f "${UNIT_SOURCE_DIRECTORY}/${unit}" ]]') < verify_index
-    assert content.index('[[ -f "$UNIT_SOURCE_DIRECTORY/run-restore-drill.sh" ]]') < verify_index
+    assert 'readonly WRAPPER_SOURCE="$UNIT_SOURCE_DIRECTORY/run-restore-drill.sh"' in content
+    assert 'readonly WRAPPER_DESTINATION="/usr/local/lib/finanse/run-restore-drill.sh"' in content
+    wrapper_guard_index = content.index('[[ -f "$WRAPPER_SOURCE" ]]')
+    wrapper_install = 'install -D -o root -g root -m 0750 "$WRAPPER_SOURCE" "$WRAPPER_DESTINATION"'
+    assert wrapper_guard_index < verify_index < content.index(wrapper_install)
+    assert "chmod 0750" not in content
     assert re.search(r"(?m)^\s*rm(?:\s|$)", content) is None
     assert "secrets/" not in content
 
@@ -105,7 +110,7 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
     restore_content = read_script(RESTORE_SERVICE)
     assert (
         "ExecStart=/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock "
-        "/opt/finanse/ops/systemd/run-restore-drill.sh"
+        "/usr/local/lib/finanse/run-restore-drill.sh"
     ) in restore_content
     assert "ReadWritePaths=/docker/finanse/data/restore-drill /run/lock" in restore_content
 
