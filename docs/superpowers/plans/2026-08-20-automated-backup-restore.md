@@ -4,7 +4,7 @@
 
 **Goal:** Automate the encrypted daily production backup and monthly isolated restore drill with systemd timers, safe cleanup and observable failures.
 
-**Architecture:** Versioned systemd unit templates and a restore-drill wrapper live in `ops/systemd/`. The explicit root-only installer copies units to `/etc/systemd/system`, installs the wrapper as `root:root` `0750` at `/usr/local/lib/finanse/run-restore-drill.sh`, and creates the persistent empty restore parent as `root:root` `0700`. The external `/docker/finanse/Makefile` remains the boundary that loads root-only environment files. Both services share a host lock; the installed wrapper creates the guarded isolated database before verification and ownership-aware cleanup removes only the drill's exact outputs after success or failure.
+**Architecture:** Versioned systemd unit templates and a restore-drill wrapper live in `ops/systemd/`. The explicit root-only installer copies units to `/etc/systemd/system`, installs the wrapper as `root:root` `0750` at `/usr/local/lib/finanse/run-restore-drill.sh`, and creates the persistent empty restore parent as `root:root` `0700`. The external `/docker/finanse/Makefile` remains the boundary that loads root-only environment files. Services and manual Make targets share the 15-minute host lock; services retry on failure after 15 minutes with at most three starts in three hours. The installed wrapper creates the guarded isolated database before verification and ownership-aware cleanup removes only the drill's exact outputs after success or failure. Restore selection uses `RESTORE_SNAPSHOT_ID`; legacy `snapshot=` is rejected before runner or Restic execution.
 
 **Tech Stack:** Bash, GNU Make, systemd 255 timers/services, flock, Restic, PostgreSQL client tools, pytest static/subprocess tests.
 
@@ -209,8 +209,8 @@
       assert 'readonly COMPOSE_DIRECTORY="/docker/finanse"' in content
       assert 'readonly RESTORE_DIRECTORY="$COMPOSE_DIRECTORY/data/restore-drill"' in content
       assert 'readonly RESTORE_DATABASE="finanse_restore"' in content
-      assert 'make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest' in content
-      assert content.index('restore-verify snapshot=latest') < content.index('dropdb')
+      assert 'RESTORE_SNAPSHOT_ID=latest make -C "$COMPOSE_DIRECTORY" restore-verify' in content
+      assert content.index('RESTORE_SNAPSHOT_ID=latest') < content.index('dropdb')
       assert content.index('dropdb') < content.index('rm -rf -- "$RESTORE_DIRECTORY/uploads"')
 
   def test_restore_drill_wrapper_refuses_any_unexpected_restore_target() -> None:
@@ -244,7 +244,7 @@
 	mkdir -p /docker/finanse/data/restore-drill; \
 	RESTORE_DATABASE_URL_SYNC="postgresql://$$POSTGRES_USER@127.0.0.1:55431/finanse_restore" \
 	RESTORE_DIR=/docker/finanse/data/restore-drill \
-	bash /opt/finanse/ops/restore-verify.sh "$(snapshot)"
+	bash /opt/finanse/ops/restore-verify.sh
   ```
 
   Keep the `backup` recipe unchanged. Verify that the existing
@@ -304,7 +304,7 @@
   trap cleanup EXIT
   createdb --host "$restore_host" --port "$restore_port" --username "$restore_user" "$restore_database"
   restore_database_created=true
-  make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest
+  FINANSE_OPERATION_LOCK_HELD=1 RESTORE_SNAPSHOT_ID=latest make -C "$COMPOSE_DIRECTORY" restore-verify
   dropdb --if-exists --host "$restore_host" --port "$restore_port" --username "$restore_user" "$restore_database"
   [[ -d "$RESTORE_DIRECTORY/uploads" ]] || fail "Restore uploads are missing."
   [[ -z "$(find "$RESTORE_DIRECTORY" -mindepth 1 -maxdepth 1 ! -name uploads -print -quit)" ]] || fail "Unexpected restore output."
@@ -331,7 +331,7 @@
   ```bash
   cd /opt/finanse/backend && .venv/bin/pytest tests/test_ops/test_backup_scripts.py -k 'restore_drill_wrapper or restore_script' -v
   bash -n /opt/finanse/ops/systemd/run-restore-drill.sh
-  make -C /docker/finanse -n restore-verify snapshot=latest
+  RESTORE_SNAPSHOT_ID=latest make -C /docker/finanse -n restore-verify
   ```
 
   Expected: focused tests PASS, Bash syntax exits 0, and dry-run emits no
@@ -523,7 +523,9 @@
 - **No-secret boundary:** unit files and Git contain no provider credentials;
   Makefile is the only external configuration boundary; tests inspect units for
   common secret assignments.
-- **Safety:** the wrapper creates only the literal guarded `finanse_restore`
+- **Safety:** `RESTORE_SNAPSHOT_ID` is the only restore selector and the legacy
+  `snapshot=` assignment fails before a runner or Restic process can start. The
+  wrapper creates only the literal guarded `finanse_restore`
   target, and ownership-aware cleanup removes its exact database and outputs
   after success or verifier failure. The installer installs the root-owned
   wrapper outside the repository and retains the empty sandbox parent.
@@ -531,3 +533,7 @@
   `ReadWritePaths` require the live manual service run in Task 4; if Docker or
   Restic needs another write location, add only that exact location, document
   it and add a regression assertion before rerunning the service.
+- **Final runtime evidence:** `snapshot=deadbeef` returned code 2 with an
+  invalid `PATH`, proving rejection before runner/Restic. The hardened services
+  then created snapshot `11fd2129` and completed the real isolated drill with
+  an empty `root:root` `0700` parent and no `finanse_restore` database.

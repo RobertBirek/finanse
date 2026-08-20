@@ -30,6 +30,17 @@ na VPS.
 - Backup i restore service zakończyły się `status=0/SUCCESS`. Statusy i journal
   nie zawierały sekretów. Wdrożenie timerów nie spowodowało downtime aplikacji
   webowej.
+- Finalny lifecycle: `RESTORE_SNAPSHOT_ID` jest jedynym selektorem snapshotu;
+  legacy `snapshot=` fail-closed kończy się przed runnerem/Restic. Wspólny lock
+  obejmuje usługi oraz ręczne targety Makefile. Po błędzie service retry po
+  15 minutach, maksymalnie 3 starty w 3 godziny.
+- Finalny deployment proof: `make test` dał backend `201 passed, 125 skipped`
+  i frontend `129 passed`; lint, typecheck i `git diff --check` przeszły.
+  `snapshot=deadbeef` został odrzucony kodem 2 z celowo niepoprawnym `PATH`,
+  zanim uruchomił się runner lub Restic. Backup utworzył `11fd2129` o
+  `2026-08-20T21:30:56.257585672+02:00`; restore service zwrócił
+  `status=0/SUCCESS`. Po cleanupie parent jest pusty `root:root` `0700`,
+  `finanse_restore` nie istnieje, a status i journal nie zawierały sekretów.
 
 ---
 

@@ -47,9 +47,11 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 - `finanse-backup.timer` użyje
   `OnCalendar=*-*-* 02:30:00 Europe/Warsaw` oraz `Persistent=true`.
 - `finanse-backup.service` uruchomi `make -C /docker/finanse backup`.
-- Wspólny hostowy lock (`flock`) serializuje backup i restore drill. Proces
-  będzie oczekiwał najwyżej 15 minut na zwolnienie locka; po przekroczeniu
-  limitu zakończy się błędem bez wykonywania częściowego zadania.
+- Wspólny hostowy lock (`flock`) serializuje backup i restore drill, także dla
+  ręcznych targetów Makefile. Proces oczekuje najwyżej 15 minut na zwolnienie
+  locka; po przekroczeniu limitu kończy się błędem bez częściowego zadania.
+- Obie usługi mają `Restart=on-failure`, `RestartSec=15min`,
+  `StartLimitBurst=3` i `StartLimitIntervalSec=3h`.
 - Usługa zapisuje standardowe wyjście i błędy tylko do journald. Własny skrypt
   backupu zachowuje obecne prywatne katalogi tymczasowe i cleanup.
 
@@ -62,7 +64,9 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
   `/usr/local/lib/finanse/run-restore-drill.sh`, a nie bezpośrednio plik z
   repozytorium. Wrapper wybiera `latest` przez istniejący target.
 - Target restore jawnie załaduje te same root-only zmienne konfiguracji co
-  backup. Nigdy nie interpoluje ich do argumentów procesu ani logów.
+  backup. Snapshot wybiera wyłącznie `RESTORE_SNAPSHOT_ID`; legacy
+  `snapshot=` jest odrzucane przed uruchomieniem runnera lub Restic. Nigdy nie
+  interpoluje sekretów do argumentów procesu ani logów.
 - Wrapper tworzy `finanse_restore` na `127.0.0.1:55431` przed weryfikacją;
   weryfikator porównuje checksumy i rewizje, aplikuje migracje oraz kontroluje
   double-entry invariant.
@@ -99,12 +103,13 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 ## Przepływ danych
 
 1. Timer uruchamia service o zaplanowanej porze w `Europe/Warsaw`.
-2. Service uzyskuje wspólny lock.
+2. Service lub ręczny target Makefile uzyskuje wspólny lock.
 3. Makefile ładuje lokalne pliki środowiskowe bez ich wypisywania.
 4. Backup tworzy dump, archiwum uploadów i manifest, a Restic wysyła
    zaszyfrowany snapshot oraz stosuje retencję.
-5. Root-only wrapper tworzy izolowaną bazę, wybiera najnowszy snapshot i
-   wykonuje fail-closed odtworzenie wyłącznie do izolowanego celu.
+5. Root-only wrapper tworzy izolowaną bazę, przekazuje
+   `RESTORE_SNAPSHOT_ID=latest` i wykonuje fail-closed odtworzenie wyłącznie do
+   izolowanego celu.
 6. Exit status trafia do systemd i journald; błąd aktywuje failure unit.
 
 ## Weryfikacja
@@ -116,6 +121,9 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 - Po wdrożeniu ręczne uruchomienie backupu utworzyło snapshot `015211bb`, a
   jawny drill zakończył się sukcesem; pusty parent restore i brak
   `finanse_restore` potwierdzono po cleanupie.
+- Finalny proof po hardeningu retry/lock utworzył snapshot `11fd2129`; legacy
+  `snapshot=deadbeef` został odrzucony kodem 2 przed runnerem/Restic, a restore
+  service zakończył się sukcesem z pustym parentem i bez `finanse_restore`.
 - Test błędnej konfiguracji musi kończyć usługę non-zero i tworzyć zdarzenie
   failure bez ujawnienia sekretu.
 

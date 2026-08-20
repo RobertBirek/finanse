@@ -31,6 +31,14 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   lint, typecheck i `git diff --check` PASS. Backup `015211bb` i rzeczywisty
   drill przeszły; brak `finanse_restore`, parent restore pusty, journal bez
   sekretów. Wdrożenie nie spowodowało downtime aplikacji webowej.
+- [x] Restore wybiera wyłącznie `RESTORE_SNAPSHOT_ID`; legacy `snapshot=` jest
+  odrzucane przed runnerem/Restic. Lock obejmuje także ręczne targety Makefile,
+  a retry działa po 15 minutach do 3 startów w 3 godziny.
+- [x] Finalny proof: backend `201 passed, 125 skipped`, frontend `129 passed`;
+  lint/typecheck/`git diff --check` PASS. Legacy guard zwrócił kod 2 bez
+  runnera/Restic; backup `11fd2129` i drill `status=0/SUCCESS` potwierdziły
+  pusty `root:root` `0700` parent, brak `finanse_restore` i journal bez
+  sekretów.
 
 ---
 

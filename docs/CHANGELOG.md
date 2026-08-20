@@ -13,6 +13,9 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   04:30 (`Europe/Warsaw`, `Persistent=true`). Usługi dzielą 15-minutowy lock;
   rootowy wrapper jest instalowany poza repozytorium, a failure unit zapisuje
   zredagowane zdarzenia do journala.
+- Restore wybiera snapshot wyłącznie przez `RESTORE_SNAPSHOT_ID`; legacy
+  `snapshot=` jest fail-closed. Usługi i ręczne targety Makefile współdzielą
+  lock, a usługi retry po 15 minutach, maksymalnie 3 starty w 3 godziny.
 - **Security baseline wdrożony**: produkcja używa fail-fast konfiguracji,
   zamkniętej rejestracji, unieważnialnych sesji server-side, CSRF/Origin,
   limitów Redis i zredagowanego audytu bezpieczeństwa. Backup Restic do
@@ -100,6 +103,12 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   drill zakończył się sukcesem, nie pozostawił `finanse_restore` ani outputu,
   tylko pusty `root:root` `0700` parent. Statusy i journal nie zawierały
   sekretów. Wdrożenie nie spowodowało przerwy aplikacji webowej.
+- Finalny proof po retry/lock hardening: backend `201 passed, 125 skipped`,
+  frontend `129 passed`; lint, typecheck i `git diff --check` PASS. Legacy
+  `snapshot=deadbeef` zakończył się kodem 2 przed runnerem/Restic. Backup
+  utworzył `11fd2129`, a restore service zakończył się `status=0/SUCCESS`;
+  parent restore pozostał pusty `root:root` `0700`, baza nie istnieje, journal
+  nie zawiera sekretów.
 - Security baseline: backend `192 passed, 125 skipped`; integracyjne
   `125 passed`; frontend `129 passed`; Ruff, mypy, ESLint, TypeScript i build
   PASS. Snapshoty Contabo S3: `922d1aba` (przed migracją) i `63145774` (po
