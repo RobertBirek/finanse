@@ -9,6 +9,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 BACKUP_SCRIPT = REPOSITORY_ROOT / "ops" / "backup.sh"
 RESTORE_SCRIPT = REPOSITORY_ROOT / "ops" / "restore-verify.sh"
 SYSTEMD_DIRECTORY = REPOSITORY_ROOT / "ops" / "systemd"
+RESTORE_DRILL_WRAPPER = SYSTEMD_DIRECTORY / "run-restore-drill.sh"
 BACKUP_TIMER = SYSTEMD_DIRECTORY / "finanse-backup.timer"
 RESTORE_TIMER = SYSTEMD_DIRECTORY / "finanse-restore-verify.timer"
 BACKUP_SERVICE = SYSTEMD_DIRECTORY / "finanse-backup.service"
@@ -81,6 +82,29 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
         "ExecStart=/usr/bin/logger --priority user.err --tag finanse-operation-failure "
         '"Scheduled operation %I failed; inspect journalctl -u %I"'
     ) in failure_content
+
+
+def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> None:
+    content = read_script(RESTORE_DRILL_WRAPPER)
+
+    assert RESTORE_DRILL_WRAPPER.stat().st_mode & stat.S_IXUSR
+    assert "set -euo pipefail" in content
+    assert "umask 077" in content
+    assert 'readonly COMPOSE_DIRECTORY="/docker/finanse"' in content
+    assert 'readonly RESTORE_DIRECTORY="$COMPOSE_DIRECTORY/data/restore-drill"' in content
+    assert 'readonly RESTORE_DATABASE="finanse_restore"' in content
+    assert 'make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest' in content
+    assert content.index("restore-verify snapshot=latest") < content.index("dropdb")
+    assert content.index("dropdb") < content.index('rm -rf -- "$RESTORE_DIRECTORY/uploads"')
+
+
+def test_restore_drill_wrapper_refuses_any_unexpected_restore_target() -> None:
+    content = read_script(RESTORE_DRILL_WRAPPER)
+
+    assert '[[ "$RESTORE_DIR" == "$RESTORE_DIRECTORY" ]]' in content
+    assert '[[ "$restore_host" == "127.0.0.1" ]]' in content
+    assert '[[ "$restore_database" == "$RESTORE_DATABASE" ]]' in content
+    assert 'find "$RESTORE_DIRECTORY" -mindepth 1 -maxdepth 1' in content
 
 
 def test_backup_script_is_executable_and_uses_private_temporary_snapshot():
