@@ -1,0 +1,11 @@
+[Unit]
+Description=Record failed Personal Advisor scheduled operation (%I)
+
+[Service]
+Type=oneshot
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ExecStart=/usr/bin/logger --priority user.err --tag finanse-operation-failure "Scheduled operation %I failed; inspect journalctl -u %I"

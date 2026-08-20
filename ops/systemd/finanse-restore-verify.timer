@@ -1,0 +1,10 @@
+[Unit]
+Description=Monthly Personal Advisor restore verification
+
+[Timer]
+OnCalendar=Sun *-*-01..07 04:30:00 Europe/Warsaw
+Persistent=true
+Unit=finanse-restore-verify.service
+
+[Install]
+WantedBy=timers.target

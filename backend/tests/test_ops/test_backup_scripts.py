@@ -8,11 +8,52 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 BACKUP_SCRIPT = REPOSITORY_ROOT / "ops" / "backup.sh"
 RESTORE_SCRIPT = REPOSITORY_ROOT / "ops" / "restore-verify.sh"
+SYSTEMD_DIRECTORY = REPOSITORY_ROOT / "ops" / "systemd"
+BACKUP_TIMER = SYSTEMD_DIRECTORY / "finanse-backup.timer"
+RESTORE_TIMER = SYSTEMD_DIRECTORY / "finanse-restore-verify.timer"
+BACKUP_SERVICE = SYSTEMD_DIRECTORY / "finanse-backup.service"
+RESTORE_SERVICE = SYSTEMD_DIRECTORY / "finanse-restore-verify.service"
+FAILURE_SERVICE = SYSTEMD_DIRECTORY / "finanse-operation-failure@.service"
 
 
 def read_script(path: Path) -> str:
     assert path.is_file(), f"missing script: {path}"
     return path.read_text()
+
+
+def test_backup_timer_has_daily_schedule_and_service():
+    content = read_script(BACKUP_TIMER)
+
+    assert "OnCalendar=*-*-* 02:30:00 Europe/Warsaw" in content
+    assert "Persistent=true" in content
+    assert "Unit=finanse-backup.service" in content
+    assert "WantedBy=timers.target" in content
+
+
+def test_restore_timer_has_monthly_schedule_and_service():
+    content = read_script(RESTORE_TIMER)
+
+    assert "OnCalendar=Sun *-*-01..07 04:30:00 Europe/Warsaw" in content
+    assert "Persistent=true" in content
+    assert "Unit=finanse-restore-verify.service" in content
+
+
+def test_scheduled_services_protect_secrets_and_serialise_operations():
+    for service in (BACKUP_SERVICE, RESTORE_SERVICE, FAILURE_SERVICE):
+        content = read_script(service)
+
+        assert "SECRET_KEY=" not in content
+        assert "PASSWORD=" not in content
+        assert "RESTIC_PASSWORD=" not in content
+
+    for service in (BACKUP_SERVICE, RESTORE_SERVICE):
+        content = read_script(service)
+
+        assert "/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock" in content
+        assert "NoNewPrivileges=true" in content
+        assert "PrivateTmp=true" in content
+        assert "UMask=0077" in content
+        assert "OnFailure=finanse-operation-failure@%n.service" in content
 
 
 def test_backup_script_is_executable_and_uses_private_temporary_snapshot():

@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Personal Advisor backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Europe/Warsaw
+Persistent=true
+Unit=finanse-backup.service
+
+[Install]
+WantedBy=timers.target
