@@ -64,7 +64,10 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
         "ExecStart=/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock "
         "/usr/bin/make -C /docker/finanse backup"
     ) in backup_content
-    assert "ReadWritePaths=/docker/finanse/data/backups /run/lock" in backup_content
+    assert (
+        "ReadWritePaths=/docker/finanse/data/backups /docker/finanse/data/uploads /run/lock"
+        in backup_content
+    )
 
     restore_content = read_script(RESTORE_SERVICE)
     assert (
