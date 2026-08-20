@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 import stat
 import subprocess
 from pathlib import Path
@@ -35,19 +36,21 @@ def test_timer_installer_verifies_then_installs_only_known_units() -> None:
     assert (
         "systemctl list-timers --all finanse-backup.timer finanse-restore-verify.timer" in content
     )
-    for unit in (
-        "finanse-backup.service",
-        "finanse-backup.timer",
-        "finanse-restore-verify.service",
-        "finanse-restore-verify.timer",
-        "finanse-operation-failure@.service",
-    ):
-        assert unit in content
-    assert content.index('[[ -f "${UNIT_SOURCE_DIRECTORY}/${unit}" ]]') < content.index(
-        "systemd-analyze verify"
+    declared_units = re.search(r"(?m)^readonly UNITS=\(\n(?:.*\n)*?\)", content)
+    assert declared_units is not None
+    assert declared_units.group(0) == (
+        "readonly UNITS=(\n"
+        "    finanse-backup.service\n"
+        "    finanse-backup.timer\n"
+        "    finanse-restore-verify.service\n"
+        "    finanse-restore-verify.timer\n"
+        "    finanse-operation-failure@.service\n"
+        ")"
     )
-    assert "rm -rf" not in content
-    assert "rm " not in content
+    verify_index = content.index("systemd-analyze verify")
+    assert content.index('[[ -f "${UNIT_SOURCE_DIRECTORY}/${unit}" ]]') < verify_index
+    assert content.index('[[ -f "$UNIT_SOURCE_DIRECTORY/run-restore-drill.sh" ]]') < verify_index
+    assert re.search(r"(?m)^\s*rm(?:\s|$)", content) is None
     assert "secrets/" not in content
 
 
