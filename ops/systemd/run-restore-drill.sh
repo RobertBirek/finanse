@@ -31,6 +31,7 @@ restore_database="${restore_parts[3]}"
 [[ "$restore_host" == "127.0.0.1" ]] || fail "Restore host is not allowed."
 [[ "$restore_database" == "$RESTORE_DATABASE" ]] || fail "Restore database is not allowed."
 
+createdb --host "$restore_host" --port "$restore_port" --username "$restore_user" "$restore_database"
 make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest
 dropdb --if-exists --host "$restore_host" --port "$restore_port" --username "$restore_user" "$restore_database"
 [[ -d "$RESTORE_DIRECTORY/uploads" ]] || fail "Restore uploads are missing."

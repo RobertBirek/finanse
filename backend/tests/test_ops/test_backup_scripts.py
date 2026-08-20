@@ -134,9 +134,21 @@ def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> 
     assert 'readonly COMPOSE_DIRECTORY="/docker/finanse"' in content
     assert 'readonly RESTORE_DIRECTORY="$COMPOSE_DIRECTORY/data/restore-drill"' in content
     assert 'readonly RESTORE_DATABASE="finanse_restore"' in content
+    assert (
+        'createdb --host "$restore_host" --port "$restore_port" '
+        '--username "$restore_user" "$restore_database"'
+    ) in content
     assert 'make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest' in content
+    assert content.index('[[ "$RESTORE_DIR" == "$RESTORE_DIRECTORY" ]]') < content.index("createdb")
+    assert content.index('[[ "$restore_host" == "127.0.0.1" ]]') < content.index("createdb")
+    assert content.index('[[ "$restore_database" == "$RESTORE_DATABASE" ]]') < content.index(
+        "createdb"
+    )
+    assert content.index("createdb") < content.index("restore-verify snapshot=latest")
     assert content.index("restore-verify snapshot=latest") < content.index("dropdb")
     assert content.index("dropdb") < content.index('rm -rf -- "$RESTORE_DIRECTORY/uploads"')
+    assert "--if-not-exists" not in content
+    assert "eval" not in content
     assert 'rmdir "$RESTORE_DIRECTORY"' not in content
 
 
