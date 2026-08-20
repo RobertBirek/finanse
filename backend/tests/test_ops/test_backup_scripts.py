@@ -36,6 +36,7 @@ def test_restore_timer_has_monthly_schedule_and_service():
     assert "OnCalendar=Sun *-*-01..07 04:30:00 Europe/Warsaw" in content
     assert "Persistent=true" in content
     assert "Unit=finanse-restore-verify.service" in content
+    assert "WantedBy=timers.target" in content
 
 
 def test_scheduled_services_protect_secrets_and_serialise_operations():
@@ -50,10 +51,33 @@ def test_scheduled_services_protect_secrets_and_serialise_operations():
         content = read_script(service)
 
         assert "/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock" in content
+        assert "TimeoutStartSec=2h" in content
         assert "NoNewPrivileges=true" in content
         assert "PrivateTmp=true" in content
+        assert "ProtectSystem=strict" in content
+        assert "ProtectHome=true" in content
         assert "UMask=0077" in content
         assert "OnFailure=finanse-operation-failure@%n.service" in content
+
+    backup_content = read_script(BACKUP_SERVICE)
+    assert (
+        "ExecStart=/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock "
+        "/usr/bin/make -C /docker/finanse backup"
+    ) in backup_content
+    assert "ReadWritePaths=/docker/finanse/data/backups /run/lock" in backup_content
+
+    restore_content = read_script(RESTORE_SERVICE)
+    assert (
+        "ExecStart=/usr/bin/flock -w 900 /run/lock/finanse-backup-restore.lock "
+        "/opt/finanse/ops/systemd/run-restore-drill.sh"
+    ) in restore_content
+    assert "ReadWritePaths=/docker/finanse/data/restore-drill /run/lock" in restore_content
+
+    failure_content = read_script(FAILURE_SERVICE)
+    assert (
+        "ExecStart=/usr/bin/logger --priority user.err --tag finanse-operation-failure "
+        '"Scheduled operation %I failed; inspect journalctl -u %I"'
+    ) in failure_content
 
 
 def test_backup_script_is_executable_and_uses_private_temporary_snapshot():
