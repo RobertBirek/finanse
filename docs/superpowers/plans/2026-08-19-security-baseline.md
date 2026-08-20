@@ -73,12 +73,12 @@
 - Create: `backend/app/security/rate_limit.py`, `backend/tests/test_security/test_rate_limit.py`
 - Modify: `backend/app/identity/router.py`, `backend/app/advisor/router.py`, `backend/app/documents/router.py`, `backend/app/audit/service.py`
 
-- [ ] **Step 1: Write failing tests.** Nth login attempt returns 429 with `Retry-After`; user-scoped Advisor and upload limits are independent; Redis connection failure blocks login, Advisor and upload but not authenticated GET; rate-limit and session events produce redacted audit rows.
-- [ ] **Step 2: Implement atomic limiter.** Use a Redis Lua script that increments a hashed key and sets expiry only on first increment. Expose dependencies `limit_login`, `limit_advisor`, `limit_upload`; config supplies limits/windows.
-- [ ] **Step 3: Apply dependencies.** Login uses client IP hash plus normalized email hash. Advisor uses user ID. Upload uses user ID plus client IP hash. Return `HTTP_429_TOO_MANY_REQUESTS` and header.
-- [ ] **Step 4: Add audit events.** Record `login_success`, `logout`, `session_rejected`, `csrf_rejected`, `rate_limited`; only hashes/identifiers, never raw secrets or email.
-- [ ] **Step 5: Run focused tests and full identity/advisor/documents integration tests.**
-- [ ] **Step 6: Commit.** `git commit -m "feat: dodaj limity i audyt bezpieczeństwa"`
+- [x] **Step 1: Write failing tests.** Nth login attempt returns 429 with `Retry-After`; user-scoped Advisor and upload limits are independent; Redis connection failure blocks login, Advisor and upload but not authenticated GET; rate-limit and session events produce redacted audit rows.
+- [x] **Step 2: Implement atomic limiter.** Use a Redis Lua script that increments a hashed key and sets expiry only on first increment. Expose dependencies `limit_login`, `limit_advisor`, `limit_upload`; config supplies limits/windows.
+- [x] **Step 3: Apply dependencies.** Login uses client IP hash plus normalized email hash. Advisor uses user ID. Upload uses user ID plus client IP hash. Return `HTTP_429_TOO_MANY_REQUESTS` and header.
+- [x] **Step 4: Add audit events.** Record `login_success`, `logout`, `session_rejected`, `csrf_rejected`, `rate_limited`; only hashes/identifiers, never raw secrets or email.
+- [x] **Step 5: Run focused tests and full identity/advisor/documents integration tests.**
+- [x] **Step 6: Commit.** `git commit -m "feat: dodaj limity i audyt bezpieczeństwa"`
 
 ### Task 6: Frontend session UX
 
