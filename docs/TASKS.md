@@ -39,6 +39,13 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   runnera/Restic; backup `11fd2129` i drill `status=0/SUCCESS` potwierdziły
   pusty `root:root` `0700` parent, brak `finanse_restore` i journal bez
   sekretów.
+- [x] Restic cache dla timerów jest `root:root` `0700` pod
+  `/docker/finanse/data/restic-cache`, dzięki czemu zachowano `ProtectHome`.
+  Produkcyjny drill uruchamia wyłącznie `finanse-restore-verify.service`; target
+  Make pozostaje wewnętrzny dla wrappera.
+- [x] Cache runtime proof: backup `a6e89e9d` i rzeczywisty drill przeszły
+  `status=0/SUCCESS`; aktualne okno journala ma 0 komunikatów `unable to open
+  cache`, parent restore jest pusty, a `finanse_restore` nie istnieje.
 
 ---
 

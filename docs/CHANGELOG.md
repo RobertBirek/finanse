@@ -16,6 +16,10 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Restore wybiera snapshot wyłącznie przez `RESTORE_SNAPSHOT_ID`; legacy
   `snapshot=` jest fail-closed. Usługi i ręczne targety Makefile współdzielą
   lock, a usługi retry po 15 minutach, maksymalnie 3 starty w 3 godziny.
+- **Cache Restic dla timerów**: unit i Make używają
+  `/docker/finanse/data/restic-cache` (`root:root`, `0700`), zachowując
+  `ProtectHome=true`. Produkcyjny restore drill uruchamia wyłącznie service z
+  wrapperem; niskopoziomowy target Make jest wewnętrzny.
 - **Security baseline wdrożony**: produkcja używa fail-fast konfiguracji,
   zamkniętej rejestracji, unieważnialnych sesji server-side, CSRF/Origin,
   limitów Redis i zredagowanego audytu bezpieczeństwa. Backup Restic do
@@ -109,6 +113,11 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   utworzył `11fd2129`, a restore service zakończył się `status=0/SUCCESS`;
   parent restore pozostał pusty `root:root` `0700`, baza nie istnieje, journal
   nie zawiera sekretów.
+- Cache proof: backend `201 passed, 125 skipped`, frontend `129 passed`; lint,
+  typecheck i `git diff --check` PASS. Po instalacji cache `root:root` `0700`
+  backup utworzył `a6e89e9d`, a restore service zwrócił `status=0/SUCCESS`.
+  Bieżące okno journala nie zawiera `unable to open cache`; parent jest pusty,
+  `finanse_restore` nie istnieje, a logi nie zawierają sekretów.
 - Security baseline: backend `192 passed, 125 skipped`; integracyjne
   `125 passed`; frontend `129 passed`; Ruff, mypy, ESLint, TypeScript i build
   PASS. Snapshoty Contabo S3: `922d1aba` (przed migracją) i `63145774` (po

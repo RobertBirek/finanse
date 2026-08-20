@@ -4,7 +4,7 @@
 
 **Goal:** Automate the encrypted daily production backup and monthly isolated restore drill with systemd timers, safe cleanup and observable failures.
 
-**Architecture:** Versioned systemd unit templates and a restore-drill wrapper live in `ops/systemd/`. The explicit root-only installer copies units to `/etc/systemd/system`, installs the wrapper as `root:root` `0750` at `/usr/local/lib/finanse/run-restore-drill.sh`, and creates the persistent empty restore parent as `root:root` `0700`. The external `/docker/finanse/Makefile` remains the boundary that loads root-only environment files. Services and manual Make targets share the 15-minute host lock; services retry on failure after 15 minutes with at most three starts in three hours. The installed wrapper creates the guarded isolated database before verification and ownership-aware cleanup removes only the drill's exact outputs after success or failure. Restore selection uses `RESTORE_SNAPSHOT_ID`; legacy `snapshot=` is rejected before runner or Restic execution.
+**Architecture:** Versioned systemd unit templates and a restore-drill wrapper live in `ops/systemd/`. The explicit root-only installer copies units to `/etc/systemd/system`, installs the wrapper as `root:root` `0750` at `/usr/local/lib/finanse/run-restore-drill.sh`, and creates the persistent empty restore parent and Restic cache as `root:root` `0700`. The external `/docker/finanse/Makefile` remains the boundary that loads root-only environment files and sets `RESTIC_CACHE_DIR=/docker/finanse/data/restic-cache`. Services and manual backup targets share the 15-minute host lock; production restore drills use only the service, whose installed wrapper creates the guarded isolated database before verification and ownership-aware cleanup removes only the drill's exact outputs after success or failure. Restore selection uses `RESTORE_SNAPSHOT_ID`; legacy `snapshot=` is rejected before runner or Restic execution.
 
 **Tech Stack:** Bash, GNU Make, systemd 255 timers/services, flock, Restic, PostgreSQL client tools, pytest static/subprocess tests.
 
@@ -22,7 +22,7 @@
 | `ops/systemd/finanse-operation-failure@.service` | Secret-free journald alert for a failed operation. |
 | `ops/systemd/run-restore-drill.sh` | Source for the guarded invocation and ownership-aware cleanup installed outside the repository. |
 | `ops/systemd/install-timers.sh` | Root-only, idempotent installation of units, wrapper, persistent restore parent and timers. |
-| `/docker/finanse/Makefile` | Loads configuration for a manually usable `restore-verify` target; external infrastructure, not committed to this repository. |
+| `/docker/finanse/Makefile` | Loads configuration and the persistent Restic cache for backup and the wrapper's internal `restore-verify` target; external infrastructure, not committed to this repository. |
 | `docs/operations/backup-restore.md` | Installation, status, logs, manual run, disable and incident procedure. |
 | `docs/CHANGELOG.md`, `docs/TASKS.md`, `docs/JOURNAL.md` | Delivery record and operational status. |
 
@@ -331,7 +331,7 @@
   ```bash
   cd /opt/finanse/backend && .venv/bin/pytest tests/test_ops/test_backup_scripts.py -k 'restore_drill_wrapper or restore_script' -v
   bash -n /opt/finanse/ops/systemd/run-restore-drill.sh
-  RESTORE_SNAPSHOT_ID=latest make -C /docker/finanse -n restore-verify
+  # Production drills run only through finanse-restore-verify.service.
   ```
 
   Expected: focused tests PASS, Bash syntax exits 0, and dry-run emits no
@@ -523,7 +523,9 @@
 - **No-secret boundary:** unit files and Git contain no provider credentials;
   Makefile is the only external configuration boundary; tests inspect units for
   common secret assignments.
-- **Safety:** `RESTORE_SNAPSHOT_ID` is the only restore selector and the legacy
+- **Safety:** production drills run only through the installed systemd wrapper,
+  which alone creates and removes `finanse_restore`. `RESTORE_SNAPSHOT_ID` is
+  the only internal restore selector and the legacy
   `snapshot=` assignment fails before a runner or Restic process can start. The
   wrapper creates only the literal guarded `finanse_restore`
   target, and ownership-aware cleanup removes its exact database and outputs
@@ -533,7 +535,13 @@
   `ReadWritePaths` require the live manual service run in Task 4; if Docker or
   Restic needs another write location, add only that exact location, document
   it and add a regression assertion before rerunning the service.
+- **Cache hardening:** units and Make use the root-owned `0700`
+  `/docker/finanse/data/restic-cache`, preserving `ProtectHome=true` and
+  avoiding any cache write below `/root`.
 - **Final runtime evidence:** `snapshot=deadbeef` returned code 2 with an
   invalid `PATH`, proving rejection before runner/Restic. The hardened services
   then created snapshot `11fd2129` and completed the real isolated drill with
   an empty `root:root` `0700` parent and no `finanse_restore` database.
+- **Cache runtime evidence:** installer created `restic-cache` as `root:root`
+  `0700`; snapshot `a6e89e9d` and the real service drill succeeded, and the
+  drill journal window contained no `unable to open cache` entry.

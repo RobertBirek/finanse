@@ -41,6 +41,17 @@ na VPS.
   `2026-08-20T21:30:56.257585672+02:00`; restore service zwrócił
   `status=0/SUCCESS`. Po cleanupie parent jest pusty `root:root` `0700`,
   `finanse_restore` nie istnieje, a status i journal nie zawierały sekretów.
+- Cache fix: cache Restic działa pod `/docker/finanse/data/restic-cache`
+  (`root:root`, `0700`) przez unit i Make, bez osłabiania `ProtectHome`.
+  Produkcyjny restore drill pozostaje wyłącznie operacją
+  `finanse-restore-verify.service`; Make jest wewnętrzną zależnością wrappera.
+- Cache runtime proof: świeże `make test` dało backend `201 passed, 125
+  skipped` i frontend `129 passed`; lint, typecheck i `git diff --check`
+  przeszły. Installer potwierdził cache `root:root` `0700`; backup utworzył
+  `a6e89e9d` o `2026-08-20T22:22:38.447541219+02:00`, a realny drill zwrócił
+  `status=0/SUCCESS`. Bieżące okno journala ma 0 wpisów `unable to open cache`.
+  Parent restore jest pusty `root:root` `0700`, `finanse_restore` nie istnieje,
+  a status i journal nie zawierały sekretów.
 
 ---
 

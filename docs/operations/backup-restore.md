@@ -42,7 +42,6 @@ provisioned external Makefile targets without executing them with:
 
 ```bash
 make -C /docker/finanse -n backup
-RESTORE_SNAPSHOT_ID=<id> make -C /docker/finanse -n restore-verify
 ```
 
 The archive command is:
@@ -69,10 +68,13 @@ not a source of truth; PostgreSQL is the source of truth.
 
 ## Restore Drill
 
-Run a monthly isolated restore drill with
-`RESTORE_SNAPSHOT_ID=<id> make -C /docker/finanse restore-verify`. Omitting
-`RESTORE_SNAPSHOT_ID` uses `latest`. The legacy `snapshot=<id>` variable is
-explicitly rejected before any restore runner or Restic process starts.
+Run a production restore drill only with
+`sudo systemctl start finanse-restore-verify.service`. Its installed root-only
+wrapper creates and removes the guarded `finanse_restore` database. The
+low-level `make restore-verify` target is an internal wrapper dependency, not a
+standalone production drill. The wrapper supplies `RESTORE_SNAPSHOT_ID=latest`;
+legacy `snapshot=<id>` is explicitly rejected before any restore runner or
+Restic process starts.
 
 The verification script requires `RESTIC_REPOSITORY`, `RESTIC_PASSWORD_FILE`,
 `RESTORE_DATABASE_URL_SYNC`, `RESTORE_DIR`, and `PGPASSFILE`. Both database URLs
@@ -116,7 +118,7 @@ sudo systemctl disable --now finanse-backup.timer finanse-restore-verify.timer
 `Europe/Warsaw`. Both timers use `Persistent=true`. The one-shot services share
 a 15-minute `flock`, so backup and drill never overlap. Failures activate the
 secret-free `finanse-operation-failure@.service` journal unit. The same shared
-lock wraps manual `make backup` and `make restore-verify` targets. Failed
+lock wraps manual `make backup` and the internal restore target. Failed
 services retry after 15 minutes, with at most three starts in three hours.
 
 The installer places the restore wrapper at
@@ -124,8 +126,11 @@ The installer places the restore wrapper at
 `0750`; the restore service invokes this installed path, not an executable in
 the repository. It also creates the persistent, empty
 `/docker/finanse/data/restore-drill` parent as `root:root` mode `0700`, required
-by the service sandbox. The wrapper creates `finanse_restore` on the loopback
-PostgreSQL endpoint before verification. It never restores to production.
+by the service sandbox. It creates `RESTIC_CACHE_DIR=/docker/finanse/data/restic-cache`
+as `root:root` mode `0700`, which systemd and Make both use; this preserves
+`ProtectHome=true` without a Restic cache under `/root`. The wrapper creates
+`finanse_restore` on the loopback PostgreSQL endpoint before verification. It
+never restores to production.
 
 On success or verifier failure, ownership-aware cleanup removes only the exact
 `finanse_restore` database and restore output it created, retaining the empty

@@ -36,8 +36,9 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 - Skrypt instalacyjny kopiuje jawnie wskazane unity do
   `/etc/systemd/system/`, instaluje wrapper jako `root:root` `0750` pod
   `/usr/local/lib/finanse/run-restore-drill.sh`, tworzy pusty parent restore
-  jako `root:root` `0700`, wykonuje `systemctl daemon-reload` oraz włącza oba
-  timery. Nie tworzy ani nie modyfikuje sekretów.
+  jako `root:root` `0700` oraz cache Restic jako `root:root` `0700` pod
+  `/docker/finanse/data/restic-cache`, wykonuje `systemctl daemon-reload` oraz
+  włącza oba timery. Nie tworzy ani nie modyfikuje sekretów.
 - Instalacja wymaga roota i jest wykonywana tylko jawnie przez operatora.
 - Dokumentacja operacyjna opisze instalację, weryfikację, ręczne uruchomienie,
   przegląd logów oraz bezpieczne wyłączenie timerów.
@@ -64,7 +65,8 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
   `/usr/local/lib/finanse/run-restore-drill.sh`, a nie bezpośrednio plik z
   repozytorium. Wrapper wybiera `latest` przez istniejący target.
 - Target restore jawnie załaduje te same root-only zmienne konfiguracji co
-  backup. Snapshot wybiera wyłącznie `RESTORE_SNAPSHOT_ID`; legacy
+  backup. Jest wewnętrzną zależnością wrappera, a nie operacyjnym entrypointem.
+  Snapshot wybiera wyłącznie `RESTORE_SNAPSHOT_ID`; legacy
   `snapshot=` jest odrzucane przed uruchomieniem runnera lub Restic. Nigdy nie
   interpoluje sekretów do argumentów procesu ani logów.
 - Wrapper tworzy `finanse_restore` na `127.0.0.1:55431` przed weryfikacją;
@@ -96,6 +98,8 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 - Zostaną ustawione co najmniej `NoNewPrivileges=true`, `PrivateTmp=true`,
   `UMask=0077`, ograniczony `ReadWritePaths` do katalogów roboczych i restore
   oraz jawny `WorkingDirectory=/docker/finanse`.
+- `RESTIC_CACHE_DIR=/docker/finanse/data/restic-cache` jest ustawione w unitach
+  i Makefile; dozwolony `ReadWritePaths` dla cache zachowuje `ProtectHome=true`.
 - Restrykcje, które blokowałyby wykonanie klienta Docker lub dostęp do
   root-only sekretów, nie będą deklarowane pozornie; zostaną zweryfikowane
   testowym uruchomieniem usługi.
@@ -103,13 +107,14 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 ## Przepływ danych
 
 1. Timer uruchamia service o zaplanowanej porze w `Europe/Warsaw`.
-2. Service lub ręczny target Makefile uzyskuje wspólny lock.
-3. Makefile ładuje lokalne pliki środowiskowe bez ich wypisywania.
+2. Service lub ręczny target backupu Makefile uzyskuje wspólny lock.
+3. Makefile ładuje lokalne pliki środowiskowe oraz cache Restic bez ich
+   wypisywania.
 4. Backup tworzy dump, archiwum uploadów i manifest, a Restic wysyła
    zaszyfrowany snapshot oraz stosuje retencję.
 5. Root-only wrapper tworzy izolowaną bazę, przekazuje
-   `RESTORE_SNAPSHOT_ID=latest` i wykonuje fail-closed odtworzenie wyłącznie do
-   izolowanego celu.
+   `RESTORE_SNAPSHOT_ID=latest` do wewnętrznego targetu i wykonuje fail-closed
+   odtworzenie wyłącznie do izolowanego celu.
 6. Exit status trafia do systemd i journald; błąd aktywuje failure unit.
 
 ## Weryfikacja
@@ -124,6 +129,9 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 - Finalny proof po hardeningu retry/lock utworzył snapshot `11fd2129`; legacy
   `snapshot=deadbeef` został odrzucony kodem 2 przed runnerem/Restic, a restore
   service zakończył się sukcesem z pustym parentem i bez `finanse_restore`.
+- Cache-aware proof utworzył snapshot `a6e89e9d`; drill zakończył się sukcesem
+  bez wpisu `unable to open cache` w bieżącym oknie journala, zachowując pusty
+  parent, brak `finanse_restore` oraz `ProtectHome=true`.
 - Test błędnej konfiguracji musi kończyć usługę non-zero i tworzyć zdarzenie
   failure bez ujawnienia sekretu.
 
