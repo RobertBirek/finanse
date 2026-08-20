@@ -112,7 +112,10 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
     assert 'verify_checksum "postgres.dump" "$expected_postgres_sha256"' in content
     assert 'verify_checksum "uploads.tar.gz" "$expected_uploads_sha256"' in content
     assert 'tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$restore_staging_dir/uploads"' in content
-    assert 'pg_restore --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"' in content
+    assert (
+        'pg_restore --dbname="$pg_database" --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"'
+        in content
+    )
     assert '"$RESTORE_DATABASE_URL_SYNC"' not in content.split("pg_restore", maxsplit=1)[1]
     assert '"$repo_root/backend/.venv/bin/alembic" heads' in content
     assert 'manifest_alembic_revision="$(manifest_field "alembic_revision")"' in content
@@ -124,7 +127,9 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
     assert '[[ "$upgraded_alembic_revision" == "$current_alembic_revision" ]]' in content
     assert content.index(
         'manifest_alembic_revision="$(manifest_field "alembic_revision")"'
-    ) < content.index('pg_restore --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"')
+    ) < content.index(
+        'pg_restore --dbname="$pg_database" --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"'
+    )
     assert content.index(
         '[[ "$restored_alembic_revision" == "$manifest_alembic_revision" ]]'
     ) < content.index(
@@ -144,7 +149,9 @@ def test_restore_script_verifies_snapshot_before_database_or_upload_changes():
     ) < content.index('tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$restore_staging_dir/uploads"')
     assert content.index(
         'verify_checksum "postgres.dump" "$expected_postgres_sha256"'
-    ) < content.index('pg_restore --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"')
+    ) < content.index(
+        'pg_restore --dbname="$pg_database" --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"'
+    )
     assert "eval" not in content
 
 
@@ -310,7 +317,7 @@ def test_failed_pg_restore_removes_only_created_uploads(tmp_path: Path):
     write_fake_command(
         fake_bin,
         "pg_restore",
-        'mkdir -p "$RESTORE_DIR/uploads"; : > "$RESTORE_DIR/uploads/sentinel"; exit 1',
+        '[[ "$*" == *"--dbname=finanse_restore"* ]] || exit 2\n[[ "$*" == *"postgres.dump"* ]] || exit 2\n[[ "$*" != *"postgresql://"* ]] || exit 2\nmkdir -p "$RESTORE_DIR/uploads"; : > "$RESTORE_DIR/uploads/sentinel"; exit 1',
     )
     environment["RESTIC_PAYLOAD"] = str(payload)
 

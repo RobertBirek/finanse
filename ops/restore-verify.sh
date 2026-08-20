@@ -126,7 +126,7 @@ tar -xzf "$snapshot_dir/uploads.tar.gz" -C "$restore_staging_dir/uploads"
 
 printf '%s\n' "Restoring database"
 PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
-    pg_restore --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"
+    pg_restore --dbname="$pg_database" --clean --if-exists --no-owner "$snapshot_dir/postgres.dump"
 
 printf '%s\n' "Checking schema revision"
 restored_alembic_revision="$(PGHOST="$pg_host" PGPORT="$pg_port" PGUSER="$pg_user" PGDATABASE="$pg_database" PGPASSFILE="$PGPASSFILE" \
