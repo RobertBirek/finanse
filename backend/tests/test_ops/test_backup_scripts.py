@@ -157,6 +157,9 @@ def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> 
     assert content.index("createdb") < content.index("restore-verify snapshot=latest")
     assert content.index("restore-verify snapshot=latest") < content.rindex(guarded_dropdb)
     assert content.rindex(guarded_dropdb) < content.rindex('rm -rf -- "$RESTORE_DIRECTORY/uploads"')
+    assert content.rindex('rm -rf -- "$RESTORE_DIRECTORY/uploads"') < content.rindex(
+        "restore_database_created=false"
+    )
     assert "restore_database_created=false" in content
     assert "restore_database_created=true" in content
     assert "trap cleanup EXIT" in content
