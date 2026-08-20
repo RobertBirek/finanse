@@ -88,16 +88,19 @@ describe("Login", () => {
     },
   );
 
-  it("falls back to today instead of returning to login after successful login", async () => {
-    mutate.mockImplementation((_values, options) => {
-      options.onSuccess();
-    });
-    renderLogin("/login");
+  it.each(["/login", "/login/", "/login//", "/login///?x=1#y"])(
+    "falls back to today instead of returning to login variant %s",
+    async (returnTo) => {
+      mutate.mockImplementation((_values, options) => {
+        options.onSuccess();
+      });
+      renderLogin(returnTo);
 
-    submitLogin();
+      submitLogin();
 
-    await waitFor(() => {
-      expect(screen.getByText("/today")).toBeInTheDocument();
-    });
-  });
+      await waitFor(() => {
+        expect(screen.getByText("/today")).toBeInTheDocument();
+      });
+    },
+  );
 });

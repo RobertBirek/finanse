@@ -4,14 +4,12 @@ import { useLogin } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
 
 function getSafeReturnTo(returnTo: string | null): string {
-  if (
-    !returnTo ||
-    !/^\/(?!\/)/.test(returnTo) ||
-    returnTo.includes("\\") ||
-    returnTo.split(/[?#]/)[0] === "/login"
-  ) {
+  if (!returnTo || !/^\/(?!\/)/.test(returnTo) || returnTo.includes("\\")) {
     return "/today";
   }
+
+  const { pathname } = new URL(returnTo, window.location.origin);
+  if (/^\/login\/*$/.test(pathname)) return "/today";
 
   return returnTo;
 }
