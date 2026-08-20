@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException
 from openai import OpenAIError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,14 +17,13 @@ from app.advisor.service import (
     get_user_conversations,
     send_message,
 )
-from app.audit.service import log_security_event
-from app.config import settings
 from app.database import get_db
 from app.identity.models import User
 from app.identity.router import get_current_user
-from app.security.rate_limit import RateLimitUnavailable, check_rate_limit
+from app.security.rate_limit import limit_advisor
 
 router = APIRouter()
+advisor_rate_limit = limit_advisor(get_current_user)
 
 
 class _MutationResultError(Exception):
@@ -65,32 +64,9 @@ async def list_messages(
 async def send_message_endpoint(
     data: SendMessageRequest,
     current_user: Annotated[User, Depends(get_current_user)],
-    request: Request,
+    _limit: Annotated[None, Depends(advisor_rate_limit)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    try:
-        limit = await check_rate_limit(
-            "advisor",
-            str(current_user.id),
-            settings.ADVISOR_RATE_LIMIT,
-            settings.ADVISOR_RATE_LIMIT_WINDOW_SECONDS,
-        )
-    except RateLimitUnavailable:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service unavailable"
-        )
-    if not limit.allowed:
-        await log_security_event(
-            "rate_limited",
-            limit.identifier_hash,
-            user_id=current_user.id,
-            state={"scope": "advisor", "identifier_hash": limit.identifier_hash},
-        )
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Request limit exceeded",
-            headers={"Retry-After": str(limit.retry_after)},
-        )
     try:
         assistant_msg = await send_message(
             db,

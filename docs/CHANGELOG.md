@@ -102,6 +102,11 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Nie wykonano migracji produkcyjnej ani deployu dla ręcznego księgowania.
 
 ### Fixed
+- **Security baseline — limity za reverse proxy**: backend akceptuje pierwszy adres
+  `X-Forwarded-For` wyłącznie od aktualnie rozwiązanego kontenera `frontend`; błędny
+  łańcuch lub bezpośredni peer pozostaje nierozpoznanym peerem. Limity logowania,
+  Advisora i uploadu są współdzielonymi zależnościami FastAPI. Backend usunięto z
+  zewnętrznej sieci `proxy`; frontend pozostaje jedynym ingress do API.
 - `PATCH /accounts/{id}` odświeża konto przed zwróceniem odpowiedzi
   (`db.refresh`), eliminując MissingGreenlet na `updated_at` po flush UPDATE
   (analogicznie do naprawionego wcześniej PATCH kategorii).

@@ -36,10 +36,12 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "deepseek-v4-pro"
     CORS_ORIGINS: str = DEFAULT_CORS_ORIGINS
     TRUSTED_ORIGINS: str | None = None
+    TRUSTED_PROXY_HOSTS: str = "frontend"
     ENVIRONMENT: str = "development"
     STIRLING_PDF_URL: str = "http://stirling-pdf:8080"
 
     _trusted_origins: tuple[str, ...] = PrivateAttr(default=())
+    _trusted_proxy_hosts: tuple[str, ...] = PrivateAttr(default=())
 
     @staticmethod
     def _parse_origins(value: Any, setting_name: str) -> list[str]:
@@ -120,6 +122,12 @@ class Settings(BaseSettings):
 
         return tuple(normalized)
 
+    @classmethod
+    def _validate_trusted_proxy_hosts(cls, hosts: str) -> tuple[str, ...]:
+        return tuple(
+            cls._normalize_hostname(host.strip()) for host in hosts.split(",") if host.strip()
+        )
+
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
         raw_origins = self.TRUSTED_ORIGINS
@@ -130,8 +138,11 @@ class Settings(BaseSettings):
         self._trusted_origins = self._validate_trusted_origins(
             self._parse_origins(raw_origins, source_name)
         )
+        self._trusted_proxy_hosts = self._validate_trusted_proxy_hosts(self.TRUSTED_PROXY_HOSTS)
 
         if self.ENVIRONMENT == "production":
+            if not self.trusted_proxy_hosts:
+                raise ValueError("TRUSTED_PROXY_HOSTS must contain at least one host in production")
             insecure_keys = {
                 "",
                 "change-me-in-production-use-a-real-secret-key",
@@ -157,6 +168,10 @@ class Settings(BaseSettings):
     @property
     def trusted_origins(self) -> tuple[str, ...]:
         return self._trusted_origins
+
+    @property
+    def trusted_proxy_hosts(self) -> tuple[str, ...]:
+        return self._trusted_proxy_hosts
 
 
 settings = Settings()

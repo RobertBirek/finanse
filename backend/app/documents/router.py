@@ -1,20 +1,19 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit.service import log_security_event
-from app.config import settings
 from app.database import get_db
 from app.documents import service
 from app.documents.schemas import DocumentResponse, DocumentTextResponse, DocumentUploadResponse
 from app.identity.models import User
 from app.identity.router import get_current_user
-from app.security.rate_limit import RateLimitUnavailable, check_rate_limit
+from app.security.rate_limit import limit_upload
 
 router = APIRouter()
+upload_rate_limit = limit_upload(get_current_user)
 MAX_FILE_SIZE = 20 * 1024 * 1024
 ALLOWED_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png"}
 
@@ -23,33 +22,9 @@ ALLOWED_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png"}
 async def upload_document(
     file: Annotated[UploadFile, File(...)],
     current_user: Annotated[User, Depends(get_current_user)],
-    request: Request,
+    _limit: Annotated[None, Depends(upload_rate_limit)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    client_ip = request.client.host if request.client is not None else "unknown"
-    try:
-        limit = await check_rate_limit(
-            "upload",
-            f"{current_user.id}|{client_ip}",
-            settings.UPLOAD_RATE_LIMIT,
-            settings.UPLOAD_RATE_LIMIT_WINDOW_SECONDS,
-        )
-    except RateLimitUnavailable:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service unavailable"
-        )
-    if not limit.allowed:
-        await log_security_event(
-            "rate_limited",
-            limit.identifier_hash,
-            user_id=current_user.id,
-            state={"scope": "upload", "identifier_hash": limit.identifier_hash},
-        )
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Request limit exceeded",
-            headers={"Retry-After": str(limit.retry_after)},
-        )
     if file.content_type not in ALLOWED_MIME_TYPES:
         return JSONResponse(
             content={

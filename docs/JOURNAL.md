@@ -3,6 +3,35 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-08-20 -- Sesja 31: Security Baseline Task 5 review fixes
+
+### Cel sesji
+Usunąć trzy ustalenia przeglądu Task 5: zaufanie do adresu klienta za npmplus,
+duplikację limiterów w routerach oraz braki pokrycia tras/audytu.
+
+### Co zrobiono
+- `get_client_ip` rozwiązuje wyłącznie skonfigurowane hosty proxy (`frontend`),
+  honoruje pierwszy poprawny adres `X-Forwarded-For` tylko dla zaufanego peera i
+  odrzuca błędne łańcuchy do adresu peera.
+- Limity loginu, Advisora i uploadu są zależnościami FastAPI z jednym flow 429/503
+  oraz zredagowanym audytem; testy obejmują rzeczywiste trasy Advisora/uploadu i
+  odrzuconą sesję.
+- Backend usunięto z sieci `proxy`; frontend ma `proxy` i `internal` także po
+  połączeniu override produkcyjnego. Nie zmieniono nginx, ponieważ używa już
+  `$proxy_add_x_forwarded_for`.
+
+### Weryfikacja
+- TDD RED: brak resolvera zaufanego proxy i `limit_login`; GREEN: focused security
+  `16 passed`.
+- Backend unit: `187 passed, 125 skipped`; integration: `125 passed, 187 deselected`.
+  Ruff i mypy PASS; merged Compose config PASS bez wypisywania sekretów.
+- Nie wykonano deployu, migracji ani operacji na produkcji; kontener testowy usunięty.
+
+### Następna sesja
+Wdrożenie tej zmiany pozostaje osobno autoryzowaną operacją.
+
+---
+
 ## 2026-08-19 -- Sesja 30: Security Baseline Task 1
 
 ### Cel sesji

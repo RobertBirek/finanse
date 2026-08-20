@@ -6,6 +6,17 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Task 5 — Security Baseline: limity i audyt za reverse proxy (2026-08-20)
+
+- [x] Backend przyjmuje `X-Forwarded-For` wyłącznie od adresu DNS zaufanego
+  kontenera frontend; błędny/spoofowany łańcuch wraca do peera.
+- [x] Limity loginu, Advisora i uploadu są zależnościami FastAPI; odrzucenia 429
+  zapisują niezależny, zredagowany event audytu.
+- [x] Backend jest wyłącznie na `internal`; frontend jest jedynym serwisem na
+  `proxy` i `internal`. Zweryfikowano konfigurację Compose bez deployu.
+
+---
+
 ## Task 1 -- Security Baseline: backup i weryfikacja odtworzenia (2026-08-19)
 
 - [x] Wersjonowane skrypty Restic wykonują prywatny snapshot PostgreSQL i uploads

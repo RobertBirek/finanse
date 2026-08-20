@@ -1,9 +1,11 @@
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
+from starlette.requests import Request
 
 from app.audit.models import AuditEvent
 from app.database import get_db
@@ -23,6 +25,65 @@ class FakeRedis:
         self.calls.append((script, key_count, key, window_seconds))
         self.counts[key] = self.counts.get(key, 0) + 1
         return [self.counts[key], int(window_seconds)]
+
+
+def request_from(peer_ip: str, forwarded_for: str | None = None) -> Request:
+    headers = [] if forwarded_for is None else [(b"x-forwarded-for", forwarded_for.encode())]
+    return Request({"type": "http", "client": (peer_ip, 1234), "headers": headers})
+
+
+def trusted_proxy_resolver(_hosts: tuple[str, ...]) -> set[str]:
+    return {"172.20.0.3"}
+
+
+def test_trusted_frontend_uses_the_first_forwarded_client_ip(monkeypatch):
+    from app.security import rate_limit
+
+    monkeypatch.setattr(rate_limit, "resolve_trusted_proxy_hosts", trusted_proxy_resolver)
+
+    assert (
+        rate_limit.get_client_ip(request_from("172.20.0.3", "198.51.100.8, 10.0.0.4"))
+        == "198.51.100.8"
+    )
+
+
+def test_untrusted_peer_cannot_spoof_forwarded_client_ip(monkeypatch):
+    from app.security import rate_limit
+
+    monkeypatch.setattr(rate_limit, "resolve_trusted_proxy_hosts", trusted_proxy_resolver)
+
+    assert rate_limit.get_client_ip(request_from("198.51.100.9", "203.0.113.99")) == "198.51.100.9"
+
+
+def test_malformed_forwarded_chain_falls_back_to_trusted_peer(monkeypatch):
+    from app.security import rate_limit
+
+    monkeypatch.setattr(rate_limit, "resolve_trusted_proxy_hosts", trusted_proxy_resolver)
+
+    assert (
+        rate_limit.get_client_ip(request_from("172.20.0.3", "198.51.100.8, invalid"))
+        == "172.20.0.3"
+    )
+
+
+@pytest.mark.asyncio
+async def test_login_dependency_hashes_the_forwarded_client_ip(monkeypatch):
+    from app.identity.schemas import UserLogin
+    from app.security import rate_limit
+
+    redis = FakeRedis()
+    monkeypatch.setattr(rate_limit.settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(rate_limit.settings, "SECRET_KEY", "s" * 32)
+    monkeypatch.setattr(rate_limit, "resolve_trusted_proxy_hosts", trusted_proxy_resolver)
+    monkeypatch.setattr(rate_limit, "get_redis_client", lambda: redis)
+
+    await rate_limit.limit_login(
+        request_from("172.20.0.3", "198.51.100.8"),
+        UserLogin(email="person@example.com", password="TestPass123!"),
+    )
+
+    assert rate_limit.hash_identifier("198.51.100.8|person@example.com") in redis.calls[0][2]
+    assert "172.20.0.3" not in redis.calls[0][2]
 
 
 @pytest.mark.asyncio
@@ -207,6 +268,68 @@ async def test_redis_outage_rejects_mutations_but_not_gets(
 
     assert [response.status_code for response in (login, advisor, upload)] == [503, 503, 503]
     assert get_response.status_code == 200
+
+
+@pytest.mark.integration
+async def test_advisor_and_upload_routes_audit_their_own_limit_rejections(
+    rate_limit_client, db_session, monkeypatch, production_rate_limit_settings
+):
+    from app.security import rate_limit
+
+    user = await create_user(
+        db_session,
+        UserCreate(email="limits@example.com", password="TestPass123!", display_name="Limits"),
+    )
+    session_token, csrf_token, _ = await create_session(db_session, user.id)
+    await db_session.commit()
+    redis = FakeRedis()
+    monkeypatch.setattr(rate_limit, "get_redis_client", lambda: redis)
+    monkeypatch.setattr(rate_limit, "resolve_trusted_proxy_hosts", lambda _hosts: set())
+    monkeypatch.setattr("app.worker.enqueue_process_document", AsyncMock())
+    headers = {
+        "Origin": TRUSTED_ORIGIN,
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"advisor_session={session_token}; advisor_csrf={csrf_token}",
+    }
+    advisor_key = f"security:rate-limit:v1:advisor:{rate_limit.hash_identifier(str(user.id))}"
+    upload_key = (
+        f"security:rate-limit:v1:upload:{rate_limit.hash_identifier(f'{user.id}|127.0.0.1')}"
+    )
+    redis.counts.update({advisor_key: 1, upload_key: 1})
+
+    advisor = await rate_limit_client.post(
+        "/api/advisor/messages", headers=headers, json={"content": "hi"}
+    )
+    upload = await rate_limit_client.post(
+        "/api/documents/upload",
+        headers=headers,
+        files={"file": ("receipt.pdf", b"%PDF", "application/pdf")},
+    )
+
+    events = (
+        (await db_session.execute(select(AuditEvent).order_by(AuditEvent.created_at)))
+        .scalars()
+        .all()
+    )
+    assert redis.calls[-1][2] == upload_key
+    assert advisor.status_code == upload.status_code == 429
+    assert advisor.headers["retry-after"] == upload.headers["retry-after"] == "60"
+    assert [event.new_state["scope"] for event in events] == ["advisor", "upload"]
+    assert all("127.0.0.1" not in str(event.new_state) for event in events)
+    assert all("limits@example.com" not in str(event.new_state) for event in events)
+
+
+@pytest.mark.integration
+async def test_rejected_session_audit_is_opaque(rate_limit_client, db_session):
+    rejected = await rate_limit_client.get(
+        "/api/documents", headers={"Cookie": "advisor_session=raw-session-token"}
+    )
+
+    events = (await db_session.execute(select(AuditEvent))).scalars().all()
+    assert rejected.status_code == 401
+    assert rejected.json() == {"detail": "Not authenticated"}
+    assert [event.action for event in events] == ["session_rejected"]
+    assert "raw-session-token" not in events[0].entity_id
 
 
 @pytest.mark.integration

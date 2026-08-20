@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import log_security_event
@@ -18,7 +18,7 @@ from app.identity.service import (
     get_user_by_id,
     revoke_session,
 )
-from app.security.rate_limit import RateLimitUnavailable, check_rate_limit
+from app.security.rate_limit import limit_login
 
 router = APIRouter()
 
@@ -96,34 +96,9 @@ async def register(
 async def login(
     data: UserLogin,
     response: Response,
-    request: Request,
+    _limit: Annotated[None, Depends(limit_login)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    client_ip = request.client.host if request.client is not None else "unknown"
-    identifier = f"{client_ip}|{data.email.strip().lower()}"
-    try:
-        limit = await check_rate_limit(
-            "login",
-            identifier,
-            settings.LOGIN_RATE_LIMIT,
-            settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS,
-        )
-    except RateLimitUnavailable:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service unavailable"
-        )
-    if not limit.allowed:
-        await log_security_event(
-            "rate_limited",
-            limit.identifier_hash,
-            state={"scope": "login", "identifier_hash": limit.identifier_hash},
-        )
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Request limit exceeded",
-            headers={"Retry-After": str(limit.retry_after)},
-        )
-
     user = await authenticate(db, data.email, data.password)
     if user is None:
         raise HTTPException(

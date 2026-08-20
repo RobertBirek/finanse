@@ -17,6 +17,7 @@ TASK2_ENVIRONMENT_VARIABLES = (
     "ADVISOR_RATE_LIMIT_WINDOW_SECONDS",
     "UPLOAD_RATE_LIMIT",
     "UPLOAD_RATE_LIMIT_WINDOW_SECONDS",
+    "TRUSTED_PROXY_HOSTS",
     "SECRET_KEY",
 )
 
@@ -54,6 +55,16 @@ def test_production_accepts_a_distinct_32_character_secret(make_settings) -> Non
     )
 
     assert settings.SECRET_KEY == "s" * 32
+
+
+def test_production_requires_at_least_one_trusted_proxy_host(make_settings) -> None:
+    with pytest.raises(ValidationError, match="TRUSTED_PROXY_HOSTS"):
+        make_settings(
+            ENVIRONMENT="production",
+            SECRET_KEY="s" * 32,
+            TRUSTED_ORIGINS="https://app.example",
+            TRUSTED_PROXY_HOSTS="",
+        )
 
 
 def test_production_always_disables_registration(make_settings) -> None:
