@@ -1,8 +1,8 @@
 # Backup And Restore Verification
 
-`ops/backup.sh` can send PostgreSQL and uploads snapshots to a configured
-encrypted Restic repository. No Restic credentials are configured, and no
-backup or restore has been performed.
+`ops/backup.sh` sends PostgreSQL and uploads snapshots to the configured,
+encrypted Restic repository. Credentials remain only in root-only files outside
+Git.
 
 ## Ingress Network Rollout
 
@@ -95,3 +95,37 @@ private `.restore-run.*` staging directory under it; only after all database and
 ledger checks pass is that staging `uploads` directory moved into
 `RESTORE_DIR/uploads`. On failure, cleanup removes only the exact staging
 directory and never a pre-existing or concurrently created user path.
+
+## Automatyzacja systemd
+
+Install the root-only systemd automation and inspect or operate it with:
+
+```bash
+sudo /opt/finanse/ops/systemd/install-timers.sh
+systemctl list-timers --all finanse-backup.timer finanse-restore-verify.timer
+sudo systemctl start finanse-backup.service
+sudo journalctl -u finanse-backup.service -n 100 --no-pager
+sudo systemctl start finanse-restore-verify.service
+sudo journalctl -u finanse-restore-verify.service -n 100 --no-pager
+sudo systemctl disable --now finanse-backup.timer finanse-restore-verify.timer
+```
+
+`finanse-backup.timer` runs daily at 02:30 and
+`finanse-restore-verify.timer` on the first Sunday at 04:30, both in
+`Europe/Warsaw`. Both timers use `Persistent=true`. The one-shot services share
+a 15-minute `flock`, so backup and drill never overlap. Failures activate the
+secret-free `finanse-operation-failure@.service` journal unit.
+
+The installer places the restore wrapper at
+`/usr/local/lib/finanse/run-restore-drill.sh`, owned by `root:root` with mode
+`0750`; the restore service invokes this installed path, not an executable in
+the repository. It also creates the persistent, empty
+`/docker/finanse/data/restore-drill` parent as `root:root` mode `0700`, required
+by the service sandbox. The wrapper creates `finanse_restore` on the loopback
+PostgreSQL endpoint before verification. It never restores to production.
+
+On success or verifier failure, ownership-aware cleanup removes only the exact
+`finanse_restore` database and restore output it created, retaining the empty
+parent directory for systemd. Unexpected nonempty parent state must be
+investigated through the failure journal before a manual rerun. No command,
+unit, or journal entry contains secrets.

@@ -1,7 +1,7 @@
 # Automatyczny backup i restore drill — projekt
 
 **Data:** 2026-08-20  
-**Status:** zaakceptowany projekt — oczekuje na review dokumentu  
+**Status:** wdrożone i zweryfikowane na VPS
 **Cel:** codziennie wykonywać zaszyfrowany backup produkcyjnej bazy PostgreSQL
 i uploadów oraz raz w miesiącu wykonywać izolowany restore drill.
 
@@ -33,9 +33,11 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 ### Wersjonowane definicje i instalacja
 
 - Definicje unitów będą wersjonowane w repozytorium w `ops/systemd/`.
-- Skrypt instalacyjny skopiuje jawnie wskazane unity do
-  `/etc/systemd/system/`, wykona `systemctl daemon-reload` oraz włączy oba
-  timery. Nie będzie tworzył ani modyfikował sekretów.
+- Skrypt instalacyjny kopiuje jawnie wskazane unity do
+  `/etc/systemd/system/`, instaluje wrapper jako `root:root` `0750` pod
+  `/usr/local/lib/finanse/run-restore-drill.sh`, tworzy pusty parent restore
+  jako `root:root` `0700`, wykonuje `systemctl daemon-reload` oraz włącza oba
+  timery. Nie tworzy ani nie modyfikuje sekretów.
 - Instalacja wymaga roota i jest wykonywana tylko jawnie przez operatora.
 - Dokumentacja operacyjna opisze instalację, weryfikację, ręczne uruchomienie,
   przegląd logów oraz bezpieczne wyłączenie timerów.
@@ -56,20 +58,19 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 - `finanse-restore-verify.timer` użyje
   `OnCalendar=Sun *-*-01..07 04:30:00 Europe/Warsaw`, co oznacza pierwszą
   niedzielę miesiąca, oraz `Persistent=true`.
-- `finanse-restore-verify.service` pobierze identyfikator najnowszego
-  snapshotu wyłącznie przez Restic i wywoła wersjonowany target
-  `restore-verify` z tym identyfikatorem.
+- `finanse-restore-verify.service` wywołuje zainstalowany root-only wrapper
+  `/usr/local/lib/finanse/run-restore-drill.sh`, a nie bezpośrednio plik z
+  repozytorium. Wrapper wybiera `latest` przez istniejący target.
 - Target restore jawnie załaduje te same root-only zmienne konfiguracji co
   backup. Nigdy nie interpoluje ich do argumentów procesu ani logów.
-- Weryfikacja odtwarza dane tylko do `finanse_restore` na `127.0.0.1:55431`,
-  porównuje checksumy i rewizje, aplikuje migracje oraz kontroluje double-entry
-  invariant.
-- Dedykowany wrapper schedulera po sukcesie drillu usuwa wyłącznie dokładny,
-  wcześniej utworzony katalog `RESTORE_DIR/uploads` i bazę
-  `finanse_restore`. Przed usunięciem ponownie wymaga loopbackowego hosta,
-  dokładnej nazwy bazy i katalogu pod `/docker/finanse/data/restore-drill`.
-  Nieudane czyszczenie jest błędem usługi i nie dopuszcza następnego drillu do
-  pracy na niepustym celu.
+- Wrapper tworzy `finanse_restore` na `127.0.0.1:55431` przed weryfikacją;
+  weryfikator porównuje checksumy i rewizje, aplikuje migracje oraz kontroluje
+  double-entry invariant.
+- Persistent parent `/docker/finanse/data/restore-drill` jest wymagany przez
+  sandbox systemd i pozostaje pusty po drillu. Ownership-aware cleanup usuwa
+  wyłącznie bazę `finanse_restore` i output należący do drillu, zarówno po
+  sukcesie, jak i po błędzie weryfikatora. Guard ponownie wymaga loopbacku,
+  dokładnej nazwy bazy i dokładnego parentu restore.
 
 ### Awaria i obserwowalność
 
@@ -102,8 +103,8 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
 3. Makefile ładuje lokalne pliki środowiskowe bez ich wypisywania.
 4. Backup tworzy dump, archiwum uploadów i manifest, a Restic wysyła
    zaszyfrowany snapshot oraz stosuje retencję.
-5. Drill wybiera najnowszy snapshot i wykonuje istniejące fail-closed
-   odtworzenie do izolowanego celu.
+5. Root-only wrapper tworzy izolowaną bazę, wybiera najnowszy snapshot i
+   wykonuje fail-closed odtworzenie wyłącznie do izolowanego celu.
 6. Exit status trafia do systemd i journald; błąd aktywuje failure unit.
 
 ## Weryfikacja
@@ -112,9 +113,9 @@ nie zawierają haseł, URI z hasłem lub kluczy API.
   brak sekretów oraz wywołania wyłącznie do zatwierdzonych Make targets.
 - Instalator przechodzi `systemd-analyze verify` dla unitów przed ich
   instalacją i po `daemon-reload` potwierdza aktywność timerów.
-- Po wdrożeniu operator ręcznie uruchamia backup service, sprawdza snapshot
-  Restic i status jednostki; pierwszy zaplanowany drill lub jawny test
-  potwierdza izolowane odtworzenie.
+- Po wdrożeniu ręczne uruchomienie backupu utworzyło snapshot `015211bb`, a
+  jawny drill zakończył się sukcesem; pusty parent restore i brak
+  `finanse_restore` potwierdzono po cleanupie.
 - Test błędnej konfiguracji musi kończyć usługę non-zero i tworzyć zdarzenie
   failure bez ujawnienia sekretu.
 

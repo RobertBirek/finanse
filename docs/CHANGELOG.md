@@ -8,6 +8,16 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 ## [Unreleased] — 2026-08-15
 
 ### Added
+- **Automatyczne backupy produkcyjne**: systemd uruchamia `finanse-backup.timer`
+  codziennie o 02:30 i `finanse-restore-verify.timer` w pierwszą niedzielę o
+  04:30 (`Europe/Warsaw`, `Persistent=true`). Usługi dzielą 15-minutowy lock;
+  rootowy wrapper jest instalowany poza repozytorium, a failure unit zapisuje
+  zredagowane zdarzenia do journala.
+- **Security baseline wdrożony**: produkcja używa fail-fast konfiguracji,
+  zamkniętej rejestracji, unieważnialnych sesji server-side, CSRF/Origin,
+  limitów Redis i zredagowanego audytu bezpieczeństwa. Backup Restic do
+  Contabo S3 obejmuje PostgreSQL i uploady; restore drill przeszedł kontrolę
+  checksum, migracji i invariantów ledgeru.
 - **Sesje serwerowe — zmiana niekompatybilna**: migracja unieważnia wszystkie
   historyczne ciasteczka przeglądarkowe JWT i po wdrożeniu wymusza ponowne logowanie.
   Publiczne uwierzytelnianie Bearer JWT zostało usunięte na rzecz ciasteczka
@@ -69,6 +79,9 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Endpoint `DELETE /cashflow/items/{item_id}` do jawnego usunięcia własnej pozycji.
 
 ### Changed
+- Frontend i npmplus komunikują się przez dedykowaną sieć
+  `finanse_ingress`; backend jest wyłącznie na `internal`. Nginx normalizuje
+  IP klienta przed przekazaniem do backendu.
 - Operacyjne listy finansowe ukrywają nieaktywne konta i kategorie; strona
   `/finances/accounts` pozostaje bez zmian i nadal pokazuje pełną listę zarządzania.
 - Potwierdzenie schedulera odrzuca pozycje nie-PLN (brak zweryfikowanego kursu),
@@ -81,6 +94,19 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   znak transakcji per konto zgodnie z konwencją `balance = credit − debit`.
 
 ### Verified
+- Automatyzacja na VPS: świeże `make test` przeszło (backend `198 passed, 125
+  skipped`; frontend `129 passed`), a lint, typecheck i `git diff --check`
+  przeszły. Oba timery są enabled. Ręczny backup utworzył `015211bb`; restore
+  drill zakończył się sukcesem, nie pozostawił `finanse_restore` ani outputu,
+  tylko pusty `root:root` `0700` parent. Statusy i journal nie zawierały
+  sekretów. Wdrożenie nie spowodowało przerwy aplikacji webowej.
+- Security baseline: backend `192 passed, 125 skipped`; integracyjne
+  `125 passed`; frontend `129 passed`; Ruff, mypy, ESLint, TypeScript i build
+  PASS. Snapshoty Contabo S3: `922d1aba` (przed migracją) i `63145774` (po
+  migracji); pierwszy przeszedł rzeczywisty restore drill.
+- Produkcja: migracja `c9d8e7f6a5b4` zastosowana, wszystkie usługi Up;
+  health i frontend HTTP 200. Rejestracja zwraca 404, błędny login z zaufanym
+  Origin 401, a bez Origin 403.
 - Backup/restore static tests: `6 passed`; full backend unit suite:
   `132 passed, 109 skipped, 3 warnings`; Ruff and `bash -n` pass.
   ShellCheck is not installed. No Restic credentials, production backup,
@@ -102,6 +128,8 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Nie wykonano migracji produkcyjnej ani deployu dla ręcznego księgowania.
 
 ### Fixed
+- Restore drill jawnie przekazuje bezpieczną nazwę bazy do `pg_restore`,
+  izoluje środowisko Alembic i obsługuje zakodowany parametr `passfile`.
 - **Ingress isolation**: final Task 7 rollout now has a documented dedicated
   `finanse_ingress` bridge (`172.24.0.0/24`), where only static npmplus
   `172.24.0.2` is trusted by the frontend. Backend remains internal-only.

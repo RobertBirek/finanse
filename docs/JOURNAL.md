@@ -3,6 +3,67 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-08-20 — Sesja 35: Automatyczny backup i restore drill
+
+### Cel sesji
+Wdrożyć i udowodnić automatyczne backupy oraz miesięczny izolowany restore drill
+na VPS.
+
+### Co zrobiono
+- Zainstalowano oba timery systemd i rootowy wrapper
+  `/usr/local/lib/finanse/run-restore-drill.sh`. Installer utrzymuje wymagany
+  przez sandbox pusty parent `/docker/finanse/data/restore-drill` jako
+  `root:root` `0700`.
+- Wrapper tworzy guarded `finanse_restore` przed `pg_restore`; ownership-aware
+  cleanup usuwa bazę i output także po błędzie, zachowując tylko pusty parent.
+- Ręczny backup utworzył snapshot `015211bb` o
+  `2026-08-20T14:37:50.478731048+02:00`. Rzeczywisty restore drill przeszedł
+  checksumy, migracje i invariant ledgeru; po nim baza nie istnieje, a parent
+  pozostał pusty.
+
+### Weryfikacja
+- `make test`: backend `198 passed, 125 skipped`; frontend `129 passed`.
+  `make lint`, `make typecheck` i `git diff --check` przeszły.
+- `finanse-backup.timer` i `finanse-restore-verify.timer` są enabled; kolejne
+  uruchomienia to odpowiednio 02:30 dziennie i 04:30 w pierwszą niedzielę,
+  `Europe/Warsaw`.
+- Backup i restore service zakończyły się `status=0/SUCCESS`. Statusy i journal
+  nie zawierały sekretów. Wdrożenie timerów nie spowodowało downtime aplikacji
+  webowej.
+
+---
+
+## 2026-08-20 — Sesja 34: Deploy security baseline
+
+### Cel sesji
+Skonfigurować Contabo S3, wykonać rzeczywisty backup/restore drill i wdrożyć
+security baseline wraz z izolacją ingress.
+
+### Co zrobiono
+- Utworzono szyfrowane repozytorium Restic Contabo S3. Snapshot `922d1aba`
+  został odtworzony do izolowanej bazy `finanse_restore`; checksumy,
+  migracja i kontrola ledgeru przeszły. Snapshot po deployu: `63145774`.
+  Tymczasowa baza i kopia uploadów zostały po drillu usunięte.
+- Zastosowano migrację `c9d8e7f6a5b4`; stare cookie JWT są celowo
+  unieważnione i wymagają ponownego logowania.
+- Wdrożono dedykowaną sieć `finanse_ingress` (`172.24.0.0/24`) między npmplus
+  (`172.24.0.2`) i frontendem. Backend jest tylko na `finanse_internal`.
+- Dodano PostgreSQL loopback `127.0.0.1:55431` wyłącznie dla hostowego restore
+  drillu; worker dostał komplet ustawień wymaganych przez fail-fast config.
+
+### Weryfikacja
+- Backend `192 passed, 125 skipped`; integracyjne `125 passed`; frontend
+  `129 passed`; lint/typecheck/build PASS.
+- Wszystkie usługi działają, rewizja bazy to `c9d8e7f6a5b4 (head)`; health i
+  frontend zwracają 200. Rejestracja zwraca 404, login z Origin 401 dla
+  błędnego hasła, a bez Origin 403.
+
+### Otwarte działania
+- Właściciel potwierdził rotację zewnętrznych kluczy LLM i Contabo S3 po
+  stronie providerów; nowych wartości nie wklejono do rozmowy.
+
+---
+
 ## 2026-08-20 -- Sesja 33: Isolacja ingress dla finanse
 
 ### Co zrobiono

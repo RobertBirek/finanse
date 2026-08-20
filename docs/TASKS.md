@@ -15,7 +15,22 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   zapisują niezależny, zredagowany event audytu.
 - [x] Backend jest wyłącznie na `internal`; frontend jest jedynym serwisem na
   dedykowanych `finanse_ingress` i `internal`; npmplus ma tam stałe `172.24.0.2`.
-  Zweryfikowano konfigurację Compose bez deployu; runtime czeka na Task 7.
+  Wdrożono runtime i zweryfikowano zewnętrznym smoke testem.
+
+---
+
+## Task 4 — Automatyczny backup i restore drill na VPS (2026-08-20)
+
+- [x] `finanse-backup.timer` (codziennie 02:30) i
+  `finanse-restore-verify.timer` (pierwsza niedziela 04:30) działają w
+  `Europe/Warsaw` z `Persistent=true` i współdzielonym 15-minutowym lockiem.
+- [x] Instalator wdraża rootowy wrapper poza repozytorium oraz zachowuje pusty
+  `root:root` `0700` parent restore wymagany przez systemd; wrapper tworzy bazę
+  izolowaną przed weryfikacją i czyści zasoby po sukcesie lub błędzie.
+- [x] Quality gate: backend `198 passed, 125 skipped`, frontend `129 passed`;
+  lint, typecheck i `git diff --check` PASS. Backup `015211bb` i rzeczywisty
+  drill przeszły; brak `finanse_restore`, parent restore pusty, journal bez
+  sekretów. Wdrożenie nie spowodowało downtime aplikacji webowej.
 
 ---
 
@@ -27,7 +42,13 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   `_restore`/`_test`, weryfikuje checksumy przed ekstrakcją lub `pg_restore`,
   uruchamia migracje i kontrolę invariantów księgi.
 - [x] Dokumentacja operacyjna, targety Makefile oraz statyczne testy zostały
-  dodane; nie skonfigurowano credentiali i nie uruchomiono backupu produkcyjnego.
+  dodane; Contabo S3 skonfigurowano w root-only plikach, wykonano dwa backupy
+  i rzeczywisty restore drill izolowanej bazy.
+
+## Task 18 — Rotacja zewnętrznych kluczy (2026-08-20)
+
+- [x] Rotacja kluczy LLM i Contabo S3 potwierdzona przez właściciela; nowych
+  wartości nie zapisano w czacie ani Git.
 
 ---
 
