@@ -36,4 +36,3 @@ dropdb --if-exists --host "$restore_host" --port "$restore_port" --username "$re
 [[ -d "$RESTORE_DIRECTORY/uploads" ]] || fail "Restore uploads are missing."
 [[ -z "$(find "$RESTORE_DIRECTORY" -mindepth 1 -maxdepth 1 ! -name uploads -print -quit)" ]] || fail "Unexpected restore output."
 rm -rf -- "$RESTORE_DIRECTORY/uploads"
-rmdir "$RESTORE_DIRECTORY"

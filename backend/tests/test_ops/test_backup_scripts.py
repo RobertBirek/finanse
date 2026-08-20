@@ -54,6 +54,10 @@ def test_timer_installer_verifies_then_installs_only_known_units() -> None:
     wrapper_guard_index = content.index('[[ -f "$WRAPPER_SOURCE" ]]')
     wrapper_install = 'install -D -o root -g root -m 0750 "$WRAPPER_SOURCE" "$WRAPPER_DESTINATION"'
     assert wrapper_guard_index < verify_index < content.index(wrapper_install)
+    restore_directory_install = (
+        "install -d -o root -g root -m 0700 /docker/finanse/data/restore-drill"
+    )
+    assert content.index(restore_directory_install) < content.index("systemctl enable --now")
     assert "chmod 0750" not in content
     assert re.search(r"(?m)^\s*rm(?:\s|$)", content) is None
     assert "secrets/" not in content
@@ -133,6 +137,7 @@ def test_restore_drill_wrapper_is_private_and_runs_only_the_guarded_target() -> 
     assert 'make -C "$COMPOSE_DIRECTORY" restore-verify snapshot=latest' in content
     assert content.index("restore-verify snapshot=latest") < content.index("dropdb")
     assert content.index("dropdb") < content.index('rm -rf -- "$RESTORE_DIRECTORY/uploads"')
+    assert 'rmdir "$RESTORE_DIRECTORY"' not in content
 
 
 def test_restore_drill_wrapper_refuses_any_unexpected_restore_target() -> None:

@@ -31,6 +31,7 @@ for unit in "${UNITS[@]}"; do
     install -o root -g root -m 0644 "${UNIT_SOURCE_DIRECTORY}/${unit}" "${UNIT_DESTINATION_DIRECTORY}/${unit}"
 done
 install -D -o root -g root -m 0750 "$WRAPPER_SOURCE" "$WRAPPER_DESTINATION"
+install -d -o root -g root -m 0700 /docker/finanse/data/restore-drill
 systemctl daemon-reload
 systemctl enable --now finanse-backup.timer finanse-restore-verify.timer
 systemctl list-timers --all finanse-backup.timer finanse-restore-verify.timer
