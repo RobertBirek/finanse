@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ContextualSidebar } from "./ContextualSidebar";
@@ -131,7 +131,48 @@ describe("Layout", () => {
       screen.getByRole("navigation", { name: "Obszary aplikacji" }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("navigation", { name: "Finanse" })).toHaveLength(
-      2,
+      1,
     );
+  });
+});
+
+describe("mobile navigation lifecycle", () => {
+  it("only mounts the mobile menu when open and provides all application areas", () => {
+    render(
+      <MemoryRouter initialEntries={["/today"]}>
+        <Layout />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const trigger = screen.getByRole("button", {
+      name: "Otwórz menu aplikacji",
+    });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: "Menu aplikacji" });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    for (const label of [
+      "Finanse",
+      "Projekty",
+      "Dokumenty",
+      "Doradca",
+      "Ustawienia",
+      "Inbox",
+      "Kalendarz",
+    ])
+      expect(
+        within(dialog).getByRole("link", { name: label }),
+      ).toBeInTheDocument();
+    fireEvent(
+      dialog,
+      new Event("cancel", { bubbles: false, cancelable: true }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+  it("does not mark the finance overview active on a detail page", () => {
+    const item = navigationContexts.find((c) => c.id === "finance")!.items[0];
+    expect(isMenuItemActive(item, "/finances/accounts")).toBe(false);
+    expect(isMenuItemActive(item, "/finances")).toBe(true);
   });
 });

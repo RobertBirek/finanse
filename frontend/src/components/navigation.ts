@@ -14,6 +14,7 @@ export type NavigationMenuItem = {
   label: string;
   to?: string;
   soon?: boolean;
+  end?: boolean;
 };
 
 export type NavigationContext = {
@@ -60,7 +61,7 @@ export const navigationContexts: NavigationContext[] = [
     icon: WalletIcon,
     routePrefixes: ["/finances"],
     items: [
-      { label: "Finanse", to: "/finances" },
+      { label: "Finanse", to: "/finances", end: true },
       { label: "Konta", to: "/finances/accounts" },
       { label: "Transakcje", to: "/finances/transactions" },
       { label: "Płynność", to: "/finances/cashflow" },
@@ -124,6 +125,6 @@ export function isMenuItemActive(
 ): boolean {
   return (
     Boolean(item.to) &&
-    (pathname === item.to || pathname.startsWith(`${item.to}/`))
+    (pathname === item.to || (!item.end && pathname.startsWith(`${item.to}/`)))
   );
 }

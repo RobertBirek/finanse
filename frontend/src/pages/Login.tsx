@@ -67,7 +67,10 @@ export function Login() {
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-4">
             {loginMutation.isError && (
-              <div className="bg-red-900/30 border border-red-800 text-red-400 px-4 py-3 rounded-lg text-sm">
+              <div
+                role="alert"
+                className="bg-red-900/30 border border-red-800 text-red-400 px-4 py-3 rounded-lg text-sm"
+              >
                 {loginError?.response?.data?.detail ||
                   "Nieprawidłowy email lub hasło"}
               </div>
@@ -82,6 +85,7 @@ export function Login() {
               </label>
               <input
                 type="email"
+                autoComplete="username"
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -101,6 +105,7 @@ export function Login() {
               </label>
               <input
                 type="password"
+                autoComplete="current-password"
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

@@ -288,13 +288,17 @@ describe("FinanceCashflow", () => {
 
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toHaveAttribute("aria-labelledby", "confirm-item-title");
+    expect(dialog).toHaveAccessibleName("Potwierdź pozycję");
     expect(
       screen.getByRole("heading", { name: "Potwierdź pozycję" }),
     ).toHaveAttribute("id", "confirm-item-title");
-    expect(dialog).toHaveFocus();
+    expect(dialog.tagName).toBe("DIALOG");
+    expect(dialog).toHaveAttribute("open");
 
-    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent(
+      dialog,
+      new Event("cancel", { bubbles: false, cancelable: true }),
+    );
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();

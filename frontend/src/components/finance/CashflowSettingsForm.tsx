@@ -38,18 +38,27 @@ export function CashflowSettingsForm() {
     }
   }, [settingsQuery.data, form]);
 
-  if (settingsQuery.isLoading || accountsQuery.isLoading || form === null) {
+  if (settingsQuery.isError || accountsQuery.isError) {
     return (
-      <div className="mb-6 flex justify-center py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-advisor-500 border-t-transparent" />
+      <div role="alert" className="card mb-6 text-sm text-red-300">
+        <p>Nie udało się pobrać ustawień płynności.</p>
+        <button
+          type="button"
+          className="btn-secondary mt-3"
+          onClick={() => {
+            void settingsQuery.refetch();
+            void accountsQuery.refetch();
+          }}
+        >
+          Spróbuj ponownie
+        </button>
       </div>
     );
   }
-
-  if (settingsQuery.isError || accountsQuery.isError) {
+  if (settingsQuery.isLoading || accountsQuery.isLoading || form === null) {
     return (
-      <p className="card mb-6 text-sm text-red-400">
-        Nie udało się pobrać ustawień płynności.
+      <p role="status" className="mb-6 py-8 text-sm text-gray-400">
+        Ładowanie ustawień płynności…
       </p>
     );
   }
@@ -179,6 +188,11 @@ export function CashflowSettingsForm() {
             />
           </div>
         </div>
+        {updateMutation.isSuccess && (
+          <p role="status" className="text-sm text-green-300">
+            Ustawienia zapisane.
+          </p>
+        )}
         {errorMessage ? (
           <p className="text-sm text-red-400">{errorMessage}</p>
         ) : null}

@@ -1,5 +1,9 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { isMenuItemActive, type NavigationContext } from "./navigation";
+import {
+  isMenuItemActive,
+  navigationContexts,
+  type NavigationContext,
+} from "./navigation";
 
 type SidebarUser = {
   display_name: string;
@@ -11,6 +15,7 @@ type ContextualSidebarProps = {
   user: SidebarUser | null;
   onLogout: () => void;
   onNavigate?: () => void;
+  showAllContexts?: boolean;
 };
 
 export function ContextualSidebar({
@@ -18,18 +23,21 @@ export function ContextualSidebar({
   user,
   onLogout,
   onNavigate,
+  showAllContexts = false,
 }: ContextualSidebarProps) {
   const { pathname } = useLocation();
 
   return (
-    <aside className="w-56 shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
+    <aside
+      className={`${showAllContexts ? "w-full min-h-0 flex-1" : "w-56 shrink-0 h-full"} bg-gray-900 border-r border-gray-800 flex flex-col`}
+    >
       <div className="p-4 border-b border-gray-800">
-        <h1 className="text-lg font-bold text-white flex items-center gap-2">
+        <p className="text-lg font-bold text-white flex items-center gap-2">
           <span className="w-8 h-8 rounded-lg bg-advisor-500 flex items-center justify-center text-sm font-bold">
             A
           </span>
           Advisor
-        </h1>
+        </p>
       </div>
 
       <div className="px-4 py-3 border-b border-gray-800 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -38,13 +46,34 @@ export function ContextualSidebar({
 
       <nav
         className="flex-1 p-3 space-y-1 overflow-y-auto"
-        aria-label={context.label}
+        aria-label={
+          showAllContexts ? "Wszystkie obszary aplikacji" : context.label
+        }
       >
+        {showAllContexts &&
+          navigationContexts
+            .filter((entry) => entry.to && entry.id !== context.id)
+            .map((entry) => (
+              <NavLink
+                key={entry.id}
+                to={entry.to!}
+                className="sidebar-link"
+                onClick={onNavigate}
+              >
+                {entry.items.length === 1 ? entry.items[0].label : entry.label}
+              </NavLink>
+            ))}
+        {showAllContexts && (
+          <p className="px-3 pt-4 pb-2 text-xs text-gray-400">
+            {context.label}
+          </p>
+        )}
         {context.items.map((item) =>
           item.to ? (
             <NavLink
               key={item.label}
               to={item.to}
+              end={item.end}
               className={`sidebar-link ${
                 isMenuItemActive(item, pathname) ? "active" : ""
               }`}
