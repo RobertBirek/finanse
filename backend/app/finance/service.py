@@ -3,11 +3,11 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Literal, cast
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
-from sqlalchemy.sql.elements import ColumnElement
 
+from app.finance import queries
 from app.finance.models import (
     Account,
     Category,
@@ -40,12 +40,16 @@ from app.finance.schemas import (
     ScheduledFinanceItemCreate,
     ScheduledFinanceItemUpdate,
     TransactionCreate,
-    TransactionResponse,
-    TransactionSearch,
-    TransactionSearchResponse,
     TransactionUpdate,
 )
 from app.work.service import validate_project_reference
+
+# Compatibility facade for existing routers, AI tools, imports and integrations.
+get_account = queries.get_account
+get_accounts = queries.get_accounts
+get_transaction = queries.get_transaction
+get_transactions = queries.get_transactions
+search_transactions = queries.search_transactions
 
 SUPPORTED_CURRENCIES = {"PLN", "EUR", "USD"}
 
@@ -72,47 +76,6 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCrea
     db.add(account)
     await db.flush()
     return account
-
-
-async def get_accounts(db: AsyncSession, user_id: uuid.UUID) -> list[Account]:
-    """Get accounts with computed balance (credits - debits in PLN)."""
-    from sqlalchemy import case
-
-    balance_subq = (
-        select(
-            Posting.account_id,
-            func.sum(
-                case(
-                    (Posting.direction == "credit", Posting.base_amount_pln),
-                    else_=-Posting.base_amount_pln,
-                )
-            ).label("balance"),
-        )
-        .group_by(Posting.account_id)
-        .subquery()
-    )
-
-    result = await db.execute(
-        select(Account, func.coalesce(balance_subq.c.balance, 0))
-        .outerjoin(balance_subq, Account.id == balance_subq.c.account_id)
-        .where(Account.user_id == user_id)
-        .order_by(Account.name)
-    )
-    rows = result.all()
-    accounts = []
-    for account, balance in rows:
-        account._balance = int(balance)
-        accounts.append(account)
-    return accounts
-
-
-async def get_account(
-    db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID
-) -> Account | None:
-    result = await db.execute(
-        select(Account).where(Account.id == account_id, Account.user_id == user_id)
-    )
-    return result.scalar_one_or_none()
 
 
 async def update_account(
@@ -510,115 +473,6 @@ async def create_exchange_transaction(
     )
 
 
-async def get_transactions(
-    db: AsyncSession,
-    user_id: uuid.UUID,
-    limit: int = 50,
-    offset: int = 0,
-    txn_type: str | None = None,
-) -> list[FinancialTransaction]:
-    stmt = (
-        select(FinancialTransaction)
-        .options(selectinload(FinancialTransaction.postings))
-        .where(FinancialTransaction.user_id == user_id)
-        .order_by(FinancialTransaction.date.desc(), FinancialTransaction.created_at.desc())
-    )
-    if txn_type:
-        stmt = stmt.where(FinancialTransaction.type == txn_type)
-
-    stmt = stmt.limit(limit).offset(offset)
-    result = await db.execute(stmt)
-    return list(result.scalars().all())
-
-
-async def search_transactions(
-    db: AsyncSession, user_id: uuid.UUID, filters: TransactionSearch
-) -> TransactionSearchResponse:
-    """Search the complete owned ledger without joining/doubling posting rows.
-
-    Amount bounds are absolute PLN minor units of one account posting (not the
-    sum of both ledger sides). Currency/account/amount must match that same leg.
-    """
-    txn = FinancialTransaction
-    account_leg: list[ColumnElement[bool]] = [Posting.account_id.is_not(None)]
-    if filters.account_id:
-        account_leg.append(Posting.account_id == filters.account_id)
-    if filters.currency:
-        account_leg.append(Posting.source_currency == filters.currency)
-    if filters.min_amount_pln is not None:
-        account_leg.append(func.abs(Posting.base_amount_pln) >= filters.min_amount_pln)
-    if filters.max_amount_pln is not None:
-        account_leg.append(func.abs(Posting.base_amount_pln) <= filters.max_amount_pln)
-    conditions = [
-        txn.user_id == user_id,
-        select(Posting.id).where(Posting.transaction_id == txn.id, *account_leg).exists(),
-    ]
-    if filters.category_id:
-        conditions.append(
-            select(Posting.id)
-            .where(
-                Posting.transaction_id == txn.id,
-                Posting.category_id == filters.category_id,
-            )
-            .exists()
-        )
-    if filters.date_from:
-        conditions.append(txn.date >= filters.date_from)
-    if filters.date_to:
-        conditions.append(txn.date <= filters.date_to)
-    if filters.type:
-        conditions.append(txn.type == filters.type)
-    if filters.q:
-        # autoescape treats user %, _ and / literally; values remain bound parameters.
-        conditions.append(
-            or_(
-                txn.description.icontains(filters.q, autoescape=True),
-                select(Posting.id)
-                .join(Account, Posting.account_id == Account.id)
-                .where(
-                    Posting.transaction_id == txn.id,
-                    Account.user_id == user_id,
-                    Account.name.icontains(filters.q, autoescape=True),
-                )
-                .exists(),
-                select(Posting.id)
-                .join(Category, Posting.category_id == Category.id)
-                .where(
-                    Posting.transaction_id == txn.id,
-                    Category.user_id == user_id,
-                    Category.name.icontains(filters.q, autoescape=True),
-                )
-                .exists(),
-            )
-        )
-    total = await db.scalar(select(func.count()).select_from(txn).where(*conditions))
-    result = await db.execute(
-        select(txn)
-        .options(selectinload(txn.postings))
-        .where(*conditions)
-        .order_by(txn.date.desc(), txn.created_at.desc(), txn.id.desc())
-        .limit(filters.limit)
-        .offset(filters.offset)
-    )
-    return TransactionSearchResponse(
-        items=[TransactionResponse.model_validate(txn) for txn in result.scalars().all()],
-        total=total or 0,
-        limit=filters.limit,
-        offset=filters.offset,
-    )
-
-
-async def get_transaction(
-    db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID
-) -> FinancialTransaction | None:
-    result = await db.execute(
-        select(FinancialTransaction)
-        .options(selectinload(FinancialTransaction.postings))
-        .where(FinancialTransaction.id == transaction_id, FinancialTransaction.user_id == user_id)
-    )
-    return result.scalar_one_or_none()
-
-
 async def update_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID, data: TransactionUpdate
 ) -> FinancialTransaction | None:
@@ -658,42 +512,19 @@ async def get_financial_summary(
 ) -> FinancialSummary:
     selected_month, selected_year, month_start, month_end = _month_bounds(month, year)
 
-    accounts_result = await db.execute(
-        select(Account).where(
-            Account.user_id == user_id,
-            Account.is_active.is_(True),
-            Account.is_budget_account.is_(True),
-        )
-    )
-    accounts = list(accounts_result.scalars().all())
-
-    account_balances = []
-    for account in accounts:
-        debit_result = await db.execute(
-            select(func.coalesce(func.sum(Posting.base_amount_pln), 0)).where(
-                Posting.account_id == account.id,
-                Posting.direction == "debit",
-            )
-        )
-        credit_result = await db.execute(
-            select(func.coalesce(func.sum(Posting.base_amount_pln), 0)).where(
-                Posting.account_id == account.id,
-                Posting.direction == "credit",
-            )
-        )
-        total_debits = debit_result.scalar() or 0
-        total_credits = credit_result.scalar() or 0
-        balance = int(total_credits - total_debits)
-
-        account_balances.append(
-            {
-                "id": str(account.id),
-                "name": account.name,
-                "type": account.type,
-                "currency": account.currency,
-                "balance_pln": balance,
-            }
-        )
+    # One grouped balance query replaces two queries per active budget account.
+    accounts = await get_accounts(db, user_id)
+    account_balances = [
+        {
+            "id": str(account.id),
+            "name": account.name,
+            "type": account.type,
+            "currency": account.currency,
+            "balance_pln": account.balance_pln,
+        }
+        for account in accounts
+        if account.is_active and account.is_budget_account
+    ]
 
     account_posting = aliased(Posting)
     income_result = await db.execute(
