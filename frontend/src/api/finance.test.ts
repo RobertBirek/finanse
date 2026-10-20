@@ -22,6 +22,7 @@ import {
   useDeleteTransaction,
   useFinancialSummary,
   useUpdateAccount,
+  useUpdateBudget,
   useUpdateCategory,
   useUpdateTransaction,
   type Account,
@@ -649,5 +650,38 @@ describe("exchange transaction hook", () => {
       description: "Przewalutowanie",
     });
     postSpy.mockRestore();
+  });
+});
+
+describe("financial dependent views", () => {
+  it("invalidates cashflow and budget status after ledger changes", () => {
+    const client = new QueryClient();
+    const keys = [
+      ["finance", "cashflow", "forecast"],
+      ["finance", "budget-status", { month: 1, year: 2026 }],
+      ["finance", "accounts", "acc", "transactions"],
+    ];
+    for (const key of keys) client.setQueryData(key, {});
+    invalidateFinanceLedger(client);
+    for (const key of keys)
+      expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+  });
+
+  it("invalidates the forecast after changing a budget", async () => {
+    const spy = vi
+      .spyOn(api, "patch")
+      .mockResolvedValue({ data: {} } as AxiosResponse);
+    try {
+      const client = new QueryClient();
+      const key = ["finance", "cashflow", "forecast"];
+      client.setQueryData(key, {});
+      const { result } = renderHook(() => useUpdateBudget(), {
+        wrapper: queryClientWrapper(client),
+      });
+      await result.current.mutateAsync({ id: "budget", amount_pln: 100 });
+      expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

@@ -1161,6 +1161,7 @@ async def migrate(
                         source="actual",
                         postings=postings,
                     ),
+                    allow_category_reversal=True,
                 )
                 await _store_mapping(
                     db, user_id, "transaction", txn["actual_id"], created_transaction.id

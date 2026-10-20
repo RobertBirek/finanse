@@ -85,7 +85,27 @@ async def delete_project(db: AsyncSession, user_id: uuid.UUID, project_id: uuid.
     return True
 
 
+async def validate_project_reference(
+    db: AsyncSession, user_id: uuid.UUID, project_id: uuid.UUID | None
+) -> None:
+    if project_id is not None and await get_project(db, user_id, project_id) is None:
+        raise ValueError("Project not found")
+
+
+async def _validate_time_block_links(
+    db: AsyncSession, user_id: uuid.UUID, task_id: uuid.UUID | None, project_id: uuid.UUID | None
+) -> None:
+    await validate_project_reference(db, user_id, project_id)
+    if task_id is not None:
+        task = await get_task(db, user_id, task_id)
+        if task is None:
+            raise ValueError("Task not found")
+        if project_id is not None and task.project_id != project_id:
+            raise ValueError("Task does not belong to the selected project")
+
+
 async def create_task(db: AsyncSession, user_id: uuid.UUID, data: TaskCreate) -> Task:
+    await validate_project_reference(db, user_id, data.project_id)
     task = Task(user_id=user_id, **data.model_dump())
     db.add(task)
     await db.flush()
@@ -132,6 +152,8 @@ async def update_task(
     if task is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    if "project_id" in update_data:
+        await validate_project_reference(db, user_id, update_data["project_id"])
     if "status" in update_data and update_data["status"] == "done" and task.status != "done":
         task.completed_at = datetime.now(UTC)
     for key, value in update_data.items():
@@ -156,6 +178,7 @@ async def create_time_block(
 ) -> TimeBlock:
     if data.start_time >= data.end_time:
         raise ValueError("start_time must be before end_time")
+    await _validate_time_block_links(db, user_id, data.task_id, data.project_id)
     block = TimeBlock(user_id=user_id, **data.model_dump())
     db.add(block)
     await db.flush()
@@ -196,10 +219,18 @@ async def update_time_block(
     if block is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    start = update_data.get("start_time", block.start_time)
+    end = update_data.get("end_time", block.end_time)
+    if start is None or end is None or start >= end:
+        raise ValueError("start_time must be before end_time")
+    await _validate_time_block_links(
+        db,
+        user_id,
+        update_data.get("task_id", block.task_id),
+        update_data.get("project_id", block.project_id),
+    )
     for key, value in update_data.items():
         setattr(block, key, value)
-    if block.start_time >= block.end_time:
-        raise ValueError("start_time must be before end_time")
     await db.flush()
     return block
 

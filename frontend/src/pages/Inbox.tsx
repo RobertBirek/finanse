@@ -92,6 +92,13 @@ export function Inbox() {
         ))}
       </div>
 
+      {processItem.isError && (
+        <p role="alert" className="mb-4 text-sm text-red-400">
+          Nie udało się przetworzyć wpisu. Spróbuj ponownie; sprawdź, czy
+          zadanie nie przekracza 500 znaków.
+        </p>
+      )}
+
       {/* Items list */}
       <div className="space-y-3">
         {isLoading ? (
@@ -145,10 +152,22 @@ export function Inbox() {
                       <button
                         key={type}
                         onClick={() => handleProcess(item.id, type)}
-                        disabled={processItem.isPending}
+                        disabled={
+                          processItem.isPending ||
+                          type === "project" ||
+                          type === "transaction"
+                        }
+                        title={
+                          type === "project" || type === "transaction"
+                            ? "Konwersja będzie dostępna w kolejnej wersji"
+                            : undefined
+                        }
                         className="px-3 py-1 text-xs rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors disabled:opacity-50"
                       >
                         → {TARGET_LABELS[type]}
+                        {type === "project" || type === "transaction"
+                          ? " — wkrótce"
+                          : ""}
                       </button>
                     ))}
                   </div>

@@ -4,6 +4,7 @@ import json
 import uuid
 
 from openai import AsyncOpenAI
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -67,7 +68,22 @@ async def create_inbox_from_document(
     original_name: str,
     data: dict,
 ) -> InboxItem:
-    """Create an inbox item from extracted document data."""
+    """Create at most one suggestion per document while its worker holds the row lock."""
+    existing = (
+        (
+            await db.execute(
+                select(InboxItem).where(
+                    InboxItem.user_id == user_id,
+                    InboxItem.source_type == "document",
+                    InboxItem.agent_suggestion["document_id"].as_string() == str(document_id),
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if existing is not None:
+        return existing
     amount_pln = data.get("amount", 0) / 100
     description = data.get("description", "Dokument")
     category = data.get("category_suggestion", "")
