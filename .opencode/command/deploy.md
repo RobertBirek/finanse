@@ -1,16 +1,34 @@
 ---
-description: Przebuduj i wdróż backend/frontend na produkcję (docker compose)
+description: Przygotuj wersjonowany release i wdróż wyłącznie po zgodzie użytkownika
 ---
 
-Wdróż zmiany na produkcję (finanse.birek.online):
+Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Cloudflare.
 
-1. `docker compose -f /docker/finanse/compose.yaml build backend frontend`
-2. `docker compose -f /docker/finanse/compose.yaml up -d backend frontend`
-3. Sprawdź status: `docker compose -f /docker/finanse/compose.yaml ps`
-4. Health check: `curl -s https://finanse.birek.online/api/health`
+1. Przed wdrożeniem przeczytaj `docs/operations/backup-restore.md`, sekcję
+   „Versioned Application Releases And Rollback”, oraz prywatne metadane
+   `/opt/finanse/webapp/releases/active-release.json`. Ustal aktywny override,
+   rewizje poszczególnych usług i istniejący rollback. Nie wypisuj sekretów.
+2. Wymagaj zatwierdzenia dokładnej rewizji i zakresu wdrożenia. Przejście testów
+   lub scalenie PR samo w sobie nie upoważnia do wdrożenia.
+3. Uruchom testy, lint, typy i build. Przygotuj wersjonowany pakiet przez
+   `ops/prepare_release.py` i skontroluj wynikowy Compose. Zmiana
+   `backend/requirements.txt` wymaga nowego, zweryfikowanego runtime; nie obchodź
+   zabezpieczenia przez podanie fałszywej rewizji starego obrazu.
+4. Wykonaj i zweryfikuj kopię bezpieczeństwa według procedury. Zachowaj obrazy
+   rollbacku oraz identyfikatory usług danych. Nie uruchamiaj importów, migracji
+   ani napraw historycznych transakcji jako niejawnego kroku deployu.
+5. Stosuj pełną listę Compose: bazowy `/docker/finanse/compose.yaml`,
+   `/docker/finanse/compose.prod.yaml` oraz zatwierdzony `compose.release.yaml`,
+   z istniejącym plikiem środowiska. Używaj `up -d --no-deps --no-build` tylko
+   dla zatwierdzonych usług. Sam frontend można wymienić wyłącznie wtedy, gdy
+   nie wymaga nowego API; nowe endpointy wymagają spójnego backendu i frontendu.
+6. Sprawdź rewizje/obrazy, brak host mountu `/app`, niezmienione usługi danych,
+   HTTPS, pliki statyczne, API health, odrzucenie anonimowych odczytów oraz logi.
+   Nie wykonuj mutacji danych użytkownika w ramach smoke testu.
+7. Przy awarii przywróć zapisany, zgodny pakiet rollbacku, używając tej samej
+   pełnej listy bazowych plików Compose. Dopiero po udanej weryfikacji zaktualizuj
+   prywatne metadane aktywnego release'u i zapisz wynik w PR.
 
-Zasady:
-- Przed deployem upewnij się, że testy przechodzą (`/test`).
-- Jeśli po wdrożeniu coś nie działa — zdiagnozuj (logi kontenerów)
-  i w razie potrzeby przywróć poprzednie obrazy.
-- Nie wdrażaj bez potwierdzenia zmian przez użytkownika.
+Nie używaj samodzielnego bazowego Compose, `make up` ani `make restart`:
+może to odtworzyć stare mounty kodu i ominąć wersjonowany release. Nie usuwaj
+obrazów lub kopii rollbacku bez osobnej zgody.
