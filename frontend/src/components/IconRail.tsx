@@ -30,7 +30,6 @@ export function IconRail({ activeContext }: IconRailProps) {
             <span
               key={context.id}
               title={`${context.label} - Wkrótce`}
-              aria-label={`${context.label} - Wkrótce`}
               aria-disabled="true"
               className={`${className} cursor-not-allowed opacity-50`}
             >

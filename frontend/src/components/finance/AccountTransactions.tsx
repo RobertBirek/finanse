@@ -9,6 +9,7 @@ import {
   type Transaction,
 } from "../../api/finance";
 import { formatPLN } from "../../lib/format";
+import { formatCalendarDate } from "../../lib/date";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -257,7 +258,14 @@ function TransactionList({
           (item) => item.account_id === accountId,
         );
         const isIncome = posting?.direction === "credit";
-        const amount = posting?.source_amount ?? 0;
+        const currency = posting?.source_currency;
+        const formattedAmount = posting
+          ? `${isIncome ? "+" : "−"}${formatPLN(posting.source_amount)} ${currency}`
+          : "Kwota niedostępna";
+        const baseAmount =
+          posting && currency !== "PLN"
+            ? `Równowartość: ${formatPLN(posting.base_amount_pln)} PLN`
+            : null;
         const isEditing = editingId === transaction.id;
         const isUpdating =
           updateMutation.isPending &&
@@ -282,17 +290,22 @@ function TransactionList({
                     {transaction.description}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {new Date(transaction.transaction_date).toLocaleDateString(
-                      "pl-PL",
-                    )}{" "}
-                    · {transaction.type}
+                    {formatCalendarDate(transaction.transaction_date)} ·{" "}
+                    {transaction.type}
                   </p>
                 </div>
                 <p
                   className={`shrink-0 font-mono text-sm font-medium ${isIncome ? "text-green-400" : "text-red-400"}`}
                 >
-                  {isIncome ? "+" : "−"}
-                  {formatPLN(amount)} PLN
+                  {posting && (isIncome ? "+" : "−")}
+                  {posting
+                    ? `${formatPLN(posting.source_amount)} ${currency}`
+                    : "Kwota niedostępna"}
+                  {baseAmount && (
+                    <span className="block text-xs font-normal text-gray-400">
+                      {baseAmount}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -355,24 +368,26 @@ function TransactionList({
         return (
           <div
             key={transaction.id}
-            className="flex items-center justify-between gap-4 rounded bg-gray-800/30 p-2.5 transition-colors hover:bg-gray-800/50"
+            className="flex flex-wrap items-center justify-between gap-3 rounded bg-gray-800/30 p-2.5 transition-colors hover:bg-gray-800/50"
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-gray-200">
                 {transaction.description}
               </p>
               <p className="text-xs text-gray-500">
-                {new Date(transaction.transaction_date).toLocaleDateString(
-                  "pl-PL",
-                )}{" "}
-                · {transaction.type}
+                {formatCalendarDate(transaction.transaction_date)} ·{" "}
+                {transaction.type}
               </p>
             </div>
             <p
               className={`shrink-0 font-mono text-sm font-medium ${isIncome ? "text-green-400" : "text-red-400"}`}
             >
-              {isIncome ? "+" : "−"}
-              {formatPLN(amount)} PLN
+              {formattedAmount}
+              {baseAmount && (
+                <span className="block text-xs font-normal text-gray-400">
+                  {baseAmount}
+                </span>
+              )}
             </p>
             <div className="flex shrink-0 gap-2">
               <button

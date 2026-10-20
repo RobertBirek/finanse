@@ -223,3 +223,37 @@ describe("AccountTransactions", () => {
     expect(deleteMutate).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("foreign currency presentation", () => {
+  it.each(["EUR", "USD"])(
+    "keeps %s source amount separate from the PLN equivalent in view and edit modes",
+    (currency) => {
+      useAccountTransactions.mockReturnValue({
+        data: [
+          {
+            ...expenseTransaction,
+            postings: [
+              {
+                ...expenseTransaction.postings[0],
+                source_currency: currency,
+                source_amount: 12345,
+                base_amount_pln: 54321,
+              },
+            ],
+          },
+        ],
+        isLoading: false,
+        isError: false,
+      });
+      useUpdateTransaction.mockReturnValue({ mutate: vi.fn() });
+      useDeleteTransaction.mockReturnValue({ mutate: vi.fn() });
+      render(<AccountTransactions accounts={accounts} />);
+      fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));
+      expect(screen.getByText(`−123,45 ${currency}`)).toBeInTheDocument();
+      expect(screen.getByText("Równowartość: 543,21 PLN")).toBeInTheDocument();
+      expect(screen.queryByText("−123,45 PLN")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Edytuj" }));
+      expect(screen.getByText(`−123,45 ${currency}`)).toBeInTheDocument();
+    },
+  );
+});
