@@ -5,6 +5,45 @@ Wszystkie istotne zmiany w projekcie.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
+## Domknięcie walidacji backendu — 2026-10-20 (niewdrożone)
+
+### Poprawki i kontrakty
+- PATCH kont: jawny `null` dla `name`, `type`, `is_active`, `is_budget_account`
+  zwraca 422 przed odczytem/zapisem encji. Pominięte pola nie są aktualizowane;
+  `closed_at=null` oraz wartości `false` pozostają poprawne.
+- PATCH inbox: analogicznie chronione `content` i `is_processed`; nadal można
+  wyczyścić `target_id`/`target_type`. Test integracyjny potwierdza brak częściowego
+  zapisu, gdy poprawne i błędne pola znajdują się w jednym żądaniu.
+- Naprawiono dodatkowo 500 dla poprawnego PATCH inbox: po UPDATE jawnie
+  odczytywany jest serwerowy `updated_at`, bez asynchronicznego lazy-load
+  podczas synchronicznej walidacji odpowiedzi.
+- Starsze endpointy list transakcji, inbox, zadań i bloków czasu wymagają
+  `limit >= 1`; zachowano górne granice 200/500, wartości domyślne i `offset=0`.
+  Testy obejmują dolne/górne granice, domyślne limity i błędne parametry.
+- Ekstrakcja LLM ma ścisły schemat: rzeczywiste boolean `detected`, typ
+  income/expense, dodatnia całkowita kwota do granicy BIGINT (bez konwersji
+  string/bool/float), PLN/EUR/USD, ograniczony niepusty opis, data YYYY-MM-DD
+  lub null i opcjonalna kategoria. Dodatkowe pola są zabronione.
+- Błędny/niepełny JSON jest traktowany jako brak rozpoznania. Brakujące kwoty,
+  waluty i daty nie są zgadywane. Ponowna walidacja przed dostępem do bazy
+  chroni również bezpośrednie wywołania tworzenia sugestii.
+- Zachowano JSON mode dostawcy i limit tekstu OCR; klient jest zamykany w
+  `finally`. Logi odrzuceń nie zawierają tekstu OCR ani odpowiedzi modelu.
+- Kwoty sugestii są zapisywane i formatowane bez float, również na granicy
+  BIGINT. Sugestia nadal nie jest zatwierdzoną transakcją. Odrzucenie sugestii
+  nie cofa OCR, a ponowne przetworzenie nie duplikuje istniejącego inbox item.
+
+### Weryfikacja
+- **562 testy backendu PASS, bez pominięć** (137 więcej niż po poprzednim etapie).
+  Wyłącznie odizolowany PostgreSQL `finanse_test`, `127.0.0.1:55432`.
+- Ruff, mypy (53 moduły), `pip check` i `git diff --check`: PASS.
+- Frontend bez zmian kodu: ponownie **189 testów PASS / 23 pliki**, ESLint,
+  TypeScript i produkcyjny build PASS. Playwright nie był powtarzany w tej iteracji.
+- Wywołania LLM/OCR w testach są mockowane; nie zużywano API ani danych produkcji.
+- Brak migracji, aktualizacji zależności i wdrożenia w tej iteracji. Pozostałe
+  zgłoszenia Tailwind oraz blokada uprawnień CI z poprzedniego raportu pozostają
+  otwarte; ten etap ich nie rozwiązuje.
+
 ## Audyt i refaktor — 2026-10-20 (niewdrożone)
 
 ### Zakres i poprawki
@@ -47,10 +86,9 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   Usunięcie wymaga osobnej migracji do Tailwind 4; nie użyto `audit fix --force`.
   Do tego czasu nie uruchamiać build/dev na niezaufanych źródłach/patternach
   ani nie udostępniać serwerów narzędzi developerskich publicznie.
-- Do kolejnego etapu walidacji: jawny `null` w aktualizacjach kont/inbox,
-  dolne granice limitów starszych endpointów listujących i ścisły schemat
-  odpowiedzi ekstraktora dokumentów LLM. Te obszary nie zostały naprawione
-  w tej iteracji; nie należy utożsamiać zielonych testów z ich pokryciem.
+- Wskazane wtedy braki walidacji (`null` w kontach/inbox, dolne granice limitów
+  starszych list i schemat ekstraktora LLM) zamknięto w kolejnym etapie
+  „Domknięcie walidacji backendu” opisanym powyżej.
 - Pozostają ostrzeżenia deprecacji Passlib i nazwy stałej HTTP 422.
 - Nie wykonano live testów LLM/NBP/Stirling/Redis, restore drill ani zmian
   konfiguracji produkcyjnej. Historyczna blokada zapisu workflow GitHub Actions

@@ -112,7 +112,7 @@ async def list_tasks(
     db: Annotated[AsyncSession, Depends(get_db)],
     project_id: Annotated[uuid.UUID | None, Query()] = None,
     status: Annotated[str | None, Query()] = None,
-    limit: Annotated[int, Query(le=500)] = 100,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
     return await get_tasks(
@@ -177,7 +177,7 @@ async def list_time_blocks(
     db: Annotated[AsyncSession, Depends(get_db)],
     start_time: Annotated[datetime | None, Query()] = None,
     end_time: Annotated[datetime | None, Query()] = None,
-    limit: Annotated[int, Query(le=500)] = 100,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
     return await get_time_blocks(

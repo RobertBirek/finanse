@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class InboxItemCreate(BaseModel):
@@ -14,6 +14,13 @@ class InboxItemUpdate(BaseModel):
     target_type: str | None = Field(default=None, max_length=50)
     target_id: uuid.UUID | None = None
     is_processed: bool | None = None
+
+    @field_validator("content", "is_processed")
+    @classmethod
+    def reject_explicit_null(cls, value: str | bool | None) -> str | bool:
+        if value is None:
+            raise ValueError("Field cannot be null")
+        return value
 
 
 class ProcessInboxItem(BaseModel):

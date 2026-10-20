@@ -237,7 +237,7 @@ async def create_transaction_endpoint(
 async def list_transactions(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-    limit: Annotated[int, Query(le=200)] = 50,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     type: Annotated[str | None, Query()] = None,
 ):

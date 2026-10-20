@@ -42,7 +42,7 @@ async def list_items(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     is_processed: Annotated[bool | None, Query()] = None,
-    limit: Annotated[int, Query(le=500)] = 100,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
     return await get_inbox_items(

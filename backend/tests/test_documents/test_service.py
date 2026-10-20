@@ -267,7 +267,7 @@ async def test_upload_commits_before_enqueue_and_survives_redis_outage(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-@pytest.mark.parametrize("extraction_failure", [False, True, "empty"])
+@pytest.mark.parametrize("extraction_failure", [False, True, "empty", "invalid"])
 async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     db_session, monkeypatch, extraction_failure
 ):
@@ -298,8 +298,13 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
         "_pdf_to_text",
         AsyncMock(return_value="\n" if extraction_failure == "empty" else "Receipt text"),
     )
-    extraction = AsyncMock(return_value={"detected": True, "amount": 100, "description": "Test"})
-    if extraction_failure:
+    extraction = AsyncMock(return_value={
+        "detected": True, "type": "expense", "amount": 100,
+        "currency": "PLN", "description": "Test",
+    })
+    if extraction_failure == "invalid":
+        extraction.return_value["amount"] = "100"
+    elif extraction_failure:
         extraction.side_effect = ValueError("Invalid model response")
     monkeypatch.setattr(extractor, "extract_financial_data", extraction)
     await worker.process_document({}, str(document_id))
@@ -386,11 +391,11 @@ async def test_recovered_document_does_not_duplicate_existing_inbox_suggestion(d
     document = await service.upload_document(
         db_session, user, b"recovered", "test.pdf", "application/pdf"
     )
-    first = await create_inbox_from_document(
-        db_session, user, document.id, "test.pdf", {"amount": 100}
-    )
-    second = await create_inbox_from_document(
-        db_session, user, document.id, "test.pdf", {"amount": 100}
-    )
+    data = {
+        "detected": True, "type": "expense", "amount": 100,
+        "currency": "PLN", "description": "Test",
+    }
+    first = await create_inbox_from_document(db_session, user, document.id, "test.pdf", data)
+    second = await create_inbox_from_document(db_session, user, document.id, "test.pdf", data)
     assert first.id == second.id
     assert len(await get_inbox_items(db_session, user)) == 1

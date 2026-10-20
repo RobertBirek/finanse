@@ -2,7 +2,7 @@ import datetime as dt
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class AccountCreate(BaseModel):
@@ -19,6 +19,15 @@ class AccountUpdate(BaseModel):
     is_active: bool | None = None
     is_budget_account: bool | None = None
     closed_at: dt.date | None = None
+
+    @field_validator("name", "type", "is_active", "is_budget_account")
+    @classmethod
+    def reject_explicit_null(cls, value: str | bool | None) -> str | bool:
+        # Omitted PATCH fields retain their defaults and are excluded by
+        # exclude_unset; only an explicit null reaches this validator.
+        if value is None:
+            raise ValueError("Field cannot be null")
+        return value
 
 
 class AccountResponse(BaseModel):

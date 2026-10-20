@@ -53,6 +53,9 @@ async def update_inbox_item(
     for key, value in update_data.items():
         setattr(item, key, value)
     await db.flush()
+    # The server-generated timestamp is expired by UPDATE; load it explicitly
+    # before synchronous response validation attempts asynchronous lazy IO.
+    await db.refresh(item, attribute_names=["updated_at"])
     return item
 
 
