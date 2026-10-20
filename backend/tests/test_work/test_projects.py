@@ -12,8 +12,99 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.work import service as work_service
-from app.work.schemas import TimeBlockCreate
+from app.work.schemas import ProjectUpdate, TaskCreate, TaskUpdate, TimeBlockCreate, TimeBlockUpdate
 from app.work.service import create_time_block, get_today_schedule
+
+
+@pytest.mark.parametrize(
+    ("schema", "field"),
+    [
+        (ProjectUpdate, "name"),
+        (ProjectUpdate, "status"),
+        (TaskUpdate, "title"),
+        (TaskUpdate, "status"),
+        (TaskUpdate, "priority"),
+        (TimeBlockUpdate, "start_time"),
+        (TimeBlockUpdate, "end_time"),
+        (TimeBlockUpdate, "title"),
+        (TimeBlockUpdate, "block_type"),
+    ],
+)
+def test_patch_distinguishes_missing_from_explicit_null(schema, field):
+    assert schema().model_dump(exclude_unset=True) == {}
+    with pytest.raises(ValueError, match="cannot be null"):
+        schema(**{field: None})
+
+
+def test_nullable_patch_fields_can_still_be_cleared():
+    assert ProjectUpdate(description=None).model_dump(exclude_unset=True) == {"description": None}
+    assert TaskUpdate(project_id=None).model_dump(exclude_unset=True) == {"project_id": None}
+
+
+def test_time_block_requires_explicit_timezone():
+    with pytest.raises(ValueError):
+        TimeBlockCreate(
+            title="Ambiguous", start_time="2026-10-20T09:00:00", end_time="2026-10-20T10:00:00"
+        )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_task_completion_and_priority_order(db_session):
+    user = uuid.uuid4()
+    for priority in ["low", "high", "medium", "urgent"]:
+        await work_service.create_task(
+            db_session, user, TaskCreate(title=priority, priority=priority)
+        )
+    tasks = await work_service.get_tasks(db_session, user)
+    assert [task.priority for task in tasks] == ["urgent", "high", "medium", "low"]
+    task = tasks[0]
+    await work_service.update_task(db_session, user, task.id, TaskUpdate(status="done"))
+    assert task.completed_at is not None
+    first_completed = task.completed_at
+    await work_service.update_task(db_session, user, task.id, TaskUpdate(status="done"))
+    assert task.completed_at == first_completed
+    await work_service.update_task(db_session, user, task.id, TaskUpdate(status="in_progress"))
+    assert task.completed_at is None
+    created_done = await work_service.create_task(
+        db_session, user, TaskCreate(title="Done", status="done")
+    )
+    assert created_done.completed_at is not None
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_today_includes_overnight_overlap_but_not_boundary_touch(db_session, monkeypatch):
+    today = date(2026, 10, 20)
+    monkeypatch.setattr(work_service, "_local_today", lambda: today)
+    monkeypatch.setattr(work_service, "_local_timezone", lambda: UTC)
+    start = datetime(2026, 10, 20, tzinfo=UTC)
+    user = uuid.uuid4()
+    overlap = await create_time_block(
+        db_session,
+        user,
+        TimeBlockCreate(
+            title="Overnight",
+            start_time=start - timedelta(hours=1),
+            end_time=start + timedelta(hours=1),
+        ),
+    )
+    await create_time_block(
+        db_session,
+        user,
+        TimeBlockCreate(title="Before", start_time=start - timedelta(hours=2), end_time=start),
+    )
+    await create_time_block(
+        db_session,
+        user,
+        TimeBlockCreate(
+            title="Tomorrow",
+            start_time=start + timedelta(days=1),
+            end_time=start + timedelta(days=1, hours=1),
+        ),
+    )
+    result = await get_today_schedule(db_session, user)
+    assert [block.id for block in result["time_blocks"]] == [overlap.id]
 
 
 class TestWorkAPI:

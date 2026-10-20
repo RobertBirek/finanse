@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime, tzinfo
 from datetime import time as dt_time
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.work.models import Project, Task, TimeBlock
@@ -38,6 +38,10 @@ def _local_day_utc_bounds(local_date: date) -> tuple[datetime, datetime]:
     local_start = datetime.combine(local_date, dt_time.min, tzinfo=timezone)
     next_local_start = datetime.combine(local_date + date.resolution, dt_time.min, tzinfo=timezone)
     return local_start.astimezone(UTC), next_local_start.astimezone(UTC)
+
+
+def _task_priority():
+    return case({"urgent": 4, "high": 3, "medium": 2, "low": 1}, value=Task.priority, else_=0)
 
 
 async def create_project(db: AsyncSession, user_id: uuid.UUID, data: ProjectCreate) -> Project:
@@ -107,6 +111,8 @@ async def _validate_time_block_links(
 async def create_task(db: AsyncSession, user_id: uuid.UUID, data: TaskCreate) -> Task:
     await validate_project_reference(db, user_id, data.project_id)
     task = Task(user_id=user_id, **data.model_dump())
+    if task.status == "done":
+        task.completed_at = datetime.now(UTC)
     db.add(task)
     await db.flush()
     return task
@@ -132,7 +138,7 @@ async def get_tasks(
 
             stmt = stmt.where(or_(*[Task.status == s for s in statuses]))
     stmt = (
-        stmt.order_by(Task.priority.desc(), Task.due_date.asc().nullslast())
+        stmt.order_by(_task_priority().desc(), Task.due_date.asc().nullslast(), Task.id)
         .limit(limit)
         .offset(offset)
     )
@@ -154,8 +160,11 @@ async def update_task(
     update_data = data.model_dump(exclude_unset=True)
     if "project_id" in update_data:
         await validate_project_reference(db, user_id, update_data["project_id"])
-    if "status" in update_data and update_data["status"] == "done" and task.status != "done":
-        task.completed_at = datetime.now(UTC)
+    if "status" in update_data:
+        if update_data["status"] == "done" and task.status != "done":
+            task.completed_at = datetime.now(UTC)
+        elif update_data["status"] != "done":
+            task.completed_at = None
     for key, value in update_data.items():
         if key == "completed_at":
             continue
@@ -252,7 +261,7 @@ async def get_today_schedule(db: AsyncSession, user_id: uuid.UUID) -> dict:
         select(TimeBlock)
         .where(
             TimeBlock.user_id == user_id,
-            TimeBlock.start_time >= start_of_day,
+            TimeBlock.end_time > start_of_day,
             TimeBlock.start_time < end_of_day,
         )
         .order_by(TimeBlock.start_time)
@@ -267,7 +276,7 @@ async def get_today_schedule(db: AsyncSession, user_id: uuid.UUID) -> dict:
             Task.due_date == today,
             Task.status.in_(["todo", "in_progress"]),
         )
-        .order_by(Task.priority.desc())
+        .order_by(_task_priority().desc(), Task.id)
     )
     tasks_today = list(tasks_today_result.scalars().all())
 
