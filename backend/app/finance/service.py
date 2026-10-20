@@ -7,7 +7,7 @@ from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
-from app.finance import queries
+from app.finance import entities, ledger_validation, queries
 from app.finance.models import (
     Account,
     Category,
@@ -19,8 +19,6 @@ from app.finance.models import (
 )
 from app.finance.nbp_rates import NbpRateProvider
 from app.finance.schemas import (
-    AccountCreate,
-    AccountUpdate,
     BudgetStatusItem,
     BudgetStatusResponse,
     CashflowBudgetSummary,
@@ -29,10 +27,8 @@ from app.finance.schemas import (
     CashflowSuggestion,
     CategoryBudgetCreate,
     CategoryBudgetUpdate,
-    CategoryCreate,
     CategorySpendResponse,
     CategorySummaryResponse,
-    CategoryUpdate,
     ExchangeCreate,
     FinanceSettingsUpdate,
     FinancialSummary,
@@ -51,7 +47,17 @@ get_transaction = queries.get_transaction
 get_transactions = queries.get_transactions
 search_transactions = queries.search_transactions
 
-SUPPORTED_CURRENCIES = {"PLN", "EUR", "USD"}
+SUPPORTED_CURRENCIES = entities.SUPPORTED_CURRENCIES
+create_account = entities.create_account
+update_account = entities.update_account
+delete_account = entities.delete_account
+create_category = entities.create_category
+get_categories = entities.get_categories
+update_category = entities.update_category
+delete_category = entities.delete_category
+_validate_category_parent = entities._validate_category_parent
+_validate_posting_sum = ledger_validation._validate_posting_sum
+_validate_transaction_postings = ledger_validation._validate_transaction_postings
 
 
 def _local_today() -> date:
@@ -66,284 +72,6 @@ def _month_bounds(month: int | None, year: int | None) -> tuple[int, int, date, 
     month_start = date(selected_year, selected_month, 1)
     month_end = date(selected_year + (selected_month == 12), (selected_month % 12) + 1, 1)
     return selected_month, selected_year, month_start, month_end
-
-
-async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCreate) -> Account:
-    currency = data.currency.upper()
-    if currency not in SUPPORTED_CURRENCIES:
-        raise ValueError("Unsupported currency")
-    account = Account(user_id=user_id, **data.model_dump(exclude={"currency"}), currency=currency)
-    db.add(account)
-    await db.flush()
-    return account
-
-
-async def update_account(
-    db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID, data: AccountUpdate
-) -> Account | None:
-    account = await get_account(db, user_id, account_id)
-    if account is None:
-        return None
-    update_data = data.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(account, key, value)
-    await db.flush()
-    return account
-
-
-async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID) -> bool:
-    account = await get_account(db, user_id, account_id)
-    if account is None:
-        return False
-    posting = await db.execute(select(Posting.id).where(Posting.account_id == account_id).limit(1))
-    scheduled = await db.execute(
-        select(ScheduledFinanceItem.id)
-        .where(ScheduledFinanceItem.account_id == account_id)
-        .limit(1)
-    )
-    if posting.first() is not None or scheduled.first() is not None:
-        raise ValueError("Account has records; deactivate it instead of deleting")
-    await db.delete(account)
-    await db.flush()
-    return True
-
-
-async def _validate_category_parent(
-    db: AsyncSession,
-    user_id: uuid.UUID,
-    parent_id: uuid.UUID | None,
-    category_type: str,
-    category_id: uuid.UUID | None = None,
-) -> None:
-    # Serialize hierarchy edits so concurrent reparenting cannot introduce a cycle.
-    await db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"category-tree:{user_id}"))))
-    visited = {category_id} if category_id is not None else set()
-    while parent_id is not None:
-        if parent_id in visited:
-            raise ValueError("Category hierarchy cannot contain cycles")
-        visited.add(parent_id)
-        parent = (
-            await db.execute(
-                select(Category)
-                .where(Category.id == parent_id, Category.user_id == user_id)
-                .execution_options(populate_existing=True)
-            )
-        ).scalar_one_or_none()
-        if parent is None:
-            raise ValueError("Parent category not found")
-        if parent.type != category_type:
-            raise ValueError("Parent category type must match category type")
-        parent_id = parent.parent_id
-
-
-async def create_category(db: AsyncSession, user_id: uuid.UUID, data: CategoryCreate) -> Category:
-    await _validate_category_parent(db, user_id, data.parent_id, data.type)
-    category = Category(user_id=user_id, **data.model_dump())
-    db.add(category)
-    await db.flush()
-    return category
-
-
-async def get_categories(db: AsyncSession, user_id: uuid.UUID) -> list[Category]:
-    result = await db.execute(
-        select(Category).where(Category.user_id == user_id).order_by(Category.name)
-    )
-    return list(result.scalars().all())
-
-
-async def update_category(
-    db: AsyncSession, user_id: uuid.UUID, category_id: uuid.UUID, data: CategoryUpdate
-) -> Category | None:
-    result = await db.execute(
-        select(Category).where(Category.id == category_id, Category.user_id == user_id)
-    )
-    category = result.scalar_one_or_none()
-    if category is None:
-        return None
-    update_data = data.model_dump(exclude_unset=True)
-    if any(update_data.get(key, True) is None for key in ("name", "type", "is_active")):
-        raise ValueError("Category name, type and is_active cannot be null")
-    await _validate_category_parent(
-        db,
-        user_id,
-        update_data.get("parent_id", category.parent_id),
-        update_data.get("type", category.type),
-        category.id,
-    )
-    if "type" in update_data and update_data["type"] != category.type:
-        child = (
-            await db.execute(
-                select(Category.id)
-                .where(Category.parent_id == category.id, Category.type != update_data["type"])
-                .limit(1)
-            )
-        ).first()
-        used = (
-            await db.execute(select(Posting.id).where(Posting.category_id == category.id).limit(1))
-        ).first()
-        if child is not None or used is not None:
-            raise ValueError("Cannot change the type of a category with children or postings")
-    for key, value in update_data.items():
-        setattr(category, key, value)
-    await db.flush()
-    return category
-
-
-async def delete_category(db: AsyncSession, user_id: uuid.UUID, category_id: uuid.UUID) -> bool:
-    result = await db.execute(
-        select(Category).where(Category.id == category_id, Category.user_id == user_id)
-    )
-    category = result.scalar_one_or_none()
-    if category is None:
-        return False
-    posting = await db.execute(
-        select(Posting.id).where(Posting.category_id == category_id).limit(1)
-    )
-    scheduled = await db.execute(
-        select(ScheduledFinanceItem.id)
-        .where(ScheduledFinanceItem.category_id == category_id)
-        .limit(1)
-    )
-    budget = await db.execute(
-        select(CategoryBudget.id).where(CategoryBudget.category_id == category_id).limit(1)
-    )
-    child = await db.execute(select(Category.id).where(Category.parent_id == category_id).limit(1))
-    if any(result.first() is not None for result in (posting, scheduled, budget, child)):
-        raise ValueError("Category has records; deactivate it instead of deleting")
-    await db.delete(category)
-    await db.flush()
-    return True
-
-
-def _validate_posting_sum(postings: list, txn_type: str) -> None:
-    """Validate that sum of postings' base_amount_pln equals 0, respecting debit/credit signs."""
-    total = 0
-    for p in postings:
-        signed_amount = p.base_amount_pln if p.direction == "debit" else -p.base_amount_pln
-        total += signed_amount
-
-    if total != 0:
-        raise ValueError(
-            f"Sum of posting base amounts must equal 0 (got {total}). "
-            "Debits = Credits (double-entry accounting invariant)."
-        )
-
-    if txn_type in ("income", "expense") and len(postings) < 2:
-        raise ValueError(
-            "Income/expense transactions must have at least 2 postings (source + destination)"
-        )
-
-    if len(postings) < 2:
-        raise ValueError("Transactions must have at least 2 postings")
-
-
-async def _validate_transaction_postings(
-    db: AsyncSession,
-    user_id: uuid.UUID,
-    postings: list,
-    txn_type: str,
-    *,
-    allow_category_reversal: bool = False,
-) -> None:
-    account_ids = {posting.account_id for posting in postings if posting.account_id is not None}
-    accounts: dict[uuid.UUID, Account] = {}
-    if account_ids:
-        account_result = await db.execute(
-            select(Account).where(Account.user_id == user_id, Account.id.in_(account_ids))
-        )
-        accounts = {account.id: account for account in account_result.scalars().all()}
-
-    category_ids = {posting.category_id for posting in postings if posting.category_id is not None}
-    categories: dict[uuid.UUID, Category] = {}
-    if category_ids:
-        category_result = await db.execute(
-            select(Category).where(Category.user_id == user_id, Category.id.in_(category_ids))
-        )
-        categories = {category.id: category for category in category_result.scalars().all()}
-
-    for posting in postings:
-        if posting.account_id is None and posting.category_id is None:
-            raise ValueError("Posting must have at least an account or category")
-        account = accounts.get(posting.account_id) if posting.account_id is not None else None
-        if posting.account_id is not None and account is None:
-            raise ValueError("Account not found")
-        if account is not None and not account.is_active:
-            raise ValueError("Account is inactive")
-        category = categories.get(posting.category_id) if posting.category_id is not None else None
-        if posting.category_id is not None and category is None:
-            raise ValueError("Category not found")
-        if category is not None and not category.is_active:
-            raise ValueError("Category is inactive")
-
-        source_currency = str(posting.source_currency).upper()
-        if source_currency not in SUPPORTED_CURRENCIES:
-            raise ValueError("Unsupported currency")
-        if account is not None:
-            account_currency = str(account.currency).upper()
-            if account_currency not in SUPPORTED_CURRENCIES:
-                raise ValueError("Unsupported currency")
-            if source_currency != account_currency:
-                raise ValueError(
-                    f"Posting currency {source_currency} does not match account currency "
-                    f"{account_currency}"
-                )
-        if posting.source_amount <= 0 or posting.base_amount_pln <= 0:
-            raise ValueError("Posting amounts must be positive")
-        if posting.fx_rate <= 0:
-            raise ValueError("FX rate must be positive")
-
-        if posting.account_id is not None and posting.category_id is not None:
-            raise ValueError("Posting must reference either an account or a category, not both")
-        rate = Decimal(str(posting.fx_rate))
-        if not rate.is_finite() or rate <= 0 or rate >= Decimal(1000000):
-            raise ValueError("FX rate must be finite, positive and fit the ledger precision")
-        if rate != rate.quantize(Decimal("0.000001")):
-            raise ValueError("FX rate must have at most 6 decimal places")
-        if source_currency == "PLN":
-            if rate != 1 or posting.source_amount != posting.base_amount_pln:
-                raise ValueError("PLN posting must use rate 1 and identical source/base amounts")
-        else:
-            expected = int(
-                (Decimal(posting.source_amount) * rate).quantize(
-                    Decimal(1), rounding=ROUND_HALF_EVEN
-                )
-            )
-            # A converted receipt is rounded to one foreign minor unit. Its PLN
-            # book value may differ from revaluing that rounded receipt.
-            exchange_rounding = txn_type == "exchange" and posting.source_amount == int(
-                (Decimal(posting.base_amount_pln) / rate).quantize(
-                    Decimal(1), rounding=ROUND_HALF_EVEN
-                )
-            )
-            if posting.base_amount_pln != expected and not exchange_rounding:
-                raise ValueError("Base amount does not match source amount and FX rate")
-
-    if txn_type not in {"income", "expense"}:
-        return
-
-    account_side_postings = [
-        posting
-        for posting in postings
-        if posting.account_id is not None and posting.category_id is None
-    ]
-    if len(account_side_postings) != 1:
-        raise ValueError("Income/expense transactions require exactly one account-side posting")
-
-    account_posting = account_side_postings[0]
-    expected_direction = "credit" if txn_type == "income" else "debit"
-    if account_posting.direction != expected_direction:
-        raise ValueError("Account posting direction does not match transaction type")
-    account = accounts[account_posting.account_id]
-    for posting in postings:
-        if posting.category_id is not None:
-            category_type = categories[posting.category_id].type
-            if category_type != txn_type and not (
-                allow_category_reversal and category_type in {"income", "expense"}
-            ):
-                raise ValueError("Category type must match transaction type")
-            if posting.direction == expected_direction:
-                raise ValueError("Category posting must oppose the account posting")
-            posting.is_budget_impact = account.is_budget_account
 
 
 async def create_transaction(
@@ -428,7 +156,11 @@ async def create_exchange_transaction(
         rate = Decimal(str(data.fx_rate))
         rate_source = "manual"
     else:
-        quote = await NbpRateProvider().get_rate(foreign_currency, effective_date)
+        provider = NbpRateProvider()
+        try:
+            quote = await provider.get_rate(foreign_currency, effective_date)
+        finally:
+            await provider.close()
         if quote is None:
             raise ValueError(f"No FX rate available for {foreign_currency} on {effective_date}")
         rate = Decimal(str(quote.rate))

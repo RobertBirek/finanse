@@ -231,3 +231,55 @@ async def test_exchange_no_rate_raises(db_session, monkeypatch):
                 description="Brak kursu",
             ),
         )
+
+
+@pytest.mark.parametrize("rate", [float("nan"), float("inf"), float("-inf"), 0, -1])
+def test_nbp_rejects_invalid_rates_and_conversion(rate):
+    import httpx
+
+    response = httpx.Response(200, json={"rates": [{"mid": str(rate), "effectiveDate": "2026-10-20"}]})
+    with pytest.raises(ValueError, match="finite"):
+        NbpRateProvider._parse_rate(response, "nbp")
+    with pytest.raises(ValueError, match="finite"):
+        NbpRateProvider().calculate_base_amount(75, rate)
+
+
+def test_nbp_conversion_uses_decimal_half_even_rounding():
+    # 75 * 4.1 is 307.49999999999994 using binary float, but exactly 307.5 in the ledger.
+    assert NbpRateProvider().calculate_base_amount(75, 4.1) == 308
+
+
+@pytest.mark.parametrize("outcome", ["success", "missing", "exception"])
+async def test_exchange_always_closes_nbp_provider(monkeypatch, outcome):
+    from datetime import date
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from app.finance import service
+
+    accounts = [
+        SimpleNamespace(id=uuid.uuid4(), currency=currency, is_active=True)
+        for currency in ("PLN", "EUR")
+    ]
+    quote = NbpRate(4.1, date(2026, 10, 20), "nbp")
+    get_rate = AsyncMock(return_value=quote if outcome == "success" else None)
+    if outcome == "exception":
+        get_rate.side_effect = RuntimeError("provider unavailable")
+    close = AsyncMock()
+    create = AsyncMock()
+    monkeypatch.setattr(service, "get_accounts", AsyncMock(return_value=accounts))
+    monkeypatch.setattr(service, "create_transaction", create)
+    monkeypatch.setattr(NbpRateProvider, "get_rate", get_rate)
+    monkeypatch.setattr(NbpRateProvider, "close", close)
+    data = ExchangeCreate(
+        from_account_id=accounts[0].id, to_account_id=accounts[1].id,
+        from_amount=4100, description="Exchange",
+    )
+    if outcome == "success":
+        await service.create_exchange_transaction(AsyncMock(), uuid.uuid4(), data)
+        create.assert_awaited_once()
+    else:
+        with pytest.raises(ValueError if outcome == "missing" else RuntimeError):
+            await service.create_exchange_transaction(AsyncMock(), uuid.uuid4(), data)
+        create.assert_not_awaited()
+    close.assert_awaited_once()

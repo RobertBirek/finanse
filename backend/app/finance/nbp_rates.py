@@ -1,6 +1,8 @@
 import logging
+import math
 from dataclasses import dataclass
 from datetime import date, timedelta
+from decimal import ROUND_HALF_EVEN, Decimal
 
 import httpx
 
@@ -18,7 +20,7 @@ class NbpRate:
 
 
 class NbpRateProvider:
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache: dict[tuple[str, date], NbpRate] = {}
         self._client: httpx.AsyncClient | None = None
 
@@ -113,16 +115,20 @@ class NbpRateProvider:
         if not rates:
             raise ValueError("NBP response has no usable rate")
         quote = max(rates, key=lambda rate: rate.effective_date)
-        if quote.rate <= 0:
-            raise ValueError("NBP response has a non-positive rate")
+        if not math.isfinite(quote.rate) or quote.rate <= 0:
+            raise ValueError("NBP response must have a finite, positive rate")
         return quote
 
     def calculate_base_amount(self, source_amount: int, fx_rate: float) -> int:
-        if fx_rate <= 0:
-            return source_amount
-        return round(source_amount * fx_rate)
+        if not math.isfinite(fx_rate) or fx_rate <= 0:
+            raise ValueError("FX rate must be finite and positive")
+        # Keep half-even rounding identical to the ledger; binary float
+        # multiplication can turn an exact half minor unit into a smaller value.
+        return int((Decimal(source_amount) * Decimal(str(fx_rate))).quantize(
+            Decimal(1), rounding=ROUND_HALF_EVEN
+        ))
 
-    async def close(self):
+    async def close(self) -> None:
         if self._client:
             await self._client.aclose()
             self._client = None

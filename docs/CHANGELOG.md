@@ -5,6 +5,60 @@ Wszystkie istotne zmiany w projekcie.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
+## Audyt i refaktor — 2026-10-20 (niewdrożone)
+
+### Zakres i poprawki
+- Przegląd repozytorium: sesje, CSRF/Origin, limity Redis, izolacja właściciela,
+  księga finansowa i raportowanie, zatwierdzanie narzędzi AI, dokumenty/worker,
+  frontend, zależności i skrypty operacyjne. To lokalny audyt kodu i regresji,
+  nie test penetracyjny produkcji ani gwarancja braku wszystkich podatności.
+- Naprawiono `TypeError`/500 dla dowodów CSRF spoza ASCII: jawne 403 przed
+  odczytem sesji; trzy nowe testy regresyjne.
+- Naprawiono renderowanie strukturalnych błędów API (np. tablicy `detail` z 422)
+  i błędów sieciowych na ekranie kont; cztery nowe testy regresyjne.
+- Wydzielono `finance/entities.py` i `finance/ledger_validation.py`, zachowując
+  fasadę serwisu i kontrakty routerów/importera/AI. Serwis: 1251 → 983 linie.
+- Wydzielono wiersze kont/kategorii i normalizację błędów do komponentów;
+  `FinanceAccounts.tsx`: 819 → 318 linii.
+- NBP: zamykanie klienta HTTP także przy błędzie/braku kursu, odrzucanie
+  NaN/Infinity oraz Decimal/half-even zamiast mnożenia float. Regresja:
+  `75 * 4.1` ma dawać 308 groszy, nie 307. Dziewięć nowych testów.
+- Zaktualizowano React Router 7, Vite 7, Vitest 4, TypeScript ESLint 8
+  i zgodne zależności przechodnie; dostosowano konfigurację i testy routera.
+- Zaktualizowano FastAPI/Starlette/Pydantic, certifi/Mako i pytest/pytest-asyncio;
+  ujednolicono deklaracje zależności, dodano brakujące arq i narzędzia dev.
+  Określono zakres pętli fixture asyncio. Nie zmieniono współdzielonego venv.
+
+### Końcowa weryfikacja lokalna
+- Backend: **425 PASS, zero pominięć** na PostgreSQL `finanse_test`, loopback
+  `127.0.0.1:55432`. Początkowe 177 pominięć wynikało z domyślnego portu 5432.
+- Frontend: **189 PASS / 23 pliki**; Playwright: **12 PASS** (desktop/mobile).
+  Testy przeglądarkowe używają produkcyjnego buildu i mocków API, nie produkcji
+  ani pełnej integracji z zewnętrznymi dostawcami.
+- Ruff, mypy (53 moduły), ESLint, TypeScript, build, `pip check`,
+  `git diff --check` i kontrola składni skryptów Bash: PASS.
+- Audyt npm `--omit=dev`: zero zgłoszeń. Zapytanie OSV dla pakietów faktycznie
+  zainstalowanych w nowym, odizolowanym środowisku Python: zero zgłoszeń.
+  Wyniki są migawką baz podatności z dnia audytu, nie certyfikatem bezpieczeństwa.
+
+### Pozostałe ryzyka i ograniczenia
+- **Otwarte: 7 zgłoszeń npm dotyczących wyłącznie narzędzi deweloperskich**
+  (5 high, 2 moderate), łańcuch Tailwind 3 / braces / parser selektorów.
+  Usunięcie wymaga osobnej migracji do Tailwind 4; nie użyto `audit fix --force`.
+  Do tego czasu nie uruchamiać build/dev na niezaufanych źródłach/patternach
+  ani nie udostępniać serwerów narzędzi developerskich publicznie.
+- Do kolejnego etapu walidacji: jawny `null` w aktualizacjach kont/inbox,
+  dolne granice limitów starszych endpointów listujących i ścisły schemat
+  odpowiedzi ekstraktora dokumentów LLM. Te obszary nie zostały naprawione
+  w tej iteracji; nie należy utożsamiać zielonych testów z ich pokryciem.
+- Pozostają ostrzeżenia deprecacji Passlib i nazwy stałej HTTP 422.
+- Nie wykonano live testów LLM/NBP/Stirling/Redis, restore drill ani zmian
+  konfiguracji produkcyjnej. Historyczna blokada zapisu workflow GitHub Actions
+  opisana w PR nadal obowiązuje; wyniki powyżej są lokalne, nie z CI.
+- **Brak wdrożenia, migracji i zmian danych produkcyjnych.** Zmieniły się
+  zależności runtime, więc przed ewentualnym wdrożeniem wymagany jest nowy,
+  zweryfikowany obraz backendu i workera, a nie samo podmienienie źródeł.
+
 ## [Unreleased] — 2026-08-15
 
 ### Added

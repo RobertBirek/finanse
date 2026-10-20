@@ -28,6 +28,33 @@ def production_csrf_settings(monkeypatch):
     monkeypatch.setattr(rate_limit, "get_redis_client", RedisForCsrf)
 
 
+@pytest.mark.parametrize("header,cookie", [("é", "valid"), ("valid", "é"), ("é", "é")])
+async def test_non_ascii_csrf_proofs_are_forbidden_before_session_lookup(
+    monkeypatch, production_csrf_settings, header, cookie
+):
+    from unittest.mock import AsyncMock
+
+    from fastapi import HTTPException, Request
+
+    from app.security import csrf
+
+    audit = AsyncMock()
+    lookup = AsyncMock()
+    monkeypatch.setattr(csrf, "log_security_event", audit)
+    monkeypatch.setattr(csrf, "get_active_session", lookup)
+    request = Request({
+        "type": "http", "method": "POST", "path": "/api/finance/accounts",
+        "headers": [(b"origin", TRUSTED_ORIGIN.encode()),
+                    (b"x-csrf-token", header.encode("latin-1"))],
+    })
+    with pytest.raises(HTTPException) as error:
+        await csrf.require_csrf(request, AsyncMock(), "opaque-session", cookie)
+    assert error.value.status_code == 403
+    assert error.value.detail == FORBIDDEN_DETAIL
+    lookup.assert_not_awaited()
+    audit.assert_awaited_once()
+
+
 @pytest.mark.integration
 class TestProductionCsrf:
     async def test_login_requires_a_trusted_origin_but_not_a_session(

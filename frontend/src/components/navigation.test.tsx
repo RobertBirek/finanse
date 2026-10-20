@@ -73,7 +73,6 @@ describe("contextual navigation components", () => {
 
     render(
       <MemoryRouter
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
       >
         <IconRail activeContext={finance} />
         <ContextualSidebar
@@ -117,7 +116,6 @@ describe("Layout", () => {
     render(
       <MemoryRouter
         initialEntries={["/finances"]}
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
       >
         <Routes>
           <Route element={<Layout />}>

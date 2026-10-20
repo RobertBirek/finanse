@@ -75,7 +75,6 @@ describe("Finances", () => {
 
     render(
       <MemoryRouter
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
       >
         <Finances />
       </MemoryRouter>,

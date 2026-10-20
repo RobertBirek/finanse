@@ -41,6 +41,10 @@ async def require_csrf(
     csrf_header = request.headers.get(CSRF_HEADER_NAME)
     if not session_token or not csrf_cookie or not csrf_header:
         await _forbidden(session_token)
+    # compare_digest(str, str) raises TypeError for non-ASCII input. Reject
+    # malformed client proofs instead of turning an unauthenticated request into 500.
+    if not csrf_header.isascii() or not csrf_cookie.isascii():
+        await _forbidden(session_token)
     if not hmac.compare_digest(csrf_header, csrf_cookie):
         await _forbidden(session_token)
 

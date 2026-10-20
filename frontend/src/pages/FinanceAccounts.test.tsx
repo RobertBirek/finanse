@@ -149,6 +149,53 @@ describe("FinanceAccounts", () => {
     expect(screen.getByText("Przychód · —")).toBeInTheDocument();
   });
 
+  it.each([
+    {
+      response: {
+        status: 422,
+        data: { detail: [{ msg: "Invalid", loc: ["body", "name"] }] },
+      },
+    },
+    { response: { status: 500, data: { detail: { message: "Unexpected" } } } },
+    new Error("Network Error"),
+  ])(
+    "shows a safe message for structured and network errors without crashing",
+    (error) => {
+      hooks.useCreateAccount.mockReturnValue({
+        mutate: vi.fn(),
+        isPending: false,
+        error,
+      });
+      render(<FinanceAccounts />);
+      expect(
+        screen.getByText(
+          "Nie udało się zapisać zmian. Sprawdź dane i spróbuj ponownie.",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        createAccountForm().getByRole("button", { name: "Dodaj konto" }),
+      ).toBeEnabled();
+    },
+  );
+
+  it("preserves a textual API error for the category form", () => {
+    hooks.useCreateCategory.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      error: {
+        response: {
+          data: { detail: "Parent category type must match category type" },
+        },
+      },
+    });
+    render(<FinanceAccounts />);
+    expect(
+      createCategoryForm().getByText(
+        "Parent category type must match category type",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("nieaktywne konto ma badge nieaktywne i jest wygaszone", () => {
     render(<FinanceAccounts />);
 
