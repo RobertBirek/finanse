@@ -85,3 +85,10 @@ export function transactionSearchParams(
     offset: (page - 1) * size,
   };
 }
+
+export const TRANSACTION_TYPES = {
+  expense: "Wydatek",
+  income: "Przychód",
+  transfer: "Transfer",
+  exchange: "Przewalutowanie",
+};
