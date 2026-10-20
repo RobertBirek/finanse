@@ -88,14 +88,14 @@ function ToolExecutionActions({
       <button
         onClick={() => confirm.mutate(variables)}
         disabled={isPending}
-        className="px-3 py-1 bg-green-800 hover:bg-green-900 disabled:opacity-50 text-white text-xs rounded font-medium"
+        className="px-3 py-1 bg-green-800 hover:bg-green-900 disabled:opacity-50 text-white text-xs rounded-sm font-medium"
       >
         {confirm.isPending ? "..." : "Zatwierdź"}
       </button>
       <button
         onClick={() => deny.mutate(variables)}
         disabled={isPending}
-        className="px-3 py-1 bg-red-600/50 hover:bg-red-500 disabled:opacity-50 text-red-200 text-xs rounded"
+        className="px-3 py-1 bg-red-600/50 hover:bg-red-500 disabled:opacity-50 text-red-200 text-xs rounded-sm"
       >
         {deny.isPending ? "..." : "Odrzuć"}
       </button>

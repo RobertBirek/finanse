@@ -82,7 +82,7 @@ export function ProjectDetail() {
                     onChange={(e) =>
                       updateTask.mutate({ id: task.id, status: e.target.value })
                     }
-                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-advisor-500"
+                    className="bg-gray-800 border border-gray-700 rounded-sm px-2 py-1 text-xs text-gray-300 focus:outline-hidden focus:border-advisor-500"
                   >
                     <option value="todo">Do zrobienia</option>
                     <option value="in_progress">W trakcie</option>

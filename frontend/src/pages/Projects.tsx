@@ -164,7 +164,7 @@ export function Projects() {
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="text-white font-medium">{project.name}</h3>
                   <span
-                    className={`text-xs px-2 py-0.5 rounded border ${statusColors[project.status]}`}
+                    className={`text-xs px-2 py-0.5 rounded-sm border ${statusColors[project.status]}`}
                   >
                     {statusLabels[project.status]}
                   </span>

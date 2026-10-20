@@ -47,7 +47,7 @@ export function CashflowForecast({
   );
 
   return (
-    <section className="card mb-6 border border-advisor-500/30 bg-gradient-to-br from-advisor-500/10 via-gray-900 to-gray-900">
+    <section className="card mb-6 border border-advisor-500/30 bg-linear-to-br/srgb from-advisor-500/10 via-gray-900 to-gray-900">
       <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-advisor-300">

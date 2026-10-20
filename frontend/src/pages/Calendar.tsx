@@ -380,7 +380,7 @@ function DayCell({
         {blocks.slice(0, agenda ? undefined : compact ? 2 : 10).map((b) => (
           <div
             key={b.id}
-            className={`px-1.5 py-0.5 rounded text-sm border-l-2 ${blockColors[b.block_type] || blockColors.shallow}`}
+            className={`px-1.5 py-0.5 rounded-sm text-sm border-l-2 ${blockColors[b.block_type] || blockColors.shallow}`}
           >
             {compact ? (
               <span className="truncate block">
@@ -401,7 +401,7 @@ function DayCell({
         {tasks.slice(0, agenda ? undefined : compact ? 2 : 10).map((t) => (
           <div
             key={t.id}
-            className={`px-1.5 py-0.5 rounded text-sm border-l-2 ${
+            className={`px-1.5 py-0.5 rounded-sm text-sm border-l-2 ${
               t.status === "done"
                 ? "border-gray-500 text-gray-500 line-through"
                 : taskPriorityColors[t.priority] || taskPriorityColors.medium

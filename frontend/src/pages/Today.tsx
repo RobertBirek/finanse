@@ -157,7 +157,7 @@ export function Today() {
                     </span>
                     {(task.priority === "high" ||
                       task.priority === "urgent") && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-red-900/50 text-red-300">
+                      <span className="text-xs px-2 py-0.5 rounded-sm bg-red-900/50 text-red-300">
                         {task.priority === "urgent" ? "Pilne" : "Ważne"}
                       </span>
                     )}

@@ -191,7 +191,7 @@ export function Inbox() {
                     </div>
                   )}
                   {item.is_processed && item.target_type && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-gray-800 text-gray-400">
+                    <span className="text-xs px-2 py-0.5 rounded-sm bg-gray-800 text-gray-400">
                       {TARGET_LABELS[item.target_type] || item.target_type}
                     </span>
                   )}

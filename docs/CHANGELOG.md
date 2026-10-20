@@ -5,6 +5,45 @@ Wszystkie istotne zmiany w projekcie.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
+## Tailwind 4 i weryfikacja gotowości CI — 2026-10-20 (niewdrożone)
+
+### Migracja i testy
+- Tailwind 3 zastąpiono Tailwind **4.3.3** i natywnym pluginem Vite.
+  Usunięto stary plugin PostCSS, konfigurację PostCSS i zbędne bezpośrednie
+  zależności autoprefixer/postcss. Plik JS z paletą marki ładowany jest jawnie
+  przez `@config`; skanowanie klas ograniczono do źródeł i index.html.
+- Zachowano dotychczasową paletę sRGB, style przycisków, placeholderów i granic.
+  Zaktualizowano nazwy utility zaokrągleń i focus outline zgodnie z v4;
+  gradient pozostaje w sRGB. Nie zmieniano logiki finansowej ani API.
+- **npm audit całego drzewa, także dev: 0 zgłoszeń**. Tym samym zamknięto
+  poprzednie 7 zgłoszeń w łańcuchu Tailwind 3, bez `audit fix --force`.
+- **189 testów Vitest PASS**, ESLint, TypeScript, build i diff check PASS.
+  **18 testów Playwright PASS** (wcześniej 12): dodano kontrolę skompilowanych
+  kolorów/paddingów, nawigacji responsywnej, focus klawiatury oraz geometrii modala.
+- Porównano 31 scenariuszy/zrzutów przed i po migracji w Chromium przy 375/1440 px:
+  strony, formularz edycji, szczegóły transakcji i menu mobilne, bez overflow.
+  Nie jest to deklaracja zgodności piksel w piksel: natywne pola daty różnią się
+  o 2 px, a modal nie dziedziczy już dawnego przesunięcia 16 px z odstępów rodzica;
+  test potwierdza pełny viewport, wycentrowanie, Escape i focus.
+- CSS buildu wzrósł z ok. 28.84 kB (gzip 5.82) do 37.34 kB (gzip 7.26).
+  Backend niezmieniony; nie powtarzano jego poprzednich 562 testów w tej iteracji.
+- Tailwind 4 wymaga nowoczesnych przeglądarek: Safari 16.4+, Chrome 111+,
+  Firefox 128+. Lokalnie sprawdzano Chromium; Safari/Firefox nie były testowane.
+
+### CI nadal wymaga działania właściciela
+- Odczyt GitHub API `user/installations` potwierdził, że instalacja
+  `genspark-ai-developer` ma contents/administration/issues/pull_requests,
+  lecz **nie ma uprawnienia workflows**. API wykazało zero workflow w repo.
+  Nie próbowano obejścia ograniczenia ani samodzielnego rozszerzania uprawnień.
+- Zaktualizowano dostarczany osobno szkic `ci.yml`: Python 3.12, PostgreSQL 16,
+  Node 22, lint/typecheck/test/build/audit/Playwright, minimalne contents:read,
+  bez sekretów produkcji i bez wdrożenia. Szkic odrzuca pominięte testy integracyjne.
+  Sprawdzono strukturę YAML i składnię osadzonego Pythona, nie wykonanie na GitHub.
+- Właściciel musi dodać szkic jako `.github/workflows/ci.yml` lub nadać aplikacji
+  uprawnienie workflows:write. **CI nie jest aktywne**, PR pozostaje draft.
+- Migracja ma wydzielony commit w istniejącym PR #4; nie tworzono fikcyjnego
+  osobnego PR z tej samej gałęzi. Bez wdrożenia, migracji bazy i zmian danych produkcji.
+
 ## Domknięcie walidacji backendu — 2026-10-20 (niewdrożone)
 
 ### Poprawki i kontrakty
@@ -40,9 +79,9 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
 - Frontend bez zmian kodu: ponownie **189 testów PASS / 23 pliki**, ESLint,
   TypeScript i produkcyjny build PASS. Playwright nie był powtarzany w tej iteracji.
 - Wywołania LLM/OCR w testach są mockowane; nie zużywano API ani danych produkcji.
-- Brak migracji, aktualizacji zależności i wdrożenia w tej iteracji. Pozostałe
-  zgłoszenia Tailwind oraz blokada uprawnień CI z poprzedniego raportu pozostają
-  otwarte; ten etap ich nie rozwiązuje.
+- Brak migracji, aktualizacji zależności i wdrożenia w tej iteracji.
+  Zgłoszenia Tailwind zamknięto w późniejszym etapie opisanym powyżej;
+  blokada uprawnień CI pozostaje otwarta.
 
 ## Audyt i refaktor — 2026-10-20 (niewdrożone)
 
@@ -81,11 +120,11 @@ Wersjonowanie: [Semantic Versioning](https://semver.org/).
   Wyniki są migawką baz podatności z dnia audytu, nie certyfikatem bezpieczeństwa.
 
 ### Pozostałe ryzyka i ograniczenia
-- **Otwarte: 7 zgłoszeń npm dotyczących wyłącznie narzędzi deweloperskich**
+- **Historyczne: 7 zgłoszeń npm w narzędziach deweloperskich**
   (5 high, 2 moderate), łańcuch Tailwind 3 / braces / parser selektorów.
-  Usunięcie wymaga osobnej migracji do Tailwind 4; nie użyto `audit fix --force`.
-  Do tego czasu nie uruchamiać build/dev na niezaufanych źródłach/patternach
-  ani nie udostępniać serwerów narzędzi developerskich publicznie.
+  Zamknięto je migracją do Tailwind 4 opisaną powyżej; pełny audyt npm: 0.
+  Nadal nie należy udostępniać narzędzi developerskich publicznie ani budować
+  niezaufanych źródeł z poświadczeniami/sekretami.
 - Wskazane wtedy braki walidacji (`null` w kontach/inbox, dolne granice limitów
   starszych list i schemat ekstraktora LLM) zamknięto w kolejnym etapie
   „Domknięcie walidacji backendu” opisanym powyżej.

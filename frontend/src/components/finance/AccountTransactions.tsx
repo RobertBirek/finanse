@@ -291,7 +291,7 @@ export function TransactionList({
           return (
             <div
               key={transaction.id}
-              className="rounded bg-gray-800/30 p-2.5 transition-colors hover:bg-gray-800/50"
+              className="rounded-sm bg-gray-800/30 p-2.5 transition-colors hover:bg-gray-800/50"
             >
               <div className="mb-2 flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -330,7 +330,7 @@ export function TransactionList({
                     type="text"
                     value={editDescription}
                     onChange={(event) => setEditDescription(event.target.value)}
-                    className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                    className="w-full rounded-sm border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
                   />
                 </div>
                 <div>
@@ -345,7 +345,7 @@ export function TransactionList({
                     type="date"
                     value={editDate}
                     onChange={(event) => setEditDate(event.target.value)}
-                    className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+                    className="w-full rounded-sm border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
                   />
                 </div>
               </div>
@@ -377,7 +377,7 @@ export function TransactionList({
         return (
           <div
             key={transaction.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded bg-gray-800/30 p-2.5 transition-colors hover:bg-gray-800/50"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-sm bg-gray-800/30 p-2.5 transition-colors hover:bg-gray-800/50"
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-gray-200">
