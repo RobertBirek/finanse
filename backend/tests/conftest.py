@@ -145,7 +145,7 @@ async def async_client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
 
-    transport = ASGITransport(app=app, raise_server_exceptions=False)
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
     try:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             yield client

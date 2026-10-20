@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Literal, cast
 
 from sqlalchemy import case, func, select
@@ -40,6 +41,7 @@ from app.finance.schemas import (
     TransactionCreate,
     TransactionUpdate,
 )
+from app.work.service import validate_project_reference
 
 SUPPORTED_CURRENCIES = {"PLN", "EUR", "USD"}
 
@@ -139,7 +141,36 @@ async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.
     return True
 
 
+async def _validate_category_parent(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    parent_id: uuid.UUID | None,
+    category_type: str,
+    category_id: uuid.UUID | None = None,
+) -> None:
+    # Serialize hierarchy edits so concurrent reparenting cannot introduce a cycle.
+    await db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"category-tree:{user_id}"))))
+    visited = {category_id} if category_id is not None else set()
+    while parent_id is not None:
+        if parent_id in visited:
+            raise ValueError("Category hierarchy cannot contain cycles")
+        visited.add(parent_id)
+        parent = (
+            await db.execute(
+                select(Category)
+                .where(Category.id == parent_id, Category.user_id == user_id)
+                .execution_options(populate_existing=True)
+            )
+        ).scalar_one_or_none()
+        if parent is None:
+            raise ValueError("Parent category not found")
+        if parent.type != category_type:
+            raise ValueError("Parent category type must match category type")
+        parent_id = parent.parent_id
+
+
 async def create_category(db: AsyncSession, user_id: uuid.UUID, data: CategoryCreate) -> Category:
+    await _validate_category_parent(db, user_id, data.parent_id, data.type)
     category = Category(user_id=user_id, **data.model_dump())
     db.add(category)
     await db.flush()
@@ -163,6 +194,28 @@ async def update_category(
     if category is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    if any(update_data.get(key, True) is None for key in ("name", "type", "is_active")):
+        raise ValueError("Category name, type and is_active cannot be null")
+    await _validate_category_parent(
+        db,
+        user_id,
+        update_data.get("parent_id", category.parent_id),
+        update_data.get("type", category.type),
+        category.id,
+    )
+    if "type" in update_data and update_data["type"] != category.type:
+        child = (
+            await db.execute(
+                select(Category.id)
+                .where(Category.parent_id == category.id, Category.type != update_data["type"])
+                .limit(1)
+            )
+        ).first()
+        used = (
+            await db.execute(select(Posting.id).where(Posting.category_id == category.id).limit(1))
+        ).first()
+        if child is not None or used is not None:
+            raise ValueError("Cannot change the type of a category with children or postings")
     for key, value in update_data.items():
         setattr(category, key, value)
     await db.flush()
@@ -218,7 +271,12 @@ def _validate_posting_sum(postings: list, txn_type: str) -> None:
 
 
 async def _validate_transaction_postings(
-    db: AsyncSession, user_id: uuid.UUID, postings: list, txn_type: str
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    postings: list,
+    txn_type: str,
+    *,
+    allow_category_reversal: bool = False,
 ) -> None:
     account_ids = {posting.account_id for posting in postings if posting.account_id is not None}
     accounts: dict[uuid.UUID, Account] = {}
@@ -267,6 +325,32 @@ async def _validate_transaction_postings(
         if posting.fx_rate <= 0:
             raise ValueError("FX rate must be positive")
 
+        if posting.account_id is not None and posting.category_id is not None:
+            raise ValueError("Posting must reference either an account or a category, not both")
+        rate = Decimal(str(posting.fx_rate))
+        if not rate.is_finite() or rate <= 0 or rate >= Decimal(1000000):
+            raise ValueError("FX rate must be finite, positive and fit the ledger precision")
+        if rate != rate.quantize(Decimal("0.000001")):
+            raise ValueError("FX rate must have at most 6 decimal places")
+        if source_currency == "PLN":
+            if rate != 1 or posting.source_amount != posting.base_amount_pln:
+                raise ValueError("PLN posting must use rate 1 and identical source/base amounts")
+        else:
+            expected = int(
+                (Decimal(posting.source_amount) * rate).quantize(
+                    Decimal(1), rounding=ROUND_HALF_EVEN
+                )
+            )
+            # A converted receipt is rounded to one foreign minor unit. Its PLN
+            # book value may differ from revaluing that rounded receipt.
+            exchange_rounding = txn_type == "exchange" and posting.source_amount == int(
+                (Decimal(posting.base_amount_pln) / rate).quantize(
+                    Decimal(1), rounding=ROUND_HALF_EVEN
+                )
+            )
+            if posting.base_amount_pln != expected and not exchange_rounding:
+                raise ValueError("Base amount does not match source amount and FX rate")
+
     if txn_type not in {"income", "expense"}:
         return
 
@@ -278,17 +362,39 @@ async def _validate_transaction_postings(
     if len(account_side_postings) != 1:
         raise ValueError("Income/expense transactions require exactly one account-side posting")
 
-    account = accounts[account_side_postings[0].account_id]
+    account_posting = account_side_postings[0]
+    expected_direction = "credit" if txn_type == "income" else "debit"
+    if account_posting.direction != expected_direction:
+        raise ValueError("Account posting direction does not match transaction type")
+    account = accounts[account_posting.account_id]
     for posting in postings:
-        if posting.account_id is None and posting.category_id is not None:
+        if posting.category_id is not None:
+            category_type = categories[posting.category_id].type
+            if category_type != txn_type and not (
+                allow_category_reversal and category_type in {"income", "expense"}
+            ):
+                raise ValueError("Category type must match transaction type")
+            if posting.direction == expected_direction:
+                raise ValueError("Category posting must oppose the account posting")
             posting.is_budget_impact = account.is_budget_account
 
 
 async def create_transaction(
-    db: AsyncSession, user_id: uuid.UUID, data: TransactionCreate
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    data: TransactionCreate,
+    *,
+    allow_category_reversal: bool = False,
 ) -> FinancialTransaction:
+    # Only trusted import code explicitly opts into preserving source-category
+    # reversals. Client-controlled `source` never disables validation.
+    if allow_category_reversal and data.source != "actual":
+        raise ValueError("Category reversals require the explicit Actual import path")
     _validate_posting_sum(data.postings, data.type)
-    await _validate_transaction_postings(db, user_id, data.postings, data.type)
+    await _validate_transaction_postings(
+        db, user_id, data.postings, data.type, allow_category_reversal=allow_category_reversal
+    )
+    await validate_project_reference(db, user_id, data.project_id)
 
     txn = FinancialTransaction(
         user_id=user_id,
@@ -352,20 +458,22 @@ async def create_exchange_transaction(
     effective_date = data.transaction_date or _local_today()
 
     if data.fx_rate is not None:
-        rate = float(data.fx_rate)
+        rate = Decimal(str(data.fx_rate))
         rate_source = "manual"
     else:
         quote = await NbpRateProvider().get_rate(foreign_currency, effective_date)
         if quote is None:
             raise ValueError(f"No FX rate available for {foreign_currency} on {effective_date}")
-        rate = quote.rate
+        rate = Decimal(str(quote.rate))
         rate_source = quote.source
 
-    fx_rate_from = 1.0 if from_currency == "PLN" else rate
-    fx_rate_to = 1.0 if to_currency == "PLN" else rate
+    fx_rate_from = Decimal(1) if from_currency == "PLN" else rate
+    fx_rate_to = Decimal(1) if to_currency == "PLN" else rate
 
-    base = round(data.from_amount * fx_rate_from)
-    to_amount = round(base / fx_rate_to)
+    base = int(
+        (Decimal(data.from_amount) * fx_rate_from).quantize(Decimal(1), rounding=ROUND_HALF_EVEN)
+    )
+    to_amount = int((Decimal(base) / fx_rate_to).quantize(Decimal(1), rounding=ROUND_HALF_EVEN))
 
     return await create_transaction(
         db,
@@ -380,7 +488,7 @@ async def create_exchange_transaction(
                     source_amount=data.from_amount,
                     source_currency=from_currency,
                     base_amount_pln=base,
-                    fx_rate=fx_rate_from,
+                    fx_rate=float(fx_rate_from),
                     fx_rate_source=rate_source,
                     direction="debit",
                 ),
@@ -389,7 +497,7 @@ async def create_exchange_transaction(
                     source_amount=to_amount,
                     source_currency=to_currency,
                     base_amount_pln=base,
-                    fx_rate=fx_rate_to,
+                    fx_rate=float(fx_rate_to),
                     fx_rate_source=rate_source,
                     direction="credit",
                 ),
@@ -437,9 +545,19 @@ async def update_transaction(
     if txn is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    if any(
+        update_data.get(key, True) is None
+        for key in ("transaction_date", "description", "is_pending")
+    ):
+        raise ValueError("Transaction date, description and is_pending cannot be null")
+    if "project_id" in update_data:
+        await validate_project_reference(db, user_id, update_data["project_id"])
+    if "transaction_date" in update_data:
+        update_data["date"] = update_data.pop("transaction_date")
     for key, value in update_data.items():
         setattr(txn, key, value)
     await db.flush()
+    await db.refresh(txn, attribute_names=["updated_at"])
     return txn
 
 
@@ -498,7 +616,18 @@ async def get_financial_summary(
 
     account_posting = aliased(Posting)
     income_result = await db.execute(
-        select(func.coalesce(func.sum(Posting.base_amount_pln), 0))
+        select(
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Posting.direction == "debit", Posting.base_amount_pln),
+                        else_=-Posting.base_amount_pln,
+                    )
+                ),
+                0,
+            )
+        )
+        .join(Category, Category.id == Posting.category_id)
         .join(FinancialTransaction, Posting.transaction_id == FinancialTransaction.id)
         .join(
             account_posting,
@@ -509,7 +638,9 @@ async def get_financial_summary(
         .join(Account, Account.id == account_posting.account_id)
         .where(
             FinancialTransaction.user_id == user_id,
-            FinancialTransaction.type == "income",
+            FinancialTransaction.type.in_(["income", "expense"]),
+            Category.type == "income",
+            Category.user_id == user_id,
             FinancialTransaction.date >= month_start,
             FinancialTransaction.date < month_end,
             Posting.category_id.is_not(None),
@@ -520,7 +651,18 @@ async def get_financial_summary(
     income_total = income_result.scalar() or 0
 
     expense_result = await db.execute(
-        select(func.coalesce(func.sum(Posting.base_amount_pln), 0))
+        select(
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Posting.direction == "credit", Posting.base_amount_pln),
+                        else_=-Posting.base_amount_pln,
+                    )
+                ),
+                0,
+            )
+        )
+        .join(Category, Category.id == Posting.category_id)
         .join(FinancialTransaction, Posting.transaction_id == FinancialTransaction.id)
         .join(
             account_posting,
@@ -531,7 +673,9 @@ async def get_financial_summary(
         .join(Account, Account.id == account_posting.account_id)
         .where(
             FinancialTransaction.user_id == user_id,
-            FinancialTransaction.type == "expense",
+            FinancialTransaction.type.in_(["income", "expense"]),
+            Category.type == "expense",
+            Category.user_id == user_id,
             FinancialTransaction.date >= month_start,
             FinancialTransaction.date < month_end,
             Posting.category_id.is_not(None),
@@ -562,7 +706,12 @@ async def get_category_summary(
             Category.id,
             Category.name,
             Category.parent_id,
-            func.sum(Posting.base_amount_pln).label("total_pln"),
+            func.sum(
+                case(
+                    (Posting.direction == "credit", Posting.base_amount_pln),
+                    else_=-Posting.base_amount_pln,
+                )
+            ).label("total_pln"),
         )
         .join(Posting, Posting.category_id == Category.id)
         .join(FinancialTransaction, Posting.transaction_id == FinancialTransaction.id)
@@ -575,7 +724,9 @@ async def get_category_summary(
         .join(Account, Account.id == account_posting.account_id)
         .where(
             FinancialTransaction.user_id == user_id,
-            FinancialTransaction.type == "expense",
+            FinancialTransaction.type.in_(["income", "expense"]),
+            Category.type == "expense",
+            Category.user_id == user_id,
             FinancialTransaction.date >= month_start,
             FinancialTransaction.date < month_end,
             Posting.account_id.is_(None),
@@ -722,8 +873,14 @@ async def get_budget_status(
     spend_result = await db.execute(
         select(
             Posting.category_id,
-            func.sum(Posting.base_amount_pln).label("spent"),
+            func.sum(
+                case(
+                    (Posting.direction == "credit", Posting.base_amount_pln),
+                    else_=-Posting.base_amount_pln,
+                )
+            ).label("spent"),
         )
+        .join(Category, Category.id == Posting.category_id)
         .join(FinancialTransaction, Posting.transaction_id == FinancialTransaction.id)
         .join(
             account_posting,
@@ -734,7 +891,9 @@ async def get_budget_status(
         .join(Account, Account.id == account_posting.account_id)
         .where(
             FinancialTransaction.user_id == user_id,
-            FinancialTransaction.type == "expense",
+            FinancialTransaction.type.in_(["income", "expense"]),
+            Category.type == "expense",
+            Category.user_id == user_id,
             FinancialTransaction.date >= month_start,
             FinancialTransaction.date < month_end,
             Posting.account_id.is_(None),

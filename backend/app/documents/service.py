@@ -5,7 +5,8 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.documents.models import Document, DocumentText
@@ -41,21 +42,27 @@ def _write_document_content(sha256_hash: str, content: bytes) -> None:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-async def upload_document(
+async def store_document(
     db: AsyncSession,
     user_id: uuid.UUID,
     content: bytes,
     original_name: str,
     mime_type: str,
-) -> Document:
+) -> tuple[Document, bool]:
+    """Store content and return an explicit duplicate flag under a per-content lock."""
     sha256_hash = compute_sha256(content)
     await asyncio.to_thread(_write_document_content, sha256_hash, content)
+    await db.execute(
+        select(
+            func.pg_advisory_xact_lock(func.hashtext(f"document-upload:{user_id}:{sha256_hash}"))
+        )
+    )
     existing = await db.execute(
         select(Document).where(Document.user_id == user_id, Document.sha256_hash == sha256_hash)
     )
     existing_doc = existing.scalar_one_or_none()
     if existing_doc is not None:
-        return existing_doc
+        return existing_doc, True
 
     doc = Document(
         user_id=user_id,
@@ -69,7 +76,14 @@ async def upload_document(
     )
     db.add(doc)
     await db.flush()
-    return doc
+    return doc, False
+
+
+async def upload_document(
+    db: AsyncSession, user_id: uuid.UUID, content: bytes, original_name: str, mime_type: str
+) -> Document:
+    document, _duplicate = await store_document(db, user_id, content, original_name, mime_type)
+    return document
 
 
 async def update_document_status(
@@ -87,15 +101,19 @@ async def update_document_status(
 async def save_extracted_text(
     db: AsyncSession, document_id: uuid.UUID, text: str, ocr_engine: str = "stirling"
 ) -> DocumentText:
-    doc_text = DocumentText(
-        document_id=document_id,
-        extracted_text=text,
-        ocr_engine=ocr_engine,
-        extracted_at=datetime.now(UTC),
+    values = {
+        "document_id": document_id,
+        "extracted_text": text,
+        "ocr_engine": ocr_engine,
+        "extracted_at": datetime.now(UTC),
+    }
+    statement = (
+        insert(DocumentText)
+        .values(**values)
+        .on_conflict_do_update(index_elements=[DocumentText.document_id], set_=values)
+        .returning(DocumentText)
     )
-    db.add(doc_text)
-    await db.flush()
-    return doc_text
+    return (await db.execute(statement, execution_options={"populate_existing": True})).scalar_one()
 
 
 async def get_documents(

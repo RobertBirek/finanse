@@ -1,17 +1,25 @@
+import logging
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.documents import service
-from app.documents.schemas import DocumentResponse, DocumentTextResponse, DocumentUploadResponse
+from app.documents.schemas import (
+    DocumentResponse,
+    DocumentStatus,
+    DocumentTextResponse,
+    DocumentUploadResponse,
+)
 from app.identity.models import User
 from app.identity.router import get_current_user
 from app.security.rate_limit import limit_upload
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 upload_rate_limit = limit_upload(get_current_user)
 MAX_FILE_SIZE = 20 * 1024 * 1024
@@ -32,24 +40,36 @@ async def upload_document(
             },
             status_code=400,
         )
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        return JSONResponse(
-            content={"detail": "File too large. Maximum size: 20 MB."}, status_code=400
-        )
+    content = bytearray()
+    while chunk := await file.read(64 * 1024):
+        content.extend(chunk)
+        if len(content) > MAX_FILE_SIZE:
+            return JSONResponse(
+                content={"detail": "File too large. Maximum size: 20 MB."}, status_code=400
+            )
+    if not content:
+        return JSONResponse(content={"detail": "File is empty"}, status_code=400)
 
-    doc = await service.upload_document(
+    doc, is_duplicate = await service.store_document(
         db,
         current_user.id,
-        content,
+        bytes(content),
         file.filename or "untitled",
         file.content_type or "application/octet-stream",
     )
-    is_duplicate = doc.created_at != doc.updated_at
-    if not is_duplicate:
+    if doc.status == DocumentStatus.ERROR:
+        doc.status = DocumentStatus.PENDING
+    # A durable pending row must be visible before a worker receives its ID.
+    await db.commit()
+    await db.refresh(doc)
+    if doc.status == DocumentStatus.PENDING:
         from app.worker import enqueue_process_document
 
-        await enqueue_process_document(str(doc.id))
+        try:
+            await enqueue_process_document(str(doc.id))
+        except (OSError, TimeoutError, RedisError):
+            # The periodic dispatcher recovers committed pending rows after outages.
+            logger.warning("Document %s awaits queue recovery", doc.id)
 
     return DocumentUploadResponse(
         document=DocumentResponse.model_validate(doc), is_duplicate=is_duplicate

@@ -220,7 +220,7 @@ async def test_category_only_posting_is_persisted(db_session):
                     base_amount_pln=5000,
                     fx_rate=1.0,
                     fx_rate_source="manual",
-                    direction="credit",
+                    direction="debit",
                     is_budget_impact=True,
                 ),
                 PostingCreate(
@@ -231,7 +231,7 @@ async def test_category_only_posting_is_persisted(db_session):
                     base_amount_pln=5000,
                     fx_rate=1.0,
                     fx_rate_source="manual",
-                    direction="debit",
+                    direction="credit",
                     is_budget_impact=True,
                 ),
             ],
@@ -253,7 +253,7 @@ async def create_categorized_transaction(
     is_budget_impact=True,
 ):
     account_direction, category_direction = (
-        ("credit", "debit") if transaction_type == "expense" else ("debit", "credit")
+        ("debit", "credit") if transaction_type == "expense" else ("credit", "debit")
     )
     return await create_transaction(
         db_session,

@@ -100,7 +100,10 @@ async def create_task_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    return await create_task(db, current_user.id, data)
+    try:
+        return await create_task(db, current_user.id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
 
 @router.get("/tasks", response_model=list[TaskResponse])
@@ -136,7 +139,10 @@ async def update_task_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    task = await update_task(db, current_user.id, task_id, data)
+    try:
+        task = await update_task(db, current_user.id, task_id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return task

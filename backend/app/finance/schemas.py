@@ -70,7 +70,7 @@ class PostingCreate(BaseModel):
     source_amount: int = Field(description="Amount in source currency minor units (grosze/centy)")
     source_currency: str = Field(default="PLN", min_length=3, max_length=3)
     base_amount_pln: int = Field(description="Equivalent amount in PLN minor units")
-    fx_rate: float = Field(default=1.0, ge=0)
+    fx_rate: float = Field(default=1.0, ge=0, allow_inf_nan=False)
     fx_rate_source: str = Field(default="manual", max_length=50)
     direction: str = Field(pattern=r"^(debit|credit)$")
     is_budget_impact: bool = True
@@ -108,14 +108,14 @@ class ExchangeCreate(BaseModel):
     from_account_id: uuid.UUID
     to_account_id: uuid.UUID
     from_amount: int = Field(gt=0, description="Amount in source currency minor units")
-    fx_rate: float | None = Field(default=None, gt=0)
+    fx_rate: float | None = Field(default=None, gt=0, lt=1000000, allow_inf_nan=False)
     transaction_date: dt.date | None = None
     description: str = Field(min_length=1)
 
 
 class TransactionUpdate(BaseModel):
     transaction_date: dt.date | None = None
-    description: str | None = None
+    description: str | None = Field(default=None, min_length=1)
     is_pending: bool | None = None
     project_id: uuid.UUID | None = None
 

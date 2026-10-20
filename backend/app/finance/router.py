@@ -169,7 +169,10 @@ async def create_category_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    return await create_category(db, current_user.id, data)
+    try:
+        return await create_category(db, current_user.id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
 
 @router.get("/categories", response_model=list[CategoryResponse])
@@ -187,7 +190,10 @@ async def update_category_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    category = await update_category(db, current_user.id, category_id, data)
+    try:
+        category = await update_category(db, current_user.id, category_id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     if category is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
     await db.refresh(category)
@@ -269,7 +275,10 @@ async def update_transaction_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    txn = await update_transaction(db, current_user.id, transaction_id, data)
+    try:
+        txn = await update_transaction(db, current_user.id, transaction_id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
     return txn

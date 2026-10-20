@@ -137,3 +137,52 @@ On success or verifier failure, ownership-aware cleanup removes only the exact
 parent directory for systemd. Unexpected nonempty parent state must be
 investigated through the failure journal before a manual rerun. No command,
 unit, or journal entry contains secrets.
+
+
+## Versioned Application Releases And Rollback
+
+Production previously mounted `/opt/finanse/backend` over `/app`. Changing only
+an image did not roll back that mounted code. New application releases must use
+`ops/prepare_release.py` to create matching forward and rollback packages. This
+tool prepares files only; it never applies Compose or changes a database.
+
+Preserve the current backend, worker and frontend image IDs with explicit local
+runtime tags. Prepare the rollback package from the current production Git
+revision and a copy of the currently served frontend assets. Prepare the forward
+package from the approved Git revision and its verified Vite build. The tool
+rejects changed backend requirements: dependency changes need a separately built
+and verified runtime, not reuse of an incompatible image.
+
+Each package contains `release.json`, three Dockerfiles and
+`compose.release.yaml`. Build each Dockerfile with `--network=none` and the exact
+image tag recorded in `release.json`. Before deployment, render and inspect the
+base Compose files plus the release override. The override uses `!override` to
+remove host code mounts while keeping `/app/uploads`; database, Redis, ingress,
+secrets and network configuration remain in the original Compose files.
+
+Apply an approved package with the full Compose file list, for example:
+
+```bash
+docker compose -p finanse \
+  -f /docker/finanse/compose.yaml \
+  -f /docker/finanse/compose.prod.yaml \
+  -f /opt/finanse/webapp/releases/RELEASE/compose.release.yaml \
+  --env-file /docker/finanse/.env \
+  up -d --no-deps --no-build backend worker frontend
+```
+
+Rollback uses the same command with the prepared rollback override. Do not use
+`make up`, `make restart` or a Compose command omitting the active override:
+that can restore the obsolete host-code mounts. Keep both package directories
+and their images until a later approved release retires them. A container's
+`org.opencontainers.image.revision` label and `release.json` identify live code;
+the original host checkout is no longer the live application code. Legacy
+backup `git_sha` metadata identifies that host checkout, so retain the release
+metadata alongside deployment backups for application-version recovery.
+
+Before applying: create a fresh encrypted backup, verify it on an isolated local
+PostgreSQL restore target, confirm ledger balance, drain both old/new Redis
+queues and record data-service container IDs. After applying: check all three
+revision labels, absence of `/app` host mounts, unchanged data-service IDs,
+HTTPS frontend/health, unauthenticated API rejection, and worker status/errors.
+Do not rewrite historic transactions or run imports as a deployment step.

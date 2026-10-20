@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     LOGIN_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     ADVISOR_RATE_LIMIT: PositiveInt = 30
     ADVISOR_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
+    DOCUMENT_JOB_TIMEOUT_SECONDS: PositiveInt = 600
+    DOCUMENT_STALE_PROCESSING_SECONDS: PositiveInt = 900
+    DOCUMENT_DISPATCH_BATCH_SIZE: PositiveInt = 100
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     OPENAI_API_KEY: str = ""
@@ -130,6 +133,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
+        if self.DOCUMENT_STALE_PROCESSING_SECONDS <= self.DOCUMENT_JOB_TIMEOUT_SECONDS:
+            raise ValueError("Document recovery timeout must exceed worker job timeout")
         raw_origins = self.TRUSTED_ORIGINS
         source_name = "TRUSTED_ORIGINS"
         if raw_origins is None:

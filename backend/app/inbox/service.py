@@ -6,9 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.inbox.models import InboxItem
 from app.inbox.schemas import InboxItemCreate, InboxItemUpdate, ProcessInboxItem
 from app.work.models import Task as WorkTask
+from app.work.schemas import TaskCreate
+from app.work.service import create_task
 
 
-async def create_inbox_item(db: AsyncSession, user_id: uuid.UUID, data: InboxItemCreate) -> InboxItem:
+async def create_inbox_item(
+    db: AsyncSession, user_id: uuid.UUID, data: InboxItemCreate
+) -> InboxItem:
     item = InboxItem(user_id=user_id, **data.model_dump())
     db.add(item)
     await db.flush()
@@ -30,7 +34,9 @@ async def get_inbox_items(
     return list(result.scalars().all())
 
 
-async def get_inbox_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID) -> InboxItem | None:
+async def get_inbox_item(
+    db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID
+) -> InboxItem | None:
     result = await db.execute(
         select(InboxItem).where(InboxItem.id == item_id, InboxItem.user_id == user_id)
     )
@@ -59,7 +65,9 @@ async def delete_inbox_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.
     return True
 
 
-async def classify_inbox_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID) -> InboxItem:
+async def classify_inbox_item(
+    db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID
+) -> InboxItem:
     item = await get_inbox_item(db, user_id, item_id)
     if item is None:
         raise ValueError(f"InboxItem {item_id} not found")
@@ -90,8 +98,16 @@ async def classify_inbox_item(db: AsyncSession, user_id: uuid.UUID, item_id: uui
 async def process_inbox_item(
     db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID, data: ProcessInboxItem
 ) -> tuple[InboxItem, WorkTask | None]:
-    """Process an inbox item: create the target entity and mark as processed."""
-    item = await get_inbox_item(db, user_id, item_id)
+    """Mark an item processed only after a supported conversion succeeds."""
+    if data.target_type not in {"task", "reference"}:
+        raise ValueError("This conversion is not available; the inbox item was not processed")
+    item = (
+        await db.execute(
+            select(InboxItem)
+            .where(InboxItem.id == item_id, InboxItem.user_id == user_id)
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
     if item is None:
         raise ValueError(f"InboxItem {item_id} not found")
     if item.is_processed:
@@ -100,13 +116,7 @@ async def process_inbox_item(
     created_entity = None
 
     if data.target_type == "task":
-        task = WorkTask(
-            user_id=user_id,
-            title=item.content,
-            source="inbox",
-        )
-        db.add(task)
-        await db.flush()
+        task = await create_task(db, user_id, TaskCreate(title=item.content, source="inbox"))
         item.target_id = task.id
         created_entity = task
 

@@ -1781,7 +1781,6 @@ class TestMigrationPipeline:
         from app.finance.schemas import (
             AccountCreate,
             CategoryCreate,
-            PostingCreate,
             TransactionCreate,
         )
         from app.finance.service import (
@@ -1868,24 +1867,17 @@ class TestMigrationPipeline:
             )
             cat_map[c["actual_id"]] = pa_c.id
 
+        from scripts.migrate_actual import build_pa_postings
+
         written = 0
         for txn in all_txns:
-            postings = []
-            for p in txn["postings"]:
-                postings.append(
-                    PostingCreate(
-                        account_id=acct_map[p["account_actual_id"]],
-                        category_id=cat_map.get(p.get("category_actual_id"))
-                        if p.get("category_actual_id")
-                        else None,
-                        source_amount=p["source_amount"],
-                        source_currency=p["source_currency"],
-                        base_amount_pln=p["source_amount"],
-                        fx_rate=1.0,
-                        fx_rate_source="manual",
-                        direction=p["direction"],
-                    )
-                )
+            postings = build_pa_postings(
+                txn,
+                acct_map,
+                cat_map,
+                {account["actual_id"]: account["currency"] for account in accounts},
+                {},
+            )
             await create_transaction(
                 db_session,
                 user_id,

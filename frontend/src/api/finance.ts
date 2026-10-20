@@ -353,6 +353,7 @@ export function canConfirmSuggestion(
 }
 
 function invalidateCashflowMutationQueries(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["finance", "budget-status"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "cashflow"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "transactions"] });
@@ -537,6 +538,8 @@ export function invalidateFinanceLedger(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "summary"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "category-summary"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "budget-status"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "cashflow"] });
 }
 
 export function useCreateTransaction() {
@@ -646,6 +649,7 @@ function invalidateBudgetMutationQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["finance", "budgets"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "budget-status"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "category-summary"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "cashflow"] });
 }
 
 export function useBudgets() {
