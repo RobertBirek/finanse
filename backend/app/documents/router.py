@@ -50,13 +50,22 @@ async def upload_document(
     if not content:
         return JSONResponse(content={"detail": "File is empty"}, status_code=400)
 
-    doc, is_duplicate = await service.store_document(
-        db,
-        current_user.id,
-        bytes(content),
-        file.filename or "untitled",
-        file.content_type or "application/octet-stream",
-    )
+    try:
+        doc, is_duplicate = await service.store_document(
+            db,
+            current_user.id,
+            bytes(content),
+            file.filename or "untitled",
+            file.content_type or "application/octet-stream",
+        )
+    except OSError:
+        logger.warning("Document storage failed; original was not overwritten")
+        return JSONResponse(
+            content={
+                "detail": "Nie udało się bezpiecznie zapisać dokumentu. Spróbuj ponownie lub zgłoś problem."
+            },
+            status_code=503,
+        )
     if doc.status == DocumentStatus.ERROR:
         doc.status = DocumentStatus.PENDING
     # A durable pending row must be visible before a worker receives its ID.

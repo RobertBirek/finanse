@@ -74,6 +74,80 @@ async def test_upload_waits_for_backup_lock_without_blocking_event_loop(
     assert database.flushed
 
 
+class TestAtomicStorage:
+    def test_publishes_only_fully_written_content(self, tmp_path, monkeypatch):
+        content = b"complete original"
+        digest = compute_sha256(content)
+        target = tmp_path / digest[:2] / digest
+        original_link = service.os.link
+
+        def link(source, destination):
+            assert not target.exists()
+            assert Path(source).read_bytes() == content
+            original_link(source, destination)
+
+        monkeypatch.setattr(service.os, "link", link)
+        service._write_document_content(digest, content)
+        assert target.read_bytes() == content
+        assert not list(target.parent.glob(".upload-*"))
+
+    def test_interrupted_write_never_leaves_a_partial_original(self, tmp_path, monkeypatch):
+        content = b"original"
+        digest = compute_sha256(content)
+
+        def fail(_descriptor):
+            raise OSError("simulated disk failure")
+
+        monkeypatch.setattr(service.os, "fsync", fail)
+        with pytest.raises(OSError):
+            service._write_document_content(digest, content)
+        assert not (tmp_path / digest[:2] / digest).exists()
+        assert not list((tmp_path / digest[:2]).glob(".upload-*"))
+
+    def test_duplicate_does_not_replace_original_inode(self, tmp_path):
+        content = b"original"
+        digest = compute_sha256(content)
+        service._write_document_content(digest, content)
+        target = tmp_path / digest[:2] / digest
+        inode = target.stat().st_ino
+        service._write_document_content(digest, content)
+        assert target.stat().st_ino == inode
+        assert target.read_bytes() == content
+
+    def test_corrupt_existing_file_is_detected_and_never_overwritten(self, tmp_path):
+        digest = compute_sha256(b"original")
+        directory = tmp_path / digest[:2]
+        directory.mkdir()
+        target = directory / digest
+        target.write_bytes(b"partial")
+        with pytest.raises(OSError, match="integrity"):
+            service._write_document_content(digest, b"original")
+        assert target.read_bytes() == b"partial"
+
+    @pytest.mark.asyncio
+    async def test_storage_failure_is_a_safe_503_and_never_enqueued(self, monkeypatch):
+        import io
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+
+        from fastapi import UploadFile
+        from starlette.datastructures import Headers
+
+        from app.documents import router
+
+        monkeypatch.setattr(
+            service, "store_document", AsyncMock(side_effect=OSError("private-path-secret"))
+        )
+        file = UploadFile(
+            io.BytesIO(b"original"),
+            filename="test.pdf",
+            headers=Headers({"content-type": "application/pdf"}),
+        )
+        response = await router.upload_document(file, SimpleNamespace(id=uuid.uuid4()), None, None)
+        assert response.status_code == 503
+        assert b"private-path-secret" not in response.body
+
+
 class TestDocumentService:
     @pytest.mark.asyncio
     @pytest.mark.integration
@@ -236,9 +310,9 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     persisted = await service.get_document(db_session, user_id, document_id)
     assert persisted.status == DocumentStatus.DONE
     assert (service.UPLOAD_DIR / persisted.storage_path).read_bytes() == b"original image"
-    assert (
-        await service.get_document_text(db_session, document_id)
-    ).extracted_text == ("\n" if extraction_failure == "empty" else "Receipt text")
+    assert (await service.get_document_text(db_session, document_id)).extracted_text == (
+        "\n" if extraction_failure == "empty" else "Receipt text"
+    )
     if extraction_failure == "empty":
         extraction.assert_not_awaited()
     assert len(await get_inbox_items(db_session, user_id)) == (0 if extraction_failure else 1)

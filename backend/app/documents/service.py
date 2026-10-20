@@ -1,6 +1,8 @@
 import asyncio
 import fcntl
 import hashlib
+import os
+import tempfile
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,8 +38,31 @@ def _write_document_content(sha256_hash: str, content: bytes) -> None:
         try:
             storage_dir = _ensure_storage_dir(sha256_hash)
             file_path = storage_dir / sha256_hash
-            if not file_path.exists():
-                file_path.write_bytes(content)
+            if file_path.exists():
+                if compute_sha256(file_path.read_bytes()) != sha256_hash:
+                    raise OSError("Stored document failed integrity verification")
+                return
+            # Never publish a partial original, even if writing/fsync is interrupted.
+            # link() creates the final name atomically without overwriting originals.
+            temporary_path = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                    dir=storage_dir, prefix=".upload-", delete=False
+                ) as temporary:
+                    temporary_path = Path(temporary.name)
+                    temporary.write(content)
+                    temporary.flush()
+                    os.fsync(temporary.fileno())
+                os.link(temporary_path, file_path)
+                for directory in (storage_dir, UPLOAD_DIR):
+                    descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+                    try:
+                        os.fsync(descriptor)
+                    finally:
+                        os.close(descriptor)
+            finally:
+                if temporary_path is not None:
+                    temporary_path.unlink(missing_ok=True)
         finally:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
