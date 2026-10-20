@@ -174,13 +174,19 @@ function AccountList({
   );
 }
 
-function TransactionList({
+export function TransactionList({
   accountId,
+  currency,
+  accounts,
+  onDetails,
   transactions,
   loading,
   error,
 }: {
-  accountId: string;
+  accountId?: string;
+  currency?: string;
+  accounts?: Account[];
+  onDetails?: (id: string) => void;
   transactions: Transaction[] | undefined;
   loading: boolean;
   error: boolean;
@@ -255,15 +261,18 @@ function TransactionList({
     <div className="space-y-1">
       {transactions.map((transaction) => {
         const posting = transaction.postings.find(
-          (item) => item.account_id === accountId,
+          (item) =>
+            item.account_id !== null &&
+            (!accountId || item.account_id === accountId) &&
+            (!currency || item.source_currency === currency),
         );
         const isIncome = posting?.direction === "credit";
-        const currency = posting?.source_currency;
+        const sourceCurrency = posting?.source_currency;
         const formattedAmount = posting
-          ? `${isIncome ? "+" : "−"}${formatPLN(posting.source_amount)} ${currency}`
+          ? `${isIncome ? "+" : "−"}${formatPLN(posting.source_amount)} ${sourceCurrency}`
           : "Kwota niedostępna";
         const baseAmount =
-          posting && currency !== "PLN"
+          posting && sourceCurrency !== "PLN"
             ? `Równowartość: ${formatPLN(posting.base_amount_pln)} PLN`
             : null;
         const isEditing = editingId === transaction.id;
@@ -299,7 +308,7 @@ function TransactionList({
                 >
                   {posting && (isIncome ? "+" : "−")}
                   {posting
-                    ? `${formatPLN(posting.source_amount)} ${currency}`
+                    ? `${formatPLN(posting.source_amount)} ${sourceCurrency}`
                     : "Kwota niedostępna"}
                   {baseAmount && (
                     <span className="block text-xs font-normal text-gray-400">
@@ -377,6 +386,9 @@ function TransactionList({
               <p className="text-xs text-gray-500">
                 {formatCalendarDate(transaction.transaction_date)} ·{" "}
                 {transaction.type}
+                {accounts &&
+                  posting &&
+                  ` · ${accounts.find((account) => account.id === posting.account_id)?.name ?? "Konto archiwalne"}`}
               </p>
             </div>
             <p
@@ -389,7 +401,17 @@ function TransactionList({
                 </span>
               )}
             </p>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex flex-wrap gap-2">
+              {onDetails && (
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-sm"
+                  aria-label={`Szczegóły: ${transaction.description}`}
+                  onClick={() => onDetails(transaction.id)}
+                >
+                  Szczegóły
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => startEdit(transaction)}

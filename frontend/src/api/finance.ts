@@ -516,6 +516,58 @@ export function useTransactions(params?: {
   });
 }
 
+export interface TransactionSearchParams {
+  q?: string;
+  account_id?: string;
+  category_id?: string;
+  date_from?: string;
+  date_to?: string;
+  currency?: string;
+  type?: string;
+  min_amount_pln?: number;
+  max_amount_pln?: number;
+  limit: number;
+  offset: number;
+}
+
+export interface TransactionSearchPage {
+  items: Transaction[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export function useTransactionSearch(
+  params: TransactionSearchParams,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["finance", "transactions", "search", params],
+    queryFn: async ({ signal }) => {
+      const { data } = await api.get<TransactionSearchPage>(
+        "/finance/transactions/search",
+        { params, signal },
+      );
+      return data;
+    },
+    enabled,
+  });
+}
+
+export function useTransaction(id: string | null) {
+  return useQuery({
+    queryKey: ["finance", "transactions", "detail", id],
+    queryFn: async ({ signal }) => {
+      const { data } = await api.get<Transaction>(
+        `/finance/transactions/${id}`,
+        { signal },
+      );
+      return data;
+    },
+    enabled: !!id,
+  });
+}
+
 export function useAccountTransactions(
   accountId: string | null,
   params?: { limit?: number },

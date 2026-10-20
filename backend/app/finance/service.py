@@ -3,9 +3,10 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Literal, cast
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.finance.models import (
     Account,
@@ -39,6 +40,9 @@ from app.finance.schemas import (
     ScheduledFinanceItemCreate,
     ScheduledFinanceItemUpdate,
     TransactionCreate,
+    TransactionResponse,
+    TransactionSearch,
+    TransactionSearchResponse,
     TransactionUpdate,
 )
 from app.work.service import validate_project_reference
@@ -525,6 +529,83 @@ async def get_transactions(
     stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def search_transactions(
+    db: AsyncSession, user_id: uuid.UUID, filters: TransactionSearch
+) -> TransactionSearchResponse:
+    """Search the complete owned ledger without joining/doubling posting rows.
+
+    Amount bounds are absolute PLN minor units of one account posting (not the
+    sum of both ledger sides). Currency/account/amount must match that same leg.
+    """
+    txn = FinancialTransaction
+    account_leg: list[ColumnElement[bool]] = [Posting.account_id.is_not(None)]
+    if filters.account_id:
+        account_leg.append(Posting.account_id == filters.account_id)
+    if filters.currency:
+        account_leg.append(Posting.source_currency == filters.currency)
+    if filters.min_amount_pln is not None:
+        account_leg.append(func.abs(Posting.base_amount_pln) >= filters.min_amount_pln)
+    if filters.max_amount_pln is not None:
+        account_leg.append(func.abs(Posting.base_amount_pln) <= filters.max_amount_pln)
+    conditions = [
+        txn.user_id == user_id,
+        select(Posting.id).where(Posting.transaction_id == txn.id, *account_leg).exists(),
+    ]
+    if filters.category_id:
+        conditions.append(
+            select(Posting.id)
+            .where(
+                Posting.transaction_id == txn.id,
+                Posting.category_id == filters.category_id,
+            )
+            .exists()
+        )
+    if filters.date_from:
+        conditions.append(txn.date >= filters.date_from)
+    if filters.date_to:
+        conditions.append(txn.date <= filters.date_to)
+    if filters.type:
+        conditions.append(txn.type == filters.type)
+    if filters.q:
+        # autoescape treats user %, _ and / literally; values remain bound parameters.
+        conditions.append(
+            or_(
+                txn.description.icontains(filters.q, autoescape=True),
+                select(Posting.id)
+                .join(Account, Posting.account_id == Account.id)
+                .where(
+                    Posting.transaction_id == txn.id,
+                    Account.user_id == user_id,
+                    Account.name.icontains(filters.q, autoescape=True),
+                )
+                .exists(),
+                select(Posting.id)
+                .join(Category, Posting.category_id == Category.id)
+                .where(
+                    Posting.transaction_id == txn.id,
+                    Category.user_id == user_id,
+                    Category.name.icontains(filters.q, autoescape=True),
+                )
+                .exists(),
+            )
+        )
+    total = await db.scalar(select(func.count()).select_from(txn).where(*conditions))
+    result = await db.execute(
+        select(txn)
+        .options(selectinload(txn.postings))
+        .where(*conditions)
+        .order_by(txn.date.desc(), txn.created_at.desc(), txn.id.desc())
+        .limit(filters.limit)
+        .offset(filters.offset)
+    )
+    return TransactionSearchResponse(
+        items=[TransactionResponse.model_validate(txn) for txn in result.scalars().all()],
+        total=total or 0,
+        limit=filters.limit,
+        offset=filters.offset,
+    )
 
 
 async def get_transaction(

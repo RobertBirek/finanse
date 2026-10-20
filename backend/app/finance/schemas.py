@@ -137,6 +137,40 @@ class TransactionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TransactionSearch(BaseModel):
+    q: str = Field(default="", max_length=200)
+    account_id: uuid.UUID | None = None
+    category_id: uuid.UUID | None = None
+    date_from: dt.date | None = None
+    date_to: dt.date | None = None
+    currency: Literal["PLN", "EUR", "USD"] | None = None
+    type: Literal["income", "expense", "transfer", "exchange"] | None = None
+    min_amount_pln: int | None = Field(default=None, ge=0, le=9007199254740991)
+    max_amount_pln: int | None = Field(default=None, ge=0, le=9007199254740991)
+    limit: int = Field(default=25, ge=1, le=100)
+    offset: int = Field(default=0, ge=0, le=10000000)
+
+    @model_validator(mode="after")
+    def validate_ranges(self) -> "TransactionSearch":
+        self.q = self.q.strip()
+        if self.date_from and self.date_to and self.date_from > self.date_to:
+            raise ValueError("Data od nie może być późniejsza niż data do")
+        if (
+            self.min_amount_pln is not None
+            and self.max_amount_pln is not None
+            and self.min_amount_pln > self.max_amount_pln
+        ):
+            raise ValueError("Kwota od nie może być większa niż kwota do")
+        return self
+
+
+class TransactionSearchResponse(BaseModel):
+    items: list[TransactionResponse]
+    total: int
+    limit: int
+    offset: int
+
+
 class ScheduledFinanceConfirmationResponse(BaseModel):
     transaction: TransactionResponse
 

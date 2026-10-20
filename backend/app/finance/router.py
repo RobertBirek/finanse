@@ -1,5 +1,6 @@
 import uuid
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
@@ -33,6 +34,8 @@ from app.finance.schemas import (
     ScheduledFinanceItemUpdate,
     TransactionCreate,
     TransactionResponse,
+    TransactionSearch,
+    TransactionSearchResponse,
     TransactionUpdate,
 )
 from app.finance.service import (
@@ -60,6 +63,7 @@ from app.finance.service import (
     get_scheduled_items,
     get_transaction,
     get_transactions,
+    search_transactions,
     update_account,
     update_budget,
     update_category,
@@ -238,6 +242,49 @@ async def list_transactions(
     type: Annotated[str | None, Query()] = None,
 ):
     return await get_transactions(db, current_user.id, limit=limit, offset=offset, txn_type=type)
+
+
+@router.get("/transactions/search", response_model=TransactionSearchResponse)
+async def search_transactions_endpoint(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    q: Annotated[str, Query(max_length=200)] = "",
+    account_id: uuid.UUID | None = None,
+    category_id: uuid.UUID | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    currency: Literal["PLN", "EUR", "USD"] | None = None,
+    type: Literal["income", "expense", "transfer", "exchange"] | None = None,
+    min_amount_pln: Annotated[int | None, Query(ge=0, le=9007199254740991)] = None,
+    max_amount_pln: Annotated[int | None, Query(ge=0, le=9007199254740991)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    offset: Annotated[int, Query(ge=0, le=10000000)] = 0,
+):
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(status_code=422, detail="Data od nie może być późniejsza niż data do")
+    if (
+        min_amount_pln is not None
+        and max_amount_pln is not None
+        and min_amount_pln > max_amount_pln
+    ):
+        raise HTTPException(status_code=422, detail="Kwota od nie może być większa niż kwota do")
+    return await search_transactions(
+        db,
+        current_user.id,
+        TransactionSearch(
+            q=q,
+            account_id=account_id,
+            category_id=category_id,
+            date_from=date_from,
+            date_to=date_to,
+            currency=currency,
+            type=type,
+            min_amount_pln=min_amount_pln,
+            max_amount_pln=max_amount_pln,
+            limit=limit,
+            offset=offset,
+        ),
+    )
 
 
 @router.post(
