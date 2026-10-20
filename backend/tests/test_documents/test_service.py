@@ -193,7 +193,7 @@ async def test_upload_commits_before_enqueue_and_survives_redis_outage(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-@pytest.mark.parametrize("extraction_failure", [False, True])
+@pytest.mark.parametrize("extraction_failure", [False, True, "empty"])
 async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     db_session, monkeypatch, extraction_failure
 ):
@@ -219,7 +219,11 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     ocr = AsyncMock(return_value=b"searchable PDF")
     monkeypatch.setattr(worker, "_convert_image_to_pdf", convert)
     monkeypatch.setattr(worker, "_ocr_pdf", ocr)
-    monkeypatch.setattr(worker, "_pdf_to_text", AsyncMock(return_value="Receipt text"))
+    monkeypatch.setattr(
+        worker,
+        "_pdf_to_text",
+        AsyncMock(return_value="\n" if extraction_failure == "empty" else "Receipt text"),
+    )
     extraction = AsyncMock(return_value={"detected": True, "amount": 100, "description": "Test"})
     if extraction_failure:
         extraction.side_effect = ValueError("Invalid model response")
@@ -234,7 +238,9 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     assert (service.UPLOAD_DIR / persisted.storage_path).read_bytes() == b"original image"
     assert (
         await service.get_document_text(db_session, document_id)
-    ).extracted_text == "Receipt text"
+    ).extracted_text == ("\n" if extraction_failure == "empty" else "Receipt text")
+    if extraction_failure == "empty":
+        extraction.assert_not_awaited()
     assert len(await get_inbox_items(db_session, user_id)) == (0 if extraction_failure else 1)
     redis = SimpleNamespace(enqueue_job=AsyncMock())
     pending = await service.upload_document(
