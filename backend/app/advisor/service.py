@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from typing import Any, cast
 
@@ -89,6 +90,35 @@ async def create_conversation(db: AsyncSession, user_id: uuid.UUID) -> Conversat
 
 
 MAX_TOOL_ITERATIONS = 3
+logger = logging.getLogger(__name__)
+ADVISOR_ERROR = "Nie udało się uzyskać odpowiedzi Doradcy. Spróbuj ponownie."
+TOOL_ERROR = "Nie udało się wykonać narzędzia"
+INVALID_ARGUMENTS = "Nieprawidłowe argumenty narzędzia"
+
+
+def _parse_tool_arguments(raw: str) -> dict[str, Any]:
+    try:
+        arguments = json.loads(raw)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise ValueError(INVALID_ARGUMENTS) from error
+    if not isinstance(arguments, dict):
+        raise TypeError(INVALID_ARGUMENTS)
+    return arguments
+
+
+async def _execute_read_tool(
+    db: AsyncSession, tool: Any, user_id: uuid.UUID, arguments: dict[str, Any]
+) -> tuple[dict, str]:
+    try:
+        # A failed SQL statement must not poison the conversation transaction.
+        async with db.begin_nested():
+            result = await tool.executor(db, str(user_id), **arguments)
+            if not isinstance(result, dict):
+                raise TypeError("Invalid tool result")
+        return result, "completed"
+    except (SQLAlchemyError, ValueError, KeyError, TypeError, RuntimeError) as error:
+        logger.warning("Advisor read tool failed (%s)", type(error).__name__)
+        return {"error": TOOL_ERROR}, "error"
 
 
 def _tool_result_content(tool_execution: ToolExecution) -> str:
@@ -118,8 +148,8 @@ def _history_messages(history: list[Message]) -> list[dict[str, Any]]:
             function = tool_call.get("function") or {}
             tool_name = function.get("name")
             try:
-                call_arguments = json.loads(function.get("arguments", "{}"))
-            except (TypeError, json.JSONDecodeError):
+                call_arguments = _parse_tool_arguments(function.get("arguments", "{}"))
+            except (ValueError, TypeError):
                 call_arguments = {}
 
             execution = next(
@@ -205,11 +235,12 @@ async def send_message(
                 temperature=0.7,
                 max_tokens=1024,
             )
-        except (OpenAIError, SQLAlchemyError, ValueError, RuntimeError) as e:
+        except (OpenAIError, SQLAlchemyError, ValueError, RuntimeError) as error:
+            logger.warning("Advisor provider request failed (%s)", type(error).__name__)
             assistant_msg = Message(
                 conversation_id=conversation_id,
                 role="assistant",
-                content=f"Przepraszam, wystąpił błąd: {str(e)[:200]}",
+                content=ADVISOR_ERROR,
             )
             db.add(assistant_msg)
             await db.flush()
@@ -242,6 +273,7 @@ async def send_message(
             role="assistant",
             content=llm_message.content or "",
             tool_calls=raw_tool_calls,
+            tool_executions=[],
         )
         db.add(assistant_msg)
         await db.flush()
@@ -258,12 +290,17 @@ async def send_message(
             tool_name = tc.function.name
             tool = get_tool_by_name(tool_name)
 
+            invalid_arguments = False
             try:
-                arguments = json.loads(tc.function.arguments)
-            except json.JSONDecodeError:
+                arguments = _parse_tool_arguments(tc.function.arguments)
+            except (ValueError, TypeError):
                 arguments = {}
+                invalid_arguments = True
 
-            if tool is None:
+            if invalid_arguments:
+                result = {"error": INVALID_ARGUMENTS}
+                status_val = "error"
+            elif tool is None:
                 result = {"error": f"Unknown tool: {tool_name}"}
                 status_val = "error"
             elif tool.autonomy_level >= 2:
@@ -271,12 +308,7 @@ async def send_message(
                 status_val = "pending_confirmation"
                 pending_confirmation = True
             else:
-                try:
-                    result = await tool.executor(db, str(user_id), **arguments)
-                    status_val = "completed"
-                except (SQLAlchemyError, ValueError, KeyError, TypeError, RuntimeError) as e:
-                    result = {"error": str(e)}
-                    status_val = "error"
+                result, status_val = await _execute_read_tool(db, tool, user_id, arguments)
 
             tool_exec = ToolExecution(
                 message_id=assistant_msg.id,

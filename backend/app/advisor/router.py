@@ -13,6 +13,8 @@ from app.advisor.schemas import (
     SendMessageRequest,
 )
 from app.advisor.service import (
+    ADVISOR_ERROR,
+    get_conversation,
     get_conversation_messages,
     get_user_conversations,
     send_message,
@@ -44,11 +46,10 @@ async def get_conversation_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    conv = await get_user_conversations(db, current_user.id)
-    for c in conv:
-        if c.id == conversation_id:
-            return c
-    raise HTTPException(status_code=404, detail="Conversation not found")
+    conversation = await get_conversation(db, current_user.id, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return conversation
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=list[MessageResponse])
@@ -74,8 +75,8 @@ async def send_message_endpoint(
             data.conversation_id,
             data.content,
         )
-    except (OpenAIError, SQLAlchemyError, ValueError) as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except (OpenAIError, SQLAlchemyError, ValueError):
+        raise HTTPException(status_code=500, detail=ADVISOR_ERROR) from None
 
     from sqlalchemy import select as sa_select
     from sqlalchemy.orm import selectinload

@@ -1,4 +1,5 @@
 import uuid
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -14,6 +15,10 @@ class FakeSession:
 
     def add(self, value):
         self.added.append(value)
+
+    @asynccontextmanager
+    async def begin_nested(self):
+        yield self
 
 
 def llm_response(*, content=None, tool_calls=None):
@@ -102,8 +107,14 @@ async def test_level_zero_tool_call_is_followed_by_second_llm_response(monkeypat
 @pytest.mark.parametrize(
     ("call_name", "arguments", "tool", "expected_result", "expected_status"),
     [
-        ("get_accounts", "{", "known", {"ok": True}, "completed"),
-        ("get_accounts", "not-json", "known", {"ok": True}, "completed"),
+        ("get_accounts", "{", "known", {"error": advisor_service.INVALID_ARGUMENTS}, "error"),
+        (
+            "get_accounts",
+            "not-json",
+            "known",
+            {"error": advisor_service.INVALID_ARGUMENTS},
+            "error",
+        ),
         ("missing_tool", "{}", None, {"error": "Unknown tool: missing_tool"}, "error"),
     ],
 )
@@ -133,10 +144,7 @@ async def test_tool_call_handles_invalid_json_and_unknown_tool(
     assert execution.result == expected_result
     assert execution.arguments == {}
     assert client.chat.completions.create.await_count == 2
-    if registered_tool is None:
-        executor.assert_not_awaited()
-    else:
-        executor.assert_awaited_once_with(db, str(user_id))
+    executor.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -158,7 +166,7 @@ async def test_tool_executor_error_is_returned_as_error_result(monkeypatch):
 
     assert result.content == "Nie udało się pobrać danych."
     assert execution.status == "error"
-    assert execution.result == {"error": "executor failed"}
+    assert execution.result == {"error": advisor_service.TOOL_ERROR}
     assert client.chat.completions.create.await_count == 2
 
 
@@ -254,6 +262,70 @@ async def test_second_user_turn_replays_prior_tool_result(monkeypatch):
         "content": "Czy to konto jest aktywne?",
     }
     assert sum(message["role"] == "tool" for message in second_messages) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("raw", ["[]", "null", "42", '"text"'])
+@pytest.mark.parametrize("level", [0, 2])
+async def test_non_object_arguments_never_execute_or_request_approval(monkeypatch, raw, level):
+    executor = AsyncMock()
+    tool = SimpleNamespace(name="tool", autonomy_level=level, executor=executor)
+    setup_service(
+        monkeypatch,
+        [
+            llm_response(tool_calls=[tool_call("tool", raw)]),
+            llm_response(content="Invalid arguments"),
+        ],
+        tool=tool,
+    )
+    db = FakeSession()
+    await advisor_service.send_message(db, uuid.uuid4(), uuid.uuid4(), "Test")
+    execution = next(item for item in db.added if item.__class__.__name__ == "ToolExecution")
+    assert execution.status == "error"
+    assert execution.arguments == {}
+    executor.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_provider_error_does_not_leak_credentials(monkeypatch, caplog):
+    setup_service(monkeypatch, [RuntimeError("SECRET_PROVIDER_CREDENTIAL")])
+    result = await advisor_service.send_message(FakeSession(), uuid.uuid4(), uuid.uuid4(), "Test")
+    assert result.content == advisor_service.ADVISOR_ERROR
+    assert "SECRET_PROVIDER_CREDENTIAL" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_router_error_does_not_leak_credentials(monkeypatch):
+    from fastapi import HTTPException
+
+    from app.advisor import router
+    from app.advisor.schemas import SendMessageRequest
+
+    monkeypatch.setattr(
+        router, "send_message", AsyncMock(side_effect=ValueError("SECRET_PROVIDER_CREDENTIAL"))
+    )
+    with pytest.raises(HTTPException) as error:
+        await router.send_message_endpoint(
+            SendMessageRequest(content="Test"),
+            SimpleNamespace(id=uuid.uuid4()),
+            None,
+            FakeSession(),
+        )
+    assert error.value.detail == advisor_service.ADVISOR_ERROR
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_sql_read_failure_is_rolled_back_to_savepoint(db_session):
+    from sqlalchemy import select, text
+
+    async def fail(db, _user_id):
+        await db.execute(text("SELECT 1 / 0"))
+
+    tool = SimpleNamespace(executor=fail)
+    result, status = await advisor_service._execute_read_tool(db_session, tool, uuid.uuid4(), {})
+    assert status == "error" and result == {"error": advisor_service.TOOL_ERROR}
+    assert await db_session.scalar(select(1)) == 1
 
 
 def test_history_messages_adds_sanitized_result_when_execution_is_missing():
