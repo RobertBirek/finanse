@@ -67,3 +67,14 @@ def test_stale_recovery_timeout_must_exceed_worker_timeout():
         Settings(
             _env_file=None, DOCUMENT_JOB_TIMEOUT_SECONDS=600, DOCUMENT_STALE_PROCESSING_SECONDS=600
         )
+
+
+@pytest.mark.asyncio
+async def test_text_extraction_uses_stirling_text_endpoint_and_output_format():
+    import httpx
+
+    response = httpx.Response(200, text="receipt", request=httpx.Request("POST", "http://stirling"))
+    client = SimpleNamespace(post=AsyncMock(return_value=response))
+    assert await worker._pdf_to_text(client, b"pdf") == "receipt"
+    assert client.post.await_args.args[0].endswith("/api/v1/convert/pdf/text")
+    assert client.post.await_args.kwargs["data"] == {"outputFormat": "txt"}

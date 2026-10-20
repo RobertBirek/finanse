@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 REDIS_SETTINGS = RedisSettings.from_dsn(settings.REDIS_URL)
 STIRLING_OCR_URL = f"{settings.STIRLING_PDF_URL}/api/v1/misc/ocr-pdf"
 STIRLING_IMG_TO_PDF_URL = f"{settings.STIRLING_PDF_URL}/api/v1/convert/img/pdf"
-STIRLING_PDF_TO_TEXT_URL = f"{settings.STIRLING_PDF_URL}/api/v1/convert/pdf/txt"
+STIRLING_PDF_TO_TEXT_URL = f"{settings.STIRLING_PDF_URL}/api/v1/convert/pdf/text"
 
 
 async def enqueue_process_document(document_id: str) -> None:
@@ -96,7 +96,9 @@ async def _ocr_pdf(
 
 async def _pdf_to_text(client: httpx.AsyncClient, pdf_content: bytes) -> str:
     files = {"fileInput": ("output.pdf", pdf_content, "application/pdf")}
-    response = await client.post(STIRLING_PDF_TO_TEXT_URL, files=files)
+    response = await client.post(
+        STIRLING_PDF_TO_TEXT_URL, files=files, data={"outputFormat": "txt"}
+    )
     response.raise_for_status()
     return response.text
 
@@ -125,30 +127,30 @@ async def process_document(ctx, document_id: str) -> None:
                 text = await _pdf_to_text(client, ocr_pdf)
             await service.save_extracted_text(db, doc_id, text, ocr_engine="stirling")
 
-            # Optional extraction cannot roll back a successful OCR result.
-            try:
-                from app.documents.extractor import (
-                    create_inbox_from_document,
-                    extract_financial_data,
-                )
+            if text.strip():
+                # Optional extraction cannot roll back a successful OCR result.
+                try:
+                    from app.documents.extractor import (
+                        create_inbox_from_document,
+                        extract_financial_data,
+                    )
 
-                async with db.begin_nested():
-                    data = await extract_financial_data(text)
-                    if data.get("detected"):
-                        await create_inbox_from_document(
-                            db, doc.user_id, doc.id, doc.original_name, data
-                        )
-            except (
-                OpenAIError,
-                SQLAlchemyError,
-                ValueError,
-                KeyError,
-                TypeError,
-                RuntimeError,
-                AttributeError,
-            ):
-                logger.warning("Financial extraction failed for document %s", doc_id)
-
+                    async with db.begin_nested():
+                        data = await extract_financial_data(text)
+                        if data.get("detected"):
+                            await create_inbox_from_document(
+                                db, doc.user_id, doc.id, doc.original_name, data
+                            )
+                except (
+                    OpenAIError,
+                    SQLAlchemyError,
+                    ValueError,
+                    KeyError,
+                    TypeError,
+                    RuntimeError,
+                    AttributeError,
+                ):
+                    logger.warning("Financial extraction failed for document %s", doc_id)
             doc.status = DocumentStatus.DONE
             await db.commit()
         except (
