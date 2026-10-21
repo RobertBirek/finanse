@@ -5,6 +5,22 @@ Wszystkie istotne zmiany w projekcie.
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
+## Aktywacja CI i przenośny test migracji — 2026-10-21 (niewdrożone)
+
+- Właściciel dodał `.github/workflows/ci.yml` na gałęzi PR #4. CI jest aktywne;
+  opis wcześniejszej blokady poniżej przedstawia stan historyczny.
+  Uprawnienia aplikacji GitHub nie zostały rozszerzone.
+- Pierwszy przebieg: frontend przeszedł wszystkie kroki, backend miał 561 PASS
+  i jeden błąd testu migracji sesji: sztywna ścieżka `.venv/bin/alembic`
+  nie istnieje na runnerze GitHub. Ruff, mypy i połączenie testowej bazy przeszły.
+- Test uruchamia teraz `sys.executable -m alembic`, z tego samego środowiska co
+  pytest. Dodano regresję wyboru interpretera i przekazania testowej bazy
+  zamiast domyślnego DATABASE_URL. Nie zmieniono migracji ani workflow właściciela.
+- Lokalnie Ruff, mypy (53 moduły) oraz 5 testów modułu sesji PASS, w tym pełny
+  cykl migracji na odizolowanym `finanse_test` (loopback, port 55432).
+  Pełny przebieg GitHub Actions po poprawce jest weryfikowany w PR #4.
+- Bez wdrożenia, migracji produkcyjnej i zmian danych produkcji. PR nadal draft.
+
 ## Tailwind 4 i weryfikacja gotowości CI — 2026-10-20 (niewdrożone)
 
 ### Migracja i testy

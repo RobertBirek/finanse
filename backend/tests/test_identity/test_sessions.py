@@ -3,6 +3,7 @@
 import asyncio
 import os
 import subprocess
+import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -24,9 +25,31 @@ SESSION_PREDECESSOR = "1dbfe88dfb1b"
 def run_alembic(*arguments: str) -> None:
     environment = os.environ | {"DATABASE_URL": os.environ["TEST_DATABASE_URL"]}
     subprocess.run(
-        [str(BACKEND_DIR / ".venv/bin/alembic"), *arguments],
+        [sys.executable, "-m", "alembic", *arguments],
         cwd=BACKEND_DIR,
         env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_run_alembic_uses_current_interpreter_and_test_database(monkeypatch):
+    from unittest.mock import Mock
+
+    run = Mock()
+    database_url = "postgresql+asyncpg://finanse:finanse@127.0.0.1:5432/finanse_test"
+    monkeypatch.setenv("TEST_DATABASE_URL", database_url)
+    monkeypatch.setenv("DATABASE_URL", "must-not-be-used")
+    monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(sys, "executable", "/isolated-python/bin/python")
+
+    run_alembic("stamp", SESSION_REVISION)
+
+    run.assert_called_once_with(
+        ["/isolated-python/bin/python", "-m", "alembic", "stamp", SESSION_REVISION],
+        cwd=BACKEND_DIR,
+        env=os.environ | {"DATABASE_URL": database_url},
         check=True,
         capture_output=True,
         text=True,
