@@ -1,0 +1,117 @@
+# Owner action required: save as .github/workflows/ci.yml.
+# This draft is not an active workflow. No production secrets or deployment steps.
+name: PR checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests and static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: finanse
+          POSTGRES_PASSWORD: finanse
+          POSTGRES_DB: finanse_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U finanse -d finanse_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://finanse:finanse@127.0.0.1:5432/finanse_test
+      ENVIRONMENT: development
+      OPENAI_API_KEY: ""
+      LLM_API_KEY: ""
+      PYTHONDONTWRITEBYTECODE: "1"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r requirements.txt ruff==0.17.1 mypy==2.4.0
+      - run: python -m pip check
+      - run: ruff check app tests
+      - run: mypy app
+      - name: Check isolated PostgreSQL before running tests
+        run: |
+          python - <<'PY'
+          import asyncio
+          import asyncpg
+          async def check():
+              connection = await asyncpg.connect('postgresql://finanse:finanse@127.0.0.1:5432/finanse_test')
+              await connection.close()
+          asyncio.run(check())
+          PY
+      - run: pytest -q --junitxml=test-results.xml
+      - name: Reject skipped tests, including unavailable integration database
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          report = ET.parse('test-results.xml')
+          skipped = report.findall('.//testcase/skipped')
+          if skipped:
+              raise SystemExit(f'Unexpected skipped tests: {len(skipped)}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: backend/test-results.xml
+          retention-days: 7
+
+  frontend:
+    name: Frontend tests build and browser regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: Europe/Warsaw
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=low
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --maxWorkers=2
+      - run: npm run build
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-test-results
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7
