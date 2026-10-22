@@ -1,5 +1,5 @@
-# Owner action required: save as .github/workflows/ci.yml.
-# This draft is not an active workflow. No production secrets or deployment steps.
+# CI workflow for pull requests and pushes to main.
+# It uses ephemeral test services and does not deploy to production.
 name: PR checks
 
 on:

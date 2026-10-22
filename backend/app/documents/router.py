@@ -50,13 +50,20 @@ async def upload_document(
     if not content:
         return JSONResponse(content={"detail": "File is empty"}, status_code=400)
 
+    detected_mime_type = service.detect_document_mime_type(bytes(content))
+    if detected_mime_type != file.content_type:
+        return JSONResponse(
+            content={"detail": "File content does not match a supported document type."},
+            status_code=400,
+        )
+
     try:
         doc, is_duplicate = await service.store_document(
             db,
             current_user.id,
             bytes(content),
             file.filename or "untitled",
-            file.content_type or "application/octet-stream",
+            detected_mime_type,
         )
     except OSError:
         logger.warning("Document storage failed; original was not overwritten")

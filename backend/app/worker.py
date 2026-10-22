@@ -72,9 +72,13 @@ async def dispatch_pending_documents(ctx) -> None:
         )
 
 
-async def _convert_image_to_pdf(client: httpx.AsyncClient, file_path: str) -> bytes:
+async def _convert_image_to_pdf(
+    client: httpx.AsyncClient, file_path: str, image_content: bytes | None = None
+) -> bytes:
     path = Path(file_path)
-    content = await asyncio.to_thread(path.read_bytes)
+    content = (
+        image_content if image_content is not None else await asyncio.to_thread(path.read_bytes)
+    )
     files = {"fileInput": (path.name, content)}
     response = await client.post(STIRLING_IMG_TO_PDF_URL, files=files)
     response.raise_for_status()
@@ -118,12 +122,18 @@ async def process_document(ctx, document_id: str) -> None:
         doc.status = DocumentStatus.PROCESSING
         await db.flush()
         try:
-            file_path = str(service.UPLOAD_DIR / doc.storage_path)
+            document_path = service.UPLOAD_DIR / doc.storage_path
+            file_path = str(document_path)
+            original_content = await asyncio.to_thread(
+                service.read_verified_document_content, document_path, doc.sha256_hash
+            )
             async with httpx.AsyncClient(timeout=120.0) as client:
                 converted = None
                 if doc.mime_type.startswith("image/"):
-                    converted = await _convert_image_to_pdf(client, file_path)
-                ocr_pdf = await _ocr_pdf(client, file_path, converted)
+                    converted = await _convert_image_to_pdf(client, file_path, original_content)
+                ocr_pdf = await _ocr_pdf(
+                    client, file_path, converted if converted is not None else original_content
+                )
                 text = await _pdf_to_text(client, ocr_pdf)
             await service.save_extracted_text(db, doc_id, text, ocr_engine="stirling")
 

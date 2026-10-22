@@ -78,3 +78,125 @@ async def test_text_extraction_uses_stirling_text_endpoint_and_output_format():
     assert await worker._pdf_to_text(client, b"pdf") == "receipt"
     assert client.post.await_args.args[0].endswith("/api/v1/convert/pdf/text")
     assert client.post.await_args.kwargs["data"] == {"outputFormat": "txt"}
+
+
+@pytest.mark.asyncio
+async def test_worker_rejects_document_hash_mismatch_before_calling_stirling(monkeypatch, tmp_path):
+    import hashlib
+    import uuid
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from app.documents import service
+    from app.documents.schemas import DocumentStatus
+
+    document_id = uuid.uuid4()
+    path = tmp_path / "stored.pdf"
+    path.write_bytes(b"tampered")
+    document = SimpleNamespace(
+        id=document_id,
+        status=DocumentStatus.PENDING,
+        storage_path=path.name,
+        sha256_hash=hashlib.sha256(b"original").hexdigest(),
+        mime_type="application/pdf",
+        user_id=uuid.uuid4(),
+        original_name="receipt.pdf",
+    )
+
+    class Result:
+        def scalar_one_or_none(self):
+            return document
+
+    class Database:
+        async def execute(self, _statement):
+            return Result()
+
+        async def flush(self):
+            pass
+
+        async def commit(self):
+            pass
+
+        async def rollback(self):
+            pass
+
+    class SessionContext:
+        async def __aenter__(self):
+            return Database()
+
+        async def __aexit__(self, *_args):
+            pass
+
+    monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
+    monkeypatch.setattr(worker, "async_session_factory", SessionContext)
+    ocr = AsyncMock()
+    convert = AsyncMock()
+    monkeypatch.setattr(worker, "_ocr_pdf", ocr)
+    monkeypatch.setattr(worker, "_convert_image_to_pdf", convert)
+
+    await worker.process_document({}, str(document_id))
+
+    assert document.status == DocumentStatus.ERROR
+    ocr.assert_not_awaited()
+    convert.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_worker_passes_verified_pdf_bytes_to_ocr(monkeypatch, tmp_path):
+    import hashlib
+    import uuid
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from app.documents import service
+    from app.documents.schemas import DocumentStatus
+
+    document_id = uuid.uuid4()
+    content = b"%PDF-1.7\nverified original"
+    path = tmp_path / "stored.pdf"
+    path.write_bytes(content)
+    document = SimpleNamespace(
+        id=document_id,
+        status=DocumentStatus.PENDING,
+        storage_path=path.name,
+        sha256_hash=hashlib.sha256(content).hexdigest(),
+        mime_type="application/pdf",
+        user_id=uuid.uuid4(),
+        original_name="receipt.pdf",
+    )
+
+    class Result:
+        def scalar_one_or_none(self):
+            return document
+
+    class Database:
+        async def execute(self, _statement):
+            return Result()
+
+        async def flush(self):
+            pass
+
+        async def commit(self):
+            pass
+
+        async def rollback(self):
+            pass
+
+    class SessionContext:
+        async def __aenter__(self):
+            return Database()
+
+        async def __aexit__(self, *_args):
+            pass
+
+    monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
+    monkeypatch.setattr(service, "save_extracted_text", AsyncMock())
+    monkeypatch.setattr(worker, "async_session_factory", SessionContext)
+    ocr = AsyncMock(return_value=b"searchable PDF")
+    monkeypatch.setattr(worker, "_ocr_pdf", ocr)
+    monkeypatch.setattr(worker, "_pdf_to_text", AsyncMock(return_value=""))
+
+    await worker.process_document({}, str(document_id))
+
+    assert document.status == DocumentStatus.DONE
+    assert ocr.await_args.args[2] == content

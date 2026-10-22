@@ -21,6 +21,25 @@ def compute_sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def detect_document_mime_type(content: bytes) -> str | None:
+    """Identify supported document formats from their file signatures."""
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if content.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if b"%PDF-" in content[:1024]:
+        return "application/pdf"
+    return None
+
+
+def read_verified_document_content(file_path: Path, expected_sha256: str) -> bytes:
+    """Read a stored document and fail if its contents differ from its recorded hash."""
+    content = file_path.read_bytes()
+    if compute_sha256(content) != expected_sha256:
+        raise OSError("Stored document failed integrity verification")
+    return content
+
+
 def _storage_path(sha256_hash: str) -> str:
     return f"{sha256_hash[:2]}/{sha256_hash}"
 

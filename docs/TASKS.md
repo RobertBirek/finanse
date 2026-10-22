@@ -12,6 +12,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   HEAD `a115afc` jest potomkiem GitHub `main`.
 - [x] Testy backend/frontend oraz lint, typecheck i build przeszły.
 - [x] Dane operacyjne i wrażliwe artefakty z `webapp/` pozostają poza Git.
+- [x] Przegląd bezpieczeństwa dokumentów: sygnatury MIME, kontrola SHA-256 przed
+  OCR i testy regresyjne; sprawdzone również uwagi whitespace/workflow.
 
 ---
 

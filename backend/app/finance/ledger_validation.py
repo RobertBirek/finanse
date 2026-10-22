@@ -139,5 +139,3 @@ async def _validate_transaction_postings(
             if posting.direction == expected_direction:
                 raise ValueError("Category posting must oppose the account posting")
             posting.is_budget_impact = account.is_budget_account
-
-

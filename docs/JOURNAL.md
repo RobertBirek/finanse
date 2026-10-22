@@ -3,6 +3,38 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-10-22 — Zabezpieczenie ingestii dokumentów
+
+### Cel sesji
+Zamknąć ustalenia przeglądu kodu dotyczące zaufania do MIME i integralności
+plików przed wysłaniem ich do Stirling OCR.
+
+### Co zrobiono
+- Upload wykrywa PDF (`%PDF-` w pierwszych 1024 bajtach), PNG i JPEG po
+  sygnaturze binarnej; odrzuca nieobsługiwany lub niezgodny content type przed
+  utrwaleniem pliku i enqueue.
+- Worker odczytuje dokument raz, porównuje jego SHA-256 z rekordem PostgreSQL,
+  a następnie przekazuje do OCR te same zweryfikowane bajty. Przy mismatch OCR
+  się nie uruchamia, a dokument otrzymuje status `error`.
+- Dodano testy sygnatur, mismatch MIME, integralności pliku, braku wywołań OCR
+  przy mismatch oraz przekazania bajtów zweryfikowanych. Poprawiono także dwa
+  EOF whitespace i nieaktualny opis workflow CI.
+
+### Weryfikacja
+- Focused: `10 passed`; backend pytest: `391 passed, 182 skipped`.
+- Ruff, mypy i `git diff --check` PASS. Pominięte testy wymagające DB pozostają
+  objęte zakończonym sukcesem workflow GitHub Actions z izolowanym PostgreSQL.
+- Nie wykonano migracji, deployu ani zmian poświadczeń.
+
+### Ograniczenia
+- Sygnatura identyfikuje format, ale nie zastępuje pełnej walidacji parserem ani
+  sandboxingu Stirling.
+
+### Następny krok
+Niezależny review poprawki, potem push i weryfikacja nowego CI.
+
+---
+
 ## 2026-10-22 — Synchronizacja repozytoriów
 
 ### Cel sesji
@@ -24,8 +56,8 @@ Ujednolicić kod VPS i GitHuba, włączając komplet zmian z gałęzi
 - Nie wykonano migracji ani deployu produkcyjnego.
 
 ### Następny krok
-Wypchnąć zatwierdzony wynik do `origin/main`, a potem fast-forwardować checkout
-`/opt/finanse`, pozostawiając lokalny `webapp/` nietknięty.
+Synchronizacja zakończona: `origin/main` i checkout `/opt/finanse` wskazywały
+na ten sam commit `9cb6101`; `webapp/` pozostał nietknięty.
 
 ---
 

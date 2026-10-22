@@ -27,6 +27,23 @@ class TestComputeSha256:
         assert compute_sha256(b"a") != compute_sha256(b"b")
 
 
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        (b"%PDF-1.7\nbody", "application/pdf"),
+        (b"\x89PNG\r\n\x1a\nbody", "image/png"),
+        (b"\xff\xd8\xff\xe0body", "image/jpeg"),
+        (b"not a supported document", None),
+    ],
+)
+def test_detects_document_type_from_file_signature(content, expected):
+    assert service.detect_document_mime_type(content) == expected
+
+
+def test_pdf_header_may_appear_within_first_1024_bytes():
+    assert service.detect_document_mime_type(b" " * 100 + b"%PDF-1.7") == "application/pdf"
+
+
 @pytest.mark.asyncio
 async def test_upload_waits_for_backup_lock_without_blocking_event_loop(
     tmp_path: Path, monkeypatch
@@ -124,6 +141,23 @@ class TestAtomicStorage:
             service._write_document_content(digest, b"original")
         assert target.read_bytes() == b"partial"
 
+    def test_verified_read_rejects_changed_file(self, tmp_path):
+        path = tmp_path / "document.pdf"
+        path.write_bytes(b"tampered content")
+
+        with pytest.raises(OSError, match="integrity"):
+            service.read_verified_document_content(path, hashlib.sha256(b"original").hexdigest())
+
+    def test_verified_read_returns_the_hashed_bytes(self, tmp_path):
+        content = b"original content"
+        path = tmp_path / "document.pdf"
+        path.write_bytes(content)
+
+        assert (
+            service.read_verified_document_content(path, hashlib.sha256(content).hexdigest())
+            == content
+        )
+
     @pytest.mark.asyncio
     async def test_storage_failure_is_a_safe_503_and_never_enqueued(self, monkeypatch):
         import io
@@ -139,13 +173,37 @@ class TestAtomicStorage:
             service, "store_document", AsyncMock(side_effect=OSError("private-path-secret"))
         )
         file = UploadFile(
-            io.BytesIO(b"original"),
+            io.BytesIO(b"%PDF-1.4 original"),
             filename="test.pdf",
             headers=Headers({"content-type": "application/pdf"}),
         )
         response = await router.upload_document(file, SimpleNamespace(id=uuid.uuid4()), None, None)
         assert response.status_code == 503
         assert b"private-path-secret" not in response.body
+
+    @pytest.mark.asyncio
+    async def test_upload_rejects_mismatched_content_before_storage(self, monkeypatch):
+        import io
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+
+        from fastapi import UploadFile
+        from starlette.datastructures import Headers
+
+        from app.documents import router
+
+        store = AsyncMock()
+        monkeypatch.setattr(service, "store_document", store)
+        file = UploadFile(
+            io.BytesIO(b"not actually a PDF"),
+            filename="receipt.pdf",
+            headers=Headers({"content-type": "application/pdf"}),
+        )
+
+        response = await router.upload_document(file, SimpleNamespace(id=uuid.uuid4()), None, None)
+
+        assert response.status_code == 400
+        store.assert_not_awaited()
 
 
 class TestDocumentService:
@@ -298,10 +356,15 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
         "_pdf_to_text",
         AsyncMock(return_value="\n" if extraction_failure == "empty" else "Receipt text"),
     )
-    extraction = AsyncMock(return_value={
-        "detected": True, "type": "expense", "amount": 100,
-        "currency": "PLN", "description": "Test",
-    })
+    extraction = AsyncMock(
+        return_value={
+            "detected": True,
+            "type": "expense",
+            "amount": 100,
+            "currency": "PLN",
+            "description": "Test",
+        }
+    )
     if extraction_failure == "invalid":
         extraction.return_value["amount"] = "100"
     elif extraction_failure:
@@ -392,8 +455,11 @@ async def test_recovered_document_does_not_duplicate_existing_inbox_suggestion(d
         db_session, user, b"recovered", "test.pdf", "application/pdf"
     )
     data = {
-        "detected": True, "type": "expense", "amount": 100,
-        "currency": "PLN", "description": "Test",
+        "detected": True,
+        "type": "expense",
+        "amount": 100,
+        "currency": "PLN",
+        "description": "Test",
     }
     first = await create_inbox_from_document(db_session, user, document.id, "test.pdf", data)
     second = await create_inbox_from_document(db_session, user, document.id, "test.pdf", data)

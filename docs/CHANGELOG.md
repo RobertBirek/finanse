@@ -8,11 +8,20 @@ Wszystkie istotne zmiany w projekcie.
 - Zintegrowano zmiany z `genspark_ai_developer` z najnowszym `main` do
   wspólnej wersji `a115afc`; wdrożenie produkcyjne pozostaje poza zakresem.
 
+### Fixed
+- Upload dokumentów rozpoznaje PDF/PNG/JPEG po sygnaturze pliku i odrzuca
+  zawartość niezgodną z deklarowanym MIME przed zapisem i kolejkowaniem.
+- Worker weryfikuje SHA-256 oryginalnych bajtów przed OCR i przekazuje te same
+  zweryfikowane bajty do parsera, aby nie odczytywać ponownie zmienionego pliku.
+- Usunięto nadmiarowe puste linie EOF i poprawiono opis aktywnego workflow CI.
+
 ### Verified
 - Backend: `381 passed, 182 skipped`; Ruff i mypy PASS.
 - Frontend: Vitest `189 passed`; ESLint, TypeScript i build PASS.
 - `git diff --check` PASS. Pominięto produkcyjne/operacyjne artefakty z
   nieśledzonego katalogu `webapp/` — nie należą do repozytorium.
+- Po poprawkach: backend `391 passed, 182 skipped`; Ruff i mypy PASS. Testy
+  integracyjne są wykonywane w GitHub Actions na osobnym Postgresie.
 
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).

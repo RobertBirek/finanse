@@ -157,5 +157,3 @@ async def delete_category(db: AsyncSession, user_id: uuid.UUID, category_id: uui
     await db.delete(category)
     await db.flush()
     return True
-
-
