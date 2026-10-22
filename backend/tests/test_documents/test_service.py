@@ -345,6 +345,9 @@ async def test_upload_commits_before_enqueue_and_survives_redis_outage(
     body = response.json()
     assert body["is_duplicate"] is False
     assert body["document"]["status"] == "pending"
+    assert body["document"]["attempt_count"] == 0
+    assert body["document"]["next_attempt_at"] is None
+    assert body["document"]["last_error_code"] is None
     assert mock.await_count == 1
     duplicate = await async_client.post(
         "/api/documents/upload",
@@ -361,7 +364,8 @@ async def test_upload_commits_before_enqueue_and_survives_redis_outage(
     )
     assert retry.status_code == 200
     assert retry.json()["is_duplicate"] is True
-    assert retry.json()["document"]["status"] == "pending"
+    assert retry.json()["document"]["status"] == "error"
+    assert mock.await_count == 2  # terminal state cannot reset the retry budget by re-upload
 
 
 @pytest.mark.integration

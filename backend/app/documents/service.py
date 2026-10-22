@@ -25,6 +25,10 @@ __all__ = ["UnsupportedDocumentFormatError", "detect_document_mime_type"]
 UPLOAD_DIR = Path("/app/uploads")
 
 
+class DocumentIntegrityError(OSError):
+    pass
+
+
 def compute_sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
@@ -33,7 +37,7 @@ def read_verified_document_content(file_path: Path, expected_sha256: str) -> byt
     """Read a stored document and fail if its contents differ from its recorded hash."""
     content = file_path.read_bytes()
     if compute_sha256(content) != expected_sha256:
-        raise OSError("Stored document failed integrity verification")
+        raise DocumentIntegrityError("Stored document failed integrity verification")
     return content
 
 

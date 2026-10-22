@@ -11,11 +11,14 @@ from arq.connections import ArqRedis, RedisSettings
 from openai import OpenAIError
 from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session_factory
 from app.documents import service
 from app.documents.models import Document
+from app.documents.ocr_client import OCRResponseTooLargeError, post_bounded
+from app.documents.retry import is_retryable_ocr_error, retry_delay_seconds
 from app.documents.schemas import DocumentStatus
 
 logger = logging.getLogger(__name__)
@@ -44,7 +47,13 @@ async def dispatch_pending_documents(ctx) -> None:
                     select(Document)
                     .where(
                         or_(
-                            Document.status == DocumentStatus.PENDING,
+                            and_(
+                                Document.status == DocumentStatus.PENDING,
+                                or_(
+                                    Document.next_attempt_at.is_(None),
+                                    Document.next_attempt_at <= datetime.now(UTC),
+                                ),
+                            ),
                             and_(
                                 Document.status == DocumentStatus.PROCESSING,
                                 Document.updated_at < cutoff,
@@ -80,9 +89,9 @@ async def _convert_image_to_pdf(
         image_content if image_content is not None else await asyncio.to_thread(path.read_bytes)
     )
     files = {"fileInput": (path.name, content)}
-    response = await client.post(STIRLING_IMG_TO_PDF_URL, files=files)
-    response.raise_for_status()
-    return response.content
+    return await post_bounded(
+        client, STIRLING_IMG_TO_PDF_URL, files, settings.DOCUMENT_OCR_MAX_BYTES
+    )
 
 
 async def _ocr_pdf(
@@ -93,18 +102,61 @@ async def _ocr_pdf(
     content = pdf_content if pdf_content is not None else await asyncio.to_thread(path.read_bytes)
     files = {"fileInput": (path.name, content)}
     data = {"languages": "pol,eng", "ocrType": "skip-text"}
-    response = await client.post(STIRLING_OCR_URL, files=files, data=data)
-    response.raise_for_status()
-    return response.content
+    return await post_bounded(
+        client, STIRLING_OCR_URL, files, settings.DOCUMENT_OCR_MAX_BYTES, data
+    )
 
 
 async def _pdf_to_text(client: httpx.AsyncClient, pdf_content: bytes) -> str:
     files = {"fileInput": ("output.pdf", pdf_content, "application/pdf")}
-    response = await client.post(
-        STIRLING_PDF_TO_TEXT_URL, files=files, data={"outputFormat": "txt"}
+    content = await post_bounded(
+        client,
+        STIRLING_PDF_TO_TEXT_URL,
+        files,
+        settings.DOCUMENT_OCR_TEXT_MAX_BYTES,
+        {"outputFormat": "txt"},
     )
-    response.raise_for_status()
-    return response.text
+    text = content.decode("utf-8", errors="replace")
+    if len(text.encode("utf-8")) > settings.DOCUMENT_OCR_TEXT_MAX_BYTES:
+        raise OCRResponseTooLargeError("OCR text exceeds limit")
+    return text
+
+
+async def _process_content(db: AsyncSession, doc: Document) -> None:
+    document_path = service.UPLOAD_DIR / doc.storage_path
+    file_path = str(document_path)
+    original_content = await asyncio.to_thread(
+        service.read_verified_document_content, document_path, doc.sha256_hash
+    )
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        converted = None
+        if doc.mime_type.startswith("image/"):
+            converted = await _convert_image_to_pdf(client, file_path, original_content)
+        ocr_pdf = await _ocr_pdf(
+            client, file_path, converted if converted is not None else original_content
+        )
+        text = await _pdf_to_text(client, ocr_pdf)
+    await service.save_extracted_text(db, doc.id, text, ocr_engine="stirling")
+    if text.strip():
+        try:
+            from app.documents.extractor import create_inbox_from_document, extract_financial_data
+
+            async with db.begin_nested():
+                data = await extract_financial_data(text)
+                if data.get("detected"):
+                    await create_inbox_from_document(
+                        db, doc.user_id, doc.id, doc.original_name, data
+                    )
+        except (
+            OpenAIError,
+            SQLAlchemyError,
+            ValueError,
+            KeyError,
+            TypeError,
+            RuntimeError,
+            AttributeError,
+        ):
+            logger.warning("Financial extraction failed for document %s", doc.id)
 
 
 async def process_document(ctx, document_id: str) -> None:
@@ -119,50 +171,23 @@ async def process_document(ctx, document_id: str) -> None:
         ).scalar_one_or_none()
         if doc is None or doc.status not in {DocumentStatus.PENDING, DocumentStatus.PROCESSING}:
             return
+        if doc.next_attempt_at is not None and doc.next_attempt_at > datetime.now(UTC):
+            return
+        if doc.attempt_count >= settings.DOCUMENT_MAX_ATTEMPTS:
+            doc.status = DocumentStatus.ERROR
+            doc.next_attempt_at = None
+            await db.commit()
+            return
+        doc.attempt_count += 1
         doc.status = DocumentStatus.PROCESSING
+        doc.next_attempt_at = None
         await db.flush()
         try:
-            document_path = service.UPLOAD_DIR / doc.storage_path
-            file_path = str(document_path)
-            original_content = await asyncio.to_thread(
-                service.read_verified_document_content, document_path, doc.sha256_hash
-            )
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                converted = None
-                if doc.mime_type.startswith("image/"):
-                    converted = await _convert_image_to_pdf(client, file_path, original_content)
-                ocr_pdf = await _ocr_pdf(
-                    client, file_path, converted if converted is not None else original_content
-                )
-                text = await _pdf_to_text(client, ocr_pdf)
-            await service.save_extracted_text(db, doc_id, text, ocr_engine="stirling")
-
-            if text.strip():
-                # Optional extraction cannot roll back a successful OCR result.
-                try:
-                    from app.documents.extractor import (
-                        create_inbox_from_document,
-                        extract_financial_data,
-                    )
-
-                    async with db.begin_nested():
-                        data = await extract_financial_data(text)
-                        if data.get("detected"):
-                            await create_inbox_from_document(
-                                db, doc.user_id, doc.id, doc.original_name, data
-                            )
-                except (
-                    OpenAIError,
-                    SQLAlchemyError,
-                    ValueError,
-                    KeyError,
-                    TypeError,
-                    RuntimeError,
-                    AttributeError,
-                ):
-                    logger.warning("Financial extraction failed for document %s", doc_id)
+            # A savepoint rolls back failed writes without releasing the claim.
+            async with db.begin_nested():
+                await _process_content(db, doc)
             doc.status = DocumentStatus.DONE
-            await db.commit()
+            doc.last_error_code = None
         except (
             OSError,
             httpx.HTTPError,
@@ -171,11 +196,25 @@ async def process_document(ctx, document_id: str) -> None:
             KeyError,
             TypeError,
             RuntimeError,
-        ):
-            await db.rollback()
+        ) as error:
+            await db.refresh(doc)
             logger.warning("OCR processing failed for document %s", doc_id)
-            await service.update_document_status(db, doc_id, DocumentStatus.ERROR)
-            await db.commit()
+            retryable = is_retryable_ocr_error(error)
+            if isinstance(error, service.DocumentIntegrityError):
+                doc.last_error_code = "integrity_mismatch"
+            elif isinstance(error, OCRResponseTooLargeError):
+                doc.last_error_code = "output_limit"
+            else:
+                doc.last_error_code = "upstream_unavailable" if retryable else "processing_failed"
+            if retryable and doc.attempt_count < settings.DOCUMENT_MAX_ATTEMPTS:
+                doc.status = DocumentStatus.PENDING
+                doc.next_attempt_at = datetime.now(UTC) + timedelta(
+                    seconds=retry_delay_seconds(doc.attempt_count)
+                )
+            else:
+                doc.status = DocumentStatus.ERROR
+                doc.next_attempt_at = None
+        await db.commit()
 
 
 class WorkerSettings:

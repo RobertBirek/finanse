@@ -1,6 +1,8 @@
+from contextlib import nullcontext
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
 
 from app import worker
@@ -22,42 +24,50 @@ async def test_worker_file_uploads_read_files_off_event_loop(
     read_bytes = AsyncMock(return_value=b"pdf bytes")
     monkeypatch.setattr(worker, "asyncio", SimpleNamespace(to_thread=read_bytes), raising=False)
 
-    response = SimpleNamespace(content=b"processed", raise_for_status=lambda: None)
-    client = SimpleNamespace(post=AsyncMock(return_value=response))
+    requests = []
 
-    result = await getattr(worker, helper_name)(client, str(path))
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(200, content=b"processed")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        result = await getattr(worker, helper_name)(client, str(path))
 
     assert result == b"processed"
     assert read_bytes.await_count == 1
     read_method = read_bytes.await_args.args[0]
     assert read_method.__self__ == path
     assert read_method.__name__ == "read_bytes"
-    request = client.post.await_args
-    assert request.args[0] == expected_url
-    assert request.kwargs["files"] == {"fileInput": (path.name, b"pdf bytes")}
+    request = requests[0]
+    assert str(request.url) == expected_url
+    assert b"pdf bytes" in request.content
     if expected_data is not None:
-        assert request.kwargs["data"] == expected_data
+        assert b"pol,eng" in request.content
 
 
 @pytest.mark.asyncio
 async def test_ocr_accepts_converted_pdf_without_reading_original(monkeypatch):
     read = AsyncMock()
     monkeypatch.setattr(worker.asyncio, "to_thread", read)
-    response = SimpleNamespace(content=b"OCR PDF", raise_for_status=lambda: None)
-    client = SimpleNamespace(post=AsyncMock(return_value=response))
-    assert await worker._ocr_pdf(client, "receipt.png", b"converted") == b"OCR PDF"
+
+    def respond(request):
+        assert b"converted" in request.content
+        return httpx.Response(200, content=b"OCR PDF")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        assert await worker._ocr_pdf(client, "receipt.png", b"converted") == b"OCR PDF"
     read.assert_not_awaited()
-    assert client.post.await_args.kwargs["files"]["fileInput"][1] == b"converted"
 
 
 @pytest.mark.asyncio
 async def test_text_extraction_does_not_treat_http_error_as_success():
     import httpx
 
-    response = httpx.Response(500, request=httpx.Request("POST", worker.STIRLING_PDF_TO_TEXT_URL))
-    client = SimpleNamespace(post=AsyncMock(return_value=response))
-    with pytest.raises(httpx.HTTPStatusError):
-        await worker._pdf_to_text(client, b"pdf")
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _: httpx.Response(500))
+    ) as client:
+        with pytest.raises(httpx.HTTPStatusError):
+            await worker._pdf_to_text(client, b"pdf")
 
 
 def test_stale_recovery_timeout_must_exceed_worker_timeout():
@@ -73,11 +83,13 @@ def test_stale_recovery_timeout_must_exceed_worker_timeout():
 async def test_text_extraction_uses_stirling_text_endpoint_and_output_format():
     import httpx
 
-    response = httpx.Response(200, text="receipt", request=httpx.Request("POST", "http://stirling"))
-    client = SimpleNamespace(post=AsyncMock(return_value=response))
-    assert await worker._pdf_to_text(client, b"pdf") == "receipt"
-    assert client.post.await_args.args[0].endswith("/api/v1/convert/pdf/text")
-    assert client.post.await_args.kwargs["data"] == {"outputFormat": "txt"}
+    def respond(request):
+        assert request.url.path.endswith("/api/v1/convert/pdf/text")
+        assert b"txt" in request.content and b"outputFormat" in request.content
+        return httpx.Response(200, text="receipt")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        assert await worker._pdf_to_text(client, b"pdf") == "receipt"
 
 
 @pytest.mark.asyncio
@@ -95,6 +107,9 @@ async def test_worker_rejects_document_hash_mismatch_before_calling_stirling(mon
     path.write_bytes(b"tampered")
     document = SimpleNamespace(
         id=document_id,
+        attempt_count=0,
+        next_attempt_at=None,
+        last_error_code=None,
         status=DocumentStatus.PENDING,
         storage_path=path.name,
         sha256_hash=hashlib.sha256(b"original").hexdigest(),
@@ -108,6 +123,12 @@ async def test_worker_rejects_document_hash_mismatch_before_calling_stirling(mon
             return document
 
     class Database:
+        def begin_nested(self):
+            return nullcontext()
+
+        async def refresh(self, _document):
+            pass
+
         async def execute(self, _statement):
             return Result()
 
@@ -157,6 +178,9 @@ async def test_worker_passes_verified_pdf_bytes_to_ocr(monkeypatch, tmp_path):
     path.write_bytes(content)
     document = SimpleNamespace(
         id=document_id,
+        attempt_count=0,
+        next_attempt_at=None,
+        last_error_code=None,
         status=DocumentStatus.PENDING,
         storage_path=path.name,
         sha256_hash=hashlib.sha256(content).hexdigest(),
@@ -170,6 +194,12 @@ async def test_worker_passes_verified_pdf_bytes_to_ocr(monkeypatch, tmp_path):
             return document
 
     class Database:
+        def begin_nested(self):
+            return nullcontext()
+
+        async def refresh(self, _document):
+            pass
+
         async def execute(self, _statement):
             return Result()
 

@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     DOCUMENT_USER_QUOTA_BYTES: PositiveInt = 1024 * 1024 * 1024
     DOCUMENT_GLOBAL_QUOTA_BYTES: PositiveInt = 10 * 1024 * 1024 * 1024
     DOCUMENT_MIN_FREE_BYTES: PositiveInt = 1024 * 1024 * 1024
+    DOCUMENT_OCR_MAX_BYTES: PositiveInt = 64 * 1024 * 1024
+    DOCUMENT_OCR_TEXT_MAX_BYTES: PositiveInt = 2 * 1024 * 1024
+    DOCUMENT_MAX_ATTEMPTS: PositiveInt = 3
+    DOCUMENT_RETRY_DELAYS_SECONDS: tuple[PositiveInt, ...] = (30, 120)
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     OPENAI_API_KEY: str = ""
@@ -145,6 +149,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
+        if len(self.DOCUMENT_RETRY_DELAYS_SECONDS) != self.DOCUMENT_MAX_ATTEMPTS - 1:
+            raise ValueError("Retry delay count must equal max attempts minus one")
         if self.DOCUMENT_MAX_BODY_BYTES <= self.DOCUMENT_MAX_FILE_BYTES:
             raise ValueError("Upload body limit must exceed file limit for multipart overhead")
         if self.DOCUMENT_STALE_PROCESSING_SECONDS <= self.DOCUMENT_JOB_TIMEOUT_SECONDS:

@@ -77,8 +77,6 @@ async def upload_document(
             },
             status_code=503,
         )
-    if doc.status == DocumentStatus.ERROR:
-        doc.status = DocumentStatus.PENDING
     # A durable pending row must be visible before a worker receives its ID.
     await db.commit()
     await db.refresh(doc)
