@@ -85,6 +85,19 @@ export function DocumentList() {
                     {formatFileSize(doc.size_bytes)} ·{" "}
                     {new Date(doc.created_at).toLocaleDateString("pl-PL")}
                   </span>
+                  {doc.status === "pending" && doc.next_attempt_at && (
+                    <span className="block text-xs text-yellow-300">
+                      Ponowna próba od{" "}
+                      {new Date(doc.next_attempt_at).toLocaleString("pl-PL")}{" "}
+                      (wykonano prób: {doc.attempt_count}).
+                    </span>
+                  )}
+                  {doc.status === "error" && (
+                    <span className="block text-xs text-red-300">
+                      Przetwarzanie zakończone błędem. Automatyczne próby
+                      zakończone.
+                    </span>
+                  )}
                 </button>
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[doc.status]}`}

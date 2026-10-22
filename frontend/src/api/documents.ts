@@ -10,6 +10,9 @@ export interface DocumentData {
   sha256_hash: string;
   size_bytes: number;
   status: "pending" | "processing" | "done" | "error";
+  attempt_count: number;
+  next_attempt_at: string | null;
+  last_error_code: string | null;
   storage_path: string;
   created_at: string;
   updated_at: string;

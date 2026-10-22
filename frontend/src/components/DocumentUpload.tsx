@@ -1,11 +1,21 @@
 import { useRef, useState, DragEvent, ChangeEvent } from "react";
 import { useUploadDocument } from "../api/documents";
+import { isAxiosError } from "axios";
 
 export function DocumentUpload() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadDocument();
+  const status = isAxiosError(upload.error)
+    ? upload.error.response?.status
+    : undefined;
+  const uploadError =
+    status === 413
+      ? "Przekroczono limit pliku lub miejsca na dokumenty. Wybierz mniejszy plik lub sprawdź limit przechowywania."
+      : status === 503 || status === 507
+        ? "Przesyłanie jest chwilowo niedostępne. Spróbuj później."
+        : "Nie udało się przesłać dokumentu. Wybierz plik ponownie, aby spróbować jeszcze raz.";
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const handleFile = (file: File) => {
@@ -154,8 +164,7 @@ export function DocumentUpload() {
       )}
       {!validationError && upload.isError && (
         <p role="alert" className="mt-2 text-sm text-red-300">
-          Nie udało się przesłać dokumentu. Wybierz plik ponownie, aby spróbować
-          jeszcze raz.
+          {uploadError}
         </p>
       )}
       {!validationError && upload.isSuccess && (
