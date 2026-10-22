@@ -8,6 +8,7 @@ import pytest
 
 from app.documents import service
 from app.documents.service import compute_sha256, get_document, get_documents, upload_document
+from test_documents.fixtures import valid_jpeg_bytes, valid_pdf_bytes, valid_png_bytes
 
 
 @pytest.fixture(autouse=True)
@@ -30,18 +31,53 @@ class TestComputeSha256:
 @pytest.mark.parametrize(
     ("content", "expected"),
     [
-        (b"%PDF-1.7\nbody", "application/pdf"),
-        (b"\x89PNG\r\n\x1a\nbody", "image/png"),
-        (b"\xff\xd8\xff\xe0body", "image/jpeg"),
+        (valid_pdf_bytes(), "application/pdf"),
+        (valid_png_bytes(), "image/png"),
+        (valid_jpeg_bytes(), "image/jpeg"),
         (b"not a supported document", None),
+        (b"\x89PNG\r\n\x1a\n", None),
+        (b"\xff\xd8\xff", None),
+        (b"arbitrary prefix %PDF-1.7 not a real PDF", None),
     ],
 )
-def test_detects_document_type_from_file_signature(content, expected):
+def test_detects_document_type_from_complete_file(content, expected):
     assert service.detect_document_mime_type(content) == expected
 
 
-def test_pdf_header_may_appear_within_first_1024_bytes():
-    assert service.detect_document_mime_type(b" " * 100 + b"%PDF-1.7") == "application/pdf"
+def test_pdf_token_in_unparseable_payload_does_not_validate_document():
+    assert service.detect_document_mime_type(b" " * 100 + b"%PDF-1.7") is None
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        valid_pdf_bytes()[:-2],
+        valid_png_bytes()[:-1],
+        valid_jpeg_bytes()[:-1],
+        valid_png_bytes()[:-5],
+    ],
+)
+def test_rejects_truncated_documents(content):
+    assert service.detect_document_mime_type(content) is None
+
+
+@pytest.mark.parametrize(
+    ("content", "declared_mime_type"),
+    [
+        (b"not a PDF", "application/pdf"),
+        (valid_png_bytes(), "application/pdf"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_store_document_rejects_invalid_content_before_writing(
+    tmp_path, monkeypatch, content, declared_mime_type
+):
+    monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
+
+    with pytest.raises(service.UnsupportedDocumentFormatError, match="document format"):
+        await service.store_document(None, uuid.uuid4(), content, "receipt.pdf", declared_mime_type)
+
+    assert not list(tmp_path.rglob("*"))
 
 
 @pytest.mark.asyncio
@@ -71,7 +107,9 @@ async def test_upload_waits_for_backup_lock_without_blocking_event_loop(
     fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
     database = Database()
     upload_task = asyncio.create_task(
-        upload_document(database, uuid.uuid4(), b"locked content", "test.pdf", "application/pdf")
+        upload_document(
+            database, uuid.uuid4(), valid_pdf_bytes("locked"), "test.pdf", "application/pdf"
+        )
     )
     await asyncio.sleep(0.05)
     ticker_ran = False
@@ -87,7 +125,7 @@ async def test_upload_waits_for_backup_lock_without_blocking_event_loop(
     fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
     lock_file.close()
     document = await upload_task
-    assert (tmp_path / document.storage_path).read_bytes() == b"locked content"
+    assert (tmp_path / document.storage_path).read_bytes() == valid_pdf_bytes("locked")
     assert database.flushed
 
 
@@ -182,20 +220,17 @@ class TestAtomicStorage:
         assert b"private-path-secret" not in response.body
 
     @pytest.mark.asyncio
-    async def test_upload_rejects_mismatched_content_before_storage(self, monkeypatch):
+    async def test_upload_rejects_mismatched_content_before_storage(self, tmp_path):
         import io
         from types import SimpleNamespace
-        from unittest.mock import AsyncMock
 
         from fastapi import UploadFile
         from starlette.datastructures import Headers
 
         from app.documents import router
 
-        store = AsyncMock()
-        monkeypatch.setattr(service, "store_document", store)
         file = UploadFile(
-            io.BytesIO(b"not actually a PDF"),
+            io.BytesIO(valid_png_bytes()),
             filename="receipt.pdf",
             headers=Headers({"content-type": "application/pdf"}),
         )
@@ -203,7 +238,7 @@ class TestAtomicStorage:
         response = await router.upload_document(file, SimpleNamespace(id=uuid.uuid4()), None, None)
 
         assert response.status_code == 400
-        store.assert_not_awaited()
+        assert not list(tmp_path.rglob("*"))
 
 
 class TestDocumentService:
@@ -211,20 +246,19 @@ class TestDocumentService:
     @pytest.mark.integration
     async def test_upload_creates_document(self, db_session):
         user_id = uuid.uuid4()
-        doc = await upload_document(
-            db_session, user_id, b"%PDF-1.4 test", "test.pdf", "application/pdf"
-        )
+        content = valid_pdf_bytes()
+        doc = await upload_document(db_session, user_id, content, "test.pdf", "application/pdf")
         assert doc.id is not None
         assert doc.original_name == "test.pdf"
         assert doc.mime_type == "application/pdf"
-        assert doc.size_bytes == 13
+        assert doc.size_bytes == len(content)
         assert doc.status == "pending"
 
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_upload_deduplicates_same_hash(self, db_session):
         user_id = uuid.uuid4()
-        content = b"same content"
+        content = valid_pdf_bytes("duplicate")
         doc1 = await upload_document(db_session, user_id, content, "a.pdf", "application/pdf")
         doc2 = await upload_document(db_session, user_id, content, "b.pdf", "application/pdf")
         assert doc1.id == doc2.id
@@ -233,8 +267,8 @@ class TestDocumentService:
     @pytest.mark.integration
     async def test_list_returns_by_user(self, db_session):
         a, b = uuid.uuid4(), uuid.uuid4()
-        await upload_document(db_session, a, b"a", "a.pdf", "application/pdf")
-        await upload_document(db_session, b, b"b", "b.pdf", "application/pdf")
+        await upload_document(db_session, a, valid_pdf_bytes("a"), "a.pdf", "application/pdf")
+        await upload_document(db_session, b, valid_pdf_bytes("b"), "b.pdf", "application/pdf")
         assert len(await get_documents(db_session, a)) == 1
         assert len(await get_documents(db_session, b)) == 1
 
@@ -242,7 +276,9 @@ class TestDocumentService:
     @pytest.mark.integration
     async def test_get_document_by_id(self, db_session):
         user_id = uuid.uuid4()
-        doc = await upload_document(db_session, user_id, b"test", "doc.pdf", "application/pdf")
+        doc = await upload_document(
+            db_session, user_id, valid_pdf_bytes("lookup"), "doc.pdf", "application/pdf"
+        )
         found = await get_document(db_session, user_id, doc.id)
         assert found is not None and found.id == doc.id
         assert await get_document(db_session, user_id, uuid.uuid4()) is None
@@ -256,12 +292,13 @@ async def test_explicit_deduplication_and_text_upsert(db_session):
     from app.documents.models import DocumentText
 
     user = uuid.uuid4()
+    content = valid_pdf_bytes("dedupe")
     document, duplicate = await service.store_document(
-        db_session, user, b"same", "a.pdf", "application/pdf"
+        db_session, user, content, "a.pdf", "application/pdf"
     )
     assert not duplicate
     same, duplicate = await service.store_document(
-        db_session, user, b"same", "b.pdf", "application/pdf"
+        db_session, user, content, "b.pdf", "application/pdf"
     )
     assert same.id == document.id and duplicate
     await service.save_extracted_text(db_session, document.id, "first")
@@ -285,6 +322,7 @@ async def test_upload_commits_before_enqueue_and_survives_redis_outage(
     from app.main import app
 
     user = uuid.uuid4()
+    content = valid_pdf_bytes("upload retry")
     app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=user)
 
     async def enqueue(document_id):
@@ -298,7 +336,7 @@ async def test_upload_commits_before_enqueue_and_survives_redis_outage(
     monkeypatch.setattr(worker, "enqueue_process_document", mock)
     response = await async_client.post(
         "/api/documents/upload",
-        files={"file": ("receipt.pdf", b"%PDF-1.4 test", "application/pdf")},
+        files={"file": ("receipt.pdf", content, "application/pdf")},
     )
     assert response.status_code == 200
     body = response.json()
@@ -307,7 +345,7 @@ async def test_upload_commits_before_enqueue_and_survives_redis_outage(
     assert mock.await_count == 1
     duplicate = await async_client.post(
         "/api/documents/upload",
-        files={"file": ("receipt.pdf", b"%PDF-1.4 test", "application/pdf")},
+        files={"file": ("receipt.pdf", content, "application/pdf")},
     )
     assert duplicate.json()["is_duplicate"] is True
 
@@ -316,7 +354,7 @@ async def test_upload_commits_before_enqueue_and_survives_redis_outage(
     await db_session.commit()
     retry = await async_client.post(
         "/api/documents/upload",
-        files={"file": ("receipt.pdf", b"%PDF-1.4 test", "application/pdf")},
+        files={"file": ("receipt.pdf", content, "application/pdf")},
     )
     assert retry.status_code == 200
     assert retry.json()["is_duplicate"] is True
@@ -339,8 +377,9 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     from app.documents.schemas import DocumentStatus
     from app.inbox.service import get_inbox_items
 
+    image_content = valid_png_bytes()
     document = await service.upload_document(
-        db_session, uuid.uuid4(), b"original image", "receipt.png", "image/png"
+        db_session, uuid.uuid4(), image_content, "receipt.png", "image/png"
     )
     document_id, user_id = document.id, document.user_id
     await db_session.commit()
@@ -377,7 +416,7 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     db_session.expire_all()
     persisted = await service.get_document(db_session, user_id, document_id)
     assert persisted.status == DocumentStatus.DONE
-    assert (service.UPLOAD_DIR / persisted.storage_path).read_bytes() == b"original image"
+    assert (service.UPLOAD_DIR / persisted.storage_path).read_bytes() == image_content
     assert (await service.get_document_text(db_session, document_id)).extracted_text == (
         "\n" if extraction_failure == "empty" else "Receipt text"
     )
@@ -386,7 +425,7 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     assert len(await get_inbox_items(db_session, user_id)) == (0 if extraction_failure else 1)
     redis = SimpleNamespace(enqueue_job=AsyncMock())
     pending = await service.upload_document(
-        db_session, user_id, b"pending", "next.pdf", "application/pdf"
+        db_session, user_id, valid_pdf_bytes("pending"), "next.pdf", "application/pdf"
     )
     pending_id = pending.id
     await db_session.commit()
@@ -413,7 +452,9 @@ async def test_dispatch_recovers_only_stale_unlocked_documents_and_commits_befor
 
     user = uuid.uuid4()
     docs = [
-        await service.upload_document(db_session, user, bytes([i]), f"{i}.pdf", "application/pdf")
+        await service.upload_document(
+            db_session, user, valid_pdf_bytes(f"dispatch-{i}"), f"{i}.pdf", "application/pdf"
+        )
         for i in range(3)
     ]
     ids = [doc.id for doc in docs]
@@ -452,7 +493,7 @@ async def test_recovered_document_does_not_duplicate_existing_inbox_suggestion(d
 
     user = uuid.uuid4()
     document = await service.upload_document(
-        db_session, user, b"recovered", "test.pdf", "application/pdf"
+        db_session, user, valid_pdf_bytes("recovered"), "test.pdf", "application/pdf"
     )
     data = {
         "detected": True,

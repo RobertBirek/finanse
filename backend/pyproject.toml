@@ -25,6 +25,8 @@ dependencies = [
     "Mako>=1.4.3",
     "openai>=1.30.0",
     "python-multipart==0.0.32",
+    "Pillow>=11.3.0,<13.0.0",
+    "pypdf>=6.0.0,<7.0.0",
 ]
 
 [project.optional-dependencies]

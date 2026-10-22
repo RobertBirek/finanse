@@ -10,25 +10,25 @@ Zamknąć ustalenia przeglądu kodu dotyczące zaufania do MIME i integralności
 plików przed wysłaniem ich do Stirling OCR.
 
 ### Co zrobiono
-- Upload wykrywa PDF (`%PDF-` w pierwszych 1024 bajtach), PNG i JPEG po
-  sygnaturze binarnej; odrzuca nieobsługiwany lub niezgodny content type przed
-  utrwaleniem pliku i enqueue.
+- Serwis weryfikuje pełny dokument przed zapisem: `pypdf` parsuje PDF, Pillow
+  weryfikuje i dekoduje PNG/JPEG; błędne pliki lub MIME mismatch są odrzucane
+  przed utrwaleniem danych i enqueue.
 - Worker odczytuje dokument raz, porównuje jego SHA-256 z rekordem PostgreSQL,
   a następnie przekazuje do OCR te same zweryfikowane bajty. Przy mismatch OCR
   się nie uruchamia, a dokument otrzymuje status `error`.
-- Dodano testy sygnatur, mismatch MIME, integralności pliku, braku wywołań OCR
-  przy mismatch oraz przekazania bajtów zweryfikowanych. Poprawiono także dwa
-  EOF whitespace i nieaktualny opis workflow CI.
+- Dodano testy prawidłowych/uszkodzonych i uciętych formatów, mismatch MIME,
+  integralności, braku wywołań OCR przy mismatch oraz przekazania zweryfikowanych
+  bajtów. Poprawiono także dwa EOF whitespace i opis aktywnego workflow CI.
 
 ### Weryfikacja
-- Focused: `10 passed`; backend pytest: `391 passed, 182 skipped`.
+- Focused: `25 passed, 12 skipped`; backend pytest: `400 passed, 182 skipped`.
 - Ruff, mypy i `git diff --check` PASS. Pominięte testy wymagające DB pozostają
   objęte zakończonym sukcesem workflow GitHub Actions z izolowanym PostgreSQL.
 - Nie wykonano migracji, deployu ani zmian poświadczeń.
 
 ### Ograniczenia
-- Sygnatura identyfikuje format, ale nie zastępuje pełnej walidacji parserem ani
-  sandboxingu Stirling.
+- Parsery i kontrole końcowych markerów odrzucają znane przypadki ucięć, ale nie
+  zastępują sandboxingu Stirling ani pełnej kontroli bezpieczeństwa PDF.
 
 ### Następny krok
 Niezależny review poprawki, potem push i weryfikacja nowego CI.
