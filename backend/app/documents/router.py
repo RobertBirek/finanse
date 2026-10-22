@@ -15,6 +15,7 @@ from app.documents.schemas import (
     DocumentTextResponse,
     DocumentUploadResponse,
 )
+from app.documents.validation import DocumentValidationUnavailableError
 from app.identity.models import User
 from app.identity.router import get_current_user
 from app.security.rate_limit import limit_upload
@@ -63,7 +64,7 @@ async def upload_document(
             content={"detail": "File content does not match a supported document type."},
             status_code=400,
         )
-    except OSError:
+    except (OSError, DocumentValidationUnavailableError):
         logger.warning("Document storage failed; original was not overwritten")
         return JSONResponse(
             content={

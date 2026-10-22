@@ -6,6 +6,23 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Audyt przekrojowy (2026-10-22)
+
+- [x] Audyt `7cde5ac` i niezależna weryfikacja raportu:
+  `docs/audits/2026-10-22-audit.md`.
+- [x] Zatwierdzono kierunek pakietu 1; przygotowano szczegółowy plan
+  `docs/superpowers/plans/2026-10-22-document-safety-package-1.md`.
+- [ ] Zatwierdzić szczegóły planu (limity, retry, metadata migracji) i sposób realizacji;
+  pozostałe pakiety nie są jeszcze zatwierdzone.
+- [ ] R01 + A01/A02: izolacja/limity parserów i OCR, zgodny limit Nginx, retry.
+- [ ] A05–A09/A13: współbieżność ustawień, importer, granice kwot i ekran projektu.
+- [ ] A10–A12: walidacja argumentów AI, policy engine i ograniczony kontekst.
+- [ ] A03/A04/A14: zatwierdzanie dokumentu do księgi, retencja/GC, dostępność UI.
+- [ ] R02–R05: lease workera, ochrona DB, restore hashów, alerty i provenance buildów.
+- [ ] Uzgodnić semantykę pending przed zmianą raportów/prognozy.
+
+---
+
 ## Synchronizacja repozytoriów (2026-10-22)
 
 - [x] Zintegrowano aktualny `main` z 14 commitami `genspark_ai_developer`;

@@ -3,6 +3,47 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-10-22 — Plan pakietu bezpieczeństwa dokumentów
+
+- Użytkownik zaakceptował rozpoczęcie pakietu 1 po audycie.
+- Przygotowano `docs/superpowers/plans/2026-10-22-document-safety-package-1.md`:
+  proces walidacji z limitami, upload/body/storage admission, bounded OCR,
+  trwały harmonogram retry, komunikaty UI i profil hardeningu do staging.
+- Parametry limitów i liczby prób są propozycją wymagającą potwierdzenia;
+  migrację retry można przygotować/testować izolowanie, nie wykonywać na produkcji.
+- Nie zmieniono kodu aplikacji ani infrastruktury. Nie wykonano deployu,
+  migracji, commitu ani pusha. Następny krok: zatwierdzenie planu i wykonanie TDD.
+
+---
+
+## 2026-10-22 — Audyt przekrojowy przed dalszym rozwojem
+
+### Zakres i wynik
+- Audyt kodu `7cde5ac`, cztery niezależne przeglądy obszarów, ponowna weryfikacja
+  kluczowych ścieżek i osobna kontrola trafności końcowego raportu.
+- Raport: `docs/audits/2026-10-22-audit.md`; 14 ustaleń funkcjonalnych/kontrolnych
+  i 5 grup ryzyk. Priorytet: zasoby parserów, limit uploadu, retry OCR;
+  następnie kontrakty finansów/UI i egzekwowanie polityk AI.
+- Małe próby lokalne potwierdziły brak granic BIGINT/rozmiaru wiadomości AI,
+  odrzucanie statusu blocked i niedopasowanie wzorca polityki create_transaction.
+
+### Dowody operacyjne
+- CI 39840942742 dla `7cde5ac`: 582 backend bez skipów, 189 Vitest,
+  18 Playwright; lint/typecheck/build PASS. Nie powtarzano pełnego zestawu lokalnie.
+- Produkcja: backend/worker `827c263`, frontend `b0912f8`; zmiany kodu nie są
+  jeszcze wdrożone. GET strony/health 200; nie jest to pełny test gotowości.
+- Timery active, ostatni backup success 22.10; świeżego restore drill nie udało
+  się potwierdzić dostępnym journalem. Szczegóły i ograniczenia w raporcie.
+
+### Bezpieczeństwo i następny krok
+- Tylko dokumentacja i odczyty/proby bez mutacji; bez deployu, migracji,
+  dostępu do webapp, poświadczeń czy danych produkcyjnych użytkownika.
+- Raport i backlog lokalne, bez commitu/pusha w tej sesji audytu.
+- Użytkownik wybiera zakres implementacji; nie naprawiać automatycznie,
+  nie kasować oryginałów przy projektowaniu GC bez zatwierdzonej retencji.
+
+---
+
 ## 2026-10-22 — Zabezpieczenie ingestii dokumentów
 
 ### Cel sesji

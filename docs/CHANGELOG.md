@@ -4,6 +4,16 @@ Wszystkie istotne zmiany w projekcie.
 
 ## [Unreleased] — 2026-10-22
 
+### Audit
+- Po zgodzie na pakiet 1 przygotowano plan izolacji walidacji, limitów uploadu/OCR,
+  storage admission i trwałego retry. Implementacja i deploy jeszcze nierozpoczęte.
+- Przeprowadzono przekrojowy audyt rewizji `7cde5ac`: finanse, auth/AI,
+  dokumenty/worker, frontend, CI i wybrane aspekty operacyjne.
+- Raport: `docs/audits/2026-10-22-audit.md` — 14 ustaleń i 5 grup ryzyk,
+  dowody, ograniczenia oraz kolejność proponowanych napraw. Bez zmian aplikacji.
+- Potwierdzono CI tej rewizji: 582 backend, 189 Vitest i 18 Playwright PASS;
+  produkcyjne obrazy pozostają starsze. Nie wykonano deployu ani migracji.
+
 ### Changed
 - Zintegrowano zmiany z `genspark_ai_developer` z najnowszym `main` do
   wspólnej wersji `a115afc`; wdrożenie produkcyjne pozostaje poza zakresem.

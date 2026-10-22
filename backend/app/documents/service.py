@@ -4,80 +4,28 @@ import hashlib
 import os
 import tempfile
 import uuid
-import warnings
 from datetime import UTC, datetime
-from io import BytesIO
 from pathlib import Path
 
-from PIL import Image, UnidentifiedImageError
-from pypdf import PdfReader
-from pypdf.errors import PdfReadError, PdfStreamError
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.documents.models import Document, DocumentText
 from app.documents.schemas import DocumentStatus
+from app.documents.validation import (
+    UnsupportedDocumentFormatError,
+    validate_document_content,
+)
+from app.documents.validation_process import detect_document_mime_type
+
+__all__ = ["UnsupportedDocumentFormatError", "detect_document_mime_type"]
 
 UPLOAD_DIR = Path("/app/uploads")
 
 
-class UnsupportedDocumentFormatError(ValueError):
-    """Raised when document bytes are malformed or do not match their declared type."""
-
-
 def compute_sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
-
-
-def detect_document_mime_type(content: bytes) -> str | None:
-    """Return a supported MIME type only after parsing the complete document."""
-    if b"%PDF-" in content[:1024]:
-        try:
-            if b"%%EOF" not in content[-1024:]:
-                return None
-            reader = PdfReader(BytesIO(content), strict=True)
-            if not reader.is_encrypted and len(reader.pages) > 0:
-                return "application/pdf"
-        except (
-            PdfReadError,
-            PdfStreamError,
-            ValueError,
-            KeyError,
-            IndexError,
-            TypeError,
-            RecursionError,
-        ):
-            # Malformed PDFs must fail closed before storage or downstream parsing.
-            pass
-
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", Image.DecompressionBombWarning)
-            with Image.open(BytesIO(content)) as image:
-                detected_format = image.format
-                if detected_format not in {"PNG", "JPEG"}:
-                    return None
-                if detected_format == "PNG" and not content.endswith(
-                    b"\x00\x00\x00\x00IEND\xaeB`\x82"
-                ):
-                    return None
-                if detected_format == "JPEG" and not content.endswith(b"\xff\xd9"):
-                    return None
-                image.verify()
-            with Image.open(BytesIO(content)) as image:
-                image.load()
-        return {"PNG": "image/png", "JPEG": "image/jpeg"}[detected_format]
-    except (
-        Image.DecompressionBombError,
-        Image.DecompressionBombWarning,
-        UnidentifiedImageError,
-        OSError,
-        ValueError,
-        SyntaxError,
-    ):
-        pass
-    return None
 
 
 def read_verified_document_content(file_path: Path, expected_sha256: str) -> bytes:
@@ -142,9 +90,7 @@ async def store_document(
     mime_type: str,
 ) -> tuple[Document, bool]:
     """Store content and return an explicit duplicate flag under a per-content lock."""
-    detected_mime_type = await asyncio.to_thread(detect_document_mime_type, content)
-    if detected_mime_type != mime_type:
-        raise UnsupportedDocumentFormatError("Unsupported document format or MIME mismatch")
+    await validate_document_content(content, mime_type)
 
     sha256_hash = compute_sha256(content)
     await asyncio.to_thread(_write_document_content, sha256_hash, content)

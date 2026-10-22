@@ -4,7 +4,7 @@ import re
 from typing import Any
 from urllib.parse import urlsplit
 
-from pydantic import PositiveInt, PrivateAttr, model_validator
+from pydantic import PositiveFloat, PositiveInt, PrivateAttr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_CORS_ORIGINS = "http://localhost:5173"
@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     DOCUMENT_JOB_TIMEOUT_SECONDS: PositiveInt = 600
     DOCUMENT_STALE_PROCESSING_SECONDS: PositiveInt = 900
     DOCUMENT_DISPATCH_BATCH_SIZE: PositiveInt = 100
+    DOCUMENT_MAX_FILE_BYTES: PositiveInt = 20 * 1024 * 1024
+    DOCUMENT_MAX_BODY_BYTES: PositiveInt = 21 * 1024 * 1024
+    DOCUMENT_PARSER_MEMORY_BYTES: PositiveInt = 512 * 1024 * 1024
+    DOCUMENT_PARSER_CPU_SECONDS: PositiveInt = 10
+    DOCUMENT_PARSER_TIMEOUT_SECONDS: PositiveFloat = 15
+    DOCUMENT_VALIDATION_CONCURRENCY: PositiveInt = 2
+    DOCUMENT_VALIDATION_QUEUE_SECONDS: PositiveFloat = 2
+    DOCUMENT_MAX_PAGES: PositiveInt = 100
+    DOCUMENT_MAX_IMAGE_PIXELS: PositiveInt = 25_000_000
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     OPENAI_API_KEY: str = ""
