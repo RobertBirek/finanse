@@ -3,6 +3,32 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-10-22 — Synchronizacja repozytoriów
+
+### Cel sesji
+Ujednolicić kod VPS i GitHuba, włączając komplet zmian z gałęzi
+`genspark_ai_developer`, bez publikowania danych operacyjnych.
+
+### Co zrobiono
+- Potwierdzono, że `origin/main` jest przodkiem `origin/genspark_ai_developer`;
+  gałąź agenta wnosi 14 commitów, kończąc na `a115afc`.
+- W odizolowanym worktree utworzono fast-forward merge od najnowszego `main`.
+- Nieśledzone `webapp/` na VPS zawiera runtime/release artifacts, backupy i
+  materiały poufne; pozostawiono ten katalog poza zmianami Git.
+
+### Weryfikacja
+- Backend pytest: `381 passed, 182 skipped` (pominięto integracyjne wymagające
+  bazy; działał już testowy kontener PostgreSQL współdzielony na VPS).
+- Frontend: `189 passed`; ESLint, TypeScript i Vite production build PASS.
+- Backend Ruff/mypy i `git diff --check` PASS.
+- Nie wykonano migracji ani deployu produkcyjnego.
+
+### Następny krok
+Wypchnąć zatwierdzony wynik do `origin/main`, a potem fast-forwardować checkout
+`/opt/finanse`, pozostawiając lokalny `webapp/` nietknięty.
+
+---
+
 ## 2026-08-20 — Sesja 35: Automatyczny backup i restore drill
 
 ### Cel sesji

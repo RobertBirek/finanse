@@ -6,6 +6,15 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ---
 
+## Synchronizacja repozytoriów (2026-10-22)
+
+- [x] Zintegrowano aktualny `main` z 14 commitami `genspark_ai_developer`;
+  HEAD `a115afc` jest potomkiem GitHub `main`.
+- [x] Testy backend/frontend oraz lint, typecheck i build przeszły.
+- [x] Dane operacyjne i wrażliwe artefakty z `webapp/` pozostają poza Git.
+
+---
+
 ## Task 5 — Security Baseline: limity i audyt za reverse proxy (2026-08-20)
 
 - [x] npmplus przekazuje łańcuch wyłącznie do Nginx frontendu, który normalizuje

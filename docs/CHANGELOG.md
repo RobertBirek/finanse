@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-22
+
+### Changed
+- Zintegrowano zmiany z `genspark_ai_developer` z najnowszym `main` do
+  wspólnej wersji `a115afc`; wdrożenie produkcyjne pozostaje poza zakresem.
+
+### Verified
+- Backend: `381 passed, 182 skipped`; Ruff i mypy PASS.
+- Frontend: Vitest `189 passed`; ESLint, TypeScript i build PASS.
+- `git diff --check` PASS. Pominięto produkcyjne/operacyjne artefakty z
+  nieśledzonego katalogu `webapp/` — nie należą do repozytorium.
+
 Format oparty na [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Wersjonowanie: [Semantic Versioning](https://semver.org/).
 
