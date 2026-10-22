@@ -91,6 +91,9 @@ async def test_upload_waits_for_backup_lock_without_blocking_event_loop(
     class Database:
         flushed = False
 
+        async def scalar(self, _statement):
+            return 0
+
         async def execute(self, _statement):
             return Result()
 

@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.documents import service
 from app.documents.schemas import (
@@ -15,6 +16,7 @@ from app.documents.schemas import (
     DocumentTextResponse,
     DocumentUploadResponse,
 )
+from app.documents.upload_limits import DocumentStorageFullError, StorageQuotaExceededError
 from app.documents.validation import DocumentValidationUnavailableError
 from app.identity.models import User
 from app.identity.router import get_current_user
@@ -23,7 +25,6 @@ from app.security.rate_limit import limit_upload
 logger = logging.getLogger(__name__)
 router = APIRouter()
 upload_rate_limit = limit_upload(get_current_user)
-MAX_FILE_SIZE = 20 * 1024 * 1024
 ALLOWED_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png"}
 
 
@@ -44,9 +45,9 @@ async def upload_document(
     content = bytearray()
     while chunk := await file.read(64 * 1024):
         content.extend(chunk)
-        if len(content) > MAX_FILE_SIZE:
+        if len(content) > settings.DOCUMENT_MAX_FILE_BYTES:
             return JSONResponse(
-                content={"detail": "File too large. Maximum size: 20 MB."}, status_code=400
+                content={"detail": "File exceeds configured size limit."}, status_code=413
             )
     if not content:
         return JSONResponse(content={"detail": "File is empty"}, status_code=400)
@@ -59,6 +60,10 @@ async def upload_document(
             file.filename or "untitled",
             file.content_type,
         )
+    except StorageQuotaExceededError:
+        return JSONResponse(content={"detail": "Document storage quota exceeded"}, status_code=413)
+    except DocumentStorageFullError:
+        return JSONResponse(content={"detail": "Document storage unavailable"}, status_code=507)
     except service.UnsupportedDocumentFormatError:
         return JSONResponse(
             content={"detail": "File content does not match a supported document type."},

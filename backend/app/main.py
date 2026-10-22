@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import engine
+from app.documents.upload_limits import DocumentUploadBodyLimitMiddleware
 from app.security.rate_limit import close_redis_client
 
 
@@ -29,6 +30,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(DocumentUploadBodyLimitMiddleware)
 
 
 @app.get("/api/health")

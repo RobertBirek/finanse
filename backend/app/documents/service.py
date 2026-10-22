@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.documents.models import Document, DocumentText
 from app.documents.schemas import DocumentStatus
+from app.documents.upload_limits import enforce_storage_admission
 from app.documents.validation import (
     UnsupportedDocumentFormatError,
     validate_document_content,
@@ -93,7 +94,10 @@ async def store_document(
     await validate_document_content(content, mime_type)
 
     sha256_hash = compute_sha256(content)
-    await asyncio.to_thread(_write_document_content, sha256_hash, content)
+    # Global lock serializes quota admission across users until the DB commit.
+    await db.execute(
+        select(func.pg_advisory_xact_lock(func.hashtext("document-storage-admission")))
+    )
     await db.execute(
         select(
             func.pg_advisory_xact_lock(func.hashtext(f"document-upload:{user_id}:{sha256_hash}"))
@@ -104,8 +108,11 @@ async def store_document(
     )
     existing_doc = existing.scalar_one_or_none()
     if existing_doc is not None:
+        await asyncio.to_thread(_write_document_content, sha256_hash, content)
         return existing_doc, True
 
+    await enforce_storage_admission(db, user_id, len(content), UPLOAD_DIR)
+    await asyncio.to_thread(_write_document_content, sha256_hash, content)
     doc = Document(
         user_id=user_id,
         filename=original_name,

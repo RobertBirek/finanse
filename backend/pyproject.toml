@@ -49,7 +49,9 @@ asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 markers = [
     "integration: tests requiring a PostgreSQL test database",
+    "proxy: disposable Docker Nginx contract test (run explicitly)",
 ]
+addopts = "-m 'not proxy'"
 
 [tool.ruff]
 line-length = 100

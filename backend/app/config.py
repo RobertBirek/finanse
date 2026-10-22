@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     DOCUMENT_VALIDATION_QUEUE_SECONDS: PositiveFloat = 2
     DOCUMENT_MAX_PAGES: PositiveInt = 100
     DOCUMENT_MAX_IMAGE_PIXELS: PositiveInt = 25_000_000
+    DOCUMENT_USER_QUOTA_BYTES: PositiveInt = 1024 * 1024 * 1024
+    DOCUMENT_GLOBAL_QUOTA_BYTES: PositiveInt = 10 * 1024 * 1024 * 1024
+    DOCUMENT_MIN_FREE_BYTES: PositiveInt = 1024 * 1024 * 1024
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     OPENAI_API_KEY: str = ""
@@ -142,6 +145,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
+        if self.DOCUMENT_MAX_BODY_BYTES <= self.DOCUMENT_MAX_FILE_BYTES:
+            raise ValueError("Upload body limit must exceed file limit for multipart overhead")
         if self.DOCUMENT_STALE_PROCESSING_SECONDS <= self.DOCUMENT_JOB_TIMEOUT_SECONDS:
             raise ValueError("Document recovery timeout must exceed worker job timeout")
         raw_origins = self.TRUSTED_ORIGINS
