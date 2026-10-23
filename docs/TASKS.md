@@ -16,6 +16,9 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Pakiet 1: implementacja, niezależny review i lokalny gate zakończone;
   poprawiono P2 ścieżki uploadu z `/` z regresją RED → GREEN.
 - [~] R01 + A01/A02: pozostała weryfikacja profilu na docelowym Stirling/Compose.
+  Staging 2026-10-23 BLOCKED: Stirling 2.14.3 nie startuje read-only/non-root
+  (zapis `/usr/local/bin/diagnostics`). Przygotować kompatybilny runtime,
+  writable paths i ponowić OCR PDF/PNG/JPEG; rozwiązać zapis uploads non-root.
   Runtime/staging/deploy wymagają osobnej zgody. Nie zamykać całego R01
   jako pełnego sandboxingu ani twardej quota filesystemu.
 - [ ] P3 z review: ograniczony traversal drzewa PDF zamiast eager flatten pypdf;

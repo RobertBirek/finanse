@@ -3,6 +3,31 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-10-23 — Push main i zablokowany preflight wdrożenia
+
+- Użytkownik zatwierdził push oraz release `f256a10` (backend/worker/frontend),
+  migrację `c7f8c620460d` i hardening wyłącznie po stagingu, backupie i rollbacku.
+- Push fast-forward do GitHub `main` potwierdzony: `f256a1067f674b3cf8a6c93315a018ac02d8967b`.
+  Powtórzony gate: 617 backend, 5 proxy/container, 194 frontend PASS;
+  Ruff/mypy/ESLint/tsc/build PASS.
+- Wdrożenie ZABLOKOWANE. Izolowany test dokładnego obrazu Stirling 2.14.3
+  `frooodle/s-pdf@sha256:3b3670fce70b396ec56ba380a3cc7858e0abf83fe13f31c88f7737847763a396`
+  jako `1001:1001`, read-only/cap-drop/no-new-privileges, network none,
+  z tymczasowymi mountami zakończył się exit 1 przed startem API:
+  `ln: failed to create symbolic link '/usr/local/bin/diagnostics': Read-only file system`.
+  Testów OCR nie wykonano, bo aplikacja nie wystartowała. Produkcyjnych mountów
+  ani kontenerów nie zmieniano.
+- Dodatkowe bramki: zmienione requirements wymagają nowego runtime backendu;
+  uploads `root:root 0755` wymaga zatwierdzonego rozwiązania zapisu non-root,
+  bez automatycznego rekurencyjnego chown oryginałów.
+- Następny krok: uzgodnić kompatybilny, przypięty digestem runtime/entrypoint
+  Stirling i jawne writable paths; ponowić staging PDF/PNG/JPEG i test uprawnień
+  na kopii uploads. Nie wyłączać read-only ani nie wracać do roota jako obejścia.
+- Nie wykonano deployu, migracji produkcyjnej ani zmiany aktywnego release'u.
+  Backup/restore i przygotowanie rollbacku pozostają wymagane przed przyszłym deployem.
+
+---
+
 ## 2026-10-23 — Implementacja pakietu 1 (bez wdrożenia)
 
 - Gałąź `fix/document-safety-package-1`, bazowa rewizja `7cde5ac`, istniejący

@@ -4,6 +4,9 @@ Wszystkie istotne zmiany w projekcie.
 
 ## [Unreleased] — 2026-10-23 — Pakiet bezpieczeństwa dokumentów (niewdrożony)
 
+- Release `f256a10` wypchnięto do `main`; wdrożenie zatrzymane na stagingu:
+  docelowy Stirling 2.14.3 nie uruchamia się z profilem read-only/non-root.
+  Bez migracji produkcyjnej ani zmiany aktywnych usług.
 - Po review objęto limitem Nginx 21 MiB obie ścieżki uploadu (z końcowym `/`
   i bez); regresja na rzeczywistym Nginx odtworzyła wcześniejsze odrzucenie 2 MiB.
 - Walidacja PDF/PNG/JPEG w ograniczonym procesie potomnym (RAM, CPU, timeout,
