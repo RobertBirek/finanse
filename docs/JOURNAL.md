@@ -2,6 +2,21 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-23 — Webapp testing po wdrożeniu UI
+
+- Na prośbę użytkownika: Python Playwright/system Chrome, produkcja w320/375/768/
+  1440px, cztery ścieżki wymagające auth/logowania. Redirect/native validation,
+  lokalne fonty, brak overflow/pageerrors/external requests PASS; API health200,
+  documents/finance/accounts/work/tasks/advisor/conversations401.
+- Nie wysyłano login POST ani mutacji; nie zgadywano haseł. Brak autoryzowanej
+  sesji wyklucza potwierdzenie produkcyjnych operacji zalogowanego użytkownika.
+- Axe na login375/1440: zero naruszeń wybranych reguł WCAG A/AA. Kontenery aplikacji
+  działają bez restartów/OOM. Nie jest to certyfikacja pełnej dostępności/stabilności.
+- Pełny E2E na dokładnym release8a7cda5/frontend-dist:29 PASS +1celowy mobile-only
+  skip. Hash JS/CSS/fontów równy produkcji. Vitest194, ESLint/tsc PASS.
+- Raport docs/audits/2026-10-23-webapp-test.md; prywatne screenshoty/logi w
+  /tmp/opencode/webapp-test-8a7cda5. Bez zmian kodu, konfiguracji i deployu.
+
 ## 2026-10-23 — UI8a7cda5 frontend-only wdrożone
 
 - Osobna zgoda użytkownika; zastosowano pełny stack base/prod/6811809-active/new

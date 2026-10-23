@@ -2,6 +2,14 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Verified] — 2026-10-23 — Testy aplikacji po wdrożeniu UI
+
+- Produkcyjny smoke na320/375/768/1440px PASS: logowanie anonimowe, brak overflow/
+  błędów JS, lokalne fonty i ochrona API. Bez mutacji danych.
+- E2E na pakiecie produkcyjnym29 PASS +1mobile-only skip; Vitest194 PASS,
+  ESLint/tsc PASS. Raport: docs/audits/2026-10-23-webapp-test.md.
+- Nie testowano operacji na zalogowanym koncie produkcyjnym (brak sesji).
+
 ## [8a7cda5] — 2026-10-23 — UI/UX wdrożone
 
 ### Changed

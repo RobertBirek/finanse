@@ -8,6 +8,12 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Audyt przekrojowy (2026-10-22)
 
+- [x] Test aplikacji po wdrożeniu UI8a7cda5: read-only production smoke4 viewporty,
+  E2E29+1skip na release assets i Vitest194 PASS; raport webapp-test2026-10-23.
+- [ ] Autoryzowany test zalogowanego konta produkcyjnego i nowego dokumentu OCR:
+  wymaga sesji/konta testowego oraz jawnego zakresu mutacji; fixtures nie zastępują
+  weryfikacji integracji produkcyjnej.
+
 - [x] UI/UX po audycie desktop/mobile: poprawiono mobilne konta/kategorie,
   touch targets, retry finansów/formularza, zwartą agendę i hierarchię Dzisiaj.
   Lokalna typografia/paleta, E2E29 PASS +1 mobile-only skip, backend642 i frontend194
