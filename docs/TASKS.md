@@ -14,7 +14,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   PASS; lint/types/build, screenshoty i review bez blokad. Bez deployu.
 - [x] UI8a7cda5 na main; pakiet frontend-only, immutable image/rollback,
   backup/restore cfc7102f i ponowiony frontend gate (194 unit,29 E2E+1skip) PASS.
-- [ ] Zatwierdzić i wdrożyć frontend-only UI8a7cda5; backend/worker pozostają6811809.
+- [x] Zatwierdzono i wdrożono frontend-only UI8a7cda5; backend/worker pozostają6811809.
+  HTTPS/health/assets/fonts/logowanie PASS; pozostałe kontenery bez zmian.
 - [ ] Uzupełnić jednostkowe testy trzech akcji ponawiania w przeglądzie finansów;
   ścieżka retry danych formularza jest pokryta E2E.
 - [ ] Zoptymalizować lokalne fonty do WOFF2 (obecnie ok. 756 KB TTF);

@@ -2,6 +2,20 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-23 — UI8a7cda5 frontend-only wdrożone
+
+- Osobna zgoda użytkownika; zastosowano pełny stack base/prod/6811809-active/new
+  release, --no-deps --no-build --pull never tylko frontend. Backup/restore cfc7102f
+  potwierdzone success/0 przed przełączeniem.
+- HTTPS/health200, anonymous documents401; hashe JS/CSS/obu fontów zgodne z pakietem.
+  Chromium375px: redirect do login, fonty loaded, brak JS errors. Brak restartów/OOM
+  i błędów startu frontend. Zalogowane UI zweryfikowane wcześniej na fixtures,
+  nie deklarujemy uploadu/logowania kontem użytkownika na produkcji.
+- Backend/worker pozostają6811809 i zachowały IDs, tak samo Stirling/PostgreSQL/Redis.
+  Refaktor finansów e5eeb2a nadal poza produkcją. Brak migracji/ACL/resetu retry.
+- Skonsolidowany active override zgodny z rendered runtime; active-release.json
+  zaktualizowany po weryfikacji. Rollback8a7cda5/rollback.sh przywraca tylko frontend.
+
 ## 2026-10-23 — Audyt i poprawki UI/UX, bez wdrożenia
 
 - Po osobnej zgodzie scalono i wypchnięto 8a7cda5 do main. Release frontend-only

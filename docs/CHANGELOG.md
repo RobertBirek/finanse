@@ -2,6 +2,14 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [8a7cda5] — 2026-10-23 — UI/UX wdrożone
+
+### Changed
+- Wdrożono wyłącznie frontend8a7cda5; backend/worker nadal6811809.
+  Backup/restore cfc7102f, HTTPS/health, hashe JS/CSS/fontów i logowanie PASS.
+- Backend/worker/Stirling/PostgreSQL/Redis bez restartu. Bez migracji i zmian danych.
+  Smoke UI obejmuje anonimową stronę logowania; zalogowane widoki testowano na fixtures.
+
 ## [Unreleased] — 2026-10-23 — UI/UX pulpitu osobistego
 
 ### Release preparation
