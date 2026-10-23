@@ -2,6 +2,20 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-23 — Produkcja 6811809 wdrożona
+
+- Osobna zgoda użytkownika na backend/worker/frontend. Backup da7eb2d7 i izolowany
+  restore success/0 przed przełączeniem. Początkowy start-limit-hit systemd
+  usunięto reset-failed; nie był to błąd wykonania skryptu backupu.
+- Stirling gotowy, queue 0; zatrzymano aplikację i wymieniono tylko trzy obrazy.
+  Bez migracji, zmian ACL, restartu Stirling lub resetowania dokumentów/retry.
+- HTTPS/health/assets PASS, anonymous documents 401. Rewizje, effective UID10001,
+  read-only/cap-drop/no-new-privileges, limity, brak host /app i logi PASS.
+  PostgreSQL/Redis/Stirling zachowały container IDs; brak restartów/OOM aplikacji.
+- Skonsolidowany compose.active.yaml ma identyczny rendered runtime z zatwierdzonym
+  stackiem (bez metadanych build). Metadane aktywne wskazują 6811809, rollback
+  do c765ea9 zachowuje zabezpieczenia. Smoke bez mutacji danych użytkownika.
+
 ## 2026-10-23 — OCR szerokich obrazów: implementacja bez wdrożenia
 
 - Release 6811809 przygotowany w /opt/finanse/webapp/releases/6811809;

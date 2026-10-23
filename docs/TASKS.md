@@ -45,8 +45,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   Unit RED→GREEN (12 worker PASS), rzeczywista geometria staging RED;
   staging GREEN: OCR szerokich PNG/JPEG i A4/PDF, geometria, hashe i zabezpieczenia.
   Gate: backend 636 PASS, frontend 194 PASS, osobno staging 1 PASS, lint/types PASS.
-- [ ] Zatwierdzić i wdrożyć poprawkę proporcji OCR jako osobny release;
-  produkcja nadal c765ea9. Nie resetować ani ponawiać historycznych dokumentów.
+- [x] Zatwierdzono i wdrożono 6811809; backup/restore da7eb2d7 i smoke PASS.
+  Zachowano hardening, bez migracji i ponawiania historycznych dokumentów.
 - [x] Scalić/wypchnąć 6811809 do main i przygotować release z przypiętymi obrazami,
   zachowanym hardeningiem, rollbackiem oraz backup/restore 23bcbccb.
 - [ ] A05–A09/A13: współbieżność ustawień, importer, granice kwot i ekran projektu.

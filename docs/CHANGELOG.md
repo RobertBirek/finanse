@@ -2,6 +2,14 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [6811809] — 2026-10-23 — Wdrożona poprawka proporcji OCR
+
+### Fixed
+- Wdrożono zachowanie proporcji obrazów OCR i automatyczny dobór orientacji A4.
+  Backup da7eb2d7 i restore drill PASS; HTTPS/health/assets i odrzucanie anonymous PASS.
+- Zmieniono tylko obrazy backend/worker/frontend. Hardening zachowany;
+  Stirling, PostgreSQL i Redis bez restartu. Bez migracji, zmian ACL i resetu retry.
+
 ## [Unreleased] — 2026-10-23 — Proporcje obrazów OCR
 
 ### Changed
