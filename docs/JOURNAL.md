@@ -1,6 +1,41 @@
 # Journal
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
+
+## 2026-10-23 — Produkcja c765ea9 wdrożona
+
+- Follow-up na zgodę „ok, działaj”: kontrola wyłącznie odczytowa ok. 12:31 CEST,
+  po 9–11 minutach pracy usług. Brak restartów/OOM/nowych błędów; Stirling healthy,
+  HTTPS/health 200 i anonymous documents 401. Queue 0, dokumenty nadal 1 done/2 error.
+  Próbka RAM: backend 82,88 MiB/2 GiB, worker 61,05 MiB/1 GiB, frontend 9,05 MiB,
+  Stirling 1,09 GiB/2 GiB; CPU wszystkich usług poniżej 1% w tej próbce.
+- Pierwszy filtr logów błędnie uznał flagę JVM `ExitOnOutOfMemoryError` za awarię;
+  potwierdzono, że to wydruk konfiguracji startowej, nie wyjątek ani OOM kill.
+  Ponowna kontrola wzorca błędu wykazała tylko znany komunikat optional templates.
+- Brak zmian aplikacji/konfiguracji produkcyjnej w follow-up. To krótki przegląd
+  stabilności bez obciążenia; naprawa szerokich obrazów wymaga osobnego planu.
+- Gate przed commitem dokumentacji: backend 632 PASS, 8 testów proxy deselected
+  (nie uruchamiano ponownie stagingu); frontend 194 PASS, Ruff/mypy/ESLint/tsc PASS.
+  Dwa istniejące warningi deprecacji crypt/argon2. Testy na izolowanej bazie testowej,
+  nie na produkcji; diff check PASS.
+
+- Użytkownik zatwierdził dokładny zakres przez „dokończ”. Zatrzymano aplikację
+  i Stirling; świeży backup e45cdc85 oraz restore drill success/0.
+- ACL helper z przypiętego obrazu: snapshot przed/po, brak default ACL, niezmienione
+  owners/inodes/bytes; non-root read i lock PASS. POSIX mask zmienia grupowe bity stat.
+- Skopiowano komplet 11 plików zatrzymanego Stirling do prywatnego katalogu release;
+  stare katalogi bez zmian. Migracja c7f8c620460d: head, 3 kolumny, indeks PASS.
+- Stirling HTTP health i walidator uprawnień PASS przed uruchomieniem workera.
+  Wszystkie obrazy przypięte; effective UID, read-only, cap-drop, limity i sieci PASS.
+- HTTPS/health/zasoby 200, anonymous documents 401; brak restartów/OOM i błędów
+  backend/worker/frontend. Data IDs bez zmian, hashe oryginałów zachowane;
+  dokumenty 1 done/2 error, queue 0. Nie wykonano mutujących smoke testów.
+- active-release.json wskazuje compose.active.yaml: potwierdzona identyczność
+  rendered runtime z czteroplikowym stackiem (bez metadanych build).
+  Rollback: releases/c765ea9/rollback.sh; zachować ACL i nowe kolumny po ruchu.
+- Pozostaje znany komunikat Stirling o read-only optional templates, problem
+  szerokich obrazów fillPage i brak certyfikacji worst-case capacity.
+
 ---
 
 ## 2026-10-23 — Runtime non-root: lokalny zakres zakończony, bez wdrożenia

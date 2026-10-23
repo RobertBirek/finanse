@@ -15,18 +15,24 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Zatwierdzono szczegóły planu i wykonanie inline; pozostałe pakiety poza zakresem.
 - [x] Pakiet 1: implementacja, niezależny review i lokalny gate zakończone;
   poprawiono P2 ścieżki uploadu z `/` z regresją RED → GREEN.
-- [~] R01 + A01/A02: pozostała weryfikacja profilu na docelowym Stirling/Compose.
-  Staging 2026-10-23 BLOCKED: Stirling 2.14.3 nie startuje read-only/non-root
-  (zapis `/usr/local/bin/diagnostics`). Przygotować kompatybilny runtime,
-  writable paths i ponowić OCR PDF/PNG/JPEG; rozwiązać zapis uploads non-root.
+- [x] Profil runtime R01 + A01/A02 zweryfikowany na docelowym Stirling/Compose
+  i wdrożony jako `c765ea9`. Początkowe blokady startu rozwiązano w derived image;
+  OCR skanów A4 i zapis uploads non-root zweryfikowano na stagingu.
 - [x] Follow-up runtime (zakres lokalny): plan `2026-10-23-stirling-nonroot.md`
   realizowany; rozszerzony patch inicjalizacji uprawnień zatwierdzony i działa.
   Staging OCR A4 PNG/JPEG/PDF oraz ACL syntetyczne PASS; poprawki po review
   zweryfikowane: 632 backend, 8 proxy/ACL/OCR, 194 frontend PASS.
-- [ ] Produkcyjna integracja nowego runtime/Compose i zatwierdzonych ACL,
+- [x] Produkcyjna integracja nowego runtime/Compose i zatwierdzonych ACL,
   świeży backup/restore, rollback oraz zatwierdzenie nowej rewizji przed deployem.
-  Runtime/staging/deploy wymagają osobnej zgody. Nie zamykać całego R01
+  Wdrożono `c765ea9` po osobnej zgodzie; backup/restore `e45cdc85`, migracja i smoke PASS.
+  Nie zamykać całego R01
   jako pełnego sandboxingu ani twardej quota filesystemu.
+- [x] Krótka kontrola produkcji po wdrożeniu: brak restartów/OOM/nowych błędów,
+  HTTPS/health PASS, kolejka OCR 0. RAM Stirling ok. 1,09 GiB / 2 GiB.
+- [ ] Testy największych dozwolonych dokumentów przy równoległym przetwarzaniu
+  w izolowanym stagingu; obecny smoke nie certyfikuje worst-case sizing.
+- [ ] Opcjonalny katalog szablonów Stirling: ocenić możliwość wyłączenia funkcji
+  lub jawnej konfiguracji ścieżki bez osłabiania read-only root.
 - [ ] P3 z review: ograniczony traversal drzewa PDF zamiast eager flatten pypdf;
   obecnie ochronę zasobów zapewniają limity subprocessu.
 - [ ] Konwersja obrazów OCR: domyślne `fillPage` Stirling rozciąga szerokie obrazy

@@ -2,7 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [c765ea9] — 2026-10-23 — Wdrożenie pakietu bezpieczeństwa dokumentów
+
+### Changed
+- Wdrożono backend, worker, frontend i przypięty Stirling non-root/read-only;
+  zachowano cap-drop, no-new-privileges i limity zasobów.
+- Zastosowano ACL uploads bez default inheritance, zmiany właścicieli i treści;
+  migracja `c7f8c620460d` wykonana jawnie. Stirling wystartował przed workerem.
+- Backup `e45cdc85` i izolowany restore drill PASS. HTTPS/health/zasoby 200,
+  anonimowe dokumenty 401; obrazy, UID, mounty, logi i niezmienione data IDs sprawdzone.
+- Pozostają: szerokie obrazy fillPage, walidacja worst-case sizing oraz komunikat
+  Stirling o opcjonalnym katalogu szablonów na read-only root.
+- Kontrola po wdrożeniu (12:31 CEST, ok. 9–11 min pracy): brak restartów/OOM
+  i nowych błędów, kolejka OCR pusta, HTTPS/health poprawne. To krótka obserwacja
+  bez obciążenia, nie test wydajności ani gwarancja długoterminowej stabilności.
+
 ## [Unreleased] — 2026-10-23 — Pakiet bezpieczeństwa dokumentów (niewdrożony)
+
+> Historyczny zapis przygotowania; aktualny status wdrożenia znajduje się powyżej.
 
 - Follow-up na osobnej gałęzi: derived Stirling z przypiętym modelem pol,
   hash-guarded patchem init i ścisłą walidacją uprawnień przeszedł rzeczywisty
