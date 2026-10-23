@@ -4,6 +4,11 @@ Wszystkie istotne zmiany w projekcie.
 
 ## [Unreleased] — 2026-10-23 — UI/UX pulpitu osobistego
 
+### Release preparation
+- `8a7cda5` scalono do main i wypchnięto. Przygotowano frontend-only image
+  z przypiętym digestem, rollback do 6811809 i backup/restore cfc7102f PASS.
+  Backend/worker i wcześniejszy refaktor finansów poza zakresem wydania.
+
 ### Fixed
 - Na telefonie nazwy kont i kategorii nie konkurują z przyciskami działań;
   długie nazwy zawijają się. Przyciski wspólne i kontrolki kalendarza mają min. 44 px.

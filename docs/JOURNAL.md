@@ -4,6 +4,18 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ## 2026-10-23 — Audyt i poprawki UI/UX, bez wdrożenia
 
+- Po osobnej zgodzie scalono i wypchnięto 8a7cda5 do main. Release frontend-only
+  przygotowany pod /opt/finanse/webapp/releases/8a7cda5, bez przełączenia produkcji.
+  Backend/worker pozostają6811809; nie dołączono automatycznie refaktoru e5eeb2a.
+- Backup/restore cfc7102f success/0. Ponowione lint/tsc/build,194 Vitest i29 E2E PASS
+  (+1 mobile-only skip). Frontend image sha256:9776414c003c2afe0f29462fbae6a3a2b1da0168c78ddd59e1075c3c8cb380d8;
+  fonty/assets zweryfikowane hashami w kontenerze network-none/read-only/cap-drop.
+- Rendered Compose zmienia wyłącznie image/build frontend; wszystkie inne definicje
+  usług i hardening bez zmian. Rollback aplikacji ograniczony do frontendu6811809.
+  Generatorowi usunięto backend/worker Dockerfiles i override entries w prywatnym
+  pakiecie, aby nie można było przypadkiem wdrożyć szerszego zakresu. Active metadata
+  i działające kontenery bez zmian; deploy wymaga osobnego zatwierdzenia.
+
 - Użytkownik zatwierdził zakres oraz paletę/typografię po audycie 4 ekranów x2
   viewporty na syntetycznych fixtures. Screenshots: /tmp/opencode/uiux-audit.
 - Naprawiono znikającą nazwę konta (konkurencja flex z akcjami), zawijanie nazw
