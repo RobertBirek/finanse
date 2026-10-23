@@ -2,6 +2,23 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-24 — Historia zamkniętych kont Actual
+
+### Fixed
+- Parser uwzględnia wszystkie nietombstonowane konta, także zamknięte, w metadanych,
+  walutach, nazwach transferów i saldach. Zamknięte konta są tworzone jako nieaktywne;
+  import nie otwiera ponownie lokalnie zarchiwizowanych kont ani nie wymyśla dat zamknięcia.
+- Jawny, wewnętrzny tryb importu historii Actual pozwala użyć nieaktywnego konta
+  bez jego aktywacji. Zwykłe API i sam parametr source nadal nie omijają blokady;
+  pozostałe walidacje księgi/własności pozostają włączone.
+- Regresje RED → GREEN; 90 testów importera (w tym świeża sesja po rollbacku),
+  110 testów z uzgodnieniami/kontraktami, backend682 PASS (8 proxy deselected,
+  2 znane warningi), Ruff/mypy i ESLint/tsc/194 Vitest PASS. Review bez blokad.
+- Próba na kopii: 16 kont, 0 błędów importu. Pozostała jedna różnica konta/kategorii/
+  grupy, dokładnie odpowiadająca zachowanej operacji nieobecnej w eksporcie.
+  require_reconciled wycofał całość; potwierdzono niezmienność1601 transakcji/postingów
+  oraz metadanych kont i mapowań. Bez importu produkcyjnego i deployu.
+
 ## [Unreleased] — 2026-10-24 — Przyrostowe mapowanie Actual
 
 ### Fixed

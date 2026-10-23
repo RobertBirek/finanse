@@ -75,6 +75,7 @@ def test_parser_sums_active_transaction_legs_per_account(tmp_path):
     assert balances == {
         "ing": SourceBalance("ing", "ING", "PLN", True, 99805),
         "loan": SourceBalance("loan", "Loan", "PLN", False, -5000),
+        "closed": SourceBalance("closed", "Closed", "PLN", True, 0),
     }
 
 

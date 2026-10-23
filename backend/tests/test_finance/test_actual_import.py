@@ -23,7 +23,7 @@ def _make_actual_db(schema_sql: str, inserts: list[str]) -> Path:
 
 
 class TestActualParserAccounts:
-    def test_reads_active_accounts(self):
+    def test_reads_non_deleted_accounts_including_closed(self):
         schema = """
         CREATE TABLE accounts (id TEXT, name TEXT, offbudget INTEGER, closed INTEGER, tombstone INTEGER);
         """
@@ -40,13 +40,15 @@ class TestActualParserAccounts:
             result = parser.get_accounts()
             by_id = {a["actual_id"]: a for a in result}
 
-            assert len(result) == 2
+            assert len(result) == 3
             assert by_id["a1"]["name"] == "ING"
             assert by_id["a1"]["type"] == "checking"
             assert by_id["a1"]["is_budget_account"] is True
             assert by_id["a2"]["name"] == "Gotowka"
             assert by_id["a2"]["type"] == "savings"
             assert by_id["a2"]["is_budget_account"] is False
+            assert by_id["a1"]["is_active"] is True
+            assert by_id["a3"]["is_active"] is False
         finally:
             os.unlink(db_path)
 

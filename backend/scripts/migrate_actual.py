@@ -330,10 +330,15 @@ async def resolve_ids(
                     type=a["type"],
                     currency=a["currency"],
                     is_budget_account=a["is_budget_account"],
+                    is_active=a.get("is_active", True),
                 ),
             )
             pa_acct.source = "actual"
             await _store_mapping(db, user_id, "account", a["actual_id"], pa_acct.id)
+        # Source closure can archive a mapped account, never reopen local history.
+        # Actual does not supply a reliable closure date here; retain closed_at.
+        if not a.get("is_active", True):
+            pa_acct.is_active = False
         acct_map[a["actual_id"]] = pa_acct.id
         acct_currency[a["actual_id"]] = a["currency"]
         acct_budget[a["actual_id"]] = a["is_budget_account"]
@@ -1331,6 +1336,7 @@ async def migrate(
                         postings=postings,
                     ),
                     allow_category_reversal=True,
+                    allow_inactive_accounts=True,
                 )
                 await _store_mapping(
                     db, user_id, "transaction", txn["actual_id"], created_transaction.id

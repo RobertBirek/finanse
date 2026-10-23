@@ -39,6 +39,7 @@ async def _validate_transaction_postings(
     txn_type: str,
     *,
     allow_category_reversal: bool = False,
+    allow_inactive_accounts: bool = False,
 ) -> None:
     account_ids = {posting.account_id for posting in postings if posting.account_id is not None}
     accounts: dict[uuid.UUID, Account] = {}
@@ -62,7 +63,7 @@ async def _validate_transaction_postings(
         account = accounts.get(posting.account_id) if posting.account_id is not None else None
         if posting.account_id is not None and account is None:
             raise ValueError("Account not found")
-        if account is not None and not account.is_active:
+        if account is not None and not account.is_active and not allow_inactive_accounts:
             raise ValueError("Account is inactive")
         category = categories.get(posting.category_id) if posting.category_id is not None else None
         if posting.category_id is not None and category is None:

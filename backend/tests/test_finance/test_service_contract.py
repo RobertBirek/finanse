@@ -59,7 +59,8 @@ def test_service_retains_transaction_and_forecast_call_signatures():
     assert str(inspect.signature(service.create_transaction)) == (
         "(db: sqlalchemy.ext.asyncio.session.AsyncSession, user_id: uuid.UUID, "
         "data: app.finance.schemas.TransactionCreate, *, "
-        "allow_category_reversal: bool = False) -> app.finance.models.FinancialTransaction"
+        "allow_category_reversal: bool = False, allow_inactive_accounts: bool = False) "
+        "-> app.finance.models.FinancialTransaction"
     )
     signature = inspect.signature(service.get_cashflow_forecast)
     assert list(signature.parameters) == ["db", "user_id", "today"]

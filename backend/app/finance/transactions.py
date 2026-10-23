@@ -22,14 +22,22 @@ async def create_transaction(
     data: TransactionCreate,
     *,
     allow_category_reversal: bool = False,
+    allow_inactive_accounts: bool = False,
 ) -> FinancialTransaction:
     # Only trusted import code explicitly opts into preserving source-category
     # reversals. Client-controlled `source` never disables validation.
     if allow_category_reversal and data.source != "actual":
         raise ValueError("Category reversals require the explicit Actual import path")
+    if allow_inactive_accounts and data.source != "actual":
+        raise ValueError("Inactive account history requires the explicit Actual import path")
     _validate_posting_sum(data.postings, data.type)
     await _validate_transaction_postings(
-        db, user_id, data.postings, data.type, allow_category_reversal=allow_category_reversal
+        db,
+        user_id,
+        data.postings,
+        data.type,
+        allow_category_reversal=allow_category_reversal,
+        allow_inactive_accounts=allow_inactive_accounts,
     )
     await validate_project_reference(db, user_id, data.project_id)
 

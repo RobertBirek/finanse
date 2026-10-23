@@ -10,14 +10,20 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 - [~] Przed importem bankowym odświeżyć dane z Actual: preflight źródła i backup/
   restore12055508 PASS. Następnie dostarczono aktualny eksport; backup/restore
-  bc2a3f05 i odtworzenie izolowanej kopii PA PASS. Po poprawce mapowania BLOCKED:
-  7 transferów do 2 zamkniętych kont pomijanych przez parser. Brak importu produkcyjnego.
+  bc2a3f05 i odtworzenie izolowanej kopii PA PASS. Po poprawkach mapowania/zamkniętych
+  kont próba bez błędów importu. BLOCKED: różnica jednej zachowanej operacji nieobecnej
+  w źródle; require_reconciled wycofał całość. Brak importu produkcyjnego.
 - [x] Zatwierdzona ograniczona poprawka mapowania Actual: regresja RED → GREEN,
   74 testy importera i backend666 PASS (8 proxy deselected), review bez blokad. Próba z wymaganym uzgodnieniem
   sald na kopii wykonana i wycofana przy kolejnej blokadzie; historia zachowana.
-- [~] Zatwierdzono zakres obsługi zamkniętych kont w parserze Actual i uzgadnianiu;
-  regresja transferów do zamkniętych kont, bez usuwania/nadpisywania historii.
-  Ponowić próbę na kopii i przeanalizować pozostałe różnice sald przed produkcją.
+- [x] Zatwierdzono zakres obsługi zamkniętych kont w parserze Actual i uzgadnianiu;
+  parser/historia bez aktywacji kont zaimplementowane, 90 testów importera PASS;
+  review i próba na kopii zakończone, backend682/frontend194 i lint/types PASS.
+  Bez usuwania/nadpisywania historii i bez wdrożenia/importu produkcyjnego.
+- [ ] Uzgodnić jawny sposób raportowania jednej zachowanej operacji Actual nieobecnej
+  w eksporcie. Nie omijać kontroli sald, nie tworzyć automatycznej korekty księgowej.
+  Prywatny raport dokładnie wiąże różnicę z istniejącym zapisem; wymagana akceptacja
+  polityki uzgodnienia i raportu przed produkcją, potem świeży backup/restore.
 
 - [x] Test aplikacji po wdrożeniu UI8a7cda5: read-only production smoke4 viewporty,
   E2E29+1skip na release assets i Vitest194 PASS; raport webapp-test2026-10-23.

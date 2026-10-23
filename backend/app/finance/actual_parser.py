@@ -13,6 +13,7 @@ class AccountDict(TypedDict):
     type: str
     currency: str
     is_budget_account: bool
+    is_active: bool
 
 
 class CategoryGroupDict(TypedDict):
@@ -102,14 +103,12 @@ class ActualParser:
         return "PLN"
 
     def _get_account_currency_map(self) -> dict[str, str]:
-        rows = self._conn.execute(
-            "SELECT id, name FROM accounts WHERE tombstone=0 AND closed=0"
-        ).fetchall()
+        rows = self._conn.execute("SELECT id, name FROM accounts WHERE tombstone=0").fetchall()
         return {r["id"]: self._detect_currency(r["name"]) for r in rows}
 
     def get_accounts(self) -> list[AccountDict]:
         rows = self._conn.execute(
-            "SELECT id, name, offbudget FROM accounts WHERE tombstone=0 AND closed=0 ORDER BY name"
+            "SELECT id, name, offbudget, closed FROM accounts WHERE tombstone=0 ORDER BY name"
         ).fetchall()
         return [
             {
@@ -118,18 +117,19 @@ class ActualParser:
                 "type": "savings" if r["offbudget"] else "checking",
                 "currency": self._detect_currency(r["name"]),
                 "is_budget_account": not bool(r["offbudget"]),
+                "is_active": not bool(r["closed"]),
             }
             for r in rows
         ]
 
     def get_account_balances(self) -> dict[str, SourceBalance]:
-        """Return active Actual account balances in their source currencies."""
+        """Return non-deleted Actual account balances, including closed history."""
         rows = self._conn.execute(
             "SELECT a.id, a.name, a.offbudget, COALESCE(SUM(t.amount), 0) AS amount "
             "FROM accounts a "
             f"LEFT JOIN {self._txn_table} t ON t.{self._txn_col_acct} = a.id "
             f"AND t.tombstone = 0 AND t.{self._txn_col_is_child} = 0 "
-            "WHERE a.tombstone = 0 AND a.closed = 0 "
+            "WHERE a.tombstone = 0 "
             "GROUP BY a.id, a.name, a.offbudget "
             "ORDER BY a.id"
         ).fetchall()
@@ -287,9 +287,7 @@ class ActualParser:
     def get_transfers(self) -> list[TransactionDict]:
         """Reconstruct transfer transactions from paired transfer_id rows (mutual reference)."""
         acct_currency = self._get_account_currency_map()
-        acct_rows = self._conn.execute(
-            "SELECT id, name FROM accounts WHERE tombstone=0 AND closed=0"
-        ).fetchall()
+        acct_rows = self._conn.execute("SELECT id, name FROM accounts WHERE tombstone=0").fetchall()
         acct_names = {r["id"]: r["name"] for r in acct_rows}
 
         table = self._txn_table

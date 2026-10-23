@@ -2,6 +2,61 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-24 — Zatwierdzona historia zamkniętych kont Actual
+
+- Poprzednią poprawkę mapowania zapisano jako df241cb po gate backend666/frontend194,
+  Ruff/mypy/ESLint/tsc PASS i review bez blokad. Bez push/merge/deploy/importu produkcyjnego.
+- Użytkownik osobno zatwierdził uwzględnienie zamkniętych kont przy zachowaniu ich
+  nieaktywnego statusu. Parser odczytuje wszystkie nietombstonowane konta w kontach,
+  saldach, currency map i nazwach transferów; deleted nadal nie tworzy kont.
+- Wewnętrzny allow_inactive_accounts w create_transaction jest domyślnie wyłączony,
+  wymaga source=actual i jawnego argumentu z importera. Nie jest polem API; source
+  przesłane przez klienta nie pomija walidacji. Zachowano własność, FX, sumę postingów,
+  blokadę nieaktywnych kategorii i pozostałe walidacje.
+- Nowe konta źródłowo zamknięte tworzone jako inactive; mapped source-closed zamyka
+  konto bez zmiany ID/nazwy/closed_at. Lokalnie inactive nie jest otwierane przy
+  źródłowo aktywnym koncie. Nie tworzono fikcyjnych dat zamknięcia.
+- Regresje: parser raw/view, waluty USD zwykłych/transferów/splitów i saldo bez
+  podwajania dzieci, tryb default/explicit/source, inne invariants,4 kombinacje statusu,
+  syntetyczny migrate z require_reconciled i ponowieniem. RED8+1/GREEN14; importer88 PASS.
+- Po review dodano test rollbacku na rzeczywistej świeżej sesji: nowo napotkane
+  zamknięte konto i source-closed dotychczas aktywne konto. Orphan transfer w źródle
+  wymusza prawdziwy mismatch. Brak nowych kont/mapowań/operacji po błędzie, istniejący
+  status/nazwa przywrócone. Komplet importera90 PASS, review bez blokad,
+  Ruff/mypy i ESLint/tsc/194 Vitest PASS; finalny backend682 PASS (8 proxy deselected).
+- Próba zachowuje bazę runtime6811809 bez niepowiązanego refaktoru finansów: tylko
+  zmieniony parser/validator/importer i przeszczepiona funkcja create_transaction.
+  AST starej funkcji równe bazie df241cb, AST podmienionej równe testowanej funkcji;
+  prywatny manifest hashów i skrypty poza repozytorium. Żadnych zmian deployu.
+- Próba na kopii:0 błędów importu,16accounts/54categories/9groups; pozostały1account,
+  1category i1group mismatch. Prywatna diagnoza wiąże tę różnicę dokładnie z jedną
+  wcześniej uzgodnioną do zachowania lokalną operacją nieobecną w źródle. Nie utworzono
+  automatycznej korekty ani nie pominięto ensure_reconciled.
+- Rollback zweryfikowany dla wszystkich1601 operacji/postingów oraz pełnych metadata
+  kont/mapowań. Pierwszy prywatny checker niesłusznie wymagał inactive już po rollbacku
+  (baseline miał aktywne konta); poprawiony wymaga przy błędzie identycznego snapshotu,
+  a inactive sprawdza tylko po sukcesie. Nie był to błąd ponownego otwarcia w aplikacji.
+  Kopia zatrzymana, eksport niezmieniony. Dalszy krok: jawna polityka zachowanej operacji,
+  akceptacja raportu; bez zapisów produkcyjnych.
+- Zamrożono prywatny preserved-history-review.json: hash eksportu i fingerprint
+  dokładnej zachowanej transakcji/postingów, pozostałe wiersze uzgodnienia oraz
+  potwierdzenie rollbacku. Różnica grupy równa różnicy kategorii. Identyfikatory,
+  kwoty i dane finansowe nie są dodawane do repozytorium.
+- Pierwszy pełny gate follow-up:680 PASS/2 FAIL,8 proxy deselected. Niezaktualizowane
+  oczekiwania w test_parser_sums_active_transaction_legs_per_account (konto closed
+  z saldem zero) i test_service_retains_transaction_and_forecast_call_signatures
+  (nowy opcjonalny keyword-only flag). Dostosowano oba do zatwierdzonego zachowania,
+  bez dalszych zmian produktu. Importer+reconciliation+kontrakty110 PASS, Ruff/mypy PASS;
+  ponowiony pełny backend682 PASS/8deselected,2 znane warningi crypt/argon2.
+- Dodatkowa projekcja tylko do odczytu: surowe salda Actual + rzeczywiste postingi
+  tej jednej przypiętej zachowanej operacji odpowiadają wynikom próby dla16/16 kont,
+  54/54 kategorii i9/9 grup. Wkład obliczono z postingów, nie z arbitralnej tolerancji
+  lub różnicy w raporcie. Surowe uzgodnienie nadal false; nie zaimplementowano obejścia.
+  Prywatny preserved-history-projection.json służy akceptacji dalszej polityki.
+- Końcowy review bez blokad (w tym potwierdzone pokrycie świeżą sesją rollbacku),
+  diff check i hashe runtime/proof zgodne. Zakres zamkniętych kont zakończony lokalnie.
+  Dalsze uzgodnienie zachowanej operacji i produkcyjny import nie zostały wykonane.
+
 ## 2026-10-24 — Zatwierdzona poprawka mapowania Actual, kolejna blokada próby
 
 - Cel: ograniczona poprawka nowych encji przy istniejącym imporcie, zatwierdzona
