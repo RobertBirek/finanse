@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-23 — UI/UX pulpitu osobistego
+
+### Fixed
+- Na telefonie nazwy kont i kategorii nie konkurują z przyciskami działań;
+  długie nazwy zawijają się. Przyciski wspólne i kontrolki kalendarza mają min. 44 px.
+- Formularz transakcji i przegląd finansów pozwalają ponowić błędne odczyty;
+  ładowanie ma tekst dostępny dla czytników ekranu.
+- Mobilna agenda mieści puste dni w zwartych wierszach, bez ukrywania wpisów.
+
+### Changed
+- Dzisiaj pokazuje działania i chronologiczny plan przed statystykami także w DOM;
+  bieżący blok oznaczony „Teraz”. Nowa granatowo-łupkowa paleta i lokalne fonty
+  Barlow Semi Condensed / Source Sans 3 (licencje OFL w public/fonts).
+- Audyt/screenshoty na danych syntetycznych, bez odczytów prywatnych danych ani deployu.
+  Gate: backend642, frontend194, E2E29 PASS +1 celowe pominięcie testu mobile
+  na desktopie; lint/types/build PASS. Axe na 8 widokach bez naruszeń wybranych
+  reguł WCAG A/AA; review bez blokad. Bez wdrożenia.
+
 ## [Unreleased] — 2026-10-23 — Podział serwisu finansów
 
 ### Changed

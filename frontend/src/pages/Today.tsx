@@ -28,11 +28,16 @@ export function Today() {
     tasks.data?.filter(
       (t) => t.status !== "done" && t.status !== "cancelled",
     ) ?? [];
-  const todayBlocks = (blocks.data ?? []).filter(
-    (b) =>
-      new Date(b.end_time) > new Date(range.start_time) &&
-      new Date(b.start_time) <= new Date(range.end_time),
-  );
+  const todayBlocks = (blocks.data ?? [])
+    .filter(
+      (b) =>
+        new Date(b.end_time) > new Date(range.start_time) &&
+        new Date(b.start_time) <= new Date(range.end_time),
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+    );
   const greet =
     now.getHours() < 10
       ? "Dzień dobry"
@@ -50,46 +55,18 @@ export function Today() {
   }
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-white mb-6">
+    <div className="max-w-5xl flex flex-col">
+      <p className="text-sm text-gray-400 mb-2">
+        {now.toLocaleDateString("pl-PL", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        })}
+      </p>
+      <h1 className="text-3xl text-white mb-6">
         {greet}
         {user?.display_name ? `, ${user.display_name}` : ""}
       </h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="card">
-          <p className="text-sm text-gray-400">Aktywne zadania</p>
-          <p className="text-2xl font-bold text-white mt-1">
-            {tasks.isLoading || tasks.isError ? "—" : activeTasks.length}
-          </p>
-        </div>
-        <div className="card">
-          <p className="text-sm text-gray-400">Bloki czasowe</p>
-          <p className="text-2xl font-bold text-white mt-1">
-            {blocks.isLoading || blocks.isError ? "—" : todayBlocks.length}
-          </p>
-        </div>
-        <div className="card">
-          <p className="text-sm text-gray-400">
-            Wynik miesiąca ({now.getMonth() + 1}.{now.getFullYear()})
-          </p>
-          <QueryFeedback
-            loading={summary.isLoading}
-            error={summary.isError}
-            errorMessage="Nie udało się pobrać wyniku miesiąca."
-            onRetry={summary.refetch}
-          >
-            {summary.data ? (
-              <p
-                className={`text-2xl font-bold mt-1 ${summary.data.net_total_pln >= 0 ? "text-green-400" : "text-red-400"}`}
-              >
-                {formatPLN(summary.data.net_total_pln)} PLN
-              </p>
-            ) : (
-              <p className="text-gray-400">Brak podsumowania.</p>
-            )}
-          </QueryFeedback>
-        </div>
-      </div>
       <div className="card mb-6">
         <form onSubmit={handleQuickAdd} className="flex flex-wrap gap-3">
           <label htmlFor="quick-task-title" className="sr-only">
@@ -187,22 +164,28 @@ export function Today() {
             ) : (
               <ul className="space-y-2">
                 {todayBlocks.map((block) => (
-                  <li
-                    key={block.id}
-                    className="p-3 rounded-lg bg-gray-800/50 flex items-center gap-3"
-                  >
-                    <div
-                      aria-hidden="true"
-                      className="w-1 h-10 bg-advisor-500 rounded-full shrink-0"
-                    />
+                  <li key={block.id} className="day-plan-entry">
+                    <div className="text-sm text-gray-400 tabular-nums">
+                      <time
+                        dateTime={block.start_time}
+                        className="block text-gray-100 font-semibold"
+                      >
+                        {formatLocalTime(block.start_time)}
+                      </time>
+                      <time dateTime={block.end_time}>
+                        {formatLocalTime(block.end_time)}
+                      </time>
+                    </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-white break-words">
                         {block.title}
                       </p>
-                      <p className="text-xs text-gray-400">
-                        {formatLocalTime(block.start_time)} –{" "}
-                        {formatLocalTime(block.end_time)}
-                      </p>
+                      {new Date(block.start_time) <= now &&
+                        new Date(block.end_time) > now && (
+                          <p className="text-xs font-semibold text-advisor-300 mt-1">
+                            Teraz
+                          </p>
+                        )}
                     </div>
                   </li>
                 ))}
@@ -211,6 +194,44 @@ export function Today() {
           </QueryFeedback>
         </section>
       </div>
+      <section
+        className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6"
+        aria-label="Podsumowanie dnia i miesiąca"
+      >
+        <div className="card">
+          <p className="text-sm text-gray-400">Aktywne zadania</p>
+          <p className="text-2xl font-bold text-white mt-1">
+            {tasks.isLoading || tasks.isError ? "—" : activeTasks.length}
+          </p>
+        </div>
+        <div className="card">
+          <p className="text-sm text-gray-400">Bloki czasowe</p>
+          <p className="text-2xl font-bold text-white mt-1">
+            {blocks.isLoading || blocks.isError ? "—" : todayBlocks.length}
+          </p>
+        </div>
+        <div className="card">
+          <p className="text-sm text-gray-400">
+            Wynik miesiąca ({now.getMonth() + 1}.{now.getFullYear()})
+          </p>
+          <QueryFeedback
+            loading={summary.isLoading}
+            error={summary.isError}
+            errorMessage="Nie udało się pobrać wyniku miesiąca."
+            onRetry={summary.refetch}
+          >
+            {summary.data ? (
+              <p
+                className={`text-2xl font-bold mt-1 ${summary.data.net_total_pln >= 0 ? "text-green-400" : "text-red-400"}`}
+              >
+                {formatPLN(summary.data.net_total_pln)} PLN
+              </p>
+            ) : (
+              <p className="text-gray-400">Brak podsumowania.</p>
+            )}
+          </QueryFeedback>
+        </div>
+      </section>
     </div>
   );
 }

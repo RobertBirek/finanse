@@ -9,6 +9,7 @@ import {
   useCreateTransaction,
 } from "../../api/finance";
 import { localTodayIso } from "../../lib/date";
+import { QueryFeedback } from "../QueryFeedback";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -194,17 +195,32 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
   if (accountsQuery.isLoading || categoriesQuery.isLoading) {
     return (
-      <div className="mb-6 flex justify-center py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-advisor-500 border-t-transparent" />
+      <div className="mb-6">
+        <QueryFeedback
+          loading
+          errorMessage="Nie udało się pobrać danych formularza."
+        >
+          {null}
+        </QueryFeedback>
       </div>
     );
   }
 
   if (accountsQuery.isError || categoriesQuery.isError) {
     return (
-      <p className="card mb-6 text-sm text-red-400">
-        Nie udało się pobrać danych do formularza transakcji.
-      </p>
+      <div className="card mb-6" role="alert">
+        <p>Nie udało się pobrać danych do formularza transakcji.</p>
+        <button
+          type="button"
+          className="btn-secondary mt-3"
+          onClick={() => {
+            void accountsQuery.refetch();
+            void categoriesQuery.refetch();
+          }}
+        >
+          Ponów pobranie danych formularza
+        </button>
+      </div>
     );
   }
 

@@ -176,7 +176,7 @@ export function Calendar() {
                 key={m}
                 aria-pressed={viewMode === m}
                 onClick={() => setViewMode(m)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`min-h-11 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   viewMode === m
                     ? "bg-advisor-700 text-white"
                     : "text-gray-400 hover:text-gray-200"
@@ -197,7 +197,7 @@ export function Calendar() {
           </button>
           <button
             onClick={today}
-            className={`text-sm px-3 py-1.5 rounded-lg ${
+            className={`min-h-11 text-sm px-3 py-1.5 rounded-lg ${
               (viewMode === "week" && isCurrentWeek) ||
               (viewMode === "month" && isCurrentMonth)
                 ? "bg-advisor-500/20 text-advisor-400"
@@ -345,16 +345,19 @@ function DayCell({
 }) {
   return (
     <div
-      className={`${compact ? "bg-gray-900 min-h-[90px] p-1.5" : agenda ? "card" : "card min-h-[200px]"} ${
+      aria-current={isToday ? "date" : undefined}
+      className={`${compact ? "bg-gray-900 min-h-[90px] p-1.5" : agenda ? "rounded-lg border border-gray-800 bg-gray-900 px-4 py-3" : "card min-h-[200px]"} ${
         isToday && !compact ? "border-advisor-500" : ""
       } ${isToday && compact ? "ring-1 ring-inset ring-advisor-500" : ""} ${
         dimmed ? "" : ""
       }`}
     >
-      <div className={`${compact ? "text-center" : "text-center mb-3"}`}>
+      <div
+        className={`${compact ? "text-center" : agenda ? "mb-1 text-left" : "text-center mb-3"}`}
+      >
         {dayName && <p className="text-xs text-gray-500">{dayName}</p>}
         <p
-          className={`${compact ? "text-xs font-medium mt-0.5" : "text-lg font-bold"} ${
+          className={`${compact ? "text-xs font-medium mt-0.5" : agenda ? "text-base font-semibold" : "text-lg font-bold"} ${
             isToday
               ? "text-advisor-400"
               : dimmed

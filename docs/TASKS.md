@@ -8,6 +8,15 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Audyt przekrojowy (2026-10-22)
 
+- [x] UI/UX po audycie desktop/mobile: poprawiono mobilne konta/kategorie,
+  touch targets, retry finansów/formularza, zwartą agendę i hierarchię Dzisiaj.
+  Lokalna typografia/paleta, E2E29 PASS +1 mobile-only skip, backend642 i frontend194
+  PASS; lint/types/build, screenshoty i review bez blokad. Bez deployu.
+- [ ] Uzupełnić jednostkowe testy trzech akcji ponawiania w przeglądzie finansów;
+  ścieżka retry danych formularza jest pokryta E2E.
+- [ ] Zoptymalizować lokalne fonty do WOFF2 (obecnie ok. 756 KB TTF);
+  zachować polskie znaki i licencje. Poza zakresem bieżącej poprawki UX.
+
 - [x] Refaktor `finance.service` po audycie: wydzielono transactions/reporting/
   budgets/cashflow/dates, fasada 63 linie zamiast 983. Kontrakty GREEN,
   AST 27/28 funkcji identyczne (28. ma tylko wydzielone traversal kategorii);

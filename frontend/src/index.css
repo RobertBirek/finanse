@@ -3,8 +3,24 @@
 @source "../index.html";
 @source "./";
 
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("/fonts/SourceSans3-Variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Semi Condensed";
+  src: url("/fonts/BarlowSemiCondensed-SemiBold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
 /* Preserve the existing sRGB design palette during the framework migration. */
 @theme {
+  --color-advisor-300: #78b9de;
   --color-amber-300: #fcd34d;
   --color-amber-400: #fbbf24;
   --color-blue-300: #93c5fd;
@@ -14,16 +30,16 @@
   --color-blue-900: #1e3a8a;
   --color-cyan-300: #67e8f9;
   --color-cyan-500: #06b6d4;
-  --color-gray-100: #f3f4f6;
+  --color-gray-100: #edf3f8;
   --color-gray-200: #e5e7eb;
   --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
+  --color-gray-400: #aec0cf;
   --color-gray-500: #6b7280;
   --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-  --color-gray-950: #030712;
+  --color-gray-700: #344b61;
+  --color-gray-800: #24394f;
+  --color-gray-900: #192a3d;
+  --color-gray-950: #101c2c;
   --color-green-100: #dcfce7;
   --color-green-300: #86efac;
   --color-green-400: #4ade80;
@@ -78,13 +94,25 @@
   body {
     @apply bg-gray-950 text-gray-100 antialiased;
     font-family:
-      "Inter",
+      "Source Sans 3",
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
       "Segoe UI",
       Roboto,
       sans-serif;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: "Barlow Semi Condensed", "Source Sans 3", sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .font-mono {
+    font-variant-numeric: tabular-nums;
   }
 
   ::-webkit-scrollbar {
@@ -118,15 +146,15 @@
   }
 
   .btn-primary {
-    @apply bg-advisor-700 hover:bg-advisor-800 text-white font-medium px-4 py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply min-h-11 bg-advisor-700 hover:bg-advisor-800 text-white font-medium px-4 py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-gray-800 hover:bg-gray-700 text-gray-200 font-medium px-4 py-2 rounded-lg border border-gray-700 transition-colors duration-200;
+    @apply min-h-11 bg-gray-800 hover:bg-gray-700 text-gray-200 font-medium px-4 py-2 rounded-lg border border-gray-700 transition-colors duration-200;
   }
 
   .btn-danger {
-    @apply bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium px-4 py-2 rounded-lg border border-red-800 transition-colors duration-200;
+    @apply min-h-11 bg-red-600/20 hover:bg-red-600/30 text-red-300 font-medium px-4 py-2 rounded-lg border border-red-800 transition-colors duration-200;
   }
 
   .input {
@@ -134,7 +162,7 @@
   }
 
   .sidebar-link {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium;
+    @apply min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium;
   }
 
   .sidebar-link.active {
@@ -177,7 +205,19 @@
 /* Raise muted text contrast without changing the existing dark visual identity. */
 .text-gray-500,
 .text-gray-600 {
-  color: #9ca3af;
+  color: var(--color-gray-400);
+}
+
+/* Day plan uses time as its navigation, rather than another metric card. */
+.day-plan-entry {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--color-gray-700);
+}
+.day-plan-entry:last-child {
+  border-bottom: 0;
 }
 @media (prefers-reduced-motion: reduce) {
   html {

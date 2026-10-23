@@ -22,12 +22,23 @@ export function Finances() {
 
       {summary.isLoading ? (
         <div className="flex justify-center py-8">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-advisor-500 border-t-transparent" />
+          <p role="status" className="text-gray-400">
+            Ładowanie podsumowania…
+          </p>
         </div>
       ) : summary.isError ? (
-        <p className="card mb-6 text-sm text-red-400">
-          Nie udało się pobrać podsumowania finansowego.
-        </p>
+        <div className="card mb-6 text-sm" role="alert">
+          <p className="text-red-300">
+            Nie udało się pobrać podsumowania finansowego.
+          </p>
+          <button
+            type="button"
+            className="btn-secondary mt-3"
+            onClick={() => void summary.refetch()}
+          >
+            Ponów pobranie podsumowania
+          </button>
+        </div>
       ) : summary.data ? (
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <SummaryCard
@@ -56,12 +67,21 @@ export function Finances() {
         <h2 className="mb-4 text-lg font-semibold text-white">Konta</h2>
         {accounts.isLoading ? (
           <div className="flex justify-center py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-advisor-500 border-t-transparent" />
+            <p role="status" className="text-gray-400">
+              Ładowanie kont…
+            </p>
           </div>
         ) : accounts.isError ? (
-          <p className="card text-sm text-red-400">
-            Nie udało się pobrać kont.
-          </p>
+          <div className="card text-sm" role="alert">
+            <p className="text-red-300">Nie udało się pobrać kont.</p>
+            <button
+              type="button"
+              className="btn-secondary mt-3"
+              onClick={() => void accounts.refetch()}
+            >
+              Ponów pobranie kont
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <AccountCard
@@ -79,12 +99,23 @@ export function Finances() {
 
       {cashflow.isLoading ? (
         <div className="flex justify-center py-8">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-advisor-500 border-t-transparent" />
+          <p role="status" className="text-gray-400">
+            Ładowanie prognozy…
+          </p>
         </div>
       ) : cashflow.isError ? (
-        <p className="card text-sm text-red-400">
-          Nie udało się pobrać prognozy płynności.
-        </p>
+        <div className="card text-sm" role="alert">
+          <p className="text-red-300">
+            Nie udało się pobrać prognozy płynności.
+          </p>
+          <button
+            type="button"
+            className="btn-secondary mt-3"
+            onClick={() => void cashflow.refetch()}
+          >
+            Ponów pobranie prognozy
+          </button>
+        </div>
       ) : cashflow.data ? (
         <section className="card border border-advisor-500/30 bg-linear-to-br/srgb from-advisor-500/10 via-gray-900 to-gray-900">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

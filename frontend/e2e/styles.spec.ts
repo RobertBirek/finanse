@@ -10,14 +10,14 @@ test("compiled styles preserve the palette, form controls and responsive navigat
   await expect(form).toBeVisible();
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
-    "rgb(3, 7, 18)",
+    "rgb(16, 28, 44)",
   );
-  await expect(form).toHaveCSS("background-color", "rgb(17, 24, 39)");
-  await expect(form).toHaveCSS("border-color", "rgb(31, 41, 55)");
+  await expect(form).toHaveCSS("background-color", "rgb(25, 42, 61)");
+  await expect(form).toHaveCSS("border-color", "rgb(36, 57, 79)");
   await expect(form).toHaveCSS("padding", "24px");
   await expect(form).toHaveCSS("border-radius", "12px");
   const input = form.getByLabel("Nazwa");
-  await expect(input).toHaveCSS("background-color", "rgb(31, 41, 55)");
+  await expect(input).toHaveCSS("background-color", "rgb(36, 57, 79)");
   await expect(input).toHaveCSS("padding", "10px 16px");
   const save = form.getByRole("button", { name: "Dodaj konto" });
   await expect(save).toHaveCSS("background-color", "rgb(1, 89, 161)");

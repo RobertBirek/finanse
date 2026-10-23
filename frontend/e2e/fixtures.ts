@@ -76,7 +76,7 @@ export async function fixtures(
     if (!url.pathname.startsWith("/api/")) {
       const file =
         url.pathname.startsWith("/assets/") ||
-        /\.(json|svg|png|ico)$/.test(url.pathname)
+        /\.(json|svg|png|ico|ttf)$/.test(url.pathname)
           ? url.pathname.slice(1)
           : "index.html";
       const resolved = path.resolve(DIST, file);
@@ -92,9 +92,11 @@ export async function fixtures(
             ? "text/css"
             : file.endsWith(".json")
               ? "application/json"
-              : file.endsWith(".svg")
-                ? "image/svg+xml"
-                : "text/html";
+              : file.endsWith(".ttf")
+                ? "font/ttf"
+                : file.endsWith(".svg")
+                  ? "image/svg+xml"
+                  : "text/html";
         await route.fulfill({ status: 200, contentType: type, body });
       } catch {
         await route.fulfill({ status: 404, body: "Unknown fixture asset" });

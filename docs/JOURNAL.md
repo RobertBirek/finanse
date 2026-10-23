@@ -2,6 +2,30 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-23 — Audyt i poprawki UI/UX, bez wdrożenia
+
+- Użytkownik zatwierdził zakres oraz paletę/typografię po audycie 4 ekranów x2
+  viewporty na syntetycznych fixtures. Screenshots: /tmp/opencode/uiux-audit.
+- Naprawiono znikającą nazwę konta (konkurencja flex z akcjami), zawijanie nazw
+  kont/kategorii, przyciski44px, błędy z retry i tekstowe loading states.
+- Dzisiaj: kolejność DOM zgodna z wizualną, plan sortowany po początku, „Teraz”
+  wyłącznie gdy start<=now<end. Agenda mobilna zwarta, wszystkie wpisy zachowane.
+- Paleta ink/surface/muted, lokalne fonty z OFL i hashami w public/fonts/README.md;
+  brak zewnętrznych żądań fontów. Koszt ok.756KB TTF, WOFF2 odłożone do backlogu.
+- RED: konta/touch/agenda/retry; osobny test DOM wykrył problem CSS-only reordering.
+  Axe wykrył kontrast btn-danger4.37:1; rozjaśniono tekst do red300, nie wyłączano axe.
+  Próg szerokości nazwy zastąpiono rzeczywistą kontrolą clippingu, bo nowy font jest węższy.
+- Backend642 PASS (8 proxy deselected), frontend194 PASS, lint/typecheck/build PASS.
+  Końcowe E2E i niezależny review w toku; screenshoty po zmianach potwierdzają
+  czytelne nazwy kont, 7 dni agendy na ekranie375px i załadowane lokalnie fonty.
+  Brak backend/API/migracji/zmian danych użytkownika i brak deployu.
+- Finalny gate: E2E29 PASS +1 celowe pominięcie desktop dla mobile-only agendy,
+  frontend194/backend642 PASS, lint/types/build/diff PASS. Axe cztery ekrany x2
+  viewport bez naruszeń wybranych reguł WCAG A/AA (nie pełna certyfikacja).
+- Review bez blokad. Po sugestiach dodano test kolejności niesortowanych bloków
+  i granicy start<=now<end oraz assertClean po retry. Dodatkowe testy trzech
+  retry w przeglądzie finansów odłożone do backlogu, podobnie jak WOFF2.
+
 ## 2026-10-23 — Refaktor finansów, bez wdrożenia
 
 - Po audycie użytkownik zatwierdził podział finance.service (983 linie, 27 zmian
