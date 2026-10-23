@@ -2,6 +2,29 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-23 — Refaktor finansów, bez wdrożenia
+
+- Po audycie użytkownik zatwierdził podział finance.service (983 linie, 27 zmian
+  w historii) jako ograniczony refaktor. Plan: docs/superpowers/plans/
+  2026-10-23-finance-service-refactor.md; baza 11a331a, istniejący linked worktree.
+- Publiczna fasada 63 linie; implementacje transactions/reporting/budgets/cashflow,
+  wspólne helpers dates. Leaf modules nie zależą od facade. Kontrakty importów
+  i sygnatur zachowane; prywatne monkeypatch targets przeniesione do właścicieli.
+- Ruling: atomowe przełączenie fasady zamiast czterech commitów pośrednich
+  z powieloną logiką — jeden większy commit mechanicznego przeniesienia, bez deployu.
+- Baseline 207 finance/integrity PASS. Nowe testy brakujących modułów RED (5),
+  po ekstrakcji 15 jednostkowych PASS; Ruff/mypy PASS. AST: 27 funkcji identycznych,
+  get_budget_status ma jedynie wydzielone descendants, przetestowane branch/cycle.
+- Frontend 194 PASS i ESLint/tsc PASS. Pełny backend i świeży review w toku.
+  Bez zmian query count/SQL, pending, księgi, migracji, zależności i produkcji.
+- Końcowy backend 642 PASS, 8 testów proxy deselected, Ruff/mypy PASS; dwa
+  istniejące warningi crypt/argon2. Pozostał wynik niezależnego review przed commitem.
+- Finalny review: bez ustaleń blokujących, niezależne potwierdzenie zgodności AST,
+  importów publicznych, kierunku zależności, SQL i blokad. Odłożone drobiazgi:
+  dodatkowe asercje starych aliasów query/entities oraz dokumentacja prywatnych
+  helperów dla potencjalnych zewnętrznych testów/pluginów (brak konsumentów w repo).
+  Zakres lokalny zakończony; scalenie/wypchnięcie i deploy wymagają osobnej decyzji.
+
 ## 2026-10-23 — Produkcja 6811809 wdrożona
 
 - Osobna zgoda użytkownika na backend/worker/frontend. Backup da7eb2d7 i izolowany

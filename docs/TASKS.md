@@ -8,6 +8,14 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Audyt przekrojowy (2026-10-22)
 
+- [x] Refaktor `finance.service` po audycie: wydzielono transactions/reporting/
+  budgets/cashflow/dates, fasada 63 linie zamiast 983. Kontrakty GREEN,
+  AST 27/28 funkcji identyczne (28. ma tylko wydzielone traversal kategorii);
+  backend 642 PASS, frontend 194 PASS, lint/types PASS; review bez blokad.
+  Bez zmian zachowania, migracji i deployu.
+- [ ] Drobne follow-up refaktoru: rozszerzyć testy aliasów fasady o starsze
+  query/entity exports; opisać brak gwarancji dla zewnętrznych prywatnych helperów.
+
 - [x] Audyt `7cde5ac` i niezależna weryfikacja raportu:
   `docs/audits/2026-10-22-audit.md`.
 - [x] Zatwierdzono kierunek pakietu 1; przygotowano szczegółowy plan

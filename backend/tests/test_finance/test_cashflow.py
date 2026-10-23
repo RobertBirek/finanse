@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database import get_db
-from app.finance import service as finance_service
+from app.finance import cashflow
 from app.finance.models import FinanceSettings, FinancialTransaction, Posting
 from app.finance.schemas import (
     AccountCreate,
@@ -684,7 +684,7 @@ async def test_cashflow_api_rejects_unconfirmable_or_inaccessible_items(
     db_session, monkeypatch
 ) -> None:
     today = date(2026, 8, 14)
-    monkeypatch.setattr(finance_service, "_local_today", lambda: today)
+    monkeypatch.setattr(cashflow, "_local_today", lambda: today)
     user_id = uuid.uuid4()
     other_user_id = uuid.uuid4()
     account = await create_account(

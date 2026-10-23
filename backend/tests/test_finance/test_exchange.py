@@ -237,7 +237,9 @@ async def test_exchange_no_rate_raises(db_session, monkeypatch):
 def test_nbp_rejects_invalid_rates_and_conversion(rate):
     import httpx
 
-    response = httpx.Response(200, json={"rates": [{"mid": str(rate), "effectiveDate": "2026-10-20"}]})
+    response = httpx.Response(
+        200, json={"rates": [{"mid": str(rate), "effectiveDate": "2026-10-20"}]}
+    )
     with pytest.raises(ValueError, match="finite"):
         NbpRateProvider._parse_rate(response, "nbp")
     with pytest.raises(ValueError, match="finite"):
@@ -255,7 +257,7 @@ async def test_exchange_always_closes_nbp_provider(monkeypatch, outcome):
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
 
-    from app.finance import service
+    from app.finance import service, transactions
 
     accounts = [
         SimpleNamespace(id=uuid.uuid4(), currency=currency, is_active=True)
@@ -267,13 +269,15 @@ async def test_exchange_always_closes_nbp_provider(monkeypatch, outcome):
         get_rate.side_effect = RuntimeError("provider unavailable")
     close = AsyncMock()
     create = AsyncMock()
-    monkeypatch.setattr(service, "get_accounts", AsyncMock(return_value=accounts))
-    monkeypatch.setattr(service, "create_transaction", create)
+    monkeypatch.setattr(transactions, "get_accounts", AsyncMock(return_value=accounts))
+    monkeypatch.setattr(transactions, "create_transaction", create)
     monkeypatch.setattr(NbpRateProvider, "get_rate", get_rate)
     monkeypatch.setattr(NbpRateProvider, "close", close)
     data = ExchangeCreate(
-        from_account_id=accounts[0].id, to_account_id=accounts[1].id,
-        from_amount=4100, description="Exchange",
+        from_account_id=accounts[0].id,
+        to_account_id=accounts[1].id,
+        from_amount=4100,
+        description="Exchange",
     )
     if outcome == "success":
         await service.create_exchange_transaction(AsyncMock(), uuid.uuid4(), data)

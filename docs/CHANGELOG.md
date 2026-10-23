@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-23 — Podział serwisu finansów
+
+### Changed
+- `finance.service` pozostaje publiczną fasadą; implementacje przeniesiono do
+  modułów transactions, reporting, budgets i cashflow, daty do dates.
+- Bez zmiany schematów/API, SQL, reguł księgi, zaokrągleń i blokad potwierdzeń.
+  Wydzielono czyste obliczanie potomków kategorii z testem zachowania.
+- Baseline finansów/integrity 207 PASS, kontrakty i jednostkowe FX 15 PASS;
+  backend 642 PASS (8 proxy deselected), frontend 194 PASS, lint/types PASS.
+  Niezależny review bez ustaleń blokujących. Brak migracji i deployu.
+
 ## [6811809] — 2026-10-23 — Wdrożona poprawka proporcji OCR
 
 ### Fixed
