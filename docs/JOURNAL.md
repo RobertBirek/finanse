@@ -3,8 +3,35 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
-## 2026-10-23 — Runtime non-root: implementacja i staging w toku
+## 2026-10-23 — Runtime non-root: lokalny zakres zakończony, bez wdrożenia
 
+- Końcowy gate po poprawkach review: backend 632 PASS, osobno 8 testów
+  proxy/kontener/ACL/OCR PASS (bez skipów w tej grupie), frontend 194 PASS;
+  Ruff/mypy/ESLint/tsc/build/diff check PASS. Dwa istniejące warningi deprecacji
+  crypt/argon2 nie blokują testów. Produkcyjna integracja Compose, ACL,
+  nowy backup/restore, rollback i zatwierdzenie dokładnego release'u pozostają.
+- Po zatwierdzonym rozszerzeniu patcha: staging OCR PASS (PNG/JPEG/skan PDF,
+  także tekst z polskimi znakami). Potwierdzono effective UID/GID PID1/Java,
+  read-only, /pipeline mode0700 i zużycie 16 KiB, poprawne zamknięcie bez OOM.
+  Przetestowany obraz: `sha256:e0d315bd87b07b0ee411ea4a42a08e52c4a9267de4b69c552718eb400df8a9e5`.
+- Niezależny review wskazał braki reprodukowalności helpera ACL i testów rollbacku,
+  restore oraz effective UID. Poprawiono je: helper przeniesiony z ignorowanego
+  ops/uploads do ops/upload-permissions, przypięta baza, etykiety i hashe kodu;
+  pięć regresji odrzucania zmienionego inventory, test writer/lock po restore,
+  odczyt tożsamości procesów. Testy ACL Docker 2 PASS, jednostkowe 6 PASS.
+- Pusty OCR na szerokim obrazie odtworzony niezależnie od runtime: Tesseract
+  czyta oryginał, ale nie obraz rozciągnięty przez domyślne fillPage do A4.
+  Pozostaje osobnym defektem produktu; acceptance runtime obejmuje skany A4,
+  bez deklaracji naprawy szerokich obrazów. Końcowy pełny gate po review w toku.
+- Poniższe blokady dokumentują etapy diagnozy, nie aktualny wynik stagingu:
+- Aktualna bramka BLOCKED: po poprawieniu połączenia health PASS, lecz runtime
+  zmienia mode /pipeline z 0700 na 0755. Odczyt vendor init linie 887–914
+  potwierdza bezwarunkowy `chmod -R 755` i fallback `chmod -R o+rwX/a+rwX`.
+  Oryginalna hipoteza minimalnego patcha aliasów nie zapewnia zadeklarowanych
+  uprawnień. Nie zmieniono oczekiwań testu. Potrzebna decyzja o rozszerzeniu
+  patcha na root-oriented sekcję naprawy uprawnień i zastąpieniu jej ścisłą
+  walidacją jawnie przygotowanych writable paths; reszta vendor startup bez zmian.
+  OCR PDF/PNG/JPEG nadal NIE przeszedł bramki, produkcja nietknięta.
 - Gałąź `fix/stirling-nonroot-runtime`, baza `962de8a`; zatwierdzony plan i brak
   default ACL. Produkcyjne Compose, uprawnienia i dane bez zmian.
 - Dodano hash-guarded patch vendor init i Dockerfile z niezmienionym entrypointem,

@@ -4,8 +4,16 @@ Wszystkie istotne zmiany w projekcie.
 
 ## [Unreleased] — 2026-10-23 — Pakiet bezpieczeństwa dokumentów (niewdrożony)
 
+- Follow-up na osobnej gałęzi: derived Stirling z przypiętym modelem pol,
+  hash-guarded patchem init i ścisłą walidacją uprawnień przeszedł rzeczywisty
+  staging OCR PNG/JPEG/PDF dla skanów A4. Produkcyjne Compose i dane bez zmian.
+- Finalny gate follow-up: 632 testy backendu, 8 proxy/ACL/OCR i 194 frontend PASS;
+  lint/typecheck/build OK. Niezależny review i poprawki pokrycia zakończone.
+- Dodano testy ACL/restore non-root na syntetycznych plikach. Wykryto osobno
+  zniekształcanie szerokich obrazów przez domyślne fillPage; pozostaje w backlogu.
 - Przygotowano projekt kompatybilnego runtime Stirling i stagingu uprawnień
-  uploads; wymaga review/akceptacji przed implementacją.
+  uploads; implementacja w toku na osobnej gałęzi. Dalszy staging ujawnił
+  konflikt vendor chmod z wymaganą polityką uprawnień; runtime nie jest zatwierdzony.
 - Release `f256a10` wypchnięto do `main`; wdrożenie zatrzymane na stagingu:
   docelowy Stirling 2.14.3 nie uruchamia się z profilem read-only/non-root.
   Bez migracji produkcyjnej ani zmiany aktywnych usług.

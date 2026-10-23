@@ -1,0 +1,8 @@
+# Test tooling only. Never use this image as the production runtime.
+ARG APPLICATION_IMAGE
+FROM ${APPLICATION_IMAGE}
+ARG APPLICATION_IMAGE
+LABEL advisor.test-only="acl" advisor.application-runtime="${APPLICATION_IMAGE}"
+USER 0:0
+RUN apt-get update && apt-get install --no-install-recommends -y acl \
+ && rm -rf /var/lib/apt/lists/*

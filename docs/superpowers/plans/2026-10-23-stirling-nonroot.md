@@ -66,7 +66,8 @@ opt-in for costly OCR; no live service names or production volume defaults.
 
 ### Task 3: Upload permissions and fresh application runtime
 
-**Files:** create `ops/uploads/README.md`, `backend/tests/test_upload_permissions.py`.
+**Files:** create `ops/upload-permissions/README.md`, `ops/upload-permissions/Dockerfile.test`,
+`backend/tests/test_upload_permissions.py` (uploads/ is globally ignored).
 Update `docs/operations/backup-restore.md` with explicit future ACL procedure.
 **Interface:** staging root only, synthetic root-owned 0600 originals and shared
 backup lock; no generic recursive production-mutating helper in this task.
@@ -98,9 +99,29 @@ backup lock; no generic recursive production-mutating helper in this task.
 
 ## Current status
 
+Final local status: Tasks 1–3 complete; Task 4 review and gate complete (632
+backend, 8 proxy/ACL/OCR, 194 frontend PASS; lint/types/build PASS). Production
+handoff/approval remains open, not a completed deployment. Historical diagnostic
+notes below explain the decisions; final evidence supersedes intermediate failures.
+
 User approved plan and no-default-ACL policy. Task 1 implemented: guarded patch
 tests 4 PASS and derived image built offline with verified Polish model. Task 2
 active: startup succeeds after reviewed /pipeline tmpfs amendment; correcting
 isolated bridge test connectivity before OCR acceptance. Task 3: fresh backend
 runtime imports/pip check and 16 parser tests PASS; 2 synthetic ACL tests PASS.
 Whole-branch review and final gate remain. No production changes.
+
+BLOCKED after actual connectivity correction: health passes, but vendor init
+permission loop changes /pipeline mode 0700 to 0755; same loop contains
+world-write fallback. Do not relax the assertion. The alias-only patch needs a
+reviewed scope extension: replace runtime permission repair with strict writable
+path validation, preserving JVM/OCR/supervision/shutdown. User approved extension;
+tests cover main-init and bootstrap permission removal plus strict validator.
+New runtime staging in progress. No OCR acceptance claim.
+
+Latest evidence supersedes the historical blockers above: strict runtime staging
+PASS for A4 PNG/JPEG/scanned PDF including accented Polish. Pipeline usage 16 KiB;
+effective process UID/GID and graceful shutdown verified. ACL helper provenance,
+inventory preflight and post-restore writer/lock checks added after independent
+review. Final whole-suite gate running. Wide-image fillPage distortion is an
+open product issue, not repaired by this runtime change.

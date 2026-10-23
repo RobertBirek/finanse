@@ -1,0 +1,30 @@
+# Standalone STAGING ONLY. Never combine with production Compose files.
+services:
+  stirling:
+    image: ${STIRLING_TEST_IMAGE:?Set immutable staging image ID}
+    user: "1001:1001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 2g
+    cpus: 2.0
+    pids_limit: 256
+    stop_grace_period: 45s
+    environment:
+      HOME: /tmp/stirling-home
+      STIRLING_AOT_ENABLE: "false"
+      # Match the existing internal OCR service's API contract, not a public service.
+      DOCKER_ENABLE_SECURITY: "false"
+      SECURITY_ENABLELOGIN: "false"
+      SYSTEM_DEFAULTLOCALE: "pl-PL"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=512m,mode=1777
+      - /pipeline:rw,noexec,nosuid,size=16m,uid=1001,gid=1001,mode=0700
+    volumes:
+      - ${STIRLING_STAGE_ROOT:?Private staging directory}/configs:/configs
+      - ${STIRLING_STAGE_ROOT:?Private staging directory}/logs:/logs
+    # No published ports: host test client uses this isolated bridge's private IP.
+    networks: [staging]
+networks:
+  staging:
+    internal: true

@@ -19,12 +19,20 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   Staging 2026-10-23 BLOCKED: Stirling 2.14.3 nie startuje read-only/non-root
   (zapis `/usr/local/bin/diagnostics`). Przygotować kompatybilny runtime,
   writable paths i ponowić OCR PDF/PNG/JPEG; rozwiązać zapis uploads non-root.
-- [~] Follow-up runtime: szczegółowy plan `2026-10-23-stirling-nonroot.md`
-  przygotowany do review; implementacja i produkcyjne ACL jeszcze niewykonane.
+- [x] Follow-up runtime (zakres lokalny): plan `2026-10-23-stirling-nonroot.md`
+  realizowany; rozszerzony patch inicjalizacji uprawnień zatwierdzony i działa.
+  Staging OCR A4 PNG/JPEG/PDF oraz ACL syntetyczne PASS; poprawki po review
+  zweryfikowane: 632 backend, 8 proxy/ACL/OCR, 194 frontend PASS.
+- [ ] Produkcyjna integracja nowego runtime/Compose i zatwierdzonych ACL,
+  świeży backup/restore, rollback oraz zatwierdzenie nowej rewizji przed deployem.
   Runtime/staging/deploy wymagają osobnej zgody. Nie zamykać całego R01
   jako pełnego sandboxingu ani twardej quota filesystemu.
 - [ ] P3 z review: ograniczony traversal drzewa PDF zamiast eager flatten pypdf;
   obecnie ochronę zasobów zapewniają limity subprocessu.
+- [ ] Konwersja obrazów OCR: domyślne `fillPage` Stirling rozciąga szerokie obrazy
+  do A4 i może dać pusty tekst mimo HTTP200. Repro: 1800x700, tekst rozpoznawany
+  przez Tesseract na oryginale, „Empty page” po konwersji. Oddzielna poprawka
+  zachowania proporcji i regresja wymagane; staging runtime sprawdza skany A4.
 - [ ] A05–A09/A13: współbieżność ustawień, importer, granice kwot i ekran projektu.
 - [ ] A10–A12: walidacja argumentów AI, policy engine i ograniczony kontekst.
 - [ ] A03/A04/A14: zatwierdzanie dokumentu do księgi, retencja/GC, dostępność UI.

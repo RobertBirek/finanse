@@ -25,8 +25,10 @@ change production volumes, migrate PostgreSQL or deploy a new revision.
 ## Chosen approach (proposed implementation decisions)
 
 1. Derive an image from the exact base digest. Verify the vendor script hash
-   before a contextual, single-occurrence patch removes only both alias-refresh
-   blocks. Create those aliases during build. Never delete lines by number.
+   before a contextual, single-occurrence patch removes both alias-refresh
+   blocks and replaces root-oriented permission repair with strict validation.
+   User explicitly approved this extension after actual permission drift.
+   Create aliases during build. Never delete lines by number.
 2. Bake Polish tessdata into the system tessdata path, owned root and read-only.
    Resolve an official `tesseract-ocr/tessdata_fast` immutable commit, record
    source/license and SHA-256, and validate bytes before COPY. No mutable URL
@@ -53,7 +55,7 @@ change production volumes, migrate PostgreSQL or deploy a new revision.
    10001 gets rwx on directories, read on existing regular originals and rw on
    `.backup.lock`. No world permissions, owner changes or recursive chown.
    Both backend and worker use UID 10001; new 0600 files remain readable to both.
-   Proposed policy awaiting owner confirmation: NO default ACLs. Only the backend
+   Owner-approved policy: NO default ACLs. Only the backend
    creates new originals; worker reads, root backup reads/locks. An importer or
    restore writer must not resume non-root consumers before ACL reapplication.
    Use synthetic files with production-like modes for automated tests; do not
@@ -79,6 +81,15 @@ change production volumes, migrate PostgreSQL or deploy a new revision.
   with a comment saying aliases are created at build time. Any mismatch fails.
   Verified base includes Python 3.12.3; run `python3 patch_init.py` during build,
   remove patch helper afterward, add no runtime dependencies.
+- Permission repair in the main init and temp setup in bootstrap are replaced
+  under exact hash/whole-block guards; bootstrap `/scripts/init.sh` SHA-256:
+  `4e6ef88d9cf4730d699982f9fa8db08561b1a8b340ad443c1cb00703935de84a`.
+  Main init runs `python3 /scripts/validate_runtime_paths.py` under umask077.
+  Runtime must be UID:GID1001:1001, HOME=/tmp/stirling-home; prepared /configs,
+  /logs and /pipeline must be directories owned by that UID/GID with mode0700.
+  Validator probes writes without permission repair and creates only private
+  home/temp/cache/heap-dump subdirectories under allowed roots. Wrong type,
+  symlink, ownership, mode or access aborts startup. Other startup logic remains.
 - ACL snapshots are private operator artifacts, never Git/application records:
   create a root-owned 0700 staging metadata directory and 0600 manifest.
   From the validated staging root run `getfacl -R -p -n .` into `before.acl`;

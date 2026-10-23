@@ -263,3 +263,14 @@ runs them in a separate Docker-enabled step. Run frontend build and Playwright.
 The hardening profile has only been structurally checked and generic container
 limits smoke-tested. **No claim is made that the live Stirling image is compatible
 with the new UID/read-only profile. That staging check is a deploy blocker.**
+
+### Non-root follow-up staging (not deployed)
+
+See `ops/upload-permissions/README.md` for the scoped ACL snapshot, rollback and
+post-restore acceptance contract. No default ACL inheritance is approved.
+Production application of ACLs remains a separate reviewed operator action;
+the tests use only synthetic root-owned files. Do not run the helper image as an
+application runtime. ACL rollback must abort on inventory/inode/hash/mode drift,
+not delete newly created originals. Existing tar archives do not retain named
+ACLs: reapply approved permissions and verify reads, atomic writes, duplicates
+and backup-lock contention before starting non-root consumers after restore.
