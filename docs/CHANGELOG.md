@@ -4,6 +4,8 @@ Wszystkie istotne zmiany w projekcie.
 
 ## [Unreleased] — 2026-10-23 — Pakiet bezpieczeństwa dokumentów (niewdrożony)
 
+- Przygotowano projekt kompatybilnego runtime Stirling i stagingu uprawnień
+  uploads; wymaga review/akceptacji przed implementacją.
 - Release `f256a10` wypchnięto do `main`; wdrożenie zatrzymane na stagingu:
   docelowy Stirling 2.14.3 nie uruchamia się z profilem read-only/non-root.
   Bez migracji produkcyjnej ani zmiany aktywnych usług.

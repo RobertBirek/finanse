@@ -3,8 +3,37 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-10-23 — Runtime non-root: implementacja i staging w toku
+
+- Gałąź `fix/stirling-nonroot-runtime`, baza `962de8a`; zatwierdzony plan i brak
+  default ACL. Produkcyjne Compose, uprawnienia i dane bez zmian.
+- Dodano hash-guarded patch vendor init i Dockerfile z niezmienionym entrypointem,
+  modelem pol przypiętym do commita i SHA-256. Unit RED→GREEN 4/4.
+- Staging ujawnił bezwarunkowy zapis Java do /pipeline; po analizie źródeł
+  i niezależnym review dopuszczono tmpfs 16 MiB UID1001 noexec/nosuid.
+- Health wewnątrz kontenera zwraca 200. Docker nie przydzielił portu publikowanego
+  na sieci internal (port 0); test używa teraz prywatnego IP bridge, bez publikacji.
+  Pełny przebieg OCR jeszcze niepotwierdzony.
+- Nowy runtime backendu: pip check/importy OK; 16 testów parsera UID10001,
+  read-only/cap-drop PASS. Pytest uruchamiany z kopii testów w /tmp, aby uniknąć
+  kolizji nazw pakietu /app/__init__.py z /app/app.
+- ACL na syntetycznych plikach: 2 PASS (stare odczyty, atomic write, wspólny lock,
+  rollback ACL, restore/reapply, brak dziedziczenia). Jawne UID:GID w testach.
+- Ostatni pełny gate: backend 622 PASS, frontend 194 PASS; lint/typecheck/build OK.
+  Kosztowne testy stagingowe uruchamiane osobno; review końcowy pozostaje otwarty.
+
+---
+
 ## 2026-10-23 — Push main i zablokowany preflight wdrożenia
 
+- Follow-up zatwierdzony do analizy/planu: potwierdzono ciągłe odtwarzanie
+  aliasów przez vendor init (samo utworzenie symlinków w buildzie nie wystarcza)
+  i brak modelu `pol` w obrazie. Przygotowano spec/plan
+  `docs/superpowers/plans/2026-10-23-stirling-nonroot.md`; builder-check zakończony,
+  doprecyzowano staging-only, manifest/rollback ACL, stały inode locka oraz
+  przypięty model pol z SHA-256. Do potwierdzenia polityka bez default ACL.
+  Propozycja: minimalny hash-guarded patch init, model pol w obrazie oraz
+  test nazwanych ACL wyłącznie na kopii uploads, bez chown produkcji.
 - Użytkownik zatwierdził push oraz release `f256a10` (backend/worker/frontend),
   migrację `c7f8c620460d` i hardening wyłącznie po stagingu, backupie i rollbacku.
 - Push fast-forward do GitHub `main` potwierdzony: `f256a1067f674b3cf8a6c93315a018ac02d8967b`.
