@@ -1,5 +1,21 @@
 # Bezpieczne dokumenty i retry OCR — Implementation Plan
 
+## Stan wykonania (2026-10-23)
+
+- [x] Task 1: parser subprocess i testy graniczne/timeout/cancel.
+- [x] Task 2: body/quota/storage i rzeczywisty test izolowanego Nginx.
+- [x] Task 3: bounded OCR/retry, savepoint i test izolowanej migracji.
+- [x] Task 4: API metadata i komunikaty UI, Vitest/build i Playwright.
+- [x] Task 5 (lokalny zakres): review zakończone, gate PASS (617 backend,
+  194 frontend, 18 E2E, 5 proxy/container); P2 poprawione, follow-up review bez uwag.
+  Review P3: eager flatten pypdf przed limitem stron oraz konieczność sprawdzenia
+  rzeczywistego merged Compose w stagingu; nie deklarować pełnego sandboxingu.
+- Rozstrzygnięcia: odpowiedzi skompresowane odrzucane przed dekompresją;
+  proxy/container tests uruchamiane osobno `-m proxy` (również krok CI);
+  drift indeksów schedulera nie należy do migracji dokumentów.
+- Staging z docelowym obrazem/UID/uprawnieniami to bramka przed osobno zatwierdzanym
+  deployem, nie część deklarowanych lokalnych testów. Subprocess nie daje pełnego sandboxu.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ograniczyć zużycie zasobów przy obsłudze dokumentów, naprawić limit uploadu i automatycznie ponawiać wyłącznie przejściowe błędy OCR.

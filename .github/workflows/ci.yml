@@ -65,6 +65,8 @@ jobs:
           asyncio.run(check())
           PY
       - run: pytest -q --junitxml=test-results.xml
+      - name: Disposable proxy and container limit contracts
+        run: pytest -q -m proxy tests/test_documents/test_proxy_upload.py tests/test_documents/test_parser_container.py tests/test_document_hardening.py
       - name: Reject skipped tests, including unavailable integration database
         run: |
           python - <<'PY'

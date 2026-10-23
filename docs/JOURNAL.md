@@ -3,6 +3,45 @@
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 ---
 
+## 2026-10-23 — Implementacja pakietu 1 (bez wdrożenia)
+
+- Gałąź `fix/document-safety-package-1`, bazowa rewizja `7cde5ac`, istniejący
+  izolowany worktree. Zgoda na wykonanie inline, bez deployu i zmian produkcyjnych.
+- Zaimplementowano parser subprocess/rlimits, body/quota/disk admission,
+  bounded OCR, savepoint zachowujący lock przy błędzie i trwałe metadata retry,
+  UI oraz kandydacki profil Compose.
+- Retry 3 kontrolowanych wyników; crash recovery bez trwałego licznika uruchomień
+  pozostaje jak poprzednio. Kompresję odpowiedzi OCR odrzucamy przed dekodowaniem
+  dla ochrony pamięci; wymaga sprawdzenia identity w staging.
+- Autogenerate wykazało niepowiązany drift indeksów schedulera; usunięto go z
+  nowej migracji. Migracja obejmuje wyłącznie dokumenty.
+- Utworzono tymczasowy kontener `finanse-document-safety-testdb`, loopback 5432,
+  tmpfs, z bazami testowymi; nie używano istniejącej produkcyjnej/testowej instancji.
+- Zależności Python wykorzystane bez zmian z istniejącego venv; przeglądarka
+  Playwright pobrana do ignorowanego workspace planu, bez instalacji pakietów systemowych.
+- Kontrole: backend pełny przebieg 617 PASS (przed ostatnim rozszerzeniem schematu
+  odpowiedzi, sprawdzonym dodatkową regresją), frontend 194 PASS, Playwright 18 PASS.
+  Pierwszy lokalny E2E nie wystartował z powodu brakującej przeglądarki; po lokalnym
+  pobraniu przeszedł. Pierwszy pełny pytest wymagał jawnego TEST_DATABASE_URL dla
+  istniejącego testu migracji sesji; poprawiony przebieg bez błędów.
+- Końcowy gate: backend 617 PASS, osobno 4 testy proxy/container PASS;
+  frontend 194 PASS, Playwright 18 PASS; Ruff/mypy/ESLint/tsc/build/diff check PASS.
+- Niezależny review zakończony: brak blockerów według reviewera; P2 — limit
+  Nginx nie obejmuje uploadu z końcowym `/` (potwierdzono w konfiguracji).
+  Po zgodzie użytkownika dodano regresję obu ścieżek: przed poprawką wariant
+  z `/` zwracał 413 dla 2 MiB. Dopasowanie Nginx ograniczono do obu dokładnych
+  wariantów; ponowny gate: 617 backend i 5 proxy/container PASS, Ruff/mypy PASS,
+  194 frontend PASS, ESLint/tsc/diff check PASS. Follow-up review bez uwag.
+  Lokalny zakres Task 5 zakończony; P3 traversal PDF pozostawiono w backlogu,
+  a realny staging profilu pozostaje bramką przed wdrożeniem.
+  P3 — reviewer wskazał pełne flatten drzewa stron przez pypdf przed limitem;
+  limity procesu pozostają zabezpieczeniem. Staging rzeczywistego Compose/Stirling
+  nadal wymagany; test syntetyczny nie potwierdza bezpieczeństwa odziedziczonych mountów.
+- Bez pusha, merge, zmiany /opt/finanse,
+  poświadczeń, webapp i działających kontenerów aplikacji.
+
+---
+
 ## 2026-10-22 — Plan pakietu bezpieczeństwa dokumentów
 
 - Użytkownik zaakceptował rozpoczęcie pakietu 1 po audycie.

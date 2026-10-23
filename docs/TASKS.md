@@ -12,9 +12,14 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   `docs/audits/2026-10-22-audit.md`.
 - [x] Zatwierdzono kierunek pakietu 1; przygotowano szczegółowy plan
   `docs/superpowers/plans/2026-10-22-document-safety-package-1.md`.
-- [ ] Zatwierdzić szczegóły planu (limity, retry, metadata migracji) i sposób realizacji;
-  pozostałe pakiety nie są jeszcze zatwierdzone.
-- [ ] R01 + A01/A02: izolacja/limity parserów i OCR, zgodny limit Nginx, retry.
+- [x] Zatwierdzono szczegóły planu i wykonanie inline; pozostałe pakiety poza zakresem.
+- [x] Pakiet 1: implementacja, niezależny review i lokalny gate zakończone;
+  poprawiono P2 ścieżki uploadu z `/` z regresją RED → GREEN.
+- [~] R01 + A01/A02: pozostała weryfikacja profilu na docelowym Stirling/Compose.
+  Runtime/staging/deploy wymagają osobnej zgody. Nie zamykać całego R01
+  jako pełnego sandboxingu ani twardej quota filesystemu.
+- [ ] P3 z review: ograniczony traversal drzewa PDF zamiast eager flatten pypdf;
+  obecnie ochronę zasobów zapewniają limity subprocessu.
 - [ ] A05–A09/A13: współbieżność ustawień, importer, granice kwot i ekran projektu.
 - [ ] A10–A12: walidacja argumentów AI, policy engine i ograniczony kontekst.
 - [ ] A03/A04/A14: zatwierdzanie dokumentu do księgi, retencja/GC, dostępność UI.

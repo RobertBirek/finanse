@@ -186,3 +186,80 @@ queues and record data-service container IDs. After applying: check all three
 revision labels, absence of `/app` host mounts, unchanged data-service IDs,
 HTTPS frontend/health, unauthenticated API rejection, and worker status/errors.
 Do not rewrite historic transactions or run imports as a deployment step.
+# Document safety package — staging and release gate (2026-10-22)
+
+This package is **not deployed**. Do not apply the overlay or run a production
+migration without approval of the exact release and a verified backup.
+
+## Compatible rollout
+
+1. Build a verified runtime containing Pillow/pypdf and this source revision.
+2. Test migration `c7f8c620460d` on an isolated restored schema; it adds only
+   document retry columns and an index. It does not enqueue/reset existing errors.
+3. On an approved deployment, apply the migration before switching backend/worker;
+   roll out backend, worker and frontend coherently. Old readers tolerate the new
+   columns, but the new ORM cannot run against the old schema.
+4. Nginx upload limit is 21 MiB (multipart envelope); file limit is 20 MiB.
+   Deploy increased ingress admission only together with resource controls.
+   Overrides of backend limits must be reconciled with Nginx and UI limits.
+5. Terminal errors are not automatically reset by re-upload. Transient upstream
+   errors retry after 30/120 seconds (three completed attempts total). Integrity,
+   oversized result and permanent errors do not retry. The UI shows scheduled
+   retry without promising completion. Operator recovery is a separate action.
+
+## Limits and residual risks
+
+Defaults in Settings: parser address space 512 MiB, CPU 10 s, wall time 15 s,
+two children/API process and two seconds queue wait; PDF 100 pages, image 25M
+pixels/one frame; OCR binary response 64 MiB and UTF-8 text 2 MiB. HTTP calls
+request identity encoding and **reject unexpected compression before decoding**.
+This intentionally trades compatibility for allocation safety; verify Stirling
+honours identity in staging.
+
+Storage admission uses a global PostgreSQL advisory lock and logical byte quotas
+(1 GiB/user, 10 GiB total), plus 1 GiB free-space reserve. It is not a filesystem
+quota: orphans, backup processes and other writers still consume disk. Deleting
+metadata does not delete originals; GC/retention require a separate decision.
+Do not run a cleanup as part of this release.
+
+Parser subprocesses have sanitized environments but are **not a filesystem or
+network sandbox**; a compromised parser could still use the process UID's access.
+The application worker still holds a DB transaction over OCR and optional LLM.
+Crash/cancellation recovery is retained; the attempt counter records completed
+controlled failures, not every crashed invocation. Durable leases are deferred.
+
+## Hardening candidate (not an automatic production override)
+
+`ops/document-hardening.compose.yaml` is applied LAST after base, production and
+immutable-release Compose files, only after staging acceptance. It requires
+explicit verified `ADVISOR_UID/GID` and `STIRLING_UID/GID`. They must be non-root.
+Starting resource budgets: backend 2 GiB/1 CPU/128 PID, worker 1 GiB/1 CPU/128 PID,
+Stirling 2 GiB/2 CPU/256 PID; reserve host memory for DB, Redis and other services.
+
+Before approval:
+- Pin and verify a Stirling digest; no digest is invented or automatically changed.
+- Verify non-root image startup and OCR for PDF/PNG/JPEG, required writable
+  directories, Java/OCR caches and tmpfs capacity with the selected image.
+  Read-only/noexec can expose image incompatibilities: fix and re-test explicitly,
+  never silently drop protections.
+- Verify non-root access to a COPY of uploads and the backup lock, including files
+  owned by the old runtime. Do not recursively chown production originals here.
+- Inspect merged config for root/privileged mode, published internal ports,
+  Docker socket, unexpected writable mounts, code mounts and correct networks.
+- Test representative worst-case allowed files at configured concurrency and
+  measure RSS, queue time and OCR latency; container contract tests are not sizing.
+- Verify rollback image compatibility and preserve new columns when rolling back
+  application code. A downgrade removes retry metadata and needs separate approval.
+
+## Verification commands in an isolated checkout
+
+Run project `/test`, `/lint`, `/typecheck` definitions with explicit test DSN;
+then `pytest -q tests/test_documents/test_proxy_upload.py
+tests/test_documents/test_parser_container.py tests/test_document_hardening.py -m proxy`.
+The `proxy` tests require Docker and create only disposable containers. Normal
+pytest deselects these tests rather than silently claiming coverage; the CI workflow
+runs them in a separate Docker-enabled step. Run frontend build and Playwright.
+
+The hardening profile has only been structurally checked and generic container
+limits smoke-tested. **No claim is made that the live Stirling image is compatible
+with the new UID/read-only profile. That staging check is a deploy blocker.**

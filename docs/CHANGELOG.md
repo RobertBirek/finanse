@@ -2,6 +2,23 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-23 — Pakiet bezpieczeństwa dokumentów (niewdrożony)
+
+- Po review objęto limitem Nginx 21 MiB obie ścieżki uploadu (z końcowym `/`
+  i bez); regresja na rzeczywistym Nginx odtworzyła wcześniejsze odrzucenie 2 MiB.
+- Walidacja PDF/PNG/JPEG w ograniczonym procesie potomnym (RAM, CPU, timeout,
+  concurrency, limity stron/pikseli/klatek), środowisko bez sekretów aplikacji.
+- Limity body przed multipart, spójny limit Nginx 21 MiB/plik 20 MiB,
+  serializowana kontrola logicznych quota i rezerwy miejsca przed zapisem.
+- Strumieniowe, ograniczone odpowiedzi OCR; nieoczekiwana kompresja odrzucana
+  przed dekodowaniem. SHA-256 i oryginalne bajty zachowane.
+- Retry błędów przejściowych przechowywane w PostgreSQL (3 próby, 30/120 s);
+  błędy integralności/limitu/permanentne kończą przetwarzanie. Re-upload nie resetuje budżetu.
+- Migracja `c7f8c620460d` dodaje metadata retry; przetestowano wyłącznie izolowaną bazę.
+- UI pokazuje termin ponownej próby oraz odróżnia 413 od niedostępności 503/507.
+- Dodano niewłączony profil hardeningu Compose i oddzielne kontenerowe testy w CI.
+  Profil wymaga staging z docelowym obrazem Stirling; subprocess nie jest pełnym sandboxem.
+
 ## [Unreleased] — 2026-10-22
 
 ### Audit
