@@ -4,6 +4,10 @@ Wszystkie istotne zmiany w projekcie.
 
 ## [Unreleased] — 2026-10-23 — Proporcje obrazów OCR
 
+### Changed
+- Rewizja 6811809 scalona do main i wypchnięta; pakiet produkcyjny oraz rollback
+  przygotowane, backup/restore 23bcbccb PASS. Produkcja nadal działa na c765ea9.
+
 ### Fixed
 - Konwersja PNG/JPEG przed OCR jawnie zachowuje proporcje i dobiera orientację
   strony A4 zamiast rozciągania obrazu. Oryginały, limity i retry pozostają bez zmian.

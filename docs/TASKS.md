@@ -47,6 +47,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   Gate: backend 636 PASS, frontend 194 PASS, osobno staging 1 PASS, lint/types PASS.
 - [ ] Zatwierdzić i wdrożyć poprawkę proporcji OCR jako osobny release;
   produkcja nadal c765ea9. Nie resetować ani ponawiać historycznych dokumentów.
+- [x] Scalić/wypchnąć 6811809 do main i przygotować release z przypiętymi obrazami,
+  zachowanym hardeningiem, rollbackiem oraz backup/restore 23bcbccb.
 - [ ] A05–A09/A13: współbieżność ustawień, importer, granice kwot i ekran projektu.
 - [ ] A10–A12: walidacja argumentów AI, policy engine i ograniczony kontekst.
 - [ ] A03/A04/A14: zatwierdzanie dokumentu do księgi, retencja/GC, dostępność UI.

@@ -4,6 +4,18 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ## 2026-10-23 — OCR szerokich obrazów: implementacja bez wdrożenia
 
+- Release 6811809 przygotowany w /opt/finanse/webapp/releases/6811809;
+  lokalny i zdalny main wskazują 681180991f5478b2cf7699635924d9d8e6ff0399.
+  Ponowiony gate integracji: backend 636 PASS, frontend 194 PASS,
+  Ruff/mypy/ESLint/tsc/build PASS. Backup 23bcbccb i restore drill success/0.
+- Obrazy backend/worker/frontend zbudowane, finalne digesty przypięte w Compose;
+  hashe kodu i requirements w runtime sprawdzone. BuildKit nie rozwiązywał lokalnych
+  baz po digest: użyto dedykowanych tagów z kontrolą ID przed/po buildzie.
+- Forward wymaga base + prod + c765ea9/compose.active.yaml + nowy compose.release.yaml.
+  Render różni się tylko obrazami/metadanymi build aplikacji; hardening i Stirling
+  zachowane. Rollback do c765ea9 przygotowany. Wdrożenie niezatwierdzone/niewykonane;
+  active-release.json pozostaje c765ea9, bez migracji, zmian ACL i resetowania retry.
+
 - Użytkownik zatwierdził małą zmianę w konwersji: zachowanie proporcji i dobór
   orientacji strony. Praca w istniejącym izolowanym worktree, baza 94e1b5e.
 - Źródła Stirling v2.14.3 potwierdzają fillPage jako default oraz obsługę
