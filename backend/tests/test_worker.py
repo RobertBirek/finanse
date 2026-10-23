@@ -1,4 +1,6 @@
 from contextlib import nullcontext
+from email.parser import BytesParser
+from email.policy import default
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -6,6 +8,38 @@ import httpx
 import pytest
 
 from app import worker
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("extension", ["png", "jpg"])
+@pytest.mark.parametrize("verified_bytes", [False, True])
+async def test_image_conversion_preserves_proportions_and_selects_page_orientation(
+    tmp_path, extension, verified_bytes
+):
+    path = tmp_path / f"receipt.{extension}"
+    original = b"verified image bytes"
+    path.write_bytes(original)
+
+    def respond(request):
+        message = BytesParser(policy=default).parsebytes(
+            f"Content-Type: {request.headers['content-type']}\r\n\r\n".encode() + request.content
+        )
+        parts = {
+            part.get_param("name", header="content-disposition"): part.get_payload(decode=True)
+            for part in message.iter_parts()
+        }
+        assert parts["fileInput"] == original
+        assert parts.get("fitOption") == b"maintainAspectRatio"
+        assert parts.get("autoRotate") == b"true"
+        assert request.headers["accept-encoding"] == "identity"
+        return httpx.Response(200, content=b"converted PDF")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        result = await worker._convert_image_to_pdf(
+            client, str(path), original if verified_bytes else None
+        )
+    assert result == b"converted PDF"
+    assert path.read_bytes() == original
 
 
 @pytest.mark.asyncio

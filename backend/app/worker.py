@@ -89,8 +89,10 @@ async def _convert_image_to_pdf(
         image_content if image_content is not None else await asyncio.to_thread(path.read_bytes)
     )
     files = {"fileInput": (path.name, content)}
+    # Keep text glyphs undistorted; choose landscape A4 for wide images.
+    data = {"fitOption": "maintainAspectRatio", "autoRotate": "true"}
     return await post_bounded(
-        client, STIRLING_IMG_TO_PDF_URL, files, settings.DOCUMENT_OCR_MAX_BYTES
+        client, STIRLING_IMG_TO_PDF_URL, files, settings.DOCUMENT_OCR_MAX_BYTES, data
     )
 
 

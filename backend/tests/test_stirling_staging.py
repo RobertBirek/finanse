@@ -1,5 +1,6 @@
 """Explicit OCR gate: STIRLING_TEST_IMAGE=sha256:... pytest -m proxy <this file>."""
 
+import asyncio
 import hashlib
 import json
 import os
@@ -12,12 +13,15 @@ from pathlib import Path
 import httpx
 import pytest
 from PIL import Image, ImageDraw, ImageFont
+from pypdf import PdfReader
+
+from app import worker
 
 COMPOSE = Path(__file__).resolve().parents[2] / "ops/stirling/staging.compose.yaml"
 
 
 @pytest.mark.proxy
-def test_actual_stirling_nonroot_ocr_and_shutdown(tmp_path):
+def test_actual_stirling_nonroot_ocr_and_shutdown(tmp_path, monkeypatch):
     image = os.environ.get("STIRLING_TEST_IMAGE")
     if not image:
         pytest.skip("Explicit immutable STIRLING_TEST_IMAGE required for OCR staging")
@@ -125,14 +129,14 @@ def test_actual_stirling_nonroot_ocr_and_shutdown(tmp_path):
             for option in ("tmpfs", "noexec", "nosuid", "size=16384k"):
                 assert option in pipeline
             assert "pol" in languages.splitlines() and "eng" in languages.splitlines()
-            canvas = Image.new("RGB", (1240, 1754), "white")
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 64)
-            ImageDraw.Draw(canvas).text(
-                (80, 160),
-                "Faktura numer 12345\nInvoice total 250 PLN\nZażółć gęślą jaźń",
-                font=font,
-                fill="black",
+            monkeypatch.setattr(
+                worker, "STIRLING_IMG_TO_PDF_URL", f"http://{address}:8080/api/v1/convert/img/pdf"
             )
+
+            async def convert_image(path, content):
+                async with httpx.AsyncClient(timeout=120, trust_env=False) as async_client:
+                    return await worker._convert_image_to_pdf(async_client, str(path), content)
 
             def post(path, filename, content, data):
                 response = client.post(
@@ -145,16 +149,40 @@ def test_actual_stirling_nonroot_ocr_and_shutdown(tmp_path):
                 assert response.headers.get("content-encoding", "identity") == "identity"
                 return response.content
 
-            for fmt in ("PNG", "JPEG", "PDF"):
+            cases = [
+                ((1800, 700), "PNG"),
+                ((1800, 700), "JPEG"),
+                ((1240, 1754), "PNG"),
+                ((1240, 1754), "JPEG"),
+                ((1240, 1754), "PDF"),
+            ]
+            for size, fmt in cases:
+                canvas = Image.new("RGB", size, "white")
+                ImageDraw.Draw(canvas).text(
+                    (80, 160),
+                    "Faktura numer 12345\nInvoice total 250 PLN\nZażółć gęślą jaźń",
+                    font=font,
+                    fill="black",
+                )
                 output = BytesIO()
                 canvas.save(output, format=fmt, resolution=150)
                 original = output.getvalue()
                 before = hashlib.sha256(original).digest()
-                pdf = (
-                    original
-                    if fmt == "PDF"
-                    else post("/api/v1/convert/img/pdf", "scan." + fmt.lower(), original, {})
-                )
+                path = tmp_path / f"scan-{size[0]}x{size[1]}.{fmt.lower()}"
+                path.write_bytes(original)
+                pdf = original if fmt == "PDF" else asyncio.run(convert_image(path, original))
+                if fmt != "PDF":
+                    page = PdfReader(BytesIO(pdf)).pages[0]
+                    # Actual drawing geometry, not merely request options: equal pixel scales.
+                    matrices = [args for args, op in page.get_contents().operations if op == b"cm"]
+                    assert len(matrices) == 1
+                    a, b, c, d, x, y = map(float, matrices[0])
+                    assert b == c == 0
+                    assert a / size[0] == pytest.approx(d / size[1], rel=1e-5)
+                    width, height = float(page.mediabox.width), float(page.mediabox.height)
+                    assert (width > height) == (size[0] > size[1])
+                    assert x >= 0 and y >= 0
+                    assert x + a <= width + 0.01 and y + d <= height + 0.01
                 processed = post(
                     "/api/v1/misc/ocr-pdf",
                     "scan.pdf",
@@ -168,6 +196,7 @@ def test_actual_stirling_nonroot_ocr_and_shutdown(tmp_path):
                     "12345" in text and "Invoice" in text and "Faktura" in text and "Zażółć" in text
                 ), text[:500]
                 assert hashlib.sha256(original).digest() == before
+                assert hashlib.sha256(path.read_bytes()).digest() == before
         started = time.monotonic()
         usage = compose("exec", "-T", "stirling", "du", "-sk", "/pipeline")
         assert int(usage.split()[0]) < 16 * 1024

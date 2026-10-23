@@ -2,6 +2,33 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-23 — OCR szerokich obrazów: implementacja bez wdrożenia
+
+- Użytkownik zatwierdził małą zmianę w konwersji: zachowanie proporcji i dobór
+  orientacji strony. Praca w istniejącym izolowanym worktree, baza 94e1b5e.
+- Źródła Stirling v2.14.3 potwierdzają fillPage jako default oraz obsługę
+  maintainAspectRatio/autoRotate. Wybrano dopasowanie do A4 bez przycinania;
+  fitDocumentToImage odrzucone (rozmiar strony zależny od liczby pikseli).
+- RED: cztery przypadki HTTP multipart nie zawierają fitOption; staging przez
+  rzeczywisty helper workera wykazuje skale 0,3307 i 1,2027 dla obrazu 1800x700.
+- GREEN unit: po dodaniu pól maintainAspectRatio i autoRotate=true 12 testów
+  workera PASS; Ruff/mypy PASS. Staging sprawdza macierz obrazu, orientację,
+  granice strony, polski tekst oraz hashe syntetycznych plików na dysku.
+- Pełny gate i niezależny review trwają. Produkcja, oryginały użytkownika, stare
+  błędy/statusy i retry bez zmian. Nie dodano migracji, zależności ani nowego obrazu.
+- Review nie wykazał regresji implementacji; wskazał możliwość rozszerzenia stagingu
+  o helpery OCR/ekstrakcji tekstu. Decyzja: odłożone jako ulepszenie pokrycia,
+  nie blokada tej poprawki — zmieniany helper konwersji jest wywoływany realnie,
+  OCR/tekst pozostają niezmienione i mają testy parametrów, limitów i kompresji.
+  Koszt: staging nadal nie jest pełnym testem całego pipeline aplikacyjnego.
+- Staging GREEN: 1 test z pięcioma przypadkami (szerokie PNG/JPEG, pionowe PNG/JPEG,
+  skan PDF) PASS w 160,40 s; polski tekst, geometria, hashe, non-root/read-only
+  i zamknięcie PASS, /pipeline 16 KiB. Frontend 194 PASS, ESLint/tsc PASS.
+- Finalny gate: backend 636 PASS, 8 proxy deselected (OCR staging uruchomiony
+  osobno: 1 PASS); frontend 194 PASS; Ruff/mypy/ESLint/tsc/diff PASS. Dwa istniejące
+  warningi crypt/argon2. Powyższe wpisy „w toku” są historią etapów, nie blokadą.
+  Implementacja i review zakończone, deploy wymaga osobnej zgody.
+
 ## 2026-10-23 — Produkcja c765ea9 wdrożona
 
 - Follow-up na zgodę „ok, działaj”: kontrola wyłącznie odczytowa ok. 12:31 CEST,

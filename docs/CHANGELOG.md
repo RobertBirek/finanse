@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-23 — Proporcje obrazów OCR
+
+### Fixed
+- Konwersja PNG/JPEG przed OCR jawnie zachowuje proporcje i dobiera orientację
+  strony A4 zamiast rozciągania obrazu. Oryginały, limity i retry pozostają bez zmian.
+- Regresja multipart oraz rzeczywistej geometrii PDF odtworzyła wcześniejszy błąd.
+  Staging OCR PASS: szerokie PNG/JPEG, pionowe PNG/JPEG i skan PDF, także polski
+  tekst; geometria i niezmienność oryginałów potwierdzone. Poprawka niewdrożona.
+- Gate: backend 636 PASS (8 proxy deselected), osobno staging OCR 1 PASS,
+  frontend 194 PASS; Ruff/mypy/ESLint/tsc i diff check PASS.
+
 ## [c765ea9] — 2026-10-23 — Wdrożenie pakietu bezpieczeństwa dokumentów
 
 ### Changed

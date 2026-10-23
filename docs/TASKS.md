@@ -31,14 +31,22 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   HTTPS/health PASS, kolejka OCR 0. RAM Stirling ok. 1,09 GiB / 2 GiB.
 - [ ] Testy największych dozwolonych dokumentów przy równoległym przetwarzaniu
   w izolowanym stagingu; obecny smoke nie certyfikuje worst-case sizing.
+- [ ] Rozszerzyć staging OCR o aplikacyjne helpery OCR i ekstrakcji tekstu;
+  obecnie realny helper konwersji + bezpośrednie OCR/tekst Stirling, a kontrakt
+  helperów OCR/tekst i ograniczenia odpowiedzi są pokryte testami jednostkowymi.
 - [ ] Opcjonalny katalog szablonów Stirling: ocenić możliwość wyłączenia funkcji
   lub jawnej konfiguracji ścieżki bez osłabiania read-only root.
 - [ ] P3 z review: ograniczony traversal drzewa PDF zamiast eager flatten pypdf;
   obecnie ochronę zasobów zapewniają limity subprocessu.
-- [ ] Konwersja obrazów OCR: domyślne `fillPage` Stirling rozciąga szerokie obrazy
+- [x] Poprawka lokalna konwersji OCR: domyślne `fillPage` rozciągało szerokie obrazy
   do A4 i może dać pusty tekst mimo HTTP200. Repro: 1800x700, tekst rozpoznawany
   przez Tesseract na oryginale, „Empty page” po konwersji. Oddzielna poprawka
-  zachowania proporcji i regresja wymagane; staging runtime sprawdza skany A4.
+  zachowania proporcji zatwierdzona: `maintainAspectRatio`, `autoRotate=true`.
+  Unit RED→GREEN (12 worker PASS), rzeczywista geometria staging RED;
+  staging GREEN: OCR szerokich PNG/JPEG i A4/PDF, geometria, hashe i zabezpieczenia.
+  Gate: backend 636 PASS, frontend 194 PASS, osobno staging 1 PASS, lint/types PASS.
+- [ ] Zatwierdzić i wdrożyć poprawkę proporcji OCR jako osobny release;
+  produkcja nadal c765ea9. Nie resetować ani ponawiać historycznych dokumentów.
 - [ ] A05–A09/A13: współbieżność ustawień, importer, granice kwot i ekran projektu.
 - [ ] A10–A12: walidacja argumentów AI, policy engine i ograniczony kontekst.
 - [ ] A03/A04/A14: zatwierdzanie dokumentu do księgi, retencja/GC, dostępność UI.
