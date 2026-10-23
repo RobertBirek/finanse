@@ -13,7 +13,8 @@ import pytest
 
 
 @pytest.mark.proxy
-def test_nginx_accepts_2mib_but_rejects_over_21mib(tmp_path):
+@pytest.mark.parametrize("upload_path", ["/api/documents/upload", "/api/documents/upload/"])
+def test_nginx_accepts_2mib_but_rejects_over_21mib(tmp_path, upload_path):
     source = Path(__file__).resolve().parents[3] / "frontend/nginx.conf"
     config = source.read_text().replace("http://backend:8000", "http://127.0.0.1:8000")
     config += "\nserver { listen 8000; client_max_body_size 0; location / { return 204; } }\n"
@@ -53,13 +54,7 @@ def test_nginx_accepts_2mib_but_rejects_over_21mib(tmp_path):
                 time.sleep(0.1)
             else:
                 pytest.fail("Disposable proxy did not become ready")
-            assert (
-                client.post("/api/documents/upload", content=b"x" * (2 * 1024**2)).status_code
-                == 204
-            )
-            assert (
-                client.post("/api/documents/upload", content=b"x" * (21 * 1024**2 + 1)).status_code
-                == 413
-            )
+            assert client.post(upload_path, content=b"x" * (2 * 1024**2)).status_code == 204
+            assert client.post(upload_path, content=b"x" * (21 * 1024**2 + 1)).status_code == 413
     finally:
         subprocess.run(["docker", "rm", "-f", name], check=True, capture_output=True)
