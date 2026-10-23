@@ -2,6 +2,91 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-24 — Zatwierdzona poprawka mapowania Actual, kolejna blokada próby
+
+- Cel: ograniczona poprawka nowych encji przy istniejącym imporcie, zatwierdzona
+  przez użytkownika. Regresja syntetyczna: 1 failed/3 passed przed zmianą;
+  po zmianie 54 testy importera PASS. Pierwszy backend646 PASS (8 proxy deselected),
+  Ruff/mypy oraz ESLint/tsc/194 Vitest PASS.
+- Review wskazał zbyt słabe dopasowanie referencji postingów, brak walidacji rodzica
+  grupy i regresję źródeł bez category_groups. Regresje odtworzone RED5/GREEN10;
+  finalny zestaw importera60 PASS. Dopasowanie wymaga unikalnej encji dla roli/kwoty/
+  waluty/odwróconego kierunku; grupy weryfikowane przez parent_id i własność.
+- Nie przyjęto propozycji bezwarunkowego odrzucania operacji nieobecnej w eksporcie:
+  sprzeczne z ustalonym zachowaniem historii. Zamiast tego sprawdzana jest kompletna,
+  zapisana provenance i własność referencji takiej operacji, bez odtwarzania/usuwania.
+  Ponowna próba z zaostrzonymi guardami nadal przechodzi mapowanie i zatrzymuje się
+  na tych samych 7 transferach. Ponownie potwierdzono pełny rollback1601 operacji/
+  postingów, niezmieniony hash eksportu i zatrzymanie kopii. Finalny backend/review w toku.
+- Drugi review: wykryto odtwarzanie encji dla istniejących, lecz stale/unowned/mistyped
+  nieużytych mapowań oraz brak sprawdzenia własności rodzica operacji nieobecnej
+  w źródle. Regresje RED10/GREEN20; komplet importera70 PASS. resolve_ids sprawdza
+  wszystkie mapowania encji źródłowych przed utworzeniem pierwszej encji, a helper
+  odróżnia brak mapowania od błędnego istniejącego mapowania (fail closed).
+  Rodzic zachowywanej kategorii także musi należeć do użytkownika.
+  Pełny backend652 PASS sprzed tych ostatnich guardów; finalny gate/review ponowione.
+- Domknięto walidację hierarchii także dla nieużytych kategorii: root grupy i zgodny
+  parent_id; trzy regresje RED → GREEN. Dodatkowa regresja zachowuje bezpieczną inferencję
+  brakującego mapowania grupy w częściowo zmapowanej historii legacy: inferencja przed
+  końcową walidacją brakującej referencji, ale nadal przed tworzeniem encji.
+- Finalny komplet importera74 PASS, Ruff/mypy i ponowione ESLint/tsc/194 Vitest PASS.
+  Niezależny końcowy review bez blokad, wcześniejszy pełny backend665 PASS/8deselected.
+  Finalny backend666 PASS (8 proxy deselected; 2 istniejące warningi crypt/argon2).
+  Ostatnia próba na kopii wykonana:
+  mapowanie PASS, oczekiwany blok ReconciliationError na tych samych7 transferach,
+  dokładny rollback1601 operacji/postingów PASS. Kopia zatrzymana, eksport niezmieniony.
+- Użytkownik następnie zatwierdził obsługę zamkniętych kont: zachować nieaktywny status,
+  bez otwierania kont, zmiany historii i produkcyjnego importu. Oddzielny follow-up:
+  parser wszystkich nietombstonowanych kont oraz kontrolowany import historii na
+  nieaktywne konto (domyślna walidacja API bez zmian), nowa próba i raport sald.
+- _backfill_legacy_mappings rozpoznaje kompletną zapisaną provenance wspólnych
+  operacji i nie wymaga dowodów historycznych dla nowych encji. Nie omija brakujących
+  mapowań historycznych. Opisy i istniejące postingi nie są zastępowane.
+- Próba na izolowanej bazie: źródła produkcyjnego backendu6811809 + wyłącznie
+  zmieniony importer, DATABASE_URL z guarded host/db. Przeszła mapowanie, ale
+  require_reconciled spowodowało ReconciliationError: 7 transferów ma referencje
+  do 2 zamkniętych, nietombstonowanych kont pomijanych przez get_accounts.
+- Raport ma 2 niedopasowane konta PLN, 2 kategorie i 2 grupy. Nie uznano ich za
+  niezależnie rozwiązane przez samą diagnozę brakujących kont; po ich obsłużeniu
+  trzeba ponowić pełne uzgodnienie. Prywatna diagnoza/raporty poza repozytorium.
+- Dokładne porównanie snapshotów wszystkich1601 transakcji i postingów kopii
+  przed/po próbie potwierdziło rollback. Kontener próbny zatrzymany, hash eksportu
+  niezmieniony, usługi produkcyjne działają bez restartów. Brak produkcyjnego importu,
+  replace-legacy, migracji i deployu. Następny krok wymaga zgody na zakres zamkniętych kont.
+
+## 2026-10-23 — Actual refresh: bezpieczny preflight, bez zapisu księgi
+
+- Użytkownik dostarczył nowy eksport: integralność OK, metadata sync23.10.2026
+  20:29UTC; parser14accounts/54categories/986ordinary/99transfers,0warnings.
+  Prywatne pliki wyłącznie w /tmp/opencode/actual-refresh-preflight.
+- Backup/restore bc2a3f05 success/0; pg_dump odtworzono do dedykowanego PostgreSQL
+  na sieci internal bez opublikowanych portów. Guard DATABASE_URL/host wymuszał
+  clone actual_review; użyto źródeł deployowanego backendu6811809 i nie podawano
+  produkcyjnych sekretów do procesu próbnego importu.
+- Skorygowane porównanie po odwróceniu znaków Actual->PA: źródło1085, istniejące
+  mapowane800, nowe286, jeden istniejący ID nieobecny w eksporcie.21 opisów różni się,
+  daty/typy/natywne postingi i kwoty wspólnych operacji zgodne. Pierwsze porównanie
+  techniczne nie odwróciło znaków (fałszywe799 różnic), poprawiono przed raportem.
+- Próba --require-reconciled na kopii: LegacyActualMappingError w resolve_ids/
+  _backfill_legacy_mappings:1account/8categories/1group. To blokada przed tworzeniem
+  nowych operacji, nie14 potwierdzonych rozbieżności sald (raport fallback ma pustą PA).
+- Potrzebna zatwierdzona poprawka rozróżniająca nowe encje od nierozwiązanych starych
+  mapowań. Nie użyto replace-legacy ani execute na produkcji.21opisów i brakującej
+  operacji nie nadpisano/usunięto. Prywatny REVIEW.md zapisuje dowody i ograniczenia.
+
+- Użytkownik wskazał działającą instancję/kontener Actual jako źródło aktualizacji
+  przed importem bankowym; tylko uzupełnianie danych, bez replacement.
+- Sam snapshot .blob nie jest kompletnym aktualnym stanem: jego metadata lastSynced
+  poprzedza komunikaty grupy. Importer PA przyjmuje blob i nie odtwarza logu sync.
+  Nie utożsamiono mtime blobu z aktualnością danych.
+- Prywatne kopie blob + wyodrębniony SQLite + spójna kopia SQLite sync logu
+  zabezpieczone w /tmp/opencode/actual-refresh-preflight, mode0700/0600;
+  integrity_check kopii sync OK. Identyfikatory/hashe źródła w prywatnym preflight.json.
+- PA backup12055508 i izolowany restore-verify success/0 przed potencjalnym importem.
+  Żadnych zapisów produkcyjnej księgi/zmian Actual/deployu. Dalsza próba wymaga
+  kompletnego eksportu po synchronizacji przez klienta Actual; nie rekonstruować
+  CRDT ad hoc. Eksport następnie sprawdzić na odtworzonej izolowanej bazie PA.
+
 ## 2026-10-23 — Webapp testing po wdrożeniu UI
 
 - Na prośbę użytkownika: Python Playwright/system Chrome, produkcja w320/375/768/

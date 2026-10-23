@@ -2,6 +2,36 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-24 — Przyrostowe mapowanie Actual
+
+### Fixed
+- Po zgodzie użytkownika poprawiono rozpoznawanie nowych kont/kategorii przy
+  kompletnych istniejących mapowaniach; brakujące historyczne referencje nadal blokują import.
+- Regresje nowych encji, brakujących/błędnych mapowań, jednoznaczności postingów,
+  rodzica kategorii, źródła bez grup i zachowania operacji nieobecnej w eksporcie:
+  oraz nieużytych mapowań stale/unowned/wrong-model: RED → GREEN, 74 testy importera PASS.
+  Walidacja wszystkich zapisanych referencji źródła odbywa się przed tworzeniem encji.
+  Zachowano bezpieczne odtwarzanie brakującej grupy w częściowo zmapowanej historii legacy.
+  Ruff/mypy i frontend ESLint/tsc/194 Vitest PASS;
+  pełny backend666 PASS (8 proxy deselected, 2 znane ostrzeżenia), niezależny review bez blokad.
+
+### Changed
+- Ponowiona próba wyłącznie na kopii PA przeszła mapowanie, ale wymuszone uzgodnienie
+  sald zatrzymało import: 7 transferów odwołuje się do 2 zamkniętych kont pomijanych
+  przez parser. To osobna blokada; nie zmieniano jeszcze obsługi zamkniętych kont.
+- Potwierdzono pełny rollback transakcji/postingów kopii i zatrzymano kontener próbny.
+  Bez zapisu do produkcji, replacement, migracji ani wdrożenia.
+
+## [Preflight] — 2026-10-23 — Aktualizacja z Actual
+
+- Zweryfikowano lokalne źródło Actual: snapshot wymaga późniejszych komunikatów
+  synchronizacji. Nie uruchomiono importu nieaktualnego snapshotu do księgi.
+- Backup PA12055508 i izolowany restore drill success/0. Prywatne kopie źródła
+  poza repozytorium; potrzebny kompletny zsynchronizowany eksport budżetu.
+- Dostarczony świeży eksport zweryfikowany; próba na izolowanej kopii PA zatrzymana
+  na mapowaniach legacy (nowe encje źródłowe). Backup/restore bc2a3f05 PASS.
+  Brak importu produkcyjnego; dalszy krok wymaga poprawki importera i ponownej próby.
+
 ## [Verified] — 2026-10-23 — Testy aplikacji po wdrożeniu UI
 
 - Produkcyjny smoke na320/375/768/1440px PASS: logowanie anonimowe, brak overflow/

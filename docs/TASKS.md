@@ -8,6 +8,17 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Audyt przekrojowy (2026-10-22)
 
+- [~] Przed importem bankowym odświeżyć dane z Actual: preflight źródła i backup/
+  restore12055508 PASS. Następnie dostarczono aktualny eksport; backup/restore
+  bc2a3f05 i odtworzenie izolowanej kopii PA PASS. Po poprawce mapowania BLOCKED:
+  7 transferów do 2 zamkniętych kont pomijanych przez parser. Brak importu produkcyjnego.
+- [x] Zatwierdzona ograniczona poprawka mapowania Actual: regresja RED → GREEN,
+  74 testy importera i backend666 PASS (8 proxy deselected), review bez blokad. Próba z wymaganym uzgodnieniem
+  sald na kopii wykonana i wycofana przy kolejnej blokadzie; historia zachowana.
+- [~] Zatwierdzono zakres obsługi zamkniętych kont w parserze Actual i uzgadnianiu;
+  regresja transferów do zamkniętych kont, bez usuwania/nadpisywania historii.
+  Ponowić próbę na kopii i przeanalizować pozostałe różnice sald przed produkcją.
+
 - [x] Test aplikacji po wdrożeniu UI8a7cda5: read-only production smoke4 viewporty,
   E2E29+1skip na release assets i Vitest194 PASS; raport webapp-test2026-10-23.
 - [ ] Autoryzowany test zalogowanego konta produkcyjnego i nowego dokumentu OCR:

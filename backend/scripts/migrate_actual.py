@@ -258,15 +258,68 @@ async def resolve_ids(
 ]:
     """Create accounts and categories, return Actual ID -> PA ID mappings."""
     await db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"actual-import:{user_id}"))))
+    accounts = parser.get_accounts()
+    categories = parser.get_categories()
+    try:
+        category_groups = parser.get_category_groups()
+    except sqlite3.OperationalError:
+        category_groups = []
+    # A missing mapping means a new entity; an unreadable existing mapping is
+    # corruption, never permission to recreate it. Validate all source entities
+    # before creating even the first one (including unused accounts/categories).
+    existing_entities: dict[tuple[str, str], Any] = {}
+    for entity_type, entities, model in (
+        ("account", accounts, Account),
+        ("category", categories, Category),
+        ("category_group", category_groups, Category),
+    ):
+        for entity in entities:
+            existing_entities[entity_type, entity["actual_id"]] = await _get_mapped_entity(
+                db, user_id, entity_type, entity["actual_id"], model
+            )
+    available_group_ids = {group["actual_id"] for group in category_groups}
+    for group in category_groups:
+        mapped_group = existing_entities["category_group", group["actual_id"]]
+        if mapped_group is not None and mapped_group.parent_id is not None:
+            raise LegacyActualMappingError("Stored category group mapping is not a root category")
+    for category in categories:
+        mapped_category = existing_entities["category", category["actual_id"]]
+        group_id = category["group_actual_id"]
+        if mapped_category is not None and group_id in available_group_ids:
+            mapped_group = existing_entities["category_group", group_id]
+            if mapped_group is not None and mapped_category.parent_id != mapped_group.id:
+                raise LegacyActualMappingError(
+                    "Stored category group mapping is missing or conflicting"
+                )
     if transactions is not None:
         await _backfill_legacy_mappings(db, user_id, parser, transactions)
+    # Legacy provenance can safely infer a missing group from a unique parent.
+    # Check unresolved references only after that inference, but still before
+    # any entity is created. Present-but-conflicting mappings were rejected above.
+    for category in categories:
+        mapped_category = await _get_mapped_entity(
+            db, user_id, "category", category["actual_id"], Category
+        )
+        group_id = category["group_actual_id"]
+        if mapped_category is not None and group_id in available_group_ids:
+            mapped_group = await _get_mapped_entity(
+                db, user_id, "category_group", group_id, Category
+            )
+            if (
+                mapped_group is None
+                or mapped_group.parent_id is not None
+                or mapped_category.parent_id != mapped_group.id
+            ):
+                raise LegacyActualMappingError(
+                    "Stored category group mapping is missing or conflicting"
+                )
     acct_map: dict[str, uuid.UUID] = {}
     cat_map: dict[str, uuid.UUID] = {}
     acct_currency: dict[str, str] = {}
     acct_budget: dict[str, bool] = {}
     group_map: dict[str, uuid.UUID] = {}
 
-    for a in parser.get_accounts():
+    for a in accounts:
         pa_acct = await _get_mapped_entity(db, user_id, "account", a["actual_id"], Account)
         if pa_acct is None:
             pa_acct = await create_account(
@@ -285,11 +338,6 @@ async def resolve_ids(
         acct_currency[a["actual_id"]] = a["currency"]
         acct_budget[a["actual_id"]] = a["is_budget_account"]
 
-    try:
-        category_groups = parser.get_category_groups()
-    except sqlite3.OperationalError:
-        category_groups = []
-
     for group in category_groups:
         pa_group = await _get_mapped_entity(
             db, user_id, "category_group", group["actual_id"], Category
@@ -304,7 +352,7 @@ async def resolve_ids(
             await _store_mapping(db, user_id, "category_group", group["actual_id"], pa_group.id)
         group_map[group["actual_id"]] = pa_group.id
 
-    for c in parser.get_categories():
+    for c in categories:
         pa_cat = await _get_mapped_entity(db, user_id, "category", c["actual_id"], Category)
         if pa_cat is None:
             pa_cat = await create_category(
@@ -357,14 +405,132 @@ async def _backfill_legacy_mappings(
     legacy_transactions: dict[str, FinancialTransaction] = {}
     for transaction in legacy_result.scalars():
         match = re.match(r"^\[actual:([^\]]+)\]", transaction.description)
-        if match is not None and match.group(1) in transactions_by_actual_id:
+        if match is not None:
             legacy_transactions[match.group(1)] = transaction
     if not legacy_transactions:
+        return
+
+    # A mapped import is not a legacy import. Newly added source accounts and
+    # categories have no historical postings from which to infer their IDs.
+    # Only bypass backfill when every existing transaction and its references
+    # are already proven; incomplete history must still fail closed.
+    mappings_result = await db.execute(
+        select(ActualImportMapping).where(ActualImportMapping.user_id == user_id)
+    )
+    mappings = {
+        (mapping.entity_type, mapping.actual_id): mapping.entity_id
+        for mapping in mappings_result.scalars()
+    }
+    category_group_ids = {
+        category["actual_id"]: category["group_actual_id"] for category in parser.get_categories()
+    }
+    try:
+        available_groups = {group["actual_id"] for group in parser.get_category_groups()}
+    except sqlite3.OperationalError:
+        available_groups = set()
+    owned_categories = {
+        category.id: category
+        for category in (
+            await db.execute(select(Category).where(Category.user_id == user_id))
+        ).scalars()
+    }
+    owned_account_ids = set(
+        (await db.execute(select(Account.id).where(Account.user_id == user_id))).scalars()
+    )
+    mapped_account_ids = {
+        entity_id for (kind, _), entity_id in mappings.items() if kind == "account"
+    }
+    mapped_category_ids = {
+        entity_id for (kind, _), entity_id in mappings.items() if kind == "category"
+    }
+    mapped_group_ids = {
+        entity_id for (kind, _), entity_id in mappings.items() if kind == "category_group"
+    }
+    fully_mapped = True
+    for actual_id, transaction in legacy_transactions.items():
+        mapped_id = mappings.get(("transaction", actual_id))
+        if mapped_id is None:
+            if actual_id not in transactions_by_actual_id:
+                raise LegacyActualMappingError(
+                    "Absent historical transaction has no stored provenance"
+                )
+            fully_mapped = False
+            continue
+        if mapped_id != transaction.id:
+            raise LegacyActualMappingError(
+                "Historical transaction mapping conflicts with provenance"
+            )
+        if actual_id not in transactions_by_actual_id:
+            # Source deletions never delete local history. With no source legs to
+            # infer from, require complete, owned stored provenance instead.
+            for posting in transaction.postings:
+                if posting.account_id is not None and (
+                    posting.account_id not in mapped_account_ids
+                    or posting.account_id not in owned_account_ids
+                ):
+                    raise LegacyActualMappingError(
+                        "Absent historical account has no stored provenance"
+                    )
+                if posting.category_id is not None:
+                    category = owned_categories.get(posting.category_id)
+                    if (
+                        category is None
+                        or category.id not in mapped_category_ids
+                        or (
+                            category.parent_id is not None
+                            and (
+                                category.parent_id not in mapped_group_ids
+                                or category.parent_id not in owned_categories
+                            )
+                        )
+                    ):
+                        raise LegacyActualMappingError(
+                            "Absent historical category has no stored provenance"
+                        )
+            continue
+        for source_posting in transactions_by_actual_id[actual_id]["postings"]:
+            category_id = source_posting["category_actual_id"]
+            role = "account" if category_id is None else "category"
+            source_id = source_posting["account_actual_id"] if category_id is None else category_id
+            candidates = {
+                getattr(posting, f"{role}_id")
+                for posting in transaction.postings
+                if posting.source_amount == source_posting["source_amount"]
+                and posting.source_currency == source_posting["source_currency"]
+                and posting.direction
+                == ("debit" if source_posting["direction"] == "credit" else "credit")
+                and getattr(posting, f"{role}_id") is not None
+            }
+            mapped_entity = mappings.get((role, source_id))
+            if len(candidates) != 1 or mapped_entity not in candidates:
+                raise LegacyActualMappingError(
+                    f"Historical {role} mapping is missing, ambiguous or conflicting"
+                )
+            if role == "account" and mapped_entity not in owned_account_ids:
+                raise LegacyActualMappingError("Historical account is not owned by importer")
+            if role == "category":
+                category = owned_categories.get(mapped_entity)
+                if category is None:
+                    raise LegacyActualMappingError("Historical category is not owned by importer")
+                group_id = category_group_ids.get(category_id)
+                if group_id in available_groups:
+                    group_entity = mappings.get(("category_group", group_id))
+                    if (
+                        group_entity is None
+                        or group_entity != category.parent_id
+                        or group_entity not in owned_categories
+                    ):
+                        raise LegacyActualMappingError(
+                            "Historical category group mapping is missing or conflicting"
+                        )
+    if fully_mapped:
         return
 
     account_candidates: dict[str, set[uuid.UUID]] = {}
     category_candidates: dict[str, set[uuid.UUID]] = {}
     for actual_id, legacy_transaction in legacy_transactions.items():
+        if actual_id not in transactions_by_actual_id:
+            continue
         for source_posting in transactions_by_actual_id[actual_id]["postings"]:
             legacy_postings = [
                 posting
@@ -470,7 +636,10 @@ async def _get_mapped_entity(
     )
     if entity_id is None:
         return None
-    return await db.scalar(select(model).where(model.id == entity_id, model.user_id == user_id))
+    entity = await db.scalar(select(model).where(model.id == entity_id, model.user_id == user_id))
+    if entity is None:
+        raise LegacyActualMappingError(f"Stored {entity_type} mapping is stale or unowned")
+    return entity
 
 
 async def _store_mapping(
