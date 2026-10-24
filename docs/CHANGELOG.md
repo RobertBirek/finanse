@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Imported] — 2026-10-24 — Actual uzupełniony na produkcji
+
+- Po jawnej zgodzie i świeżym backupbd201f28+restore success/0 zapisano286 nowych
+  operacji,799 pominięto jako istniejące,0 błędów. Wcześniejsze1601 pełnych zapisów
+  transakcji/postingów niezmienione; obowiązkowe invariants i zakres sprawdzone przed commitem.
+- Augmented16/16 kont,54/54 kategorii,9/9 grup zgodne; raw Actual nadal jawnie pokazuje
+  zachowaną przypiętą historię.1085 mapowań idempotencji poprawnych,2 konta zamknięte
+  pozostają inactive. Bez replacement,korekt,migracji,deployu i importu bankowego.
+- Niezależny fresh-process READ ONLY potwierdził cały snapshot,salda,invariants1887,
+  pin i1085 mapowań. Dodatkowy backup po imporciec69299d0 i restore success/0.
+  Raport:docs/audits/2026-10-24-actual-production-import.md.
+
 ## [Verified] — 2026-10-24 — Aktualność przed importem Actual
 
 - Kontrola tylko do odczytu:serwer Actual nie ma komunikatów po watermarku zatwierdzonego

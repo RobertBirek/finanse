@@ -2,6 +2,45 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-24 — Zatwierdzony produkcyjny import Actual wykonany
+
+- Użytkownik jednoznacznie zatwierdził zapis286 nowych operacji po świeżym backup/
+  restore,bez usuwania/nadpisywania historii,z zachowaniem przypiętej operacji.
+  Nie dotyczy to CSV/PDF bankowych. Używany wdrożony importer d3c2c68,bez zmian kodu.
+- Backupbd201f28 i izolowany restore drill success/0. Tuż przed komendą hash źródła,
+  runtime,pin i server watermark sprawdzone ponownie; brak nowszych komunikatów Actual.
+- Prywatny operator uruchamia dokładnie jeden subprocess w finanse-backend;
+  wejścia poprzez stdin do tmpfs,weryfikacja READ ONLY baseline przed importem.
+  Usługi domenowe i istniejące require_reconciled pozostają bramką zapisu. Dodatkowy
+  session commit guard kontroluje1601 wcześniejszych fingerprintów,dokładny zestaw286
+  nowych Actual ID,metadane/mapowania oraz invariant każdej operacji PRZED commitem.
+  Guard sprawdzony na wyniku udanej kopii i8 negatywnych mutacjach (odrzucane).
+- Marker wykonania uniemożliwia automatyczne ponowienie. Input/temp/report tylko
+  w prywatnym /tmp/opencode/actual-production-import-20261024; bez zapisów do uploads.
+  Komenda w toku, wyniku nie zakładamy; po błędzie ustalić czy commit nastąpił,
+  nie wykonywać ponowienia/restore/usuwania bez świadomej decyzji.
+- Pojedyncze wykonanie zakończone0 i dokładnie jeden fizyczny commit:286written,
+  799skipped,0errors. Scope guard przed commitem potwierdził1601 wcześniejszych
+  fingerprintów i metadane bez zmian poza source closure; każdy z1887 zapisów
+  z min.2 postings/sumą0. Augmented16/54/9 zgodne,raw Actual false zgodnie z polityką
+  jednej zachowanej operacji. Pin i1085idempotency checks PASS po commicie.
+- Raport/log/snapshot/precommit/postcommit proof zapisane prywatnie,aplikacyjny kod
+  niezmieniony,bez ponownego wykonania importu. Niezależny fresh-process READ ONLY
+  weryfikuje teraz cały snapshot,salda,historyczne fingerprinty i brak duplikatów.
+- Niezależny fresh-process READ ONLY po commicie PASS:16/16accounts,54/54categories,
+  9/9groups,1887invariants,1085idempotency checks,pin bez zmian;cały snapshot odpowiada
+  zapisanemu postcommit. Wszystkie1601 wcześniejszych fingerprintów zachowane. Health200,
+  aplikacji/Actual nie restartowano. Żadnego ponownego wykonania importu.
+- Dodatkowy backup zakończonego stanuc69299d0 i izolowany restore success/0;
+  zachowano backup przed operacjąbd201f28. Raport sanitized:
+  docs/audits/2026-10-24-actual-production-import.md. Gate dokumentacji na niezmienionym
+  produkcie:96 backend/194frontend i lint/types PASS. Aktualizację Actual zamknięto;
+  następny zakres to podgląd plików bankowych po zatwierdzeniu,nie automatyczny import.
+- Dowody i zaakceptowane wejścia zarchiwizowano trwale poza Git w prywatnym
+  /opt/finanse/webapp/imports/actual-20261024-154006 (700/600,manifest hashów).
+  Wyłącznie provenance/audit,nie źródło prawdy. Kod aplikacji wciąż d3c2c68;
+  w repo zmieniana jest jedynie dokumentacja operacji.
+
 ## 2026-10-24 — Odczytowa kontrola aktualności Actual i PA po deployu
 
 - Użytkownik zatwierdził tylko aktualność i raport,bez zapisu księgi. Nie uruchamiano

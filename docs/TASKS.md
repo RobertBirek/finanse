@@ -19,20 +19,26 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   dokładne hashe tabel/plików, odrębna kontrola dozwolonego cron i realnych jobs,
   zapis mismatch oraz logów przed rollbackiem. Prywatny helper ma9 testów PASS.
 
-- [~] Przed importem bankowym odświeżyć dane z Actual: preflight źródła i backup/
+- [x] Przed importem bankowym odświeżyć dane z Actual: preflight źródła i backup/
   restore12055508 PASS. Następnie dostarczono aktualny eksport; backup/restore
   bc2a3f05 i odtworzenie izolowanej kopii PA PASS. Po poprawkach mapowania/zamkniętych
   kont i jawnego manifestu próba na kopii PASS:286 nowych, powtórzenie0 nowych,
   augmented16/54/9 zgodne; backend778/frontend194 i lint/types PASS.
-  Kod wdrożonyd3c2c68. PENDING: osobna decyzja o imporcie księgi, świeży preflight/
-  backup/restore przed wykonaniem; zgoda na deploy nie uruchamiała importu.
-  Brak importu produkcyjnego i danych bankowych.
+  Kod wdrożonyd3c2c68;po osobnej zgodzie wykonano produkcyjnie286new/799skip/0errors,
+  stan i salda zweryfikowane niezależnym odczytem.1601 wcześniejszych zapisów bez zmian.
+  Backupbd201f28 przed i c69299d0 po +restore PASS. Brak importu danych bankowych.
 - [x] Świeża kontrola aktualności po deployu,wyłącznie odczyt:Actual watermark zgodny,
   0 późniejszych komunikatów;produkcyjne1601 zapisy/33kont/102kategorii/869mapowań i pin
   identyczne z próbą. Zakres286 nowych/1 zachowana,0 konfliktów wspólnych operacji.
   Raport actual-current-preflight2026-10-24; bez zapisu do księgi.
-- [ ] Zatwierdzić osobno produkcyjny import286 nowych operacji ze wskazaną zachowaną
-  historią; świeży backup/restore i ponowna kontrola niezmienności bezpośrednio przed execute.
+- [x] Osobno zatwierdzony produkcyjny import286 nowych operacji ze wskazaną zachowaną
+  historią. Backupbd201f28/restore PASS, ponowny guard źródła/pinu/baseline wykonany;
+  pojedyncza komenda zakończona0:286new/799skip/0errors,1601 wcześniejszych zapisów
+  zachowane,augmented16/54/9 zgodne. Niezależny odczyt po commicie PASS,backup po
+  imporciec69299d0+restore PASS. Bez importu bankowego.
+- [ ] Następny zakres:zatwierdzony podgląd CSV Revolut i tekstowych PDF VeloBank,
+  deduplikacja względem odświeżonej PA i uzgodnienie sald;bez automatycznego zapisu.
+  Harmonogram kredytu nie tworzy wykonanych transakcji.
 - [x] Zatwierdzona ograniczona poprawka mapowania Actual: regresja RED → GREEN,
   74 testy importera i backend666 PASS (8 proxy deselected), review bez blokad. Próba z wymaganym uzgodnieniem
   sald na kopii wykonana i wycofana przy kolejnej blokadzie; historia zachowana.
@@ -48,7 +54,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   wszystkie1601 wcześniejszych zapisów bez zmian. Backend778/frontend194 i lint/types PASS.
   Nie omijać kontroli sald, nie tworzyć automatycznej korekty księgowej.
   Prywatny raport dokładnie wiąże różnicę z istniejącym zapisem; polityka zatwierdzona
-  wyłącznie dla próby na kopii. Wymagana osobna zgoda produkcyjna, świeży backup/restore.
+  początkowo dla próby na kopii,następnie jawnie rozszerzona na wykonany import
+  produkcyjny286 operacji z backup/restore i niezależnym post-checkiem.
 
 - [x] Test aplikacji po wdrożeniu UI8a7cda5: read-only production smoke4 viewporty,
   E2E29+1skip na release assets i Vitest194 PASS; raport webapp-test2026-10-23.
