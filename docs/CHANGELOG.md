@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Verified] — 2026-10-24 — Aktualność przed importem Actual
+
+- Kontrola tylko do odczytu:serwer Actual nie ma komunikatów po watermarku zatwierdzonego
+  eksportu; ZIP/pin i produkcyjne konta,kategorie,mapowania oraz1601 pełnych zapisów
+  transakcji/postingów są identyczne z baseline próby.
+- Zakres nadal286 nowych operacji+1 zachowana source-absent. Wspólne operacje zgodne;
+  poprzednie21 różnic opisów odtworzono jako efekt brakujących nazw zamkniętych kont
+  w starym parserze. Obecnie0 różnic opisów,bez aktualizacji danych.
+- Raport:docs/audits/2026-10-24-actual-current-preflight.md. Brak importu produkcyjnego;
+  potrzebna osobna zgoda i świeży backup/restore przed ewentualnym wykonaniem.
+
 ## [d3c2c68] — 2026-10-24 — Wdrożona aplikacja, bez importu księgi
 
 ### Changed

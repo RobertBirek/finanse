@@ -2,6 +2,35 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-24 — Odczytowa kontrola aktualności Actual i PA po deployu
+
+- Użytkownik zatwierdził tylko aktualność i raport,bez zapisu księgi. Nie uruchamiano
+  migrate/execute,migracji,restore lub kolejnej próby importu. Wszystkie pliki robocze
+  w prywatnym /tmp/opencode/actual-current-preflight-20261024,nie w repo.
+- Sync store Actual odczytano przez mode=ro i SQLite backup do prywatnej kopii;
+  integrity_check OK. Ostatni komunikat identyczny z watermarkiem dostarczonego ZIP
+  (23.10.2026 20:29:07.363UTC),0 późniejszych. Tożsamość budżetu/group/cloud file zgodna,
+  hash ZIP/pinu i db.sqlite zgodny z próbą. Nie rekonstruowano CRDT,nie czytano treści
+  komunikatów. Niezsynchronizowane zmiany klienta pozostają poza obserwacją serwera.
+- PA z deployed backendd3c2c68:połączenie REPEATABLE READ+READ ONLY,pełne fingerprinty
+  wszystkich1601 transakcji/postingów i snapshot33accounts/102categories/869mappings
+  identyczne z pierwotnym baseline próby. Pin owner/provenance/ID/hash zgodny,headc7
+  niezmieniony;produkcja health200,backend/worker/Actual bez restartów.
+- Źródło parsera:16accounts/2closed,54categories,9groups,986simple+99transfers/0splits,
+  1085operations/1184live raw IDs,0warnings. Z800 mapowanych799 wspólnych,286 nowych,
+  dokładnie1 source-absent pin nadal zachowany. Nowe encje:1account/8categories/1group.
+- Istotne doprecyzowanie historycznego raportu:aktualne porównanie pokazało0 różnic
+  opisów,nie21. Odtworzenie parserem6811809 potwierdza21 dawnych różnic dokładnie w
+  transferach z brakującymi nazwami zamkniętych kont (`?`). Poprawiony parser daje
+  opisy identyczne z PA. Nie były to rzeczywiste zmiany lokalnych danych do nadpisania.
+- Raport sanitized:docs/audits/2026-10-24-actual-current-preflight.md. Wynik próby
+  pozostaje aktualny przy niezmienionych obu wejściach. Przed zapisem wymagana osobna
+  zgoda,świeży backup/restore i ponowne sprawdzenie niezmienności; bez automatycznej
+  zmiany manifestu,bez tolerancji,korekty lub importu CSV/PDF. Produkcja niezmieniona.
+- Przed commitem samej dokumentacji ponowiono96 testów manifestu/integracji oraz
+  frontend194,Ruff/mypy/ESLint/tsc PASS; produkt bez zmian względem d3c2c68. Brak zgody
+  na import produkcyjny na tym etapie; odpowiedzi z wynikami testów nie są taką zgodą.
+
 ## 2026-10-24 — Main/push i wdrożenie aplikacji d3c2c68, bez importu danych
 
 - Użytkownik wprost zatwierdził merge,commit/push main i deploy. Wykonano fast-forward

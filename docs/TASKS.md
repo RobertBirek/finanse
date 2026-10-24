@@ -27,6 +27,12 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   Kod wdrożonyd3c2c68. PENDING: osobna decyzja o imporcie księgi, świeży preflight/
   backup/restore przed wykonaniem; zgoda na deploy nie uruchamiała importu.
   Brak importu produkcyjnego i danych bankowych.
+- [x] Świeża kontrola aktualności po deployu,wyłącznie odczyt:Actual watermark zgodny,
+  0 późniejszych komunikatów;produkcyjne1601 zapisy/33kont/102kategorii/869mapowań i pin
+  identyczne z próbą. Zakres286 nowych/1 zachowana,0 konfliktów wspólnych operacji.
+  Raport actual-current-preflight2026-10-24; bez zapisu do księgi.
+- [ ] Zatwierdzić osobno produkcyjny import286 nowych operacji ze wskazaną zachowaną
+  historią; świeży backup/restore i ponowna kontrola niezmienności bezpośrednio przed execute.
 - [x] Zatwierdzona ograniczona poprawka mapowania Actual: regresja RED → GREEN,
   74 testy importera i backend666 PASS (8 proxy deselected), review bez blokad. Próba z wymaganym uzgodnieniem
   sald na kopii wykonana i wycofana przy kolejnej blokadzie; historia zachowana.
