@@ -23,6 +23,8 @@ Identyfikatory, kwoty i manifest rzeczywistych danych pozostają poza repozytori
   tych samych bajtów (ZipFile(BytesIO)); nie otwierać ponownie ścieżki po weryfikacji.
   Tryb manifestu wyodrębnia wyłącznie jeden główny plik db.sqlite do prywatnego katalogu.
 - Brak operacji sprawdzać w unii ID zwykłych operacji, transferów i splitów.
+  Obejmuje to wszystkie nietombstonowane wiersze: obie strony transferu, rodzica
+  i dzieci splitu, także wiersze nieprzekształcone w operację przez parser.
   Powtórzone ID źródłowe blokują próbę przed weryfikacją pinu i zapisami.
 - Provenance wymaga dokładnie jednego mapowania tego użytkownika o
   entity_type=transaction i actual_id z manifestu, którego entity_id jest PA UUID

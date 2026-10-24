@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Plan] — 2026-10-24 — Jawne uzgodnienie zachowanej historii Actual
+## [Unreleased] — 2026-10-24 — Jawne uzgodnienie zachowanej historii Actual
 
 ### Added
 - Użytkownik zatwierdził uzgodnienie eksportu plus dokładnie jednej zachowanej
@@ -10,9 +10,20 @@ Wszystkie istotne zmiany w projekcie.
   Manifest tylko identyfikuje zaakceptowany zapis; kwoty nadal z PostgreSQL.
 - Plan zakłada osobny surowy raport, pełną kontrolę pozostałych różnic i próbę wyłącznie
   na kopii. Rozpoczęto zatwierdzone wykonanie natywne: moduł manifestu/fingerprintu/
-  blokad i wkładu postingów przeszedł66 testów RED → GREEN. Integracja importera
-  jeszcze nierozpoczęta; backend748 PASS (8 proxy deselected,2 znane warningi),
-  frontend194 i lint/types PASS. Bez zgody na import produkcyjny.
+  blokad i wkładu postingów przeszedł66 testów RED → GREEN (3266377).
+  Backend tego modułu748 PASS (8 proxy deselected,2 znane warningi), frontend194 i lint/types PASS.
+- Integracja CLI/niezmiennego ZIP/raportu raw_actual+augmented:30 nowych testów PASS,
+  łącznie206 finansowych/kontraktowych PASS. Po końcowym review naprawiono kontrolę
+  obecności pinu także w drugiej stronie transferu/dzieciach splitów i pomijanych
+  przez rekonstrukcję wierszach. Regresje RED3 → GREEN, Ruff/mypy PASS.
+- Próba na kopii z przypiętym manifestem PASS:286 nowych operacji,0 błędów;
+  powtórzenie0 nowych/1085 pominiętych, identyczny raport i wiersze. Augmented zgodne
+  dla16/16 kont,54/54 kategorii i9/9 grup; surowe różnice nadal jawne.
+- Pełne fingerprinty1601 wcześniejszych transakcji/postingów niezmienione,2 zamknięte
+  konta nieaktywne. Obie izolowane kopie zatrzymane. Raport:
+  docs/audits/2026-10-24-actual-preserved-history-rehearsal.md.
+  Końcowy backend778 PASS (8 proxy deselected,2 znane warningi), frontend194 i lint/types PASS.
+  Brak zgody na import produkcyjny.
 
 ## [Unreleased] — 2026-10-24 — Historia zamkniętych kont Actual
 

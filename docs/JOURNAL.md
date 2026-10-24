@@ -25,6 +25,51 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   wkład native/base wyłącznie z PG. Sześć testów konkurencyjnej aktualizacji PASS.
   Ruff/mypy i frontend194 PASS; pełny backend Task1 748 PASS (8 proxy deselected,
   2 znane warningi crypt/argon2). CLI jeszcze bez tej opcji.
+- Task1 zapisany3266377; task-done ponownie66 PASS. Task2 integracja --preserved-history-manifest:
+  RED20/GREEN25; łącznie201 testów finansów/kontraktów PASS. Odczyt ZIP raz, ekstrakcja
+  tylko jednego root db.sqlite, walidacja pinu pod blokadami przed tworzeniem encji,
+  duplikaty ID z simple/transfer/split blokowane. Surowy i augmented raport liczone
+  wobec tego samego snapshotu PA; no-manifest JSON byte-compatible. Invalid mode
+  zatrzymuje się także przed backup/replacement; rollback i powtórzenie testowane.
+- Jeden końcowy fresh review obu zadań przed pełnym gate i próbą, z jawnym overlay
+  niecommitowanego Task2. Prywatne skrypty próby i pełnych snapshotów przygotowane,
+  ale jeszcze nie wykonano importu z manifestem. Produkcja bez zmian.
+- Restart serwera przerwał wyłącznie końcowy review; stan Git/ledger/prywatne pliki
+  przetrwały, wznowiono tę samą sesję review bez powtarzania ukończonych zadań.
+  Frontend194/ESLint/tsc ponowione PASS, hash prywatnego eksportu bez zmian.
+- Jeden Important finding: unia głównych ID operacji nie obejmowała partnera transferu
+  i dzieci splitów. RED3 odtworzyło podwójne uwzględnienie; parser teraz inwentaryzuje
+  wszystkie nietombstonowane wiersze źródła (także pominięte przez rekonstrukcję),
+  odrzuca duplikaty/brak ID. Kontrola pinu wykorzystuje pełny zbiór. Testy raw/view
+  potwierdzają wyłączenie tombstone. GREEN206 focused, Ruff/mypy PASS.
+- Brak Minor findings; natywna jedna runda poprawek, bez ponownego review. Reviewer
+  nie oglądał prywatnych danych ani operacji produkcyjnych (poza zakresem). Koordynator
+  uruchomił pełny backend i odrębną zatwierdzoną próbę na guardowanej kopii; wyniki w toku.
+- Pierwszy ścisły import z manifestem na kopii zakończył się0:286 written/799 skipped,
+  augmented16/16accounts,54/54categories,9/9groups zgodne,0errors. Raw Actual nadal
+  pokazuje przypiętą różnicę, bez zmiany zachowanej operacji i bez korekty księgowej.
+- Prywatny post-check porównał zakres jednego użytkownika800 z wcześniejszym globalnym
+  snapshotem1601; asercja zatrzymała dowód, nie wykonany poprawnie commit na kopii.
+  Nie powtórzono pierwszego importu. Odtwarzamy pierwotny dump do nowej izolowanej
+  bazy baseline, aby porównać pełne kolumny wszystkich właścicieli, potem jedno powtórzenie.
+  Kontenery próbne są zatrzymywane w finally. Produkcja nie jest źródłem nowego zapisu.
+- Odzyskano pełny all-owner baseline z pierwotnego dumpa do nowego kontenera,
+  potwierdzając identyczność wcześniejszego snapshotu800. Wszystkie1601 pełnych
+  fingerprintów transakcji/postingów zachowane po pierwszym imporcie; stare kategorie/
+  mapowania i konta bez zmian poza zatwierdzonym source-closed statusem2 kont.
+- Powtórny strict import z tym samym manifestem zakończony0:0 written/1085 skipped,
+  0errors. Wszystkie wiersze i raport identyczne po powtórzeniu; augmented16/16,
+  54/54,9/9 zgodne. Raw Actual nadal niezgodne dla wskazanej zachowanej historii.
+- Obie kopie zatrzymane, brak opublikowanych portów, źródłowy ZIP i kod runtime
+  zgodne z hashami. Produkcyjne usługi running/restarts0. Prywatny final-summary
+  wiąże źródło/pin/runtime/dowody; publiczny raport sanitized:
+  docs/audits/2026-10-24-actual-preserved-history-rehearsal.md.
+- Końcowy gate: backend778 PASS/8proxy deselected/2znane warningi crypt+argon2,
+  frontend194/ESLint/tsc i Ruff/mypy PASS, diff check PASS. Ważne ustalenie review
+  (wewnętrzne ID źródła) naprawione z regresją RED3 → GREEN i pełnym zielonym zestawem.
+  Brak Minor do odłożenia; wszystkie decyzje wykonawcze i zakres ograniczeń review
+  zapisane w publicznym sanitized raporcie. Zakończono implementację i dwie próby
+  na kopii. Nie wykonano push/merge/deploy ani produkcyjnego importu.
 
 ## 2026-10-24 — Zatwierdzona historia zamkniętych kont Actual
 

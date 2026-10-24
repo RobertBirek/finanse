@@ -22,6 +22,7 @@ import uuid
 import zipfile
 from collections.abc import Sequence
 from datetime import date
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import settings
 from app.database import async_session_factory
+from app.finance.actual_history import (
+    PreservedHistoryManifest,
+    add_preserved_history_balances,
+    load_preserved_history,
+    validate_preserved_history,
+)
 from app.finance.actual_parser import ActualParser, TransactionDict
 from app.finance.models import Account, ActualImportMapping, Category, FinancialTransaction, Posting
 from app.finance.nbp_rates import NbpRate, NbpRateProvider
@@ -233,9 +240,27 @@ async def replace_legacy_actual_data(
         )
 
 
-async def extract_sqlite(blob_path: Path) -> Path:
+async def extract_sqlite(blob_path: Path, *, archive_bytes: bytes | None = None) -> Path:
     """Extract db.sqlite from Actual encrypted ZIP blob."""
     extract_dir = Path(tempfile.mkdtemp(prefix="actual_extract_"))
+    if archive_bytes is not None:
+        # Hash and parse the exact same immutable bytes. Never extract archive
+        # paths or metadata from the approved-input path into the filesystem.
+        with zipfile.ZipFile(BytesIO(archive_bytes), "r") as archive:
+            databases = [
+                entry
+                for entry in archive.infolist()
+                if entry.filename == "db.sqlite" and not entry.is_dir()
+            ]
+            if len(databases) != 1:
+                raise ImportValidationError(
+                    "Verified archive must contain exactly one root db.sqlite"
+                )
+            sqlite_path = extract_dir / "db.sqlite"
+            with sqlite_path.open("xb") as output:
+                output.write(archive.read(databases[0]))
+            sqlite_path.chmod(0o600)
+            return sqlite_path
     with zipfile.ZipFile(blob_path, "r") as zf:
         zf.extractall(extract_dir)
     sqlite_path = extract_dir / "db.sqlite"
@@ -1040,11 +1065,38 @@ def generate_report(stats: dict, errors: list[str], warnings: list[str], mapping
     return "\n".join(lines)
 
 
-def write_reconciliation_report(output_dir: Path, report: ReconciliationReport) -> None:
+def write_reconciliation_report(
+    output_dir: Path,
+    report: ReconciliationReport,
+    *,
+    raw_actual: ReconciliationReport | None = None,
+    preserved_history: dict[str, Any] | None = None,
+) -> None:
+    if (raw_actual is None) != (preserved_history is None):
+        raise ImportValidationError(
+            "Preserved-history reports require both raw and augmented context"
+        )
+    payload: dict[str, Any] = report.to_dict()
+    text = report.to_text()
+    if raw_actual is not None and preserved_history is not None:
+        payload = {
+            "schema_version": 1,
+            "source_basis": "actual_plus_pinned_preserved_history",
+            "raw_actual": raw_actual.to_dict(),
+            "augmented": report.to_dict(),
+            "preserved_history": preserved_history,
+        }
+        text = (
+            "Source basis: Actual plus exactly one pinned preserved local Actual transaction.\n"
+            "No ledger adjustment and no tolerance applied.\n\n"
+            f"Raw Actual reconciliation:\n{raw_actual.to_text()}\n\n"
+            f"Augmented reconciliation:\n{report.to_text()}\n\n"
+            f"Preserved history:\n{json.dumps(preserved_history, indent=2, ensure_ascii=False)}"
+        )
     (output_dir / "reconciliation.json").write_text(
-        json.dumps(report.to_dict(), indent=2, ensure_ascii=False) + "\n"
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
     )
-    (output_dir / "reconciliation_report.txt").write_text(report.to_text() + "\n")
+    (output_dir / "reconciliation_report.txt").write_text(text + "\n")
 
 
 async def migrate(
@@ -1053,9 +1105,20 @@ async def migrate(
     dry_run: bool = False,
     require_reconciled: bool = False,
     replace_legacy_actual: bool = False,
+    preserved_history_manifest: Path | None = None,
 ) -> None:
     """Main migration pipeline."""
-    sqlite_path = await extract_sqlite(blob_path)
+    manifest: PreservedHistoryManifest | None = None
+    if preserved_history_manifest is not None:
+        if dry_run or not require_reconciled or replace_legacy_actual:
+            raise ImportValidationError(
+                "Preserved history requires strict execution without replacement"
+            )
+        archive_bytes = blob_path.read_bytes()
+        manifest = load_preserved_history(preserved_history_manifest, archive_bytes, user_id)
+        sqlite_path = await extract_sqlite(blob_path, archive_bytes=archive_bytes)
+    else:
+        sqlite_path = await extract_sqlite(blob_path)
     parser = ActualParser(sqlite_path)
     nbp = NbpRateProvider()
 
@@ -1086,6 +1149,11 @@ async def migrate(
     print(f"  Simple: {len(simple_txns)}, Transfers: {len(transfers)}, Splits: {len(splits)}")
 
     all_txns = simple_txns + transfers + splits
+    source_ids = {transaction["actual_id"] for transaction in all_txns}
+    if manifest is not None and len(source_ids) != len(all_txns):
+        raise ImportValidationError("Duplicate Actual transaction IDs across parsed source paths")
+    if manifest is not None:
+        source_ids |= parser.get_source_transaction_ids()
 
     if dry_run:
         acct_currency = parser._get_account_currency_map()
@@ -1200,6 +1268,11 @@ async def migrate(
 
     # Phase 2: Write to DB
     async with async_session_factory() as db:
+        preserved_transaction = None
+        if manifest is not None:
+            preserved_transaction = await validate_preserved_history(
+                db, user_id, manifest, source_ids
+            )
         print("Phase 2: Creating accounts and categories...")
         if replace_legacy_actual:
             await replace_legacy_actual_data(db, user_id, {txn["actual_id"] for txn in all_txns})
@@ -1272,6 +1345,43 @@ async def migrate(
             fx_rates,
             acct_budget,
         )
+        expected_account_balances = actual_balances
+        expected_category_balances = actual_category_balances
+        expected_group_balances = actual_group_balances
+        preserved_metadata = None
+        if manifest is not None and preserved_transaction is not None:
+            expected_account_balances, expected_category_balances, expected_group_balances = (
+                add_preserved_history_balances(
+                    preserved_transaction,
+                    acct_map,
+                    cat_map,
+                    group_map,
+                    categories,
+                    actual_balances,
+                    actual_category_balances,
+                    actual_group_balances,
+                )
+            )
+            preserved_metadata = {
+                "manifest": manifest.model_dump(mode="json"),
+                "contributions": {
+                    "accounts": {
+                        key: balance.amount - actual_balances[key].amount
+                        for key, balance in expected_account_balances.items()
+                        if balance.amount != actual_balances[key].amount
+                    },
+                    "categories": {
+                        key: balance.amount_pln - actual_category_balances[key].amount_pln
+                        for key, balance in expected_category_balances.items()
+                        if balance.amount_pln != actual_category_balances[key].amount_pln
+                    },
+                    "category_groups": {
+                        key: balance.amount_pln - actual_group_balances[key].amount_pln
+                        for key, balance in expected_group_balances.items()
+                        if balance.amount_pln != actual_group_balances[key].amount_pln
+                    },
+                },
+            }
 
         # Phase 4: Write transactions
         print("Phase 4: Writing transactions...")
@@ -1348,23 +1458,43 @@ async def migrate(
 
         output_dir = Path(tempfile.gettempdir()) / "actual_migration"
         output_dir.mkdir(exist_ok=True)
-        reconciliation = reconcile_account_balances(
-            actual_balances,
-            await get_pa_source_balances(db, user_id, acct_map),
-        )
-        reconciliation = ReconciliationReport(
-            accounts=reconciliation.accounts,
+        pa_accounts = await get_pa_source_balances(db, user_id, acct_map)
+        pa_categories = await get_pa_category_balances(db, user_id, cat_map)
+        pa_groups = await get_pa_category_group_balances(db, user_id, cat_map, group_map)
+        raw_reconciliation = ReconciliationReport(
+            accounts=reconcile_account_balances(actual_balances, pa_accounts).accounts,
             categories=reconcile_category_balances(
                 actual_category_balances,
-                await get_pa_category_balances(db, user_id, cat_map),
+                pa_categories,
             ),
             category_groups=reconcile_category_balances(
                 actual_group_balances,
-                await get_pa_category_group_balances(db, user_id, cat_map, group_map),
+                pa_groups,
             ),
             import_errors=tuple(errors),
         )
-        write_reconciliation_report(output_dir, reconciliation)
+        reconciliation = raw_reconciliation
+        if preserved_metadata is not None:
+            reconciliation = ReconciliationReport(
+                accounts=reconcile_account_balances(
+                    expected_account_balances, pa_accounts
+                ).accounts,
+                categories=reconcile_category_balances(expected_category_balances, pa_categories),
+                category_groups=reconcile_category_balances(expected_group_balances, pa_groups),
+                import_errors=tuple(errors),
+            )
+            write_reconciliation_report(
+                output_dir,
+                reconciliation,
+                raw_actual=raw_reconciliation,
+                preserved_history=preserved_metadata,
+            )
+            print("Source basis: Actual plus exactly one pinned preserved local transaction.")
+            print("Raw Actual reconciliation:")
+            print(raw_reconciliation.to_text())
+            print("Augmented reconciliation:")
+        else:
+            write_reconciliation_report(output_dir, reconciliation)
         print(reconciliation.to_text())
         if require_reconciled:
             ensure_reconciled(reconciliation)
@@ -1399,6 +1529,7 @@ async def main():
     )
     parser_args.add_argument("--replace-legacy-actual", action="store_true")
     parser_args.add_argument("--backup-path")
+    parser_args.add_argument("--preserved-history-manifest", type=Path)
     parser_args.add_argument(
         "--user-id", required=True, help="PA user UUID to assign imported data to"
     )
@@ -1419,6 +1550,15 @@ async def main():
     if not args.dry_run and not args.execute:
         print("Error: must specify --dry-run or --execute")
         sys.exit(1)
+    if args.preserved_history_manifest is not None and (
+        not args.execute
+        or args.dry_run
+        or not args.require_reconciled
+        or args.replace_legacy_actual
+    ):
+        parser_args.error(
+            "Preserved history requires --execute --require-reconciled without replacement"
+        )
     if args.replace_legacy_actual:
         if not (args.execute and args.require_reconciled and args.backup_path and not args.dry_run):
             print("Error: replacement requires --execute --require-reconciled and --backup-path")
@@ -1437,6 +1577,8 @@ async def main():
     }
     if args.replace_legacy_actual:
         options["replace_legacy_actual"] = True
+    if args.preserved_history_manifest is not None:
+        options["preserved_history_manifest"] = args.preserved_history_manifest
     await migrate(blob_path, user_id, **options)
 
 

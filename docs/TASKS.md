@@ -11,8 +11,10 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [~] Przed importem bankowym odświeżyć dane z Actual: preflight źródła i backup/
   restore12055508 PASS. Następnie dostarczono aktualny eksport; backup/restore
   bc2a3f05 i odtworzenie izolowanej kopii PA PASS. Po poprawkach mapowania/zamkniętych
-  kont próba bez błędów importu. BLOCKED: różnica jednej zachowanej operacji nieobecnej
-  w źródle; require_reconciled wycofał całość. Brak importu produkcyjnego.
+  kont i jawnego manifestu próba na kopii PASS:286 nowych, powtórzenie0 nowych,
+  augmented16/54/9 zgodne; backend778/frontend194 i lint/types PASS.
+  PENDING: osobna decyzja produkcyjna, świeży preflight/backup/restore przed wykonaniem.
+  Brak importu produkcyjnego i danych bankowych.
 - [x] Zatwierdzona ograniczona poprawka mapowania Actual: regresja RED → GREEN,
   74 testy importera i backend666 PASS (8 proxy deselected), review bez blokad. Próba z wymaganym uzgodnieniem
   sald na kopii wykonana i wycofana przy kolejnej blokadzie; historia zachowana.
@@ -20,13 +22,15 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   parser/historia bez aktywacji kont zaimplementowane, 90 testów importera PASS;
   review i próba na kopii zakończone, backend682/frontend194 i lint/types PASS.
   Bez usuwania/nadpisywania historii i bez wdrożenia/importu produkcyjnego.
-- [~] Zatwierdzono jawny sposób raportowania jednej zachowanej operacji Actual nieobecnej
+- [x] Zatwierdzono jawny sposób raportowania jednej zachowanej operacji Actual nieobecnej
   w eksporcie (kontrola ID/hasz zapisu/hasz źródła/użytkownik). Plan actual-preserved-history
-  zatwierdzony i wykonywany natywnie: moduł pinów/blokad66 PASS, integracja jeszcze
-  nierozpoczęta. Nie omijać kontroli sald,
-  nie tworzyć automatycznej korekty księgowej.
-  Prywatny raport dokładnie wiąże różnicę z istniejącym zapisem; wymagana akceptacja
-  polityki uzgodnienia i raportu przed produkcją, potem świeży backup/restore.
+  zatwierdzony i wykonywany natywnie: moduł pinów/blokad3266377,66 PASS/backend748;
+  integracja30 nowych/łącznie206 PASS; finding review dot. wszystkich źródłowych ID
+  naprawiony RED3 → GREEN. Próba na kopii286/0errors i ponowienie0new PASS,
+  wszystkie1601 wcześniejszych zapisów bez zmian. Backend778/frontend194 i lint/types PASS.
+  Nie omijać kontroli sald, nie tworzyć automatycznej korekty księgowej.
+  Prywatny raport dokładnie wiąże różnicę z istniejącym zapisem; polityka zatwierdzona
+  wyłącznie dla próby na kopii. Wymagana osobna zgoda produkcyjna, świeży backup/restore.
 
 - [x] Test aplikacji po wdrożeniu UI8a7cda5: read-only production smoke4 viewporty,
   E2E29+1skip na release assets i Vitest194 PASS; raport webapp-test2026-10-23.

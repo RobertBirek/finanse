@@ -144,6 +144,24 @@ class ActualParser:
             for row in rows
         }
 
+    def get_source_transaction_ids(self) -> set[str]:
+        """Return every live source row ID, not only reconstructed operation IDs.
+
+        Transfers expose one operation ID for two source legs and splits expose
+        their parent ID. A preserved-history pin must also be absent from the
+        partner/child rows (including malformed rows omitted by reconstruction).
+        """
+        rows = self._conn.execute(f"SELECT id FROM {self._txn_table} WHERE tombstone=0").fetchall()
+        identifiers: set[str] = set()
+        for row in rows:
+            actual_id = row["id"]
+            if not isinstance(actual_id, str) or not actual_id:
+                raise ValueError("Invalid Actual source transaction ID")
+            if actual_id in identifiers:
+                raise ValueError("Duplicate Actual transaction ID in underlying source rows")
+            identifiers.add(actual_id)
+        return identifiers
+
     def get_categories(self) -> list[CategoryDict]:
         rows = self._conn.execute(
             "SELECT id, name, is_income, cat_group FROM categories WHERE tombstone=0 ORDER BY name"

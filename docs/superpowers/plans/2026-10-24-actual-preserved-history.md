@@ -44,15 +44,15 @@ rozszerzony o zatwierdzoną historię i nadal wymaga pełnego uzgodnienia przed 
 - `validate_preserved_history(db: AsyncSession, user_id: UUID, manifest: PreservedHistoryManifest, source_actual_ids: set[str]) -> FinancialTransaction` (async; locks parent/postings, validates immutable pin).
 - `add_preserved_history_balances(transaction: FinancialTransaction, account_map: dict[str, UUID], category_map: dict[str, UUID], group_map: dict[str, UUID], source_categories: list[CategoryDict], accounts: dict[str, SourceBalance], categories: dict[str, CategoryBalance], groups: dict[str, CategoryBalance]) -> tuple[dict[str, SourceBalance], dict[str, CategoryBalance], dict[str, CategoryBalance]]`; no mutation of inputs.
 
-- [ ] Write negative tests for wrong ZIP/user/UUID/hash/source/mapping, missing/reappearing ID, unknown manifest fields, and changed metadata/postings.
-- [ ] Run those tests and confirm missing implementation fails.
-- [ ] Implement strict manifest, deterministic fingerprint and locked PostgreSQL validation. Preserve all original rows.
-- [ ] Pin canonical encoding from the spec in tests: reordered ORM postings same hash, every mapped column changes hash, Unicode exact, UTC timestamps, six-decimal Numeric; no rounding away changed precision.
-- [ ] Pin exact provenance equality (entity_type/actual_id/owner/entity_id) and the full transaction/transfer/split source ID union; reject duplicate source IDs before any writes.
-- [ ] Write synthetic contribution tests using 37 minor units (not real data), including native foreign currency, PLN base category/group signs, missing references and unchanged input maps.
-- [ ] Observe RED, implement additions with dataclasses.replace and inverse verified mappings; reject ambiguous/unmapped references and currency mismatch.
-- [ ] Add two-session lock tests for pinned transaction/posting and referenced metadata; verify rejection or waiting, release by rollback. Acquire locks in the spec's fixed order under the user advisory lock, retain through commit/rollback.
-- [ ] Run focused tests, Ruff and mypy; require PASS. Review and commit this independently testable module.
+- [x] Write negative tests for wrong ZIP/user/UUID/hash/source/mapping, missing/reappearing ID, unknown manifest fields, and changed metadata/postings.
+- [x] Run those tests and confirm missing implementation fails.
+- [x] Implement strict manifest, deterministic fingerprint and locked PostgreSQL validation. Preserve all original rows.
+- [x] Pin canonical encoding from the spec in tests: reordered ORM postings same hash, every mapped column changes hash, Unicode exact, UTC timestamps, six-decimal Numeric; no rounding away changed precision.
+- [x] Pin exact provenance equality (entity_type/actual_id/owner/entity_id) and the full transaction/transfer/split source ID union; reject duplicate source IDs before any writes.
+- [x] Write synthetic contribution tests using 37 minor units (not real data), including native foreign currency, PLN base category/group signs, missing references and unchanged input maps.
+- [x] Observe RED, implement additions with dataclasses.replace and inverse verified mappings; reject ambiguous/unmapped references and currency mismatch.
+- [x] Add two-session lock tests for pinned transaction/posting and referenced metadata; verify rejection or waiting, release by rollback. Acquire locks in the spec's fixed order under the user advisory lock, retain through commit/rollback.
+- [x] Run focused tests, Ruff and mypy; require PASS. Review and commit this independently testable module.
 
 ### Task 2: Importer, jawny raport i próba
 
@@ -68,16 +68,17 @@ rozszerzony o zatwierdzoną historię i nadal wymaga pełnego uzgodnienia przed 
 - Writer optional keyword-only `raw_actual: ReconciliationReport | None` and `preserved_history: dict[str, Any] | None`; no-manifest output unchanged.
 - With manifest JSON envelope exactly: schema_version=1, source_basis, raw_actual, augmented, preserved_history(manifest, contributions). No-manifest output stays byte/schema compatible. ensure_reconciled consumes augmented; text labels both reports.
 
-- [ ] Write integration fixture with one mapped Actual operation absent from synthetic export; without manifest strict import fails/rolls back, with manifest raw_actual remains false and augmented report becomes true.
-- [ ] Run to RED; read ZIP once into immutable bytes, validate hash against those bytes and pass the same bytes to extraction. Implement mode/user checks, per-user advisory lock and locked pin verification before entity creation.
-- [ ] Add TOCTOU regression swapping the path after hash verification: parsed data must still come from the originally approved bytes. Reject duplicate source IDs across all three parsed transaction paths.
-- [ ] After ordinary map validation, derive augmented expectations from the pinned row; compute raw and augmented reports against the same PA snapshot. Run ensure_reconciled on the augmented report with unchanged import errors.
-- [ ] Write tests for all invalid mode combinations, unchanged no-manifest behavior, wrong/stale pin, a reappearing source ID, and another unexplained difference. Verify no new account/mapping/transaction survives from a fresh session on failure.
-- [ ] Write repeat-import test: existing transaction/postings unchanged and all new source IDs imported once, contributions applied once per report, not accumulated between runs.
-- [ ] Run focused tests to GREEN; request independent review before the full gate.
-- [ ] Run project test/lint/typecheck commands for backend and frontend; report deselected tests and warnings explicitly.
-- [ ] Privately generate manifest only after verifying the existing approved snapshot; record source/code hashes. Run execute+require-reconciled only on the guarded isolated clone, retain raw/augmented report and compare all original ledger rows.
-- [ ] Update docs, commit after gates; do not push/merge/deploy or run production execute. Return report for separate production decision.
+- [x] Write integration fixture with one mapped Actual operation absent from synthetic export; without manifest strict import fails/rolls back, with manifest raw_actual remains false and augmented report becomes true.
+- [x] Run to RED; read ZIP once into immutable bytes, validate hash against those bytes and pass the same bytes to extraction. Implement mode/user checks, per-user advisory lock and locked pin verification before entity creation.
+- [x] Add TOCTOU regression swapping the path after hash verification: parsed data must still come from the originally approved bytes. Reject duplicate source IDs across all three parsed transaction paths.
+- [x] Final review regression: include every live underlying source ID (transfer partner and split child included), reject duplicate raw IDs even when reconstruction omits them; RED3 → focused206 PASS.
+- [x] After ordinary map validation, derive augmented expectations from the pinned row; compute raw and augmented reports against the same PA snapshot. Run ensure_reconciled on the augmented report with unchanged import errors.
+- [x] Write tests for all invalid mode combinations, unchanged no-manifest behavior, wrong/stale pin, a reappearing source ID, and another unexplained difference. Verify no new account/mapping/transaction survives from a fresh session on failure.
+- [x] Write repeat-import test: existing transaction/postings unchanged and all new source IDs imported once, contributions applied once per report, not accumulated between runs.
+- [x] Run focused tests to GREEN; request independent review before the full gate.
+- [x] Run project test/lint/typecheck commands for backend and frontend; report deselected tests and warnings explicitly. Backend778/8deselected/2known warnings, frontend194, lint/types PASS.
+- [x] Privately generate manifest only after verifying the existing approved snapshot; record source/code hashes. Run execute+require-reconciled only on the guarded isolated clone, retain raw/augmented report and compare all original ledger rows.
+- [x] Update docs, commit after gates; do not push/merge/deploy or run production execute. Return report for separate production decision.
 
 ## Self-review
 
