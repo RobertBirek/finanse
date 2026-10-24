@@ -2,6 +2,15 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Plan] — 2026-10-24 — Jawne uzgodnienie zachowanej historii Actual
+
+### Added
+- Użytkownik zatwierdził uzgodnienie eksportu plus dokładnie jednej zachowanej
+  lokalnej operacji z kontrolą ID i hasha. Zapisano projekt i plan actual-preserved-history.
+  Manifest tylko identyfikuje zaakceptowany zapis; kwoty nadal z PostgreSQL.
+- Plan zakłada osobny surowy raport, pełną kontrolę pozostałych różnic i próbę wyłącznie
+  na kopii. Implementacja nierozpoczęta; bez zgody na import produkcyjny.
+
 ## [Unreleased] — 2026-10-24 — Historia zamkniętych kont Actual
 
 ### Fixed

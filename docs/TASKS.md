@@ -20,8 +20,10 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   parser/historia bez aktywacji kont zaimplementowane, 90 testów importera PASS;
   review i próba na kopii zakończone, backend682/frontend194 i lint/types PASS.
   Bez usuwania/nadpisywania historii i bez wdrożenia/importu produkcyjnego.
-- [ ] Uzgodnić jawny sposób raportowania jednej zachowanej operacji Actual nieobecnej
-  w eksporcie. Nie omijać kontroli sald, nie tworzyć automatycznej korekty księgowej.
+- [~] Zatwierdzono jawny sposób raportowania jednej zachowanej operacji Actual nieobecnej
+  w eksporcie (kontrola ID/hasz zapisu/hasz źródła/użytkownik). Plan actual-preserved-history
+  przygotowany; implementacja jeszcze nierozpoczęta. Nie omijać kontroli sald,
+  nie tworzyć automatycznej korekty księgowej.
   Prywatny raport dokładnie wiąże różnicę z istniejącym zapisem; wymagana akceptacja
   polityki uzgodnienia i raportu przed produkcją, potem świeży backup/restore.
 

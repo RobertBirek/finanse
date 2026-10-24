@@ -2,6 +2,22 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-24 — Zatwierdzone jawne uzgodnienie jednej zachowanej operacji
+
+- Poprawka zamkniętych kont zapisana jako f5ff651 po pełnym backend682 (8 proxy
+  deselected,2 znane warningi), frontend194, lint/types i review PASS. Brak deployu.
+- Użytkownik wprost wybrał uzgodnienie Actual + dokładnie jedna zachowana operacja,
+  z kontrolą ID i hasha, następnie wyłącznie próba na kopii. Bez zgody produkcyjnej.
+- Projekt/spec oraz plan: docs/superpowers/{specs,plans}/2026-10-24-actual-preserved-history*.
+  Opcjonalny manifest przypina ZIP/użytkownika/Actual ID/PA UUID/pełny fingerprint;
+  nie zawiera kwot i nie jest źródłem prawdy. Wkład obliczany z zablokowanego zapisu PG.
+- Plan przewiduje surowy raport i jawny raport z zachowaną historią, brak tolerancji,
+  brak operacji wyrównawczej/aktualizacji zapisów i pełny rollback innych różnic.
+  Implementacja jeszcze nierozpoczęta. Builder-check nie wymaga dodatkowej decyzji
+  produktowej; uściślono ten sam odczyt ZIP dla hasha i parsera (TOCTOU), dokładne
+  provenance, blokady mapowań/zapisu/referencji, kanoniczny fingerprint i envelope
+  raw_actual/augmented. Plan przekazany do potwierdzenia przed wykonaniem.
+
 ## 2026-10-24 — Zatwierdzona historia zamkniętych kont Actual
 
 - Poprzednią poprawkę mapowania zapisano jako df241cb po gate backend666/frontend194,
