@@ -17,6 +17,14 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   produktowej; uściślono ten sam odczyt ZIP dla hasha i parsera (TOCTOU), dokładne
   provenance, blokady mapowań/zapisu/referencji, kanoniczny fingerprint i envelope
   raw_actual/augmented. Plan przekazany do potwierdzenia przed wykonaniem.
+- Użytkownik zatwierdził wykonanie; istniejący linked worktree, natywnie z jednym
+  końcowym niezależnym review. Ledger w git-ignored
+  .superpowers/sdd/2026-10-24-actual-preserved-history/progress.md.
+  Task1 moduł actual_history: RED66 → GREEN66, strict manifest bez kwot, pełny
+  kanoniczny fingerprint kolumn, blokady mapowań/zapisu/postingów/own references,
+  wkład native/base wyłącznie z PG. Sześć testów konkurencyjnej aktualizacji PASS.
+  Ruff/mypy i frontend194 PASS; pełny backend Task1 748 PASS (8 proxy deselected,
+  2 znane warningi crypt/argon2). CLI jeszcze bez tej opcji.
 
 ## 2026-10-24 — Zatwierdzona historia zamkniętych kont Actual
 

@@ -9,7 +9,10 @@ Wszystkie istotne zmiany w projekcie.
   lokalnej operacji z kontrolą ID i hasha. Zapisano projekt i plan actual-preserved-history.
   Manifest tylko identyfikuje zaakceptowany zapis; kwoty nadal z PostgreSQL.
 - Plan zakłada osobny surowy raport, pełną kontrolę pozostałych różnic i próbę wyłącznie
-  na kopii. Implementacja nierozpoczęta; bez zgody na import produkcyjny.
+  na kopii. Rozpoczęto zatwierdzone wykonanie natywne: moduł manifestu/fingerprintu/
+  blokad i wkładu postingów przeszedł66 testów RED → GREEN. Integracja importera
+  jeszcze nierozpoczęta; backend748 PASS (8 proxy deselected,2 znane warningi),
+  frontend194 i lint/types PASS. Bez zgody na import produkcyjny.
 
 ## [Unreleased] — 2026-10-24 — Historia zamkniętych kont Actual
 

@@ -22,7 +22,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   Bez usuwania/nadpisywania historii i bez wdrożenia/importu produkcyjnego.
 - [~] Zatwierdzono jawny sposób raportowania jednej zachowanej operacji Actual nieobecnej
   w eksporcie (kontrola ID/hasz zapisu/hasz źródła/użytkownik). Plan actual-preserved-history
-  przygotowany; implementacja jeszcze nierozpoczęta. Nie omijać kontroli sald,
+  zatwierdzony i wykonywany natywnie: moduł pinów/blokad66 PASS, integracja jeszcze
+  nierozpoczęta. Nie omijać kontroli sald,
   nie tworzyć automatycznej korekty księgowej.
   Prywatny raport dokładnie wiąże różnicę z istniejącym zapisem; wymagana akceptacja
   polityki uzgodnienia i raportu przed produkcją, potem świeży backup/restore.
