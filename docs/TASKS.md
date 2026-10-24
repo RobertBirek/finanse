@@ -36,9 +36,15 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   pojedyncza komenda zakończona0:286new/799skip/0errors,1601 wcześniejszych zapisów
   zachowane,augmented16/54/9 zgodne. Niezależny odczyt po commicie PASS,backup po
   imporciec69299d0+restore PASS. Bez importu bankowego.
-- [ ] Następny zakres:zatwierdzony podgląd CSV Revolut i tekstowych PDF VeloBank,
+- [x] Zatwierdzono i wykonano podgląd CSV Revolut i tekstowych PDF VeloBank,
   deduplikacja względem odświeżonej PA i uzgodnienie sald;bez automatycznego zapisu.
-  Harmonogram kredytu nie tworzy wykonanych transakcji.
+  95 wierszy:73 pojedyncze kandydatury,17 niejednoznacznych,5 bez zgodnej kwoty
+  (4 korekty odsetek i1 konflikt). Rozbieżności otwarcia/zdarzeń blokują import.
+  Harmonogram kredytu nie tworzy wykonanych transakcji. Raport bank-preview2026-10-24.
+- [ ] Wyjaśnić rozbieżności Velo przed jakimkolwiek zapisem:poprzedni wyciąg karty
+  do17.09,rachunek za sierpień i księgowania początku października;potwierdzić mapowanie
+  kont. Nie usuwać2 zapisów PA bez odpowiednika w wrześniowym PDF,nie dodawać4 korekt
+  ani nie zmieniać kwoty zakupu automatycznie. Zgodne saldo końcowe karty nie wystarcza.
 - [x] Zatwierdzona ograniczona poprawka mapowania Actual: regresja RED → GREEN,
   74 testy importera i backend666 PASS (8 proxy deselected), review bez blokad. Próba z wymaganym uzgodnieniem
   sald na kopii wykonana i wycofana przy kolejnej blokadzie; historia zachowana.

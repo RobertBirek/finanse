@@ -2,6 +2,60 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-24 — Zatwierdzony podgląd bankowy, bez zapisu księgi
+
+- Użytkownik zatwierdził wyłącznie podgląd CSV Revolut i tekstowych PDF VeloBank:
+  dopasowania/nowe/niejednoznaczne, transfery i salda. Brak zgody na import, upload,
+  korekty historii, zmiany kategorii albo tworzenie płatności z harmonogramu kredytu.
+- Oryginały zastane w prywatnym /tmp/opencode/bank-import-review, hashe zapisane
+  w /tmp/opencode/bank-preview-20261024/input-manifest.json. Oryginałów nie zmieniano.
+- Świeży snapshot produkcyjny ORM w REPEATABLE READ+READ ONLY: identyczny ze stanem
+  po imporcie Actual (1887 transakcji całej bazy,1086 właściciela). Bez wywoływania
+  importera/API ani mutujących serwisów. Skrypty wyłącznie prywatne,offline/odczytowe.
+- CSV5 completed,0 innych stanów; exact-cents running balances PASS dla obu walut.
+  Dopasowania finansowe:4 na dacie rozpoczęcia/księgowania i1 transfer z różnicą1d;
+  to kandydaci,nie dowód identyczności bankowego ID. Brak niepasujących wierszy CSV.
+  Opłata zawiera się już w kwocie jednego obciążenia PA; nie dublować.
+- PDF-y w niezależnej analizie: kontrola odczytu i sum z dokumentami źródłowymi,
+  nie OCR/LLM ani upload do produkcji. Wynik końcowy i niezależny post-check w toku.
+- Analiza PDF zakończona:81rachunek09.2026 i9karta18.09–17.10;oba dokumenty
+  mają spójne saldo otwarcia+zmiana=zamknięcie. Niezależnie sprawdzono90 kwot/par dat
+  względem linii tekstu,81 kolejnych sald rachunku i kolejność dat w lokalnym odczycie
+  PDF przez Ghostscript. Page provenance to estymata ekstraktora,nie potwierdzony
+  numer strony. Loan schedule całkowicie wyłączony ze zbioru płatności.
+- Łącznie95:71 pojedynczych kandydatur na jednej z jawnych dat,2near-date,
+  17niejednoznacznych powtórzeń rachunku (grupy2/13/2 z równą licznością PA;
+  możliwe1:1 nie dowodzi tożsamości wierszy),5 bez zgodnej kwoty na karcie:
+  4dodatnie korekty odsetek i1 zakup z inną kwotą w PA tego samego dnia.
+- Velo rachunek:różnice PA-bank otwarcie+72049gr,zmiana okresu-74405gr,zamknięcie
+  -2356gr. Dwa dodatkowe postingi PA datowane29.09 nie są w tym wyciągu;to nie
+  zgoda na usunięcie,mogą wymagać późniejszego księgowania bankowego.
+  Karta:otwarcie+1499gr,zmiana-1499gr,koniec0gr;nie wolno uznać samego zgodnego
+  końca za pełne uzgodnienie.4korekty+984gr i konflikt zakupu515gr wymagają wyjaśnienia,
+  a nie automatycznego importu lub korekty starych danych.
+- 6 istniejących transferów ma wiersze bankowe;spłata karty i zasilenie Revolut
+  są widoczne z obu stron w dostarczonych źródłach. Nie tworzyć income/expense.
+- Niezależny review Revolut potwierdził kwoty/prowizję/znaki;doprecyzowano start
+  vs booking (wszystkie4 exact-anchor to start),odcięcia salda USD oraz liczność tylko
+  w oknie. Jawne wyjątki dla sub-cent/NaN,Python-O matcher odrzucany. Lokalne artefakty
+  ograniczono do owner-only po początkowym pełnym safety snapshot;ORM dalszego odczytu
+  filtruje owner. Pliki0600/katalog0700;żadnych danych/sekretów w repo.
+- Świeży końcowy READ ONLY potwierdził identyczność1086 zapisów właściciela/postingów,
+  kont/kategorii/mapowań z początkiem. Wszystkie7 oryginałów ma identyczne hashe.
+  Kod backend/frontend/ops bez zmian względemd3c2c68.96 testów manifestu/integracji,
+  194frontend oraz Ruff/mypy/ESLint/tsc PASS (gate dokumentacji,nie pełny test parsera banku).
+- Rekomendacja:nie importować. Następnie uzyskać poprzedni wyciąg karty do17.09,
+  rachunek za sierpień i księgowania początku października oraz potwierdzić mapowania.
+  Raport sanitized:docs/audits/2026-10-24-bank-preview.md. Szczegóły i dowody prywatne
+  w /tmp/opencode/bank-preview-20261024. Bez restartów/deployu/backup operacji zapisu,
+  bez bankowego importu/uploadu/migracji/modyfikacji historii. Końcowy niezależny
+  review potwierdził liczności i wszystkie różnice oraz rekomendację NO IMPORT.
+  Po ostatniej uwadze także parser CSV odmawia Python-O,nie tylko matcher.
+- Trwałe prywatne archiwum poza Git:/opt/finanse/webapp/imports/bank-preview-20261024,
+  0700/0600,manifest hashów i źródła. Wyłącznie provenance podglądu,nie księga ani
+  wykonany import. W commicie tylko sanitized dokumentacja. Potrzebne dodatkowe
+  wyciągi/wyjaśnienie przed zatwierdzeniem jakiegokolwiek bankowego zapisu.
+
 ## 2026-10-24 — Zatwierdzony produkcyjny import Actual wykonany
 
 - Użytkownik jednoznacznie zatwierdził zapis286 nowych operacji po świeżym backup/

@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Reviewed] — 2026-10-24 — Podgląd wyciągów bankowych, bez importu
+
+### Added
+- Po zgodzie przeanalizowano95 wierszy:5 CSV Revolut,81 PDF rachunku VeloBank,
+  9 PDF karty.73 pojedyncze kandydatury finansowe,17 niejednoznacznych powtórzeń,
+  5 bez zgodnej kwoty:4 korekty odsetek i1 konflikt kwoty zakupu.
+- Dokumenty same w sobie spójne; Revolut odpowiada saldom PA. Rachunek Velo ma
+  różnicę otwarcia/zamknięcia; zgodny koniec karty maskuje różnice otwarcia i zdarzeń.
+  Nie jest to zatwierdzony zakres zapisu. Rekomendacja:wyjaśnić różnice,nie importować.
+- Świeże odczyty READ ONLY potwierdziły niezmienność księgi właściciela i oryginałów.
+  Bez deployu,migracji,uploadu,importu,korekt ani transakcji z harmonogramu kredytu.
+  Raport:docs/audits/2026-10-24-bank-preview.md;dane szczegółowe tylko prywatnie.
+
 ## [Imported] — 2026-10-24 — Actual uzupełniony na produkcji
 
 - Po jawnej zgodzie i świeżym backupbd201f28+restore success/0 zapisano286 nowych
