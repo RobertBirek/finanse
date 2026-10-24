@@ -8,12 +8,24 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Audyt przekrojowy (2026-10-22)
 
+- [x] Po zgodzie użytkownika scalono/push main i wdrożono aplikacjęd3c2c68:
+  backend778/frontend194/E2E29+1skip,lint/types/build/CI PASS,backupfa1551c7+restore PASS.
+  HTTPS/health/assets/auth/browser PASS,hashe księgi/uploads i data container IDs bez zmian.
+  Bez importu Actual/bankowego/migracji. Raport release-d3c2c68 opisuje także rollbacki.
+- [ ] Uodpornić ops/prepare_release.py na restrictive umask; test source directories
+  i obrazu jako produkcyjny UID10001. Obecny pakiet poprawiony/zweryfikowany,
+  ale ogólny generator wymaga osobnego follow-up z regresją.
+- [ ] Przenieść zweryfikowany kontrakt stanu deployu do narzędzi operacyjnych:
+  dokładne hashe tabel/plików, odrębna kontrola dozwolonego cron i realnych jobs,
+  zapis mismatch oraz logów przed rollbackiem. Prywatny helper ma9 testów PASS.
+
 - [~] Przed importem bankowym odświeżyć dane z Actual: preflight źródła i backup/
   restore12055508 PASS. Następnie dostarczono aktualny eksport; backup/restore
   bc2a3f05 i odtworzenie izolowanej kopii PA PASS. Po poprawkach mapowania/zamkniętych
   kont i jawnego manifestu próba na kopii PASS:286 nowych, powtórzenie0 nowych,
   augmented16/54/9 zgodne; backend778/frontend194 i lint/types PASS.
-  PENDING: osobna decyzja produkcyjna, świeży preflight/backup/restore przed wykonaniem.
+  Kod wdrożonyd3c2c68. PENDING: osobna decyzja o imporcie księgi, świeży preflight/
+  backup/restore przed wykonaniem; zgoda na deploy nie uruchamiała importu.
   Brak importu produkcyjnego i danych bankowych.
 - [x] Zatwierdzona ograniczona poprawka mapowania Actual: regresja RED → GREEN,
   74 testy importera i backend666 PASS (8 proxy deselected), review bez blokad. Próba z wymaganym uzgodnieniem

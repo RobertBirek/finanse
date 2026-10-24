@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [d3c2c68] — 2026-10-24 — Wdrożona aplikacja, bez importu księgi
+
+### Changed
+- Po jawnej zgodzie scalono/push main i wdrożono backend/worker/frontendd3c2c68.
+  Gate main:backend778/frontend194/E2E29+1skip,lint/types/build i GitHub CI PASS.
+- Backupfa1551c7 i restore drill success/0. Zachowano hardening, dane/env/usługi danych;
+  bez migracji, importu Actual/bankowego i resetu retry.
+- Dwie wycofane próby opisano jawnie w raporcie: poprawiono uprawnienia wygenerowanej
+  kopii kodu dla UID10001 i rozdzielono zmienną metrykę cron od niezmienności księgi.
+  Końcowy HTTPS/health/assets/auth/browser375+1440 PASS; dane/pliki bez zmian.
+- Raport:docs/audits/2026-10-24-release-d3c2c68.md; active metadata zaktualizowane,
+  poprzednie obrazy i rollback do backend6811809/frontend8a7cda5 zachowane.
+
 ## [Unreleased] — 2026-10-24 — Jawne uzgodnienie zachowanej historii Actual
 
 ### Added

@@ -2,6 +2,40 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-24 — Main/push i wdrożenie aplikacji d3c2c68, bez importu danych
+
+- Użytkownik wprost zatwierdził merge,commit/push main i deploy. Wykonano fast-forward
+  main4cad82b→d3c2c68 i push origin/main. Zgoda dotyczyła aplikacji, nie wykonania
+  importera finansów; nie uruchamiano importu/migracji/replacement/korekt.
+- Gate na scalonym main:backend778/8proxy deselected/2known warningi,frontend194,
+  ESLint/tsc/Ruff/mypy/build PASS,E2E29+1skip,GitHub CI40095822690 PASS.
+  Main node_modules miało brak @tailwindcss/vite; npm ci --offline naprawił lokalny
+  stan według lockfile, bez zmian dependencies. Backupfa1551c7+restore success/0.
+- Runtime zbudowano offline z wdrożonych imageIDs; wymagania i schema headc7 bez zmian.
+  Forward compose zachował całą poprzednią definicję poza3 image/build aplikacji.
+  Backend/worker nadal10001:10001,read-only,cap-drop ALL,nnp,bez host/app mountu.
+- Pierwsza próba automatycznie rollback po nieudanym health: generated source directories
+  0700 pod umask077 nieczytelne dla UID10001. Zdiagnozowano w network-none na obu
+  nowych obrazach; zmieniono tylko publiczny kod kopii w release na0755. Prywatny
+  parent0700,uploads/sekrety bez chmod. Nonroot+production-env Uvicorn/health GREEN.
+- Druga próba przeszła HTTP/assets/auth, ale checker porównujący także zmienny Redis
+  ZSET wymusił rollback. Nie zapisał snapshotu różnicy. Po rollbacku i odczycie nowego
+  runtime tabelaryczne fingerprinty odpowiadały baseline; rozdzielono tę metrykę
+  od niezmienności danych.9 regresji private-checkera RED→GREEN: dozwolony jedynie cron
+  dispatch_pending_documents; realne jobs/każda zmiana tabel/pliku nadal blokują.
+  Logs i mismatch teraz zapisywane przed rollbackiem. Dwie próby nie są ukrywane.
+- Końcowa próba PASS:HTTPS/root/login/health200,anonymous4API401,hashe wszystkich
+  publicznych assets zgodne. Dane wszystkich kont/kategorii/transakcji/postingów/mapowań/
+  dokumentów i oryginalnych uploads identyczne; postgres/redis/stirling/Actual IDs i
+  StartedAt bez zmian. Nowe app containers bez restartów i ERROR/Traceback w smoke.
+- Browser375/1440 PASS:fonts,overflow,JS,external origins,redirect protected→login;
+  bez login POST i mutacji. Atomowo zapisano active-release.json i zgodny rendered
+  compose.active.yaml. Rollback zachowuje backend/worker6811809+frontend8a7cda5.
+- Raport sanitized:docs/audits/2026-10-24-release-d3c2c68.md. Prywatne logi/hashe/
+  sekretny render i dowody w /tmp/opencode/release-d3c2c68. To krótki smoke, nie
+  długoterminowa certyfikacja ani test zalogowanych operacji. Backlog obejmuje trwałe
+  poprawki generatora/kontraktu deployu, a import księgi wymaga osobnej zgody.
+
 ## 2026-10-24 — Zatwierdzone jawne uzgodnienie jednej zachowanej operacji
 
 - Poprawka zamkniętych kont zapisana jako f5ff651 po pełnym backend682 (8 proxy
