@@ -111,7 +111,7 @@ test("transaction form can recover from failed reference data without reloading"
     else await route.fallback();
   });
   await page.goto("/finances/transactions");
-  await page.locator("summary").filter({ hasText: "Dodaj transakcję" }).click();
+  await page.getByRole("button", { name: /Dodaj transakcję/ }).click();
   const retry = page.getByRole("button", {
     name: "Ponów pobranie danych formularza",
   });

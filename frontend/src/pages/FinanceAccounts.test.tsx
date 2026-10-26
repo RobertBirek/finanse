@@ -65,6 +65,13 @@ const categories = [
     type: "income",
     is_active: true,
   },
+  {
+    id: "c4",
+    name: "Prąd",
+    parent_id: "c2",
+    type: "expense",
+    is_active: true,
+  },
 ];
 
 function createAccountForm() {
@@ -141,12 +148,49 @@ describe("FinanceAccounts", () => {
     expect(screen.getByText("Oszczędnościowe · EUR")).toBeInTheDocument();
     expect(screen.getByText("budżetowe")).toBeInTheDocument();
 
-    expect(screen.getAllByText("Dom").length).toBeGreaterThan(0);
-    expect(screen.getByText("Wydatek · —")).toBeInTheDocument();
-    expect(screen.getAllByText("Czynsz").length).toBeGreaterThan(0);
-    expect(screen.getByText("Wydatek · Dom")).toBeInTheDocument();
-    expect(screen.getAllByText("Wynagrodzenie").length).toBeGreaterThan(0);
-    expect(screen.getByText("Przychód · —")).toBeInTheDocument();
+    const tree = screen.getByRole("list", { name: "Drzewo kategorii" });
+    expect(within(tree).getByText("Dom")).toBeInTheDocument();
+    expect(within(tree).getByText("Czynsz")).toBeInTheDocument();
+    expect(within(tree).getByText("Prąd")).toBeInTheDocument();
+    expect(within(tree).getByText(/archiwalna/)).toBeInTheDocument();
+    expect(within(tree).getByText("Wynagrodzenie")).toBeInTheDocument();
+  });
+
+  it("drzewo zachowuje aktywnego potomka archiwalnej kategorii i pozwala je zwinąć", () => {
+    render(<FinanceAccounts />);
+
+    expect(screen.getByText("Prąd")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Zwiń Dom" }));
+    expect(screen.queryByText("Czynsz")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prąd")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Rozwiń Dom" }));
+    expect(screen.getByText("Prąd")).toBeVisible();
+  });
+
+  it("archiwizuje i przywraca kategorię zamiast usuwać ją z drzewa", () => {
+    const updateCategoryMutate = vi.fn();
+    hooks.useUpdateCategory.mockReturnValue({
+      mutate: updateCategoryMutate,
+      isPending: false,
+      error: null,
+    });
+    render(<FinanceAccounts />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dezaktywuj kategorię Dom" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Aktywuj kategorię Czynsz" }),
+    );
+
+    expect(updateCategoryMutate).toHaveBeenNthCalledWith(1, {
+      id: "c1",
+      is_active: false,
+    });
+    expect(updateCategoryMutate).toHaveBeenNthCalledWith(2, {
+      id: "c2",
+      is_active: true,
+    });
   });
 
   it.each([
@@ -408,23 +452,6 @@ describe("FinanceAccounts", () => {
     ).toBeInTheDocument();
   });
 
-  it("błąd 409 przy usuwaniu kategorii pokazuje komunikat inline", () => {
-    hooks.useDeleteCategory.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-      error: {
-        response: { status: 409, data: { detail: "Category has records" } },
-      },
-      variables: "c1",
-    });
-
-    render(<FinanceAccounts />);
-
-    expect(
-      screen.getByText("Kategoria ma zapisy — zdezaktywuj ją zamiast usuwać"),
-    ).toBeInTheDocument();
-  });
-
   it("edycja kategorii wywołuje useUpdateCategory.mutate", () => {
     const updateCategoryMutate = vi.fn();
     hooks.useUpdateCategory.mockReturnValue({
@@ -441,7 +468,7 @@ describe("FinanceAccounts", () => {
 
     const row = screen
       .getByRole("button", { name: "Zapisz kategorię Czynsz" })
-      .closest("div.rounded-lg");
+      .closest("li");
     expect(row).not.toBeNull();
 
     fireEvent.change(within(row as HTMLElement).getByLabelText("Nazwa"), {
@@ -462,6 +489,92 @@ describe("FinanceAccounts", () => {
       type: "expense",
       parent_id: null,
     });
+  });
+
+  it("dodanie podkategorii wybiera rodzica i zgodny typ w formularzu", () => {
+    render(<FinanceAccounts />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dodaj podkategorię do Dom" }),
+    );
+
+    expect(
+      createCategoryForm().getByLabelText("Kategoria nadrzędna"),
+    ).toHaveValue("c1");
+    expect(createCategoryForm().getByLabelText("Typ")).toHaveValue("expense");
+  });
+
+  it("maskuje IBAN, pozwala go pokazać/skopiować i wysyła null przy wyczyszczeniu metadanych", () => {
+    const updateMutate = vi.fn();
+    const writeText = vi.fn();
+    Object.assign(navigator, { clipboard: { writeText } });
+    hooks.useAccounts.mockReturnValue({
+      data: [
+        {
+          ...accounts[0],
+          iban: "PL12 3456 7890 1234",
+          bank_name: "Bank testowy",
+          account_holder: "Anna",
+          bic: "TESTPLPW",
+          notes: "konto domowe",
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    hooks.useUpdateAccount.mockReturnValue({
+      mutate: updateMutate,
+      isPending: false,
+      error: null,
+    });
+    render(<FinanceAccounts />);
+
+    expect(screen.getByText("•••• 1234")).toBeInTheDocument();
+    expect(screen.queryByText("PL12 3456 7890 1234")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Pokaż" }));
+    expect(screen.getByText("PL12 3456 7890 1234")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Kopiuj" }));
+    expect(writeText).toHaveBeenCalledWith("PL12 3456 7890 1234");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj konto Rachunek główny" }),
+    );
+    const editingRow = screen
+      .getByRole("button", { name: "Zapisz konto Rachunek główny" })
+      .closest("div.rounded-lg")!;
+    fireEvent.change(
+      within(editingRow as HTMLElement).getByLabelText("IBAN / NRB"),
+      {
+        target: { value: "" },
+      },
+    );
+    fireEvent.click(screen.getByText("Pozostałe dane bankowe"));
+    for (const label of [
+      "Bank / instytucja",
+      "Właściciel rachunku",
+      "BIC / SWIFT",
+      "Notatka",
+    ]) {
+      fireEvent.change(
+        within(editingRow as HTMLElement).getByLabelText(label),
+        { target: { value: "" } },
+      );
+    }
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz konto Rachunek główny" }),
+    );
+
+    expect(updateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "a1",
+        iban: null,
+        bank_name: null,
+        account_holder: null,
+        bic: null,
+        notes: null,
+      }),
+      expect.any(Object),
+    );
   });
 
   it("dodanie kategorii wywołuje useCreateCategory.mutate", () => {
@@ -503,5 +616,15 @@ describe("FinanceAccounts", () => {
       type: "expense",
       parent_id: "c1",
     });
+  });
+
+  it("nie pokazuje danych rachunku bankowego dla nowego konta gotówkowego", () => {
+    render(<FinanceAccounts section="accounts" />);
+    fireEvent.change(createAccountForm().getByLabelText("Typ"), {
+      target: { value: "cash" },
+    });
+    expect(
+      createAccountForm().queryByText("Dane bankowe (opcjonalne)"),
+    ).not.toBeInTheDocument();
   });
 });

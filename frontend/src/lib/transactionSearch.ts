@@ -11,6 +11,8 @@ export const SEARCH_FIELDS = [
   "min",
   "max",
   "size",
+  "include_descendants",
+  "budget_accounts_only",
 ] as const;
 
 export function parseSearchAmount(value: string): number | undefined {
@@ -61,6 +63,15 @@ export function transactionSearchParams(
   if (type && !["income", "expense", "transfer", "exchange"].includes(type))
     throw new Error("Wybierz poprawny typ transakcji.");
   const size = Number(text("size") ?? 25);
+  const descendantsValue = text("include_descendants");
+  const budgetOnly = text("budget_accounts_only");
+  if (budgetOnly !== undefined && !["true", "false"].includes(budgetOnly))
+    throw new Error("Filtr kont budżetowych musi mieć wartość tak lub nie.");
+  if (
+    descendantsValue !== undefined &&
+    !["true", "false"].includes(descendantsValue)
+  )
+    throw new Error("Filtr podkategorii musi mieć wartość tak lub nie.");
   const page = Number(text("page") ?? 1);
   if (
     ![25, 50, 100].includes(size) ||
@@ -81,6 +92,8 @@ export function transactionSearchParams(
     type,
     min_amount_pln,
     max_amount_pln,
+    ...(descendantsValue === "true" ? { include_descendants: true } : {}),
+    ...(budgetOnly === "true" ? { budget_accounts_only: true } : {}),
     limit: size,
     offset: (page - 1) * size,
   };

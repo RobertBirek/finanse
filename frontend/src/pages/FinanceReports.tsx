@@ -7,6 +7,7 @@ import {
 import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { SummaryCard } from "../components/finance/SummaryCard";
+import { FinanceTabs } from "../components/finance/FinanceTabs";
 
 function currentPeriod(): FinancialPeriod {
   const today = new Date();
@@ -24,6 +25,7 @@ export function FinanceReports() {
         <h1 className="text-2xl font-bold text-white">Raporty</h1>
         <MonthPicker period={period} onChange={setPeriod} />
       </div>
+      <FinanceTabs />
 
       {summary.isLoading ? (
         <div className="flex justify-center py-8">

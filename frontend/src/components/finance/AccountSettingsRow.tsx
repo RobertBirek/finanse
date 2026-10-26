@@ -34,6 +34,12 @@ export function AccountRow({
   const [draftName, setDraftName] = useState(account.name);
   const [draftType, setDraftType] = useState(account.type);
   const [draftBudget, setDraftBudget] = useState(account.is_budget_account);
+  const [draftIban, setDraftIban] = useState(account.iban ?? "");
+  const [draftBankName, setDraftBankName] = useState(account.bank_name ?? "");
+  const [draftHolder, setDraftHolder] = useState(account.account_holder ?? "");
+  const [draftBic, setDraftBic] = useState(account.bic ?? "");
+  const [draftNotes, setDraftNotes] = useState(account.notes ?? "");
+  const [showIban, setShowIban] = useState(false);
 
   const rowPending =
     (updateMutation.isPending && updateMutation.variables?.id === account.id) ||
@@ -54,6 +60,11 @@ export function AccountRow({
     setDraftName(account.name);
     setDraftType(account.type);
     setDraftBudget(account.is_budget_account);
+    setDraftIban(account.iban ?? "");
+    setDraftBankName(account.bank_name ?? "");
+    setDraftHolder(account.account_holder ?? "");
+    setDraftBic(account.bic ?? "");
+    setDraftNotes(account.notes ?? "");
     onStartEdit();
   }
 
@@ -64,6 +75,21 @@ export function AccountRow({
         name: draftName,
         type: draftType,
         is_budget_account: draftBudget,
+        ...(draftIban !== (account.iban ?? "")
+          ? { iban: draftIban.trim() || null }
+          : {}),
+        ...(draftBankName !== (account.bank_name ?? "")
+          ? { bank_name: draftBankName.trim() || null }
+          : {}),
+        ...(draftHolder !== (account.account_holder ?? "")
+          ? { account_holder: draftHolder.trim() || null }
+          : {}),
+        ...(draftBic !== (account.bic ?? "")
+          ? { bic: draftBic.trim() || null }
+          : {}),
+        ...(draftNotes !== (account.notes ?? "")
+          ? { notes: draftNotes.trim() || null }
+          : {}),
       },
       { onSuccess: onCancelEdit },
     );
@@ -105,6 +131,29 @@ export function AccountRow({
           <p className="mt-0.5 text-xs text-gray-500">
             {accountTypeLabel(account.type)} · {account.currency}
           </p>
+          {account.type !== "cash" && account.iban ? (
+            <p className="mt-1 text-xs text-gray-500">
+              {showIban
+                ? account.iban
+                : `•••• ${account.iban.replace(/\s/g, "").slice(-4)}`}{" "}
+              <button
+                type="button"
+                className="ml-2 text-advisor-700"
+                onClick={() => setShowIban((value) => !value)}
+              >
+                {showIban ? "Ukryj" : "Pokaż"}
+              </button>
+              <button
+                type="button"
+                className="ml-2 text-advisor-700"
+                onClick={() =>
+                  void navigator.clipboard?.writeText(account.iban!)
+                }
+              >
+                Kopiuj
+              </button>
+            </p>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {editing ? (
@@ -208,6 +257,64 @@ export function AccountRow({
               />
               Budżetowe
             </label>
+          </div>
+          <div hidden={draftType === "cash"}>
+            <div>
+              <label
+                htmlFor="account-edit-iban"
+                className="mb-1 block text-xs text-gray-400"
+              >
+                IBAN / NRB
+              </label>
+              <input
+                id="account-edit-iban"
+                className="input"
+                value={draftIban}
+                onChange={(event) => setDraftIban(event.target.value)}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Wyczyść pole i zapisz, aby usunąć numer rachunku.
+              </p>
+            </div>
+            <details className="border-t border-gray-800 pt-3">
+              <summary className="cursor-pointer text-sm text-gray-400">
+                Pozostałe dane bankowe
+              </summary>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="text-xs text-gray-400">
+                  Bank / instytucja
+                  <input
+                    className="input mt-1"
+                    value={draftBankName}
+                    onChange={(event) => setDraftBankName(event.target.value)}
+                  />
+                </label>
+                <label className="text-xs text-gray-400">
+                  Właściciel rachunku
+                  <input
+                    className="input mt-1"
+                    value={draftHolder}
+                    onChange={(event) => setDraftHolder(event.target.value)}
+                  />
+                </label>
+                <label className="text-xs text-gray-400">
+                  BIC / SWIFT
+                  <input
+                    className="input mt-1"
+                    value={draftBic}
+                    onChange={(event) => setDraftBic(event.target.value)}
+                  />
+                </label>
+                <label className="text-xs text-gray-400">
+                  Notatka
+                  <textarea
+                    className="input mt-1"
+                    value={draftNotes}
+                    onChange={(event) => setDraftNotes(event.target.value)}
+                  />
+                </label>
+              </div>
+            </details>
           </div>
         </div>
       ) : null}

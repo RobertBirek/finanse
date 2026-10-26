@@ -16,6 +16,13 @@ export interface Account {
   balance_pln: number;
   opened_at: string;
   closed_at: string | null;
+  /** Original-currency balance supplied by the ledger; balance_pln remains book value. */
+  balance_source?: number;
+  bank_name?: string | null;
+  account_holder?: string | null;
+  iban?: string | null;
+  bic?: string | null;
+  notes?: string | null;
 }
 
 export interface Category {
@@ -32,6 +39,11 @@ export interface AccountUpdateInput {
   is_active?: boolean;
   is_budget_account?: boolean;
   closed_at?: string | null;
+  bank_name?: string | null;
+  account_holder?: string | null;
+  iban?: string | null;
+  bic?: string | null;
+  notes?: string | null;
 }
 
 export interface CategoryUpdateInput {
@@ -86,6 +98,8 @@ export interface Transaction {
 }
 
 export interface FinancialSummary {
+  balance_all_pln?: number;
+  balance_budget_pln?: number;
   accounts: Array<{
     id: string;
     name: string;
@@ -116,6 +130,13 @@ export interface CategorySummary {
   year: number;
   groups: CategorySpend[];
   categories: CategorySpend[];
+  tree?: CategorySummaryNode[];
+}
+
+export interface CategorySummaryNode extends CategorySpend {
+  is_active: boolean;
+  direct_total_pln: number;
+  children: CategorySummaryNode[];
 }
 
 export interface CategoryGroup extends CategorySpend {
@@ -141,6 +162,9 @@ export interface BudgetStatusResponse {
   month: number;
   year: number;
   items: BudgetStatusItem[];
+  total_budget_pln?: number;
+  total_spent_pln?: number;
+  remaining_pln?: number;
 }
 
 export interface ScheduledFinanceItem {
@@ -398,6 +422,11 @@ export function useCreateAccount() {
       type: string;
       currency?: string;
       is_budget_account?: boolean;
+      bank_name?: string | null;
+      account_holder?: string | null;
+      iban?: string | null;
+      bic?: string | null;
+      notes?: string | null;
     }) => {
       const { data } = await api.post<Account>("/finance/accounts", account);
       return data;
@@ -526,6 +555,8 @@ export interface TransactionSearchParams {
   type?: string;
   min_amount_pln?: number;
   max_amount_pln?: number;
+  include_descendants?: boolean;
+  budget_accounts_only?: boolean;
   limit: number;
   offset: number;
 }

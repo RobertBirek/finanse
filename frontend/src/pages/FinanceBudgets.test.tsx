@@ -181,11 +181,11 @@ describe("FinanceBudgets", () => {
     expect(deleteMutate).toHaveBeenCalledWith("b1");
   });
 
-  it("renders the unbudgeted expenses section", () => {
+  it("renders full backend category spending without inventing an unbudgeted rollup", () => {
     render(<FinanceBudgets />);
 
     expect(
-      screen.getByRole("heading", { name: "Wydatki bez budżetu" }),
+      screen.getByRole("heading", { name: "Wydatki według kategorii" }),
     ).toBeInTheDocument();
   });
 

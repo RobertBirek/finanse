@@ -1,6 +1,7 @@
 import { useState, type SelectHTMLAttributes } from "react";
 import type { Account, Category } from "../../api/finance";
 import { SEARCH_FIELDS, TRANSACTION_TYPES } from "../../lib/transactionSearch";
+import { categoryPath } from "../../lib/categories";
 
 export function TransactionFilters({
   search,
@@ -89,11 +90,29 @@ export function TransactionFilters({
                 )}
               {categories?.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {categoryPath(c.id, categories)}
                   {c.is_active === false ? " (archiwalna)" : ""}
                 </option>
               ))}
             </SearchSelect>
+          </label>
+          <label className="flex items-center gap-2 self-end pb-3 text-sm text-gray-300">
+            <input
+              name="include_descendants"
+              type="checkbox"
+              value="true"
+              defaultChecked={search.get("include_descendants") === "true"}
+            />
+            Uwzględnij podkategorie
+          </label>
+          <label className="flex items-center gap-2 self-end pb-3 text-sm text-gray-300">
+            <input
+              name="budget_accounts_only"
+              type="checkbox"
+              value="true"
+              defaultChecked={search.get("budget_accounts_only") === "true"}
+            />
+            Tylko konta budżetowe
           </label>
           <label className="text-sm text-gray-300">
             Typ

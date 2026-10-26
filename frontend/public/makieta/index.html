@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'"
+    />
+    <meta name="theme-color" content="#f5f6f8" />
+    <title>Makieta finansów · Personal Advisor</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/makieta/style.css?v=1" />
+    <link rel="stylesheet" href="/makieta/progress.css?v=1" />
+    <script src="/makieta/app.js?v=1" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Przejdź do treści</a>
+    <div class="prototype-bar">
+      <span class="prototype-dot"></span><strong>Makieta interaktywna</strong
+      ><span class="prototype-explanation"
+        >Fikcyjne dane. Zmiany znikają po odświeżeniu.</span
+      ><span class="mobile-only">Dane demo</span
+      ><a href="/">Wróć do aplikacji <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Nawigacja główna">
+        <a class="brand" href="#overview"
+          ><span class="brand-mark">p<span>а</span></span
+          ><span>Personal<br /><strong>Advisor</strong></span></a
+        >
+        <div class="workspace-label">TWOJA PRZESTRZEŃ</div>
+        <nav id="primary-nav"></nav>
+        <div class="sidebar-bottom">
+          <div class="private-note">
+            <span id="private-icon"></span
+            ><span
+              >Tylko przykładowe dane<br /><small
+                >Bez połączenia z bankiem</small
+              ></span
+            >
+          </div>
+          <button class="profile" data-view="settings">
+            <span class="avatar">AK</span
+            ><span>Alex Kowalski<small>Konto demonstracyjne</small></span
+            ><span aria-hidden="true">⌄</span>
+          </button>
+        </div>
+      </aside>
+      <div class="workspace">
+        <header class="topbar">
+          <div class="breadcrumb">
+            <span>Moja przestrzeń</span><span aria-hidden="true">/</span
+            ><strong id="breadcrumb">Finanse</strong>
+          </div>
+          <div class="topbar-actions">
+            <span class="demo-badge">WERSJA KONCEPCYJNA</span
+            ><button
+              class="icon-button"
+              id="theme-toggle"
+              aria-label="Włącz ciemny motyw"
+            ></button
+            ><span
+              class="avatar small-avatar"
+              aria-label="Profil demonstracyjny"
+              >AK</span
+            >
+          </div>
+        </header>
+        <main id="main" tabindex="-1"></main>
+        <footer class="page-footer">
+          <span>Personal Advisor · Koncepcja interfejsu</span
+          ><span>Wszystkie kwoty i dane są fikcyjne.</span>
+        </footer>
+      </div>
+    </div>
+    <nav
+      class="mobile-nav"
+      id="mobile-nav"
+      aria-label="Nawigacja mobilna"
+    ></nav>
+    <dialog
+      id="detail-dialog"
+      class="detail-dialog"
+      aria-labelledby="detail-title"
+    >
+      <div id="dialog-content"></div>
+    </dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <noscript
+      ><p>
+        Włącz JavaScript, aby przejrzeć interaktywną makietę. Makieta nie
+        korzysta z API ani rzeczywistych danych.
+      </p></noscript
+    >
+  </body>
+</html>

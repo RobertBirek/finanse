@@ -9,6 +9,7 @@ import {
   type ScheduledFinanceItem,
   type ScheduledFinanceItemInput,
 } from "../../api/finance";
+import { CategoryPicker } from "./CategoryPicker";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -181,27 +182,13 @@ export function ScheduledItemForm({
             disabled
           />
         </div>
-        <div>
-          <label
-            htmlFor="item-category"
-            className="mb-1 block text-sm text-gray-400"
-          >
-            Kategoria
-          </label>
-          <select
-            id="item-category"
-            className="input"
-            value={categoryId}
-            onChange={(event) => setCategoryId(event.target.value)}
-          >
-            <option value="">Wybierz kategorię</option>
-            {filteredCategories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CategoryPicker
+          id="item-category"
+          categories={filteredCategories}
+          value={categoryId}
+          onChange={setCategoryId}
+          type={type}
+        />
         <div>
           <label
             htmlFor="item-due-day"

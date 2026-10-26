@@ -26,7 +26,7 @@ type ScheduledItemsListProps = {
   suggestions: CashflowSuggestion[];
   loading: boolean;
   error: boolean;
-  onEdit: (item: ScheduledFinanceItem) => void;
+  onEdit?: (item: ScheduledFinanceItem) => void;
 };
 
 export function ScheduledItemsList({
@@ -147,31 +147,33 @@ export function ScheduledItemsList({
                 </p>
               ) : null}
             </div>
-            <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
-                onClick={() => onEdit(item)}
-                className="btn-secondary px-3 py-1.5 text-sm"
-              >
-                Edytuj
-              </button>
-              <button
-                type="button"
-                onClick={handleToggle}
-                disabled={isTogglePending || isDeletePending}
-                className="btn-secondary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {item.is_active ? "Dezaktywuj" : "Aktywuj"}
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isTogglePending || isDeletePending}
-                className="btn-danger px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Usuń
-              </button>
-            </div>
+            {onEdit ? (
+              <div className="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onEdit(item)}
+                  className="btn-secondary px-3 py-1.5 text-sm"
+                >
+                  Edytuj
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggle}
+                  disabled={isTogglePending || isDeletePending}
+                  className="btn-secondary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {item.is_active ? "Dezaktywuj" : "Aktywuj"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isTogglePending || isDeletePending}
+                  className="btn-danger px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Usuń
+                </button>
+              </div>
+            ) : null}
             {toggleError || deleteErrorForItem ? (
               <p className="w-full text-xs text-red-400">
                 {toggleError ?? deleteErrorForItem}

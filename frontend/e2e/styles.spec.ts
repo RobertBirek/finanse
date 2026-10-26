@@ -10,17 +10,18 @@ test("compiled styles preserve the palette, form controls and responsive navigat
   await expect(form).toBeVisible();
   await expect(page.locator("body")).toHaveCSS(
     "background-color",
-    "rgb(16, 28, 44)",
+    "rgb(245, 246, 248)",
   );
-  await expect(form).toHaveCSS("background-color", "rgb(25, 42, 61)");
-  await expect(form).toHaveCSS("border-color", "rgb(36, 57, 79)");
-  await expect(form).toHaveCSS("padding", "24px");
-  await expect(form).toHaveCSS("border-radius", "12px");
+  await expect(form).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(form).toHaveCSS("border-color", "rgb(233, 236, 241)");
+  const small = page.viewportSize()!.width <= 740;
+  await expect(form).toHaveCSS("padding", small ? "19px" : "24px");
+  await expect(form).toHaveCSS("border-radius", small ? "14px" : "17px");
   const input = form.getByLabel("Nazwa");
-  await expect(input).toHaveCSS("background-color", "rgb(36, 57, 79)");
+  await expect(input).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(input).toHaveCSS("padding", "10px 16px");
   const save = form.getByRole("button", { name: "Dodaj konto" });
-  await expect(save).toHaveCSS("background-color", "rgb(1, 89, 161)");
+  await expect(save).toHaveCSS("background-color", "rgb(36, 91, 234)");
   await expect(save).toHaveCSS("cursor", "pointer");
   await save.evaluate((element: HTMLButtonElement) => {
     element.disabled = true;
@@ -33,11 +34,11 @@ test("compiled styles preserve the palette, form controls and responsive navigat
       page.getByRole("button", { name: "Otwórz menu aplikacji" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("navigation", { name: "Obszary aplikacji" }),
+      page.getByRole("navigation", { name: "Wszystkie obszary aplikacji" }),
     ).not.toBeVisible();
   } else {
     await expect(
-      page.getByRole("navigation", { name: "Obszary aplikacji" }),
+      page.getByRole("navigation", { name: "Wszystkie obszary aplikacji" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Otwórz menu aplikacji" }),

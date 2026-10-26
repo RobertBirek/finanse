@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import type { AxiosError } from "axios";
 import {
   budgetProgress,
@@ -10,12 +11,13 @@ import {
   useCreateBudget,
   useDeleteBudget,
   useUpdateBudget,
-  type CategorySummary,
   type FinancialPeriod,
 } from "../api/finance";
 import { formatPLN } from "../lib/format";
 import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
+import { FinanceTabs } from "../components/finance/FinanceTabs";
+import { CategoryPicker } from "../components/finance/CategoryPicker";
 
 function currentPeriod(): FinancialPeriod {
   const today = new Date();
@@ -29,23 +31,7 @@ function apiErrorDetail(error: unknown): string | null {
   );
 }
 
-function withoutBudgetedCategories(
-  summary: CategorySummary | undefined,
-  budgetedIds: Set<string>,
-): CategorySummary | undefined {
-  if (!summary) return undefined;
-  return {
-    ...summary,
-    groups: summary.groups.filter(
-      (group) => !budgetedIds.has(group.category_id),
-    ),
-    categories: summary.categories.filter(
-      (category) => !budgetedIds.has(category.category_id),
-    ),
-  };
-}
-
-export function FinanceBudgets() {
+export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
   const [period, setPeriod] = useState(currentPeriod);
   const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
@@ -67,13 +53,6 @@ export function FinanceBudgets() {
   );
   const budgetedCategoryIds = new Set(
     budgets.map((budget) => budget.category_id),
-  );
-
-  const expenseCategories = (categoriesQuery.data ?? []).filter(
-    (category) => category.is_active !== false && category.type === "expense",
-  );
-  const availableCategories = expenseCategories.filter(
-    (category) => !budgetedCategoryIds.has(category.id),
   );
 
   const amountInGrosze = parsePlnToGrosze(amount);
@@ -127,9 +106,48 @@ export function FinanceBudgets() {
         <h1 className="text-2xl font-bold text-white">Budżet</h1>
         <MonthPicker period={period} onChange={setPeriod} />
       </div>
+      {!configure ? (
+        <>
+          <FinanceTabs />
+          <Link
+            className="mb-4 inline-block text-sm text-advisor-700"
+            to="/settings/finances/budgets"
+          >
+            Zmień limity w ustawieniach →
+          </Link>
+        </>
+      ) : null}
 
       <section className="card mb-4">
-        <h2 className="mb-4 text-lg font-semibold text-white">Budżety</h2>
+        <h2 className="mb-2 text-lg font-semibold text-white">Budżety</h2>
+        <p className="mb-4 text-xs text-gray-500">
+          Limity podkategorii są podlimitami rodzica. W podsumowaniu całego
+          budżetu każdą gałąź liczymy tylko raz.
+        </p>
+        {statusQuery.data?.total_budget_pln !== undefined &&
+        statusQuery.data.total_spent_pln !== undefined &&
+        statusQuery.data.remaining_pln !== undefined ? (
+          <div className="mb-5 grid grid-cols-3 gap-3 border-b border-gray-800 pb-4 text-sm">
+            <p>
+              <span className="block text-xs text-gray-500">Plan gałęzi</span>
+              <strong className="font-mono">
+                {formatPLN(statusQuery.data.total_budget_pln)} PLN
+              </strong>
+            </p>
+            <p>
+              <span className="block text-xs text-gray-500">Wydane</span>
+              <strong className="font-mono">
+                {formatPLN(statusQuery.data.total_spent_pln)} PLN
+              </strong>
+            </p>
+            <p>
+              <span className="block text-xs text-gray-500">Pozostało</span>
+              <strong className="font-mono">
+                {formatPLN(statusQuery.data.remaining_pln)} PLN
+              </strong>
+            </p>
+          </div>
+        ) : null}
         {budgetsQuery.isError ? (
           <p className="mb-4 text-sm text-red-400">
             Nie udało się pobrać budżetów — edycja i usuwanie są niedostępne.
@@ -227,7 +245,7 @@ export function FinanceBudgets() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {budget ? (
+                        {configure && budget ? (
                           <>
                             {!isEditing ? (
                               <button
@@ -291,64 +309,50 @@ export function FinanceBudgets() {
         )}
       </section>
 
-      <form onSubmit={handleSubmit} className="card mb-4">
-        <h2 className="mb-4 text-lg font-semibold text-white">Nowy budżet</h2>
-        <div className="flex flex-wrap items-end gap-4">
-          <div>
-            <label
-              htmlFor="budget-category"
-              className="mb-1 block text-sm text-gray-400"
-            >
-              Kategoria
-            </label>
-            <select
+      {configure ? (
+        <form onSubmit={handleSubmit} className="card mb-4">
+          <h2 className="mb-4 text-lg font-semibold text-white">Nowy budżet</h2>
+          <div className="flex flex-wrap items-end gap-4">
+            <CategoryPicker
               id="budget-category"
-              className="input"
+              categories={categoriesQuery.data ?? []}
+              type="expense"
+              excludedIds={budgetedCategoryIds}
               value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-            >
-              <option value="">Wybierz kategorię</option>
-              {availableCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              htmlFor="budget-amount"
-              className="mb-1 block text-sm text-gray-400"
-            >
-              Kwota (PLN)
-            </label>
-            <input
-              id="budget-amount"
-              className="input"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="np. 1 234,56"
+              onChange={setCategoryId}
             />
+            <div>
+              <label
+                htmlFor="budget-amount"
+                className="mb-1 block text-sm text-gray-400"
+              >
+                Kwota (PLN)
+              </label>
+              <input
+                id="budget-amount"
+                className="input"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="np. 1 234,56"
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={createBudget.isPending || !canSubmit}
+            >
+              Dodaj budżet
+            </button>
           </div>
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={createBudget.isPending || !canSubmit}
-          >
-            Dodaj budżet
-          </button>
-        </div>
-        {createError ? (
-          <p className="mt-4 text-sm text-red-400">{createError}</p>
-        ) : null}
-      </form>
+          {createError ? (
+            <p className="mt-4 text-sm text-red-400">{createError}</p>
+          ) : null}
+        </form>
+      ) : null}
 
       <CategorySpendTree
-        title="Wydatki bez budżetu"
-        summary={withoutBudgetedCategories(
-          categorySummary.data,
-          budgetedCategoryIds,
-        )}
+        title="Wydatki według kategorii"
+        summary={categorySummary.data}
         loading={categorySummary.isLoading}
         error={categorySummary.isError}
       />

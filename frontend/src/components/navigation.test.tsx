@@ -2,7 +2,6 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ContextualSidebar } from "./ContextualSidebar";
-import { IconRail } from "./IconRail";
 import { Layout } from "./Layout";
 import {
   getContextForPathname,
@@ -54,27 +53,23 @@ describe("isMenuItemActive", () => {
     expect(isMenuItemActive(reports, "/finances/budgets")).toBe(false);
   });
 
-  it("places Konta right after Finanse in the finance menu", () => {
+  it("keeps daily finance navigation separate from finance configuration", () => {
     const finance = navigationContexts.find(
       (context) => context.id === "finance",
     )!;
     const labels = finance.items.map((item) => item.label);
 
-    expect(labels.indexOf("Konta")).toBe(labels.indexOf("Finanse") + 1);
-    expect(finance.items.find((item) => item.label === "Konta")?.to).toBe(
-      "/finances/accounts",
-    );
+    expect(labels).not.toContain("Konta");
+    expect(labels).toContain("Transakcje");
   });
 });
 
 describe("contextual navigation components", () => {
-  it("renders accessible rail tooltips and finance route links", () => {
+  it("renders the daily finance routes in the contextual sidebar", () => {
     const finance = getContextForPathname("/finances");
 
     render(
-      <MemoryRouter
-      >
-        <IconRail activeContext={finance} />
+      <MemoryRouter>
         <ContextualSidebar
           context={finance}
           user={{ display_name: "Anna", email: "anna@example.com" }}
@@ -83,40 +78,25 @@ describe("contextual navigation components", () => {
       </MemoryRouter>,
     );
 
-    const financeRailLink = screen
-      .getAllByRole("link", { name: "Finanse" })
-      .find((link) => link.hasAttribute("title"));
-
-    expect(financeRailLink).toHaveAttribute("title", "Finanse");
-    expect(screen.getByRole("link", { name: "Konta" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Finanse" })).toHaveAttribute(
       "href",
-      "/finances/accounts",
+      "/finances",
     );
-    expect(screen.getByRole("link", { name: "Transakcje" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Ustawienia" })).toHaveAttribute(
       "href",
-      "/finances/transactions",
+      "/settings",
     );
-    expect(screen.getByRole("link", { name: "Płynność" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Projekty" })).toHaveAttribute(
       "href",
-      "/finances/cashflow",
-    );
-    expect(screen.getByRole("link", { name: "Budżet" })).toHaveAttribute(
-      "href",
-      "/finances/budgets",
-    );
-    expect(screen.getByRole("link", { name: "Raporty" })).toHaveAttribute(
-      "href",
-      "/finances/reports",
+      "/projects",
     );
   });
 });
 
 describe("Layout", () => {
-  it("composes the finance rail and contextual menu from the current URL", () => {
+  it("uses one contextual sidebar and a fixed mobile bottom navigation", () => {
     render(
-      <MemoryRouter
-        initialEntries={["/finances"]}
-      >
+      <MemoryRouter initialEntries={["/finances"]}>
         <Routes>
           <Route element={<Layout />}>
             <Route path="/finances" element={<Outlet />} />
@@ -126,11 +106,20 @@ describe("Layout", () => {
     );
 
     expect(
-      screen.getByRole("navigation", { name: "Obszary aplikacji" }),
+      screen.queryByRole("navigation", { name: "Obszary aplikacji" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "Wszystkie obszary aplikacji" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("navigation", { name: "Finanse" })).toHaveLength(
-      1,
+    const mobile = screen.getByRole("navigation", {
+      name: "Nawigacja mobilna",
+    });
+    expect(within(mobile).getByRole("link", { name: "Finanse" })).toHaveClass(
+      "active",
     );
+    expect(
+      within(mobile).getByRole("link", { name: "Ustawienia" }),
+    ).toHaveAttribute("href", "/settings");
   });
 });
 

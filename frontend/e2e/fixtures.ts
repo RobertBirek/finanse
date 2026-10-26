@@ -123,6 +123,42 @@ export async function fixtures(
       };
     else if (url.pathname === "/api/finance/accounts") body = [account];
     else if (url.pathname === "/api/finance/categories") body = [];
+    else if (url.pathname === "/api/finance/transactions") body = [transaction];
+    else if (url.pathname === "/api/finance/budgets") body = [];
+    else if (url.pathname === "/api/finance/budget-status")
+      body = {
+        month: 10,
+        year: 2026,
+        items: [],
+        total_budget_pln: 0,
+        total_spent_pln: 0,
+        remaining_pln: 0,
+      };
+    else if (url.pathname === "/api/finance/category-summary")
+      body = { month: 10, year: 2026, groups: [], categories: [], tree: [] };
+    else if (url.pathname === "/api/finance/cashflow/items") body = [];
+    else if (url.pathname === "/api/finance/cashflow/settings")
+      body = {
+        payday_day: 10,
+        payday_account_id: account.id,
+        forecast_horizon_days: 30,
+        overdue_grace_days: 3,
+      };
+    else if (url.pathname === "/api/finance/cashflow/forecast")
+      body = {
+        last_payday: "2026-10-10",
+        next_payday: "2026-11-10",
+        opening_balance_pln: 54321,
+        projected_balance_before_next_payday_pln: 44321,
+        lowest_balance_pln: 44321,
+        safe_daily_limit_pln: 2216,
+        days: [
+          { date: "2026-10-26", projected_balance_pln: 54321 },
+          { date: "2026-11-09", projected_balance_pln: 44321 },
+        ],
+        suggestions: [],
+        budgets: { total_budget_pln: 0, total_spent_pln: 0, remaining_pln: 0 },
+      };
     else if (url.pathname === "/api/finance/transactions/search") {
       searches.push(url.searchParams);
       const offset = Number(url.searchParams.get("offset") ?? 0),
@@ -149,6 +185,8 @@ export async function fixtures(
         ? { detail: "Fixture unavailable" }
         : {
             accounts: [],
+            balance_all_pln: 54321,
+            balance_budget_pln: 54321,
             income_total_pln: 10000,
             expense_total_pln: 1000,
             net_total_pln: 9000,

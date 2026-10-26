@@ -21,7 +21,7 @@ export function TransactionDetail({
     <Dialog
       label="Szczegóły transakcji"
       onClose={onClose}
-      panelClassName="card w-full max-w-2xl"
+      panelClassName="card transaction-detail-panel"
     >
       <div className="flex justify-between gap-3 mb-4">
         <h2 className="text-xl font-semibold text-white">

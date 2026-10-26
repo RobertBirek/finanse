@@ -1,199 +1,368 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  splitAccounts,
   useAccounts,
+  useBudgetStatus,
   useCashflowForecast,
   useFinancialSummary,
+  useTransactions,
+  type Account,
+  type FinancialPeriod,
 } from "../api/finance";
-import { CashflowMetric, SummaryCard } from "../components/finance/SummaryCard";
 import { formatPLN } from "../lib/format";
+import { formatCalendarDate } from "../lib/date";
+import { TRANSACTION_TYPES } from "../lib/transactionSearch";
+import { FinanceTabs } from "../components/finance/FinanceTabs";
+import { MonthPicker } from "../components/finance/MonthPicker";
+import { QueryFeedback } from "../components/QueryFeedback";
 
 export function Finances() {
+  const [period, setPeriod] = useState<FinancialPeriod>(() => ({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+  }));
+  const [scope, setScope] = useState<"all" | "budget">("all");
+  const navigate = useNavigate();
   const accounts = useAccounts();
-  const summary = useFinancialSummary();
+  const summary = useFinancialSummary(period);
   const cashflow = useCashflowForecast();
-  const accountGroups = splitAccounts(
-    (accounts.data ?? []).filter((account) => account.is_active !== false),
-  );
-
+  const latest = useTransactions({ limit: 5 });
+  const budgets = useBudgetStatus(period);
+  const active = (accounts.data ?? []).filter((a) => a.is_active !== false);
+  const balance =
+    scope === "all"
+      ? summary.data?.balance_all_pln
+      : summary.data?.balance_budget_pln;
   return (
-    <div className="max-w-6xl">
-      <h1 className="mb-6 text-2xl font-bold text-white">Finanse</h1>
-
-      {summary.isLoading ? (
-        <div className="flex justify-center py-8">
-          <p role="status" className="text-gray-400">
-            Ładowanie podsumowania…
-          </p>
+    <div className="finance-overview max-w-6xl">
+      <header className="finance-page-heading">
+        <div>
+          <h1>Twoje finanse</h1>
+          <p>Saldo, codzienne wydatki i spokojny plan na kolejne dni.</p>
         </div>
-      ) : summary.isError ? (
-        <div className="card mb-6 text-sm" role="alert">
-          <p className="text-red-300">
-            Nie udało się pobrać podsumowania finansowego.
-          </p>
-          <button
-            type="button"
-            className="btn-secondary mt-3"
-            onClick={() => void summary.refetch()}
-          >
-            Ponów pobranie podsumowania
-          </button>
-        </div>
-      ) : summary.data ? (
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <SummaryCard
-            label="Przychody"
-            amount={summary.data.income_total_pln}
-            tone="income"
-          />
-          <SummaryCard
-            label="Wydatki"
-            amount={summary.data.expense_total_pln}
-            tone="expense"
-          />
-          <SummaryCard
-            label="Bilans"
-            amount={summary.data.net_total_pln}
-            tone="net"
-          />
-        </div>
-      ) : (
-        <p className="card mb-6 text-sm text-gray-500">
-          Brak podsumowania finansowego dla bieżącego miesiąca.
-        </p>
-      )}
-
-      <section className="mb-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">Konta</h2>
-        {accounts.isLoading ? (
-          <div className="flex justify-center py-8">
-            <p role="status" className="text-gray-400">
-              Ładowanie kont…
+        <MonthPicker period={period} onChange={setPeriod} />
+      </header>
+      <FinanceTabs />
+      <div className="finance-primary-grid">
+        <section className="card balance-surface">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="finance-caption">
+              {scope === "all" ? "Łączne saldo kont" : "Saldo kont budżetowych"}
             </p>
-          </div>
-        ) : accounts.isError ? (
-          <div className="card text-sm" role="alert">
-            <p className="text-red-300">Nie udało się pobrać kont.</p>
-            <button
-              type="button"
-              className="btn-secondary mt-3"
-              onClick={() => void accounts.refetch()}
-            >
-              Ponów pobranie kont
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <AccountCard
-              title="Konta budżetowe"
-              accounts={accountGroups.budget}
-            />
-            <AccountCard
-              title="Konta informacyjne"
-              description="wyłączone z analiz"
-              accounts={accountGroups.informational}
-            />
-          </div>
-        )}
-      </section>
-
-      {cashflow.isLoading ? (
-        <div className="flex justify-center py-8">
-          <p role="status" className="text-gray-400">
-            Ładowanie prognozy…
-          </p>
-        </div>
-      ) : cashflow.isError ? (
-        <div className="card text-sm" role="alert">
-          <p className="text-red-300">
-            Nie udało się pobrać prognozy płynności.
-          </p>
-          <button
-            type="button"
-            className="btn-secondary mt-3"
-            onClick={() => void cashflow.refetch()}
-          >
-            Ponów pobranie prognozy
-          </button>
-        </div>
-      ) : cashflow.data ? (
-        <section className="card border border-advisor-500/30 bg-linear-to-br/srgb from-advisor-500/10 via-gray-900 to-gray-900">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-advisor-300">
-                Płynność
-              </p>
-              <h2 className="text-lg font-semibold text-white">
-                Prognoza do wypłaty
-              </h2>
+            <div className="finance-segment" aria-label="Zakres salda">
+              {(
+                [
+                  ["all", "Wszystkie"],
+                  ["budget", "Budżetowe"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={scope === id}
+                  onClick={() => setScope(id)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <Link to="/finances/cashflow" className="btn-secondary self-start">
-              Przejdź do płynności
-            </Link>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <CashflowMetric
-              label="Przed wypłatą"
-              amount={cashflow.data.projected_balance_before_next_payday_pln}
-            />
-            <CashflowMetric
-              label="Najniższe saldo"
-              amount={cashflow.data.lowest_balance_pln}
-            />
-            <CashflowMetric
-              label="Bezpiecznie dziennie"
-              amount={cashflow.data.safe_daily_limit_pln}
-              neutral
-            />
-          </div>
+          <QueryFeedback
+            loading={summary.isLoading}
+            error={summary.isError}
+            errorMessage="Nie udało się pobrać podsumowania finansowego."
+            onRetry={summary.refetch}
+          >
+            <p className="finance-balance" aria-label="Łączne saldo kont">
+              {balance === undefined ? "—" : formatPLN(balance)}{" "}
+              <span>PLN</span>
+            </p>
+            <p className="finance-caption">
+              Bieżąca wartość księgowa · nie wynik wybranego miesiąca
+            </p>
+            <div className="finance-quick-actions">
+              {(
+                [
+                  ["expense", "Wydatek", "+"],
+                  ["income", "Przychód", "↓"],
+                  ["transfer", "Transfer", "⇄"],
+                ] as const
+              ).map(([type, label, glyph]) => (
+                <button
+                  key={type}
+                  className={
+                    type === "expense" ? "btn-primary" : "btn-secondary"
+                  }
+                  type="button"
+                  onClick={() =>
+                    navigate(`/finances/transactions?create=${type}`)
+                  }
+                >
+                  <span aria-hidden="true">{glyph}</span> {label}
+                </button>
+              ))}
+            </div>
+            <div className="finance-period-totals">
+              <div>
+                <small>Przychody · konta budżetowe</small>
+                <strong>
+                  {summary.data
+                    ? formatPLN(summary.data.income_total_pln)
+                    : "—"}{" "}
+                  PLN
+                </strong>
+              </div>
+              <div>
+                <small>Wydatki · konta budżetowe</small>
+                <strong>
+                  {summary.data
+                    ? formatPLN(summary.data.expense_total_pln)
+                    : "—"}{" "}
+                  PLN
+                </strong>
+              </div>
+            </div>
+          </QueryFeedback>
         </section>
-      ) : (
-        <p className="card text-sm text-gray-500">Brak prognozy płynności.</p>
-      )}
+        <section
+          className="card finance-runway"
+          aria-label="Prognoza do wypłaty"
+        >
+          <QueryFeedback
+            loading={cashflow.isLoading}
+            error={cashflow.isError}
+            errorMessage="Nie udało się pobrać prognozy płynności."
+            onRetry={cashflow.refetch}
+          >
+            <p className="finance-caption">
+              Prognoza do wypłaty
+              {cashflow.data?.next_payday
+                ? ` · ${formatCalendarDate(cashflow.data.next_payday)}`
+                : ""}
+            </p>
+            <h2 className="finance-forecast-amount">
+              {cashflow.data
+                ? formatPLN(
+                    cashflow.data.projected_balance_before_next_payday_pln,
+                  )
+                : "—"}{" "}
+              PLN
+            </h2>
+            <p className="finance-caption">
+              Saldo kont budżetowych po uwzględnieniu planowanych operacji.
+            </p>
+            {cashflow.data?.days?.length ? (
+              <ForecastLine days={cashflow.data.days} />
+            ) : (
+              <p className="py-5 text-sm">Brak dziennego przebiegu prognozy.</p>
+            )}
+            <div className="finance-runway-footer">
+              <div>
+                <small>Orientacyjnie dziennie</small>
+                <strong>
+                  {cashflow.data
+                    ? formatPLN(cashflow.data.safe_daily_limit_pln)
+                    : "—"}{" "}
+                  PLN
+                </strong>
+              </div>
+              <Link to="/finances/cashflow">Przejdź do płynności →</Link>
+            </div>
+          </QueryFeedback>
+        </section>
+      </div>
+      <section className="my-6" aria-label="Twoje konta">
+        <QueryFeedback
+          loading={accounts.isLoading}
+          error={accounts.isError}
+          errorMessage="Nie udało się pobrać kont."
+          onRetry={accounts.refetch}
+        >
+          <div className="finance-account-strip">
+            {active.map((a) => (
+              <Link
+                key={a.id}
+                to={`/finances/transactions?account_id=${encodeURIComponent(a.id)}`}
+                className="finance-account-chip"
+              >
+                <span className="finance-bank-mark" aria-hidden="true">
+                  {(a.bank_name || a.name).slice(0, 1).toUpperCase()}
+                </span>
+                <span>
+                  <small>
+                    {a.bank_name ? `${a.bank_name} · ${a.name}` : a.name}
+                  </small>
+                  <strong>{sourceBalance(a)}</strong>
+                  {a.currency !== "PLN" ? (
+                    <small>
+                      Wartość księgowa: {formatPLN(a.balance_pln)} PLN
+                    </small>
+                  ) : null}
+                </span>
+              </Link>
+            ))}
+          </div>
+          {active.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              Brak aktywnych kont. Dodaj konto w ustawieniach.
+            </p>
+          ) : null}
+        </QueryFeedback>
+      </section>
+      <div className="finance-primary-grid">
+        <section className="card">
+          <div className="finance-section-heading">
+            <div>
+              <h2>Ostatnie transakcje</h2>
+              <p>Twoja codzienność w jednym miejscu</p>
+            </div>
+            <Link to="/finances/transactions">Cała historia →</Link>
+          </div>
+          <QueryFeedback
+            loading={latest.isLoading}
+            error={latest.isError}
+            errorMessage="Nie udało się pobrać ostatnich transakcji."
+            onRetry={latest.refetch}
+          >
+            {latest.data?.length ? (
+              <ul className="finance-recent-list">
+                {latest.data.map((t) => {
+                  const leg = t.postings.find((p) => p.account_id !== null);
+                  return (
+                    <li key={t.id}>
+                      <Link
+                        to={`/finances/transactions?detail=${encodeURIComponent(t.id)}`}
+                      >
+                        <span
+                          className="finance-transaction-mark"
+                          aria-hidden="true"
+                        >
+                          {t.type === "transfer" || t.type === "exchange"
+                            ? "⇄"
+                            : t.description.slice(0, 1).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <strong>{t.description}</strong>
+                          <small>
+                            {formatCalendarDate(t.transaction_date)} ·{" "}
+                            {TRANSACTION_TYPES[t.type]}
+                          </small>
+                        </span>
+                        <span className="finance-transaction-amount">
+                          {leg
+                            ? `${leg.direction === "credit" ? "+" : "−"}${formatPLN(leg.source_amount)} ${leg.source_currency}`
+                            : "Kwota niedostępna"}
+                          {t.type === "transfer" ? (
+                            <small>Transfer własny</small>
+                          ) : null}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Brak ostatnich transakcji.
+              </p>
+            )}
+          </QueryFeedback>
+        </section>
+        <section className="card">
+          <div className="finance-section-heading">
+            <div>
+              <h2>Budżet miesiąca</h2>
+              <p>Limity i podlimity, bez podwójnego liczenia</p>
+            </div>
+            <Link to="/finances/budgets">Szczegóły →</Link>
+          </div>
+          <QueryFeedback
+            loading={budgets.isLoading}
+            error={budgets.isError}
+            errorMessage="Nie udało się pobrać budżetu."
+            onRetry={budgets.refetch}
+          >
+            {budgets.data?.items.slice(0, 3).map((b) => (
+              <Link
+                key={b.category_id}
+                className="finance-budget-preview"
+                to={`/finances/transactions?category_id=${encodeURIComponent(b.category_id)}&include_descendants=true&budget_accounts_only=true&date_from=${period.year}-${String(period.month).padStart(2, "0")}-01&date_to=${period.year}-${String(period.month).padStart(2, "0")}-${new Date(period.year!, period.month!, 0).getDate()}`}
+              >
+                <span>{b.name}</span>
+                <strong>{formatPLN(b.spent_pln)} PLN</strong>
+                <progress
+                  aria-label={`Wykorzystanie budżetu ${b.name}`}
+                  value={Math.max(0, b.spent_pln)}
+                  max={Math.max(1, b.budget_amount_pln)}
+                />
+                <small>z {formatPLN(b.budget_amount_pln)} PLN</small>
+              </Link>
+            ))}
+            {!budgets.data?.items.length ? (
+              <p className="text-sm text-gray-500">
+                Brak zdefiniowanych limitów.
+              </p>
+            ) : null}
+            <div className="finance-budget-remaining">
+              <small>Pozostało w całym budżecie</small>
+              <strong>
+                {budgets.data?.remaining_pln === undefined
+                  ? "—"
+                  : `${formatPLN(budgets.data.remaining_pln)} PLN`}
+              </strong>
+              <Link to="/settings/finances/budgets">Ustawienia limitów →</Link>
+            </div>
+          </QueryFeedback>
+        </section>
+      </div>
+      <div className="finance-footer">
+        <span>Konta budżetowe · konta informacyjne</span>
+        <Link to="/settings/finances/accounts">Ustawienia kont</Link>
+      </div>
     </div>
   );
 }
 
-function AccountCard({
-  title,
-  description,
-  accounts,
+function sourceBalance(a: Account): string {
+  if (a.balance_source !== undefined)
+    return `${formatPLN(a.balance_source)} ${a.currency}`;
+  return `${formatPLN(a.balance_pln)} PLN${a.currency === "PLN" ? "" : " · wartość księgowa"}`;
+}
+
+function ForecastLine({
+  days,
 }: {
-  title: string;
-  description?: string;
-  accounts: Array<{
-    id: string;
-    name: string;
-    balance_pln: number;
-  }>;
+  days: Array<{ date: string; projected_balance_pln: number }>;
 }) {
+  const values = days.map((d) => d.projected_balance_pln);
+  const min = Math.min(...values);
+  const range = Math.max(...values) - min || 1;
+  const points = days
+    .map(
+      (d, i) =>
+        `${days.length === 1 ? 50 : (i / (days.length - 1)) * 100},${90 - ((d.projected_balance_pln - min) / range) * 75}`,
+    )
+    .join(" ");
   return (
-    <div className="card">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold text-white">{title}</h3>
-        {description ? (
-          <span className="text-xs text-gray-500">{description}</span>
-        ) : null}
-      </div>
-      {accounts.length === 0 ? (
-        <p className="py-2 text-sm text-gray-500">Brak kont.</p>
-      ) : (
-        <div className="space-y-2">
-          {accounts.map((account) => (
-            <div
-              key={account.id}
-              className="flex items-center justify-between gap-4 text-sm"
-            >
-              <span className="truncate text-gray-200">{account.name}</span>
-              <span
-                className={`shrink-0 font-mono ${account.balance_pln >= 0 ? "text-green-400" : "text-red-400"}`}
-              >
-                {formatPLN(account.balance_pln)} PLN
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <figure className="finance-forecast-chart">
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label="Prognozowany przebieg salda"
+      >
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <figcaption>
+        <span>{formatCalendarDate(days[0].date)}</span>
+        <span>{formatCalendarDate(days[days.length - 1].date)}</span>
+      </figcaption>
+    </figure>
   );
 }

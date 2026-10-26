@@ -10,6 +10,7 @@ import {
 } from "../../api/finance";
 import { localTodayIso } from "../../lib/date";
 import { QueryFeedback } from "../QueryFeedback";
+import { CategoryPicker } from "./CategoryPicker";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -22,17 +23,21 @@ type TransactionType = "income" | "expense" | "transfer" | "exchange";
 
 type TransactionFormProps = {
   onSuccess?: () => void;
+  initialType?: TransactionType;
 };
 
 const DEFAULT_TYPE: TransactionType = "expense";
 
-export function TransactionForm({ onSuccess }: TransactionFormProps) {
+export function TransactionForm({
+  onSuccess,
+  initialType = DEFAULT_TYPE,
+}: TransactionFormProps) {
   const accountsQuery = useAccounts();
   const categoriesQuery = useCategories();
   const create = useCreateTransaction();
   const exchange = useCreateExchange();
 
-  const [type, setType] = useState<TransactionType>(DEFAULT_TYPE);
+  const [type, setType] = useState<TransactionType>(initialType);
   const [accountId, setAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -392,27 +397,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 ))}
               </select>
             </div>
-            <div>
-              <label
-                htmlFor="tx-category"
-                className="mb-1 block text-sm text-gray-400"
-              >
-                Kategoria
-              </label>
-              <select
-                id="tx-category"
-                className="input"
-                value={categoryId}
-                onChange={(event) => setCategoryId(event.target.value)}
-              >
-                <option value="">Wybierz kategorię</option>
-                {filteredCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CategoryPicker
+              id="tx-category"
+              categories={filteredCategories}
+              value={categoryId}
+              onChange={setCategoryId}
+              type={type}
+            />
           </>
         )}
         <div>

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Today } from "./Today";
 import { Settings } from "./Settings";
+import { MemoryRouter } from "react-router-dom";
 import { Calendar } from "./Calendar";
 import { Advisor } from "./Advisor";
 import { Dialog } from "../components/Dialog";
@@ -136,7 +137,11 @@ describe("trustworthy query states", () => {
     expect(mocks.retry).toHaveBeenCalledTimes(2);
   });
   it("does not offer unsupported preference or autonomy controls", () => {
-    render(<Settings />);
+    render(
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>,
+    );
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByText(/nie zmienia uprawnień/)).toBeInTheDocument();
   });

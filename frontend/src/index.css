@@ -1,4 +1,5 @@
 @import "tailwindcss" source(none);
+@import "./styles/advisor.css";
 @config "../tailwind.config.js";
 @source "../index.html";
 @source "./";
@@ -92,7 +93,7 @@
   }
 
   body {
-    @apply bg-gray-950 text-gray-100 antialiased;
+    @apply bg-[#f5f6f8] text-[#15191e] antialiased;
     font-family:
       "Source Sans 3",
       system-ui,
@@ -138,6 +139,114 @@
     -webkit-text-fill-color: #e2e8f0;
     -webkit-box-shadow: 0 0 0px 1000px #1e293b inset;
   }
+}
+
+/* The application shell follows the approved finance canvas without remapping
+   utility grays used by legacy modules. Dark mode is scoped to semantic shell
+   surfaces, preserving contrast in those modules. */
+:root {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+:root[data-theme="dark"] body {
+  background: #111820;
+  color: #edf2f8;
+}
+.app-shell {
+  background: #f5f6f8;
+  color: #15191e;
+}
+:root[data-theme="dark"] .app-shell {
+  background: #111820;
+  color: #edf2f8;
+}
+.app-shell .bg-gray-950 {
+  background-color: #f5f6f8;
+}
+.app-shell .bg-gray-900 {
+  background-color: #fff;
+}
+.app-shell .border-gray-800 {
+  border-color: #e9ecf1;
+}
+.app-shell .text-white {
+  color: #15191e;
+}
+.app-shell .text-gray-300 {
+  color: #344054;
+}
+.app-shell .text-gray-400,
+.app-shell .text-gray-500 {
+  color: #667085;
+}
+.app-shell .bg-gray-800 {
+  background-color: #f8f9fc;
+}
+:root[data-theme="dark"] .app-shell .bg-gray-950 {
+  background-color: #111820;
+}
+:root[data-theme="dark"] .app-shell .bg-gray-900 {
+  background-color: #19222d;
+}
+:root[data-theme="dark"] .app-shell .border-gray-800 {
+  border-color: #2b3645;
+}
+:root[data-theme="dark"] .app-shell .text-white {
+  color: #edf2f8;
+}
+:root[data-theme="dark"] .app-shell .text-gray-300 {
+  color: #d0dae7;
+}
+:root[data-theme="dark"] .app-shell .text-gray-400,
+:root[data-theme="dark"] .app-shell .text-gray-500 {
+  color: #a5b3c6;
+}
+:root[data-theme="dark"] .app-shell .bg-gray-800 {
+  background-color: #202c3b;
+}
+.mobile-bottom-nav {
+  position: fixed;
+  z-index: 30;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  gap: 0.2rem;
+  padding: 0.45rem 0.4rem max(0.45rem, env(safe-area-inset-bottom));
+  border-top: 1px solid #e9ecf1;
+  background: #fff;
+}
+.mobile-bottom-link {
+  display: flex;
+  min-width: 3.25rem;
+  min-height: 3rem;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border-radius: 0.55rem;
+  color: #667085;
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+.mobile-bottom-link.active {
+  background: #edf2ff;
+  color: #245bea;
+}
+:root[data-theme="dark"] .mobile-bottom-nav {
+  border-color: #2b3645;
+  background: #19222d;
+}
+:root[data-theme="dark"] .mobile-bottom-link {
+  color: #a5b3c6;
+}
+:root[data-theme="dark"] .mobile-bottom-link.active {
+  background: #273c61;
+  color: #92b2ff;
 }
 
 @layer components {

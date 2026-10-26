@@ -18,6 +18,7 @@ import { FinanceReports } from "./pages/FinanceReports";
 import { Advisor } from "./pages/Advisor";
 import { Documents } from "./pages/Documents";
 import { Settings } from "./pages/Settings";
+import { FinanceSettings } from "./pages/FinanceSettings";
 
 export default function App() {
   const fetchUser = useAuthStore((s) => s.fetchUser);
@@ -43,17 +44,46 @@ export default function App() {
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/finances" element={<Finances />} />
-        <Route path="/finances/accounts" element={<FinanceAccounts />} />
+        <Route
+          path="/finances/accounts"
+          element={<Navigate to="/settings/finances/accounts" replace />}
+        />
         <Route
           path="/finances/transactions"
           element={<FinanceTransactions />}
         />
-        <Route path="/finances/cashflow" element={<FinanceCashflow />} />
-        <Route path="/finances/budgets" element={<FinanceBudgets />} />
+        <Route
+          path="/finances/cashflow"
+          element={<FinanceCashflow configure={false} />}
+        />
+        <Route
+          path="/finances/budgets"
+          element={<FinanceBudgets configure={false} />}
+        />
         <Route path="/finances/reports" element={<FinanceReports />} />
         <Route path="/advisor" element={<Advisor />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/finances" element={<FinanceSettings />}>
+          <Route index element={<Navigate to="accounts" replace />} />
+          <Route
+            path="accounts"
+            element={<FinanceAccounts section="accounts" />}
+          />
+          <Route
+            path="categories"
+            element={<FinanceAccounts section="categories" />}
+          />
+          <Route path="budgets" element={<FinanceBudgets />} />
+          <Route
+            path="schedules"
+            element={<FinanceCashflow configure settingsSection="schedules" />}
+          />
+          <Route
+            path="forecast"
+            element={<FinanceCashflow configure settingsSection="forecast" />}
+          />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/today" replace />} />
     </Routes>

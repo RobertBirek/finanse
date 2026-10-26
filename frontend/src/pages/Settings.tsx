@@ -1,4 +1,5 @@
 import { useAuthStore } from "../stores/authStore";
+import { Link } from "react-router-dom";
 
 export function Settings() {
   const user = useAuthStore((s) => s.user);
@@ -6,6 +7,35 @@ export function Settings() {
     <div className="max-w-2xl">
       <h1 className="text-2xl font-bold text-white mb-6">Ustawienia</h1>
       <div className="space-y-6">
+        <section className="card">
+          <h2 className="mb-2 text-lg font-semibold">Finanse</h2>
+          <p className="mb-4 text-sm text-gray-500">
+            Konta, kategorie i plan definiujesz tutaj. Codzienny przegląd
+            pozostaje w Finansach.
+          </p>
+          <nav aria-label="Konfiguracja finansów" className="space-y-1">
+            {(
+              [
+                ["accounts", "Konta i rachunki"],
+                ["categories", "Kategorie"],
+                ["budgets", "Limity budżetu"],
+                ["schedules", "Harmonogramy"],
+                ["forecast", "Prognoza"],
+              ] as const
+            ).map(([path, label]) => (
+              <Link
+                key={path}
+                to={`/settings/finances/${path}`}
+                className="sidebar-link"
+              >
+                <span>{label}</span>
+                <span className="ml-auto" aria-hidden="true">
+                  →
+                </span>
+              </Link>
+            ))}
+          </nav>
+        </section>
         <section className="card">
           <h2 className="text-lg font-semibold text-white mb-4">Profil</h2>
           <dl className="space-y-4 text-sm">
