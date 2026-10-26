@@ -2,6 +2,62 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-26 — Implementacja zatwierdzonego UI finansów (worktree)
+
+- Użytkownik zaakceptował makietę, 8-etapowy plan, podlimity i implementację.
+  Osobno zatwierdził worktree: `/root/.local/share/opencode/worktree/a46231/finance-ui-redesign`,
+  gałąź `feat/finance-ui-redesign`. Root `/opt/finanse` i opublikowana makieta nietknięte.
+- Spec i plan: `docs/superpowers/{specs/2026-10-26-finance-ui-design.md,plans/2026-10-26-finance-ui.md}`.
+  Backend ma opcjonalne bank_name/account_holder/iban/bic/notes, walidację NRB/IBAN/BIC,
+  balance_source, głębokie tree raportu, include_descendants i agregaty najwyższych
+  budżetów gałęzi używane również przez cashflow. Bez przepisywania ledger/history/Actual.
+- Nowa nullable migracja `b8e4c2f1a7d9` po `c7f8c620460d`; review wykrył pierwotne błędne
+  rozgałęzienie, poprawione z testem pojedynczego head. Próba na syntetycznych danych
+  testowych potwierdziła zachowanie kont, transakcji i postingów.
+- React: jeden sidebar i dolna nawigacja, oba motywy, settings-only definicje,
+  pola bankowe i maskowanie, drzewo/pickery, przegląd z faktycznych API i wykresem,
+  tworzenie operacji w dialogu, panel szczegółów, backendowe sumy budżetu.
+  Saldo ogólne/budżetowe jest dodatkowym agregatem API, nie obliczeniem klienta.
+- Subagenci przerwali pracę przy limicie użycia; główny agent przejął brakujące
+  elementy, testy i kontrolę zgodności zamiast uznać częściową implementację za gotową.
+- Końcowy pełny backend: 790 PASS, 8 proxy deselected, 2 znane warningi bibliotek.
+  Frontend220 PASS, E2E31 PASS+1 celowy desktop skip, Ruff/mypy/ESLint/tsc/build PASS.
+  Fresh review bez blokad; raport: `docs/audits/2026-10-26-finance-ui-implementation.md`.
+  Dodatkowy `budget_accounts_only` zachowuje zakres raportu przy przejściu do historii;
+  zwykła historia domyślnie nadal obejmuje wszystkie konta. Regresja RED→GREEN.
+  Początkowe problemy testów dotyczyły jawnego test DSN i niedostępnej wersji Chromium;
+  użyto istniejącej przeglądarki przez PLAYWRIGHT_CHROMIUM_EXECUTABLE, bez instalacji.
+- Bez produkcyjnego DB/API testów mutacji, bez migracji/deployu/merge/pusha. Publiczny
+  podgląd nowej aplikacji wymaga świadomego kolejnego kroku; aktualna makieta pozostaje.
+- Lokalne commity: backend `5cfc7e9`, frontend + zachowany prototyp `898976c`.
+  Worktree i gałąź pozostawione do oceny. Następnie uzgodnić podgląd bez produkcyjnego
+  zapisu; dopiero po akceptacji próba migracji na kopii i osobno zatwierdzone wydanie.
+
+## 2026-10-26 — Makieta UI/UX finansów dostępna przez HTTPS
+
+- Użytkownik odrzucił obecny układ i wskazał Revolut jako wzorzec jakości.
+  Wymaga konfiguracji kont/kategorii w ustawieniach, drzewa kategorii i danych
+  bankowych kont. Po porównaniu oficjalnych materiałów konkurencji zaakceptował
+  klikalną makietę i publikację pod `/makieta`, następnie przełączył sesję na Build.
+- Zbudowano izolowany statyczny prototyp `frontend/public/makieta/`: 5 widoków finansów,
+  7 sekcji ustawień, panele szczegółów, filtry, tworzenie/edycja fikcyjnych kont,
+  kategorii i operacji, limity oraz dwa motywy. Source Sans 3 lokalnie, bez zależności.
+  CSP blokuje połączenia/form-action. Dane w JS są syntetyczne, reset po odświeżeniu.
+- W testach usunięto mobilne overflow (min-content panelu i różne marginesy 320px)
+  oraz ukrywanie nowej operacji przez zachowane filtry. Prognoza celowo stała i opisana.
+- Publikacja tylko nowych 4 plików pod `/usr/share/nginx/html/makieta`, staging
+  sprawdzony hashami i atomowo przeniesiony. Istniejący webroot/config Nginx i IDs/
+  obrazy/czasy startu 6 kontenerów identyczne przed/po; HTTPS/health 200.
+  Bez restartu, nowego obrazu, Compose, migracji, dostępu do DB, importu i uploadu.
+- Lokalny i publiczny Playwright: 12 widoków × 5 szerokości + interakcje PASS,
+  brak JS/CSP errors/API/mutujących żądań/cookies/localStorage. Axe 8 audytów PASS
+  w badanym zakresie; frontend 194 Vitest, lint/tsc/build i JS syntax PASS.
+- Raport `docs/audits/2026-10-26-finance-mockup.md`; dowody i screenshoty
+  `/tmp/opencode/makieta-20261026`. Bez commita/pusha. Zastany `webapp/` nietknięty.
+- Dalej: opinia użytkownika. To nie zatwierdzenie pełnej przebudowy ani wdrożenie
+  nowego UI. Katalog jest nakładką statyczną: odtworzenie starego obrazu go usunie;
+  następny build z repo zawiera pliki public albo należy je opublikować ponownie.
+
 ## 2026-10-24 — Zatwierdzony podgląd bankowy, bez zapisu księgi
 
 - Użytkownik zatwierdził wyłącznie podgląd CSV Revolut i tekstowych PDF VeloBank:

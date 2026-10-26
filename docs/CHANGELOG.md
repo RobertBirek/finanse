@@ -2,6 +2,39 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-26 — Nowy interfejs finansów i ustawień
+
+### Added
+- Opcjonalne dane bankowe kont: bank, właściciel, IBAN/NRB, BIC i notatka;
+  walidacja oraz nullable migracja `b8e4c2f1a7d9` po dotychczasowym head `c7f8c620460d`.
+- Źródłowe salda kont, serwerowe agregaty sald ogólnych/budżetowych, głębokie drzewo
+  raportu oraz filtry podkategorii i kont budżetowych.
+
+### Changed
+- Jeden sidebar, dolna nawigacja mobilna, jasny/ciemny motyw i wspólne powierzchnie.
+  Przegląd z rzeczywistych API, wykres prognozy, szybkie operacje i panel szczegółów.
+- Konta, drzewo kategorii, limity, harmonogramy i parametry prognozy w ustawieniach;
+  historyczne adresy zachowane, dane finansowe i mapowania Actual bez przekształceń.
+- Limit dziecka jako podlimit rodzica: agregaty budżetu/cashflow nie liczą gałęzi
+  podwójnie. Linki z raportów zachowują ich zakres kont i podkategorii.
+- Raport wdrożeniowy i rozstrzygnięcia: `docs/audits/2026-10-26-finance-ui-implementation.md`.
+  Weryfikacja: backend790/frontend220/E2E31+1skip, lint/types/build PASS.
+  Wersja w osobnej gałęzi; bez migracji/deployu/merge/pusha na produkcję.
+
+## [Prototype] — 2026-10-26 — Makieta nowego UI finansów
+
+### Added
+- Po zgodzie użytkownika opublikowano klikalny, polski prototyp pod `/makieta/`:
+  przegląd, transakcje, budżet, nadchodzące, raporty i ustawienia finansów.
+- Ustawienia oddzielają konfigurację kont/danych bankowych, drzewa kategorii,
+  limitów i harmonogramów. Fikcyjne dane w pamięci; brak API i trwałego zapisu.
+- Weryfikacja lokalna i HTTPS: 60 kombinacji widok/szerokość oraz główne interakcje
+  PASS; brak błędów JS/CSP i żądań API. Axe 8 widoków bez naruszeń badanych reguł.
+- Publikacja wyłącznie nowych plików statycznych, bez restartów/migracji/importu
+  ani dostępu do bazy. Istniejące assets/Nginx oraz kontenery niezmienione.
+  Frontend 194 testy i lint/typecheck/build PASS. Docelowy interfejs jeszcze nie wdrożony.
+  Raport i ograniczenia: `docs/audits/2026-10-26-finance-mockup.md`.
+
 ## [Reviewed] — 2026-10-24 — Podgląd wyciągów bankowych, bez importu
 
 ### Added

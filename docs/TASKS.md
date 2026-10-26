@@ -4,6 +4,23 @@ Backlog zadań ze statusami.
 
 Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
+## Przeprojektowanie UI/UX finansów (2026-10-26)
+
+- [x] Porównanie oficjalnych wzorców Revolut, Monzo, Monarch, Actual i YNAB;
+  propozycja oddzielenia codziennej pracy od konfiguracji w ustawieniach.
+- [x] Zatwierdzona klikalna makieta pod `https://finanse.birek.online/makieta/`:
+  fikcyjne dane, przegląd/transakcje/budżet/nadchodzące/raporty, ustawienia kont
+  i danych bankowych, wielopoziomowe drzewo kategorii, desktop/mobile i dwa motywy.
+  HTTPS/60 kombinacji/interakcje/axe PASS; istniejący frontend/API/dane bez zmian.
+- [x] Użytkownik zaakceptował wygląd makiety, pełny plan i zasadę podlimitów kategorii;
+  zatwierdził implementację w osobnym worktree, bez publikacji produkcyjnej.
+- [x] Implementacja nowego UI i kontraktów backendu w gałęzi `feat/finance-ui-redesign`:
+  ustawienia, drzewo, metadane kont, waluty, raporty i agregacja budżetów gotowe;
+  testy backend790/frontend220/E2E31+1skip, lint/types/build i review zakończone.
+- [ ] Pokazać wersję do oceny i uzyskać osobną zgodę przed wdrożeniem/migracją na produkcji.
+- [ ] Przy następnym odtworzeniu frontendu uwzględnić `/public/makieta` w obrazie
+  albo ponownie opublikować katalog: obecna statyczna nakładka nie jest nowym obrazem.
+
 ---
 
 ## Audyt przekrojowy (2026-10-22)
