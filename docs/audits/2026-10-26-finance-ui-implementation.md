@@ -6,6 +6,10 @@ Użytkownik zatwierdził wygląd makiety `/makieta`, ośmioetapowy plan, podlimi
 i implementację w osobnym worktree. Przed produkcją ma otrzymać wersję do oceny.
 Nie wykonano deployu, migracji produkcyjnej, importu, merge ani pusha.
 
+Powyższy opis dotyczy etapu implementacji. Następnie użytkownik jawnie wybrał
+bezpośredni main i produkcję: wydanie1b42e34 z migracją b8 jest wdrożone.
+Osobny raport wykonania: `docs/audits/2026-10-26-release-finance-ui.md`.
+
 - Gałąź: `feat/finance-ui-redesign`.
 - Worktree: `/root/.local/share/opencode/worktree/a46231/finance-ui-redesign`.
 - Wzorzec: `frontend/public/makieta/` (przeniesiony z wcześniejszej sesji do gałęzi).

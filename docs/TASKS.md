@@ -17,9 +17,12 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Implementacja nowego UI i kontraktów backendu w gałęzi `feat/finance-ui-redesign`:
   ustawienia, drzewo, metadane kont, waluty, raporty i agregacja budżetów gotowe;
   testy backend790/frontend220/E2E31+1skip, lint/types/build i review zakończone.
-- [ ] Pokazać wersję do oceny i uzyskać osobną zgodę przed wdrożeniem/migracją na produkcji.
-- [ ] Przy następnym odtworzeniu frontendu uwzględnić `/public/makieta` w obrazie
-  albo ponownie opublikować katalog: obecna statyczna nakładka nie jest nowym obrazem.
+- [-] Osobny podgląd przed wdrożeniem: użytkownik wybrał bezpośrednio main i produkcję.
+- [x] Po jawnej zgodzie main/push + wdrożenie1b42e34 i addytywna migracja b8:
+  backupc5520a46/restore/próba na kopii, backend790/frontend220/E2E31+1skip/CI PASS;
+  HTTPS/assets/auth/browser i niezmienność historycznych danych/original uploads PASS.
+- [x] `/public/makieta` zawarte w nowym obrazie i zweryfikowane przez HTTPS.
+- [ ] Zebrać uwagi użytkownika do działającego UI na produkcji; poprawki małymi zmianami.
 
 ---
 

@@ -2,6 +2,29 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-26 — Nowy interfejs finansów wdrożony po jawnej zgodzie
+
+- Użytkownik pominął proponowany osobny podgląd: „wdróż od razu do main”.
+  Scalono fast-forward i wypchnięto `1b42e345f42bec2667c888a578b8f9b60a6fc136`;
+  następnie wdrożono spójny backend/worker/frontend i nullable migrację c7→b8.
+- Pełny gate main: backend790,frontend220,E2E31+1skip, Ruff/mypy/ESLint/tsc/build PASS.
+  GitHub CI40412251107 success, oba jobs (w tym osobne testy proxy/kontenerów).
+- Backup c5520a46 i systemd restore drill success/0; nowy obraz migracyjny sprawdzony
+  dodatkowo na izolowanym świeżym dumpie z dokładnym porównaniem wszystkich starych
+  kolumn finansowych/dokumentów/ustawień. NULL nowych metadanych, invariants0 błędów.
+- Pakiet `/opt/finanse/webapp/releases/1b42e34`, runtime'y d3c, dependencies unchanged,
+  obrazy offline i pinned IDs. Zachowany hardening. Znane obejście umask dotyczy tylko
+  wygenerowanego source/dist; non-root exact-env health i wszystkie source hashes PASS.
+- Produkcyjna migracja nie zmieniła starych danych. HTTPS/assets/auth/browser375/1440
+  i końcowe porównanie księgi/uploads/data-container IDs PASS. Bez importów/mutacji smoke.
+  Active metadata wskazuje1b42e34 i b8, poprzednie obrazy/rollback zachowane.
+- Rollback to stare obrazy aplikacji **bez downgrade bazy**; zachować nowe nullable pola.
+  Nie przywracać produkcyjnej bazy z backupu jako rutynowego rollbacku kodu.
+- Zastane prototypowe zmiany main są w scalonej wersji, a ich kopia nadal w nazwanym
+  Git stash `pre-finance-ui-release`; `webapp/` nie dodawano do repo, worktree zachowany.
+- Raport: `docs/audits/2026-10-26-release-finance-ui.md`. Pięciominutowa obserwacja
+  końcowa w toku. Następnie opinia użytkownika i małe poprawki; import Velo nadal zablokowany.
+
 ## 2026-10-26 — Implementacja zatwierdzonego UI finansów (worktree)
 
 - Użytkownik zaakceptował makietę, 8-etapowy plan, podlimity i implementację.

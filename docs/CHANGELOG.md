@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Unreleased] — 2026-10-26 — Nowy interfejs finansów i ustawień
+## [1b42e34] — 2026-10-26 — Nowy interfejs finansów i ustawień
 
 ### Added
 - Opcjonalne dane bankowe kont: bank, właściciel, IBAN/NRB, BIC i notatka;
@@ -19,7 +19,10 @@ Wszystkie istotne zmiany w projekcie.
   podwójnie. Linki z raportów zachowują ich zakres kont i podkategorii.
 - Raport wdrożeniowy i rozstrzygnięcia: `docs/audits/2026-10-26-finance-ui-implementation.md`.
   Weryfikacja: backend790/frontend220/E2E31+1skip, lint/types/build PASS.
-  Wersja w osobnej gałęzi; bez migracji/deployu/merge/pusha na produkcję.
+  Po osobnej zgodzie scalono/push main i wdrożono backend/worker/frontend oraz
+  addytywną migrację b8. Backup c5520a46+restore i próba na kopii PASS;
+  HTTPS/assets/auth/browser PASS, stare dane i oryginały bez zmian. Rollback obrazów
+  zachowany, bez importu księgi. Raport: `docs/audits/2026-10-26-release-finance-ui.md`.
 
 ## [Prototype] — 2026-10-26 — Makieta nowego UI finansów
 
