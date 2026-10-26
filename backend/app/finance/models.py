@@ -33,6 +33,11 @@ class Account(Base):
         Date, nullable=False, server_default=func.current_date()
     )
     closed_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    bank_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    account_holder: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
+    bic: Mapped[str | None] = mapped_column(String(11), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     postings: Mapped[list["Posting"]] = relationship(
         "Posting", back_populates="account", cascade="all, delete-orphan"
@@ -41,6 +46,10 @@ class Account(Base):
     @property
     def balance_pln(self) -> int:
         return getattr(self, "_balance", 0)
+
+    @property
+    def balance_source(self) -> int:
+        return getattr(self, "_balance_source", 0)
 
 
 class Category(Base):

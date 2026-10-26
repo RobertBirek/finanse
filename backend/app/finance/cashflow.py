@@ -316,9 +316,9 @@ async def get_cashflow_forecast(
     remaining_days = max((next_payday - today).days, 1)
     budget_status = await get_budget_status(db, user_id, today.month, today.year)
     budgets = CashflowBudgetSummary(
-        total_budget_pln=sum(item.budget_amount_pln for item in budget_status.items),
-        total_spent_pln=sum(item.spent_pln for item in budget_status.items),
-        remaining_pln=sum(item.remaining_pln for item in budget_status.items),
+        total_budget_pln=budget_status.total_budget_pln,
+        total_spent_pln=budget_status.total_spent_pln,
+        remaining_pln=budget_status.remaining_pln,
     )
     return CashflowForecastResponse(
         last_payday=_payday_bounds(today, settings.payday_day)[0],

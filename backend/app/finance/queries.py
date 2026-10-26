@@ -21,6 +21,12 @@ def _account_rows(user_id: uuid.UUID):
                     else_=-Posting.base_amount_pln,
                 )
             ).label("balance"),
+            func.sum(
+                case(
+                    (Posting.direction == "credit", Posting.source_amount),
+                    else_=-Posting.source_amount,
+                )
+            ).label("balance_source"),
         )
         .join(Account, Account.id == Posting.account_id)
         .where(Account.user_id == user_id)
@@ -28,7 +34,11 @@ def _account_rows(user_id: uuid.UUID):
         .subquery()
     )
     return (
-        select(Account, func.coalesce(balances.c.balance, 0))
+        select(
+            Account,
+            func.coalesce(balances.c.balance, 0),
+            func.coalesce(balances.c.balance_source, 0),
+        )
         .outerjoin(balances, balances.c.account_id == Account.id)
         .where(Account.user_id == user_id)
     )
@@ -37,8 +47,9 @@ def _account_rows(user_id: uuid.UUID):
 async def get_accounts(db: AsyncSession, user_id: uuid.UUID) -> list[Account]:
     result = await db.execute(_account_rows(user_id).order_by(Account.name, Account.id))
     accounts = []
-    for account, balance in result.all():
+    for account, balance, balance_source in result.all():
         account._balance = int(balance)
+        account._balance_source = int(balance_source)
         accounts.append(account)
     return accounts
 
@@ -50,8 +61,9 @@ async def get_account(
     row = result.one_or_none()
     if row is None:
         return None
-    account, balance = row
+    account, balance, balance_source = row
     account._balance = int(balance)
+    account._balance_source = int(balance_source)
     return account
 
 
@@ -86,6 +98,14 @@ async def search_transactions(
     """
     txn = FinancialTransaction
     account_leg: list[ColumnElement[bool]] = [Posting.account_id.is_not(None)]
+    if filters.budget_accounts_only:
+        account_leg.append(
+            Posting.account_id.in_(
+                select(Account.id).where(
+                    Account.user_id == user_id, Account.is_budget_account.is_(True)
+                )
+            )
+        )
     if filters.account_id:
         account_leg.append(Posting.account_id == filters.account_id)
     if filters.currency:
@@ -99,11 +119,22 @@ async def search_transactions(
         select(Posting.id).where(Posting.transaction_id == txn.id, *account_leg).exists(),
     ]
     if filters.category_id:
+        category_ids = select(Category.id).where(
+            Category.id == filters.category_id, Category.user_id == user_id
+        )
+        if filters.include_descendants:
+            descendants = category_ids.cte("category_descendants", recursive=True)
+            descendants = descendants.union_all(
+                select(Category.id).where(
+                    Category.parent_id == descendants.c.id, Category.user_id == user_id
+                )
+            )
+            category_ids = select(descendants.c.id)
         conditions.append(
             select(Posting.id)
             .where(
                 Posting.transaction_id == txn.id,
-                Posting.category_id == filters.category_id,
+                Posting.category_id.in_(category_ids),
             )
             .exists()
         )

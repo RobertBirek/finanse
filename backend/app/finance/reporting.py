@@ -9,7 +9,12 @@ from sqlalchemy.orm import aliased
 from app.finance.dates import _month_bounds
 from app.finance.models import Account, Category, FinancialTransaction, Posting
 from app.finance.queries import get_accounts
-from app.finance.schemas import CategorySpendResponse, CategorySummaryResponse, FinancialSummary
+from app.finance.schemas import (
+    CategorySpendResponse,
+    CategorySummaryResponse,
+    CategoryTreeNode,
+    FinancialSummary,
+)
 
 
 async def get_financial_summary(
@@ -104,6 +109,10 @@ async def get_financial_summary(
 
     return FinancialSummary(
         accounts=account_balances,
+        balance_all_pln=sum(a.balance_pln for a in accounts if a.is_active),
+        balance_budget_pln=sum(
+            a.balance_pln for a in accounts if a.is_active and a.is_budget_account
+        ),
         income_total_pln=income_total,
         expense_total_pln=expense_total,
         net_total_pln=income_total - expense_total,
@@ -185,9 +194,39 @@ async def get_category_summary(
         for category_id, name, parent_id in groups_result.all()
     ]
 
+    # The legacy flat fields intentionally retain their historical meaning.
+    # The additive tree includes zero-total and inactive ancestors so a UI can
+    # render the complete owned hierarchy while rolling each posting up once.
+    tree_categories_result = await db.execute(
+        select(Category)
+        .where(Category.user_id == user_id, Category.type == "expense")
+        .order_by(Category.name, Category.id)
+    )
+    tree_categories = list(tree_categories_result.scalars())
+    direct_by_id = {category_id: int(total) for category_id, _, _, total in category_totals}
+    children_by_parent: dict[uuid.UUID | None, list[Category]] = {}
+    for tree_category in tree_categories:
+        children_by_parent.setdefault(tree_category.parent_id, []).append(tree_category)
+
+    def build_node(category: Category) -> CategoryTreeNode:
+        children = [build_node(child) for child in children_by_parent.get(category.id, [])]
+        direct_total = direct_by_id.get(category.id, 0)
+        return CategoryTreeNode(
+            category_id=category.id,
+            name=category.name,
+            parent_id=category.parent_id,
+            is_active=category.is_active,
+            direct_total_pln=direct_total,
+            total_pln=direct_total + sum(child.total_pln for child in children),
+            children=children,
+        )
+
+    tree = [build_node(tree_category) for tree_category in children_by_parent.get(None, [])]
+
     return CategorySummaryResponse(
         month=selected_month,
         year=selected_year,
         groups=groups,
         categories=categories,
+        tree=tree,
     )

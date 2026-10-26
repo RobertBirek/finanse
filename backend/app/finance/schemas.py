@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.finance.account_validation import normalize_bic, normalize_iban
+
 
 class AccountCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
@@ -11,6 +13,14 @@ class AccountCreate(BaseModel):
     currency: str = Field(default="PLN", min_length=3, max_length=3)
     is_active: bool = True
     is_budget_account: bool = True
+    bank_name: str | None = Field(default=None, max_length=200)
+    account_holder: str | None = Field(default=None, max_length=200)
+    iban: str | None = Field(default=None, max_length=64)
+    bic: str | None = Field(default=None, max_length=11)
+    notes: str | None = None
+
+    _normalize_iban = field_validator("iban")(normalize_iban)
+    _normalize_bic = field_validator("bic")(normalize_bic)
 
 
 class AccountUpdate(BaseModel):
@@ -19,6 +29,14 @@ class AccountUpdate(BaseModel):
     is_active: bool | None = None
     is_budget_account: bool | None = None
     closed_at: dt.date | None = None
+    bank_name: str | None = Field(default=None, max_length=200)
+    account_holder: str | None = Field(default=None, max_length=200)
+    iban: str | None = Field(default=None, max_length=64)
+    bic: str | None = Field(default=None, max_length=11)
+    notes: str | None = None
+
+    _normalize_iban = field_validator("iban")(normalize_iban)
+    _normalize_bic = field_validator("bic")(normalize_bic)
 
     @field_validator("name", "type", "is_active", "is_budget_account")
     @classmethod
@@ -39,6 +57,12 @@ class AccountResponse(BaseModel):
     is_active: bool
     is_budget_account: bool
     balance_pln: int = 0
+    balance_source: int = 0
+    bank_name: str | None
+    account_holder: str | None
+    iban: str | None
+    bic: str | None
+    notes: str | None
     opened_at: dt.date
     closed_at: dt.date | None
     created_at: dt.datetime
@@ -150,6 +174,8 @@ class TransactionSearch(BaseModel):
     q: str = Field(default="", max_length=200)
     account_id: uuid.UUID | None = None
     category_id: uuid.UUID | None = None
+    include_descendants: bool = False
+    budget_accounts_only: bool = False
     date_from: dt.date | None = None
     date_to: dt.date | None = None
     currency: Literal["PLN", "EUR", "USD"] | None = None
@@ -186,6 +212,8 @@ class ScheduledFinanceConfirmationResponse(BaseModel):
 
 class FinancialSummary(BaseModel):
     accounts: list[dict]
+    balance_all_pln: int = 0
+    balance_budget_pln: int = 0
     income_total_pln: int
     expense_total_pln: int
     net_total_pln: int
@@ -205,6 +233,17 @@ class CategorySummaryResponse(BaseModel):
     year: int
     groups: list[CategorySpendResponse]
     categories: list[CategorySpendResponse]
+    tree: list["CategoryTreeNode"] = Field(default_factory=list)
+
+
+class CategoryTreeNode(BaseModel):
+    category_id: uuid.UUID
+    name: str
+    parent_id: uuid.UUID | None
+    is_active: bool
+    direct_total_pln: int
+    total_pln: int
+    children: list["CategoryTreeNode"] = Field(default_factory=list)
 
 
 class FinanceSettingsUpdate(BaseModel):
@@ -334,3 +373,6 @@ class BudgetStatusResponse(BaseModel):
     month: int
     year: int
     items: list[BudgetStatusItem]
+    total_budget_pln: int = 0
+    total_spent_pln: int = 0
+    remaining_pln: int = 0

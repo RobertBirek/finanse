@@ -167,4 +167,24 @@ async def get_budget_status(
         )
 
     items.sort(key=lambda item: item.name)
-    return BudgetStatusResponse(month=selected_month, year=selected_year, items=items)
+    budget_category_ids = {budget.category_id for budget in budgets}
+    aggregate_items = []
+    for item in items:
+        parent_id = item.parent_id
+        has_budget_ancestor = False
+        while parent_id is not None:
+            if parent_id in budget_category_ids:
+                has_budget_ancestor = True
+                break
+            parent = category_by_id.get(parent_id)
+            parent_id = parent.parent_id if parent is not None else None
+        if not has_budget_ancestor:
+            aggregate_items.append(item)
+    return BudgetStatusResponse(
+        month=selected_month,
+        year=selected_year,
+        items=items,
+        total_budget_pln=sum(item.budget_amount_pln for item in aggregate_items),
+        total_spent_pln=sum(item.spent_pln for item in aggregate_items),
+        remaining_pln=sum(item.remaining_pln for item in aggregate_items),
+    )
