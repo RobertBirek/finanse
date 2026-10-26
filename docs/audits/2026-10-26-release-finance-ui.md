@@ -66,8 +66,9 @@ backendu, workera i frontendu z addytywną migracją danych bankowych kont.
   overflow, błędów JS, obcych originów i mutujących żądań. Bez login POST.
 - Active-release metadata zaktualizowano atomowo dopiero po udanym smoke;
   skonsolidowany `compose.active.yaml` renderuje dokładnie wdrożony runtime.
-- Pierwsze kontrole logów: zero nowych ERROR/CRITICAL/Traceback.
-  Końcowa pięciominutowa obserwacja jest zapisywana osobno po jej zakończeniu.
+- Pięciominutowa obserwacja po wdrożeniu: **11/11 prób PASS**, health17–68ms,
+  zero restartów, zero nowych ERROR/CRITICAL/Traceback. Redis PONG, aplikacje
+  uruchomione na właściwych obrazach; identyfikatory/czasy startu usług danych bez zmian.
 
 ## Rollback i ograniczenia
 
@@ -86,6 +87,8 @@ backendu, workera i frontendu z addytywną migracją danych bankowych kont.
   nie został dodany do Git. Worktree feature pozostawiony.
 - Dowody/manifesty/logi/render z konfiguracją: prywatnie w
   `/tmp/opencode/release-finance-ui-1b42e34`, bez sekretów i danych osobowych w repo.
+  Tymczasowy nieszyfrowany dump próby i skopiowane env usunięto po weryfikacji;
+  szyfrowany backup, rollback i dowody hashów pozostają zachowane.
 
 ## Następny krok
 

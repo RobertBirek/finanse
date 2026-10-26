@@ -23,6 +23,7 @@ Wszystkie istotne zmiany w projekcie.
   addytywną migrację b8. Backup c5520a46+restore i próba na kopii PASS;
   HTTPS/assets/auth/browser PASS, stare dane i oryginały bez zmian. Rollback obrazów
   zachowany, bez importu księgi. Raport: `docs/audits/2026-10-26-release-finance-ui.md`.
+  Pięciominutowa obserwacja11/11 PASS, bez restartów i nowych błędów aplikacji.
 
 ## [Prototype] — 2026-10-26 — Makieta nowego UI finansów
 

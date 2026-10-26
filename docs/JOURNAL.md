@@ -23,7 +23,9 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Zastane prototypowe zmiany main są w scalonej wersji, a ich kopia nadal w nazwanym
   Git stash `pre-finance-ui-release`; `webapp/` nie dodawano do repo, worktree zachowany.
 - Raport: `docs/audits/2026-10-26-release-finance-ui.md`. Pięciominutowa obserwacja
-  końcowa w toku. Następnie opinia użytkownika i małe poprawki; import Velo nadal zablokowany.
+  końcowa11/11 PASS, health17–68ms,0 restartów/nowych błędów. Tymczasowy dump i kopie
+  env usunięte, backup zachowany. Dalej opinia użytkownika i małe poprawki;
+  import Velo nadal zablokowany.
 
 ## 2026-10-26 — Implementacja zatwierdzonego UI finansów (worktree)
 
