@@ -1,21 +1,12 @@
-import { useState } from "react";
-import {
-  useCategorySummary,
-  useFinancialSummary,
-  type FinancialPeriod,
-} from "../api/finance";
+import { useCategorySummary, useFinancialSummary } from "../api/finance";
 import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { SummaryCard } from "../components/finance/SummaryCard";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
-
-function currentPeriod(): FinancialPeriod {
-  const today = new Date();
-  return { month: today.getMonth() + 1, year: today.getFullYear() };
-}
+import { useFinancePeriod } from "../components/finance/useFinancePeriod";
 
 export function FinanceReports() {
-  const [period, setPeriod] = useState(currentPeriod);
+  const [period, setPeriod] = useFinancePeriod();
   const summary = useFinancialSummary(period);
   const categorySummary = useCategorySummary(period);
 

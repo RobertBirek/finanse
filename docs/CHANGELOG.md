@@ -2,6 +2,21 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-27 — Poprawki po przeglądzie finansów
+
+### Fixed
+- Okres finansów zapisany w URL, zachowany po odświeżeniu, powrocie z historii
+  i przejściu przez zakładki/linki przeglądu; bez przenoszenia filtrów transakcji.
+- Pełny kontrast tekstu i aktywnych przycisków kont archiwalnych w obu motywach.
+- Dostępny komunikat kopiowania IBAN-u, obsługa odmowy/braku Clipboard API
+  i ręczne kopiowanie z możliwością ponownego ukrycia numeru.
+
+### Added
+- Regresje jednostkowe i E2E na fikcyjnym API, w tym axe dla kont archiwalnych.
+- Weryfikacja: frontend 230 unit / 43 E2E + 1 celowy skip,
+  lint/typecheck/build PASS; niezależne review bez blokad.
+- Zmiany tylko w frontendzie; bez migracji, importów i wdrożenia produkcyjnego.
+
 ## [1b42e34] — 2026-10-26 — Nowy interfejs finansów i ustawień
 
 ### Added

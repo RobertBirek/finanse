@@ -4,6 +4,7 @@ import {
   type CategorySummaryNode,
 } from "../../api/finance";
 import { formatPLN } from "../../lib/format";
+import { financePeriodSearch } from "./useFinancePeriod";
 
 type CategorySpendTreeProps = {
   summary?: CategorySummary;
@@ -97,7 +98,7 @@ function SpendNode({
 }) {
   const month = String(summary.month).padStart(2, "0");
   const lastDay = new Date(summary.year, summary.month, 0).getDate();
-  const href = `/finances/transactions?category_id=${encodeURIComponent(node.category_id)}&include_descendants=true&budget_accounts_only=true&date_from=${summary.year}-${month}-01&date_to=${summary.year}-${month}-${lastDay}`;
+  const href = `/finances/transactions${financePeriodSearch({ month: summary.month, year: summary.year })}&category_id=${encodeURIComponent(node.category_id)}&include_descendants=true&budget_accounts_only=true&date_from=${summary.year}-${month}-01&date_to=${summary.year}-${month}-${lastDay}`;
 
   return (
     <div>

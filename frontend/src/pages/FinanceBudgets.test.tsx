@@ -1,6 +1,17 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderWithRouter,
+  screen,
+  within,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FinanceBudgets } from "./FinanceBudgets";
+
+function render(component: ReactElement) {
+  return renderWithRouter(<MemoryRouter>{component}</MemoryRouter>);
+}
 
 const hooks = vi.hoisted(() => ({
   useBudgetStatus: vi.fn(),

@@ -4,6 +4,17 @@ Backlog zadań ze statusami.
 
 Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
+## Poprawki po przeglądzie UI (2026-10-27)
+
+- [x] Zgoda użytkownika na trzy poprawki wykryte podczas przeglądu.
+- [x] Okres w URL, odświeżenie, Wstecz, zakładki i linki przeglądu; granice lat.
+- [x] Kontrast archiwalnych kont bez opacity na całym wierszu.
+- [x] Kopiowanie IBAN-u: sukces, odmowa, brak API, ręczne kopiowanie i Ukryj.
+- [x] Końcowy frontend gate: 230 unit, 43 E2E + 1 celowy skip,
+  lint/typecheck/build PASS; ponowne niezależne review bez blokad.
+- [ ] Osobne wdrożenie poprawek; produkcja nadal używa wydania 1b42e34.
+- [ ] Ocena zalogowanej produkcji — testy fixtures jej nie zastępują.
+
 ## Przeprojektowanie UI/UX finansów (2026-10-26)
 
 - [x] Porównanie oficjalnych wzorców Revolut, Monzo, Monarch, Actual i YNAB;

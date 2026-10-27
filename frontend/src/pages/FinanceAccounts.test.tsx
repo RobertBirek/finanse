@@ -240,7 +240,7 @@ describe("FinanceAccounts", () => {
     ).toBeInTheDocument();
   });
 
-  it("nieaktywne konto ma badge nieaktywne i jest wygaszone", () => {
+  it("nieaktywne konto ma badge nieaktywne bez wygaszania kontrolek", () => {
     render(<FinanceAccounts />);
 
     expect(screen.getByText("nieaktywne")).toBeInTheDocument();
@@ -249,7 +249,7 @@ describe("FinanceAccounts", () => {
       .getByRole("button", { name: "Aktywuj konto Lokata" })
       .closest("div.rounded-lg");
     expect(lokataRow).not.toBeNull();
-    expect(lokataRow).toHaveClass("opacity-60");
+    expect(lokataRow).not.toHaveClass("opacity-60");
   });
 
   it("utworzenie konta wywołuje useCreateAccount.mutate z {name,type,currency}", () => {

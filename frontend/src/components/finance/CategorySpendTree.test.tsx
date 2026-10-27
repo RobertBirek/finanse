@@ -97,7 +97,7 @@ describe("CategorySpendTree", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Rachunki/ })).toHaveAttribute(
       "href",
-      "/finances/transactions?category_id=utilities&include_descendants=true&budget_accounts_only=true&date_from=2026-02-01&date_to=2026-02-28",
+      "/finances/transactions?month=2&year=2026&category_id=utilities&include_descendants=true&budget_accounts_only=true&date_from=2026-02-01&date_to=2026-02-28",
     );
     expect(screen.getByText("archiwalna")).toBeInTheDocument();
   });

@@ -11,18 +11,13 @@ import {
   useCreateBudget,
   useDeleteBudget,
   useUpdateBudget,
-  type FinancialPeriod,
 } from "../api/finance";
 import { formatPLN } from "../lib/format";
 import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { CategoryPicker } from "../components/finance/CategoryPicker";
-
-function currentPeriod(): FinancialPeriod {
-  const today = new Date();
-  return { month: today.getMonth() + 1, year: today.getFullYear() };
-}
+import { useFinancePeriod } from "../components/finance/useFinancePeriod";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -32,7 +27,7 @@ function apiErrorDetail(error: unknown): string | null {
 }
 
 export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
-  const [period, setPeriod] = useState(currentPeriod);
+  const [period, setPeriod] = useFinancePeriod();
   const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);

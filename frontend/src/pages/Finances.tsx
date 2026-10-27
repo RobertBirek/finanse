@@ -7,7 +7,6 @@ import {
   useFinancialSummary,
   useTransactions,
   type Account,
-  type FinancialPeriod,
 } from "../api/finance";
 import { formatPLN } from "../lib/format";
 import { formatCalendarDate } from "../lib/date";
@@ -15,14 +14,16 @@ import { TRANSACTION_TYPES } from "../lib/transactionSearch";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { QueryFeedback } from "../components/QueryFeedback";
+import {
+  financePeriodSearch,
+  useFinancePeriod,
+} from "../components/finance/useFinancePeriod";
 
 export function Finances() {
-  const [period, setPeriod] = useState<FinancialPeriod>(() => ({
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear(),
-  }));
+  const [period, setPeriod] = useFinancePeriod();
   const [scope, setScope] = useState<"all" | "budget">("all");
   const navigate = useNavigate();
+  const periodSearch = financePeriodSearch(period);
   const accounts = useAccounts();
   const summary = useFinancialSummary(period);
   const cashflow = useCashflowForecast();
@@ -95,7 +96,9 @@ export function Finances() {
                   }
                   type="button"
                   onClick={() =>
-                    navigate(`/finances/transactions?create=${type}`)
+                    navigate(
+                      `/finances/transactions${periodSearch}&create=${type}`,
+                    )
                   }
                 >
                   <span aria-hidden="true">{glyph}</span> {label}
@@ -166,7 +169,9 @@ export function Finances() {
                   PLN
                 </strong>
               </div>
-              <Link to="/finances/cashflow">Przejdź do płynności →</Link>
+              <Link to={`/finances/cashflow${periodSearch}`}>
+                Przejdź do płynności →
+              </Link>
             </div>
           </QueryFeedback>
         </section>
@@ -182,7 +187,7 @@ export function Finances() {
             {active.map((a) => (
               <Link
                 key={a.id}
-                to={`/finances/transactions?account_id=${encodeURIComponent(a.id)}`}
+                to={`/finances/transactions${periodSearch}&account_id=${encodeURIComponent(a.id)}`}
                 className="finance-account-chip"
               >
                 <span className="finance-bank-mark" aria-hidden="true">
@@ -216,7 +221,9 @@ export function Finances() {
               <h2>Ostatnie transakcje</h2>
               <p>Twoja codzienność w jednym miejscu</p>
             </div>
-            <Link to="/finances/transactions">Cała historia →</Link>
+            <Link to={`/finances/transactions${periodSearch}`}>
+              Cała historia →
+            </Link>
           </div>
           <QueryFeedback
             loading={latest.isLoading}
@@ -231,7 +238,7 @@ export function Finances() {
                   return (
                     <li key={t.id}>
                       <Link
-                        to={`/finances/transactions?detail=${encodeURIComponent(t.id)}`}
+                        to={`/finances/transactions${periodSearch}&detail=${encodeURIComponent(t.id)}`}
                       >
                         <span
                           className="finance-transaction-mark"
@@ -274,7 +281,7 @@ export function Finances() {
               <h2>Budżet miesiąca</h2>
               <p>Limity i podlimity, bez podwójnego liczenia</p>
             </div>
-            <Link to="/finances/budgets">Szczegóły →</Link>
+            <Link to={`/finances/budgets${periodSearch}`}>Szczegóły →</Link>
           </div>
           <QueryFeedback
             loading={budgets.isLoading}
@@ -286,7 +293,7 @@ export function Finances() {
               <Link
                 key={b.category_id}
                 className="finance-budget-preview"
-                to={`/finances/transactions?category_id=${encodeURIComponent(b.category_id)}&include_descendants=true&budget_accounts_only=true&date_from=${period.year}-${String(period.month).padStart(2, "0")}-01&date_to=${period.year}-${String(period.month).padStart(2, "0")}-${new Date(period.year!, period.month!, 0).getDate()}`}
+                to={`/finances/transactions${periodSearch}&category_id=${encodeURIComponent(b.category_id)}&include_descendants=true&budget_accounts_only=true&date_from=${period.year}-${String(period.month).padStart(2, "0")}-01&date_to=${period.year}-${String(period.month).padStart(2, "0")}-${new Date(period.year, period.month, 0).getDate()}`}
               >
                 <span>{b.name}</span>
                 <strong>{formatPLN(b.spent_pln)} PLN</strong>

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { FinanceReports } from "./FinanceReports";
 
@@ -33,7 +34,11 @@ describe("FinanceReports", () => {
       isError: false,
     });
 
-    render(<FinanceReports />);
+    render(
+      <MemoryRouter>
+        <FinanceReports />
+      </MemoryRouter>,
+    );
 
     expect(
       screen.getByRole("heading", { name: "Raporty" }),

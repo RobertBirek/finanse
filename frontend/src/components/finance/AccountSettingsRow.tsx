@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { Account, AccountUpdateInput } from "../../api/finance";
 import { ACCOUNT_TYPES, apiErrorDetail, isConflict } from "./accountSettings";
@@ -40,6 +40,10 @@ export function AccountRow({
   const [draftBic, setDraftBic] = useState(account.bic ?? "");
   const [draftNotes, setDraftNotes] = useState(account.notes ?? "");
   const [showIban, setShowIban] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"success" | "manual" | null>(
+    null,
+  );
+  const copyAttempt = useRef(0);
 
   const rowPending =
     (updateMutation.isPending && updateMutation.variables?.id === account.id) ||
@@ -105,12 +109,38 @@ export function AccountRow({
     }
   }
 
+  async function copyIban() {
+    const attempt = ++copyAttempt.current;
+
+    if (!navigator.clipboard?.writeText) {
+      setShowIban(true);
+      setCopyStatus("manual");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(account.iban!);
+      if (copyAttempt.current === attempt) {
+        setCopyStatus("success");
+      }
+    } catch {
+      if (copyAttempt.current === attempt) {
+        setShowIban(true);
+        setCopyStatus("manual");
+      }
+    }
+  }
+
+  function toggleIban() {
+    if (showIban) {
+      copyAttempt.current += 1;
+      setCopyStatus(null);
+    }
+    setShowIban(!showIban);
+  }
+
   return (
-    <div
-      className={`rounded-lg border border-gray-800 bg-gray-800/40 p-3 ${
-        account.is_active ? "" : "opacity-60"
-      }`}
-    >
+    <div className="rounded-lg border border-gray-800 bg-gray-800/40 p-3">
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -132,27 +162,47 @@ export function AccountRow({
             {accountTypeLabel(account.type)} · {account.currency}
           </p>
           {account.type !== "cash" && account.iban ? (
-            <p className="mt-1 text-xs text-gray-500">
-              {showIban
-                ? account.iban
-                : `•••• ${account.iban.replace(/\s/g, "").slice(-4)}`}{" "}
-              <button
-                type="button"
-                className="ml-2 text-advisor-700"
-                onClick={() => setShowIban((value) => !value)}
-              >
-                {showIban ? "Ukryj" : "Pokaż"}
-              </button>
-              <button
-                type="button"
-                className="ml-2 text-advisor-700"
-                onClick={() =>
-                  void navigator.clipboard?.writeText(account.iban!)
-                }
-              >
-                Kopiuj
-              </button>
-            </p>
+            <>
+              <p className="mt-1 text-xs text-gray-500">
+                {showIban
+                  ? account.iban
+                  : `•••• ${account.iban.replace(/\s/g, "").slice(-4)}`}{" "}
+                <button
+                  type="button"
+                  className="ml-2 text-advisor-700"
+                  onClick={toggleIban}
+                >
+                  {showIban ? "Ukryj" : "Pokaż"}
+                </button>
+                <button
+                  type="button"
+                  className="ml-2 text-advisor-700"
+                  onClick={() => void copyIban()}
+                >
+                  Kopiuj
+                </button>
+              </p>
+              {copyStatus ? (
+                <p
+                  className="mt-1 text-xs text-gray-500"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {copyStatus === "success"
+                    ? "Numer rachunku został skopiowany."
+                    : "Nie udało się skopiować numeru rachunku. Skopiuj go ręcznie."}
+                </p>
+              ) : null}
+              {copyStatus === "manual" && showIban ? (
+                <input
+                  aria-label="Numer rachunku do ręcznego skopiowania"
+                  className="input mt-2 w-full font-mono text-xs"
+                  readOnly
+                  value={account.iban}
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+              ) : null}
+            </>
           ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">

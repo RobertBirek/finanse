@@ -1,4 +1,5 @@
 import type { FinancialPeriod } from "../../api/finance";
+import { MAX_FINANCIAL_YEAR, MIN_FINANCIAL_YEAR } from "./useFinancePeriod";
 
 type MonthPickerProps = {
   period: FinancialPeriod;
@@ -13,6 +14,8 @@ export function MonthPicker({ period, onChange }: MonthPickerProps) {
   const currentYear = today.getFullYear();
   const isAtOrAfterCurrentMonth =
     year > currentYear || (year === currentYear && month >= currentMonth);
+  const isAtEarliestMonth = year === MIN_FINANCIAL_YEAR && month === 1;
+  const isAtLatestMonth = year === MAX_FINANCIAL_YEAR && month === 12;
   const label = new Intl.DateTimeFormat("pl-PL", {
     month: "long",
     year: "numeric",
@@ -35,6 +38,7 @@ export function MonthPicker({ period, onChange }: MonthPickerProps) {
       <button
         type="button"
         onClick={previousMonth}
+        disabled={isAtEarliestMonth}
         className="btn-secondary px-3"
         aria-label="Poprzedni miesiąc"
       >
@@ -46,7 +50,7 @@ export function MonthPicker({ period, onChange }: MonthPickerProps) {
       <button
         type="button"
         onClick={nextMonth}
-        disabled={isAtOrAfterCurrentMonth}
+        disabled={isAtOrAfterCurrentMonth || isAtLatestMonth}
         className="btn-secondary px-3 disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="Następny miesiąc"
       >

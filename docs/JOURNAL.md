@@ -2,6 +2,29 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-27 — Zaakceptowane poprawki po przeglądzie UI
+
+- Użytkownik odpowiedział „tak” na trzy poprawki: okres, kontrast archiwalnych
+  kont i kopiowanie IBAN-u. Implementacja w istniejącym worktree, aktualizacja
+  bazy gałęzi fast-forward do main c917ac3 (wyłącznie dokumentacja wdrożenia).
+- Wspólny hook czyta month/year z URL i sprawdza zakres backendu 2000–2100.
+  Zakładki przenoszą tylko okres, lokalna zmiana miesiąca zachowuje inne parametry.
+  Linki przeglądu/drilldown zachowują kontekst bez zmiany zakresu zapytań księgi.
+- Konto archiwalne ma pełny kontrast; clipboard ma status i ręczny fallback.
+  Ukryj chowa także fallback, a spóźniona odmowa nie ujawnia ponownie numeru.
+- TDD: regresje jednostkowe RED przed implementacją; sześć nowych desktop E2E
+  potwierdziło RED na poprzednim release-dist (okres, dwa motywy, trzy clipboard).
+  Review wykrył brak okresu na części linków, granicę 2000 i maskowanie fallbacku;
+  poprawiono je z dodatkowymi testami. Ponowne review bez blokad.
+- Końcowy gate: Vitest 230/230, E2E 43 PASS + 1 celowy desktop skip,
+  ESLint/tsc/build PASS. Axe kont archiwalnych w obu motywach i viewportach PASS.
+  Artefakty: /tmp/opencode/finance-fixes-{red,green}, raporty z sufiksem -report.
+- Wywołanie backend pytest/ruff/mypy zostało odrzucone przy zatwierdzaniu narzędzia;
+  nie ponawiano. Backend bez zmian, brak deklaracji nowego backend gate.
+- Nie zmieniano danych, nie wykonywano importu Velo ani deployu. Zastana dokumentacja
+  przeglądu w /opt/finanse pozostaje nietknięta i niezatwierdzona w Git; należy ją
+  zachować przy późniejszej integracji. Plan: docs/plans/2026-10-27-finance-ui-fixes.md.
+
 ## 2026-10-26 — Nowy interfejs finansów wdrożony po jawnej zgodzie
 
 - Użytkownik pominął proponowany osobny podgląd: „wdróż od razu do main”.

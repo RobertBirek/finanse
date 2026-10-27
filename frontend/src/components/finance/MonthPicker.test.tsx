@@ -37,4 +37,14 @@ describe("MonthPicker", () => {
       screen.getByRole("button", { name: "Następny miesiąc" }),
     ).toBeDisabled();
   });
+
+  it("disables previous month at the earliest backend-supported period", () => {
+    render(
+      <MonthPicker period={{ month: 1, year: 2000 }} onChange={vi.fn()} />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Poprzedni miesiąc" }),
+    ).toBeDisabled();
+  });
 });

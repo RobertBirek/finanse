@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { Finances } from "./Finances";
 
@@ -20,6 +20,13 @@ const {
     isError: false,
   })),
 }));
+
+function LocationDisplay() {
+  const location = useLocation();
+  return (
+    <p data-testid="location">{`${location.pathname}${location.search}`}</p>
+  );
+}
 
 vi.mock("../api/finance", () => ({
   splitAccounts: (accounts: Array<{ is_budget_account: boolean }>) => ({
@@ -108,16 +115,30 @@ describe("Finances", () => {
       isLoading: false,
       isError: false,
     });
+    useBudgetStatus.mockReturnValue({
+      data: {
+        items: [
+          {
+            category_id: "c-food",
+            name: "Jedzenie",
+            spent_pln: 40000,
+            budget_amount_pln: 100000,
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    } as never);
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/finances?month=2&year=2026"]}>
         <Finances />
       </MemoryRouter>,
     );
 
     expect(
       screen.getByRole("link", { name: /Przejdź do płynności/ }),
-    ).toHaveAttribute("href", "/finances/cashflow");
+    ).toHaveAttribute("href", "/finances/cashflow?month=2&year=2026");
     expect(screen.getByText(/Konta budżetowe/)).toBeInTheDocument();
     expect(screen.queryByText("Stare konto")).not.toBeInTheDocument();
     expect(
@@ -133,11 +154,62 @@ describe("Finances", () => {
     expect(screen.getAllByText(/25.10.2026/).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /Zakup kawy/ })).toHaveAttribute(
       "href",
-      "/finances/transactions?detail=tx%20latest",
+      "/finances/transactions?month=2&year=2026&detail=tx%20latest",
+    );
+    expect(screen.getByRole("link", { name: /Konto główne/ })).toHaveAttribute(
+      "href",
+      "/finances/transactions?month=2&year=2026&account_id=budget",
+    );
+    expect(
+      screen.getByRole("link", { name: "Cała historia →" }),
+    ).toHaveAttribute("href", "/finances/transactions?month=2&year=2026");
+    expect(screen.getByRole("link", { name: "Szczegóły →" })).toHaveAttribute(
+      "href",
+      "/finances/budgets?month=2&year=2026",
+    );
+    expect(screen.getByRole("link", { name: /Jedzenie/ })).toHaveAttribute(
+      "href",
+      "/finances/transactions?month=2&year=2026&category_id=c-food&include_descendants=true&budget_accounts_only=true&date_from=2026-02-01&date_to=2026-02-28",
     );
     expect(
       screen.getByRole("link", { name: "Ustawienia kont" }),
     ).toHaveAttribute("href", "/settings/finances/accounts");
+  });
+
+  it("keeps the selected period when a quick action opens a transaction form", () => {
+    useAccounts.mockReturnValue({ data: [], isLoading: false, isError: false });
+    useFinancialSummary.mockReturnValue({
+      data: null,
+      isLoading: false,
+      isError: false,
+    });
+    useCashflowForecast.mockReturnValue({
+      data: null,
+      isLoading: false,
+      isError: false,
+    });
+    useTransactions.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    });
+    useBudgetStatus.mockReturnValue({
+      data: { items: [] },
+      isLoading: false,
+      isError: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/finances?month=2&year=2026"]}>
+        <Finances />
+        <LocationDisplay />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Wydatek/ }));
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/finances/transactions?month=2&year=2026&create=expense",
+    );
   });
 
   it("retries latest transaction data instead of rendering an invented empty history", () => {
