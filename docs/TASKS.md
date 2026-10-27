@@ -4,6 +4,21 @@ Backlog zadań ze statusami.
 
 Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
+## Waluty i zobowiązania (2026-10-27)
+
+- [x] Użytkownik zaakceptował kolejność: waluty, Q7, karta/Allegro Pay z odsetkami,
+  pożyczki rodzinne, Goodie i darowizny. Nie zmieniać przy okazji historii Velo.
+- [x] Slice walut: bezpieczny PATCH, capability, UI i testy konkurencji;
+  backend812/frontend235/E2E47+1skip, lint/types/build PASS i review bez blokad
+  w gałęzi `feat/account-currency`. Bez zmian produkcji.
+- [ ] Osobna integracja/wdrożenie walut po potwierdzonym gate.
+- [ ] Q7 jako pierwszy pionowy slice zobowiązań: kapitał, odsetki/opłaty,
+  harmonogram jako plan i przypisywanie rzeczywistych płatności bez duplikatów.
+- [ ] Rozszerzenie na kartę Velo i Allegro Pay (również oprocentowane raty).
+- [ ] Pożyczki rodzinne: umowy i spłaty, bez zamiany na darowiznę automatycznie.
+- [ ] Goodie: oczekujący/zatwierdzony/wypłacony, brak podwójnego przychodu;
+  darowizny otrzymane/przekazane i jawne umorzenie zobowiązania.
+
 ## Poprawki po przeglądzie UI (2026-10-27)
 
 - [x] Zgoda użytkownika na trzy poprawki wykryte podczas przeglądu.

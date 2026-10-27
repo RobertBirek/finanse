@@ -71,7 +71,9 @@ async def _validate_scheduled_item_links(
     currency: str,
     item_type: str,
 ) -> None:
-    account = await get_account(db, user_id, account_id)
+    from app.finance.queries import lock_accounts
+
+    account = (await lock_accounts(db, user_id, {account_id})).get(account_id)
     if account is None:
         raise ValueError("Scheduled item account not found")
     if not account.is_active or not account.is_budget_account:

@@ -2,6 +2,25 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-27 — Bezpieczna edycja waluty konta
+
+### Added
+- Waluta PLN/EUR/USD w edycji ustawień konta; backend wylicza możliwość zmiany
+  z historii i powiązań, nie z salda. UI przy braku capability blokuje zmianę.
+- Ochrona przed równoczesną zmianą waluty i pierwszym postingiem/harmonogramem:
+  blokady wierszy kont oraz odświeżenie danych ORM po oczekiwaniu.
+
+### Fixed
+- PATCH waluty nie jest już ignorowany. Null/nieobsługiwane wartości odrzucane,
+  historia/pending/zerowe saldo z postingami/harmonogram/import blokują zmianę409.
+  Konflikt nie zmienia innych pól; obecna waluta może być przesłana ponownie.
+- Bez migracji, przeliczania historii, importu i deployu. Pierwszy slice zatwierdzonej
+  kolejności; Q7 i pozostałe zobowiązania pozostają kolejnymi iteracjami.
+- Frontend: 235 testów jednostkowych, 47 E2E + 1 celowy desktop skip,
+  ESLint/tsc/build i axe edycji PASS; niezależne review bez blokad.
+- Backend: 812 PASS (8 proxy deselected, 2 znane warningi bibliotek), Ruff/mypy PASS;
+  końcowe ponowienie 25 testów walut/queries po uzupełnieniu typowania PASS.
+
 ## [e5ce5f5] — 2026-10-27 — Poprawki po przeglądzie finansów
 
 ### Fixed

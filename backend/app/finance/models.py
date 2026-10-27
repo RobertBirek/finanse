@@ -51,6 +51,14 @@ class Account(Base):
     def balance_source(self) -> int:
         return getattr(self, "_balance_source", 0)
 
+    @property
+    def can_change_currency(self) -> bool:
+        return getattr(self, "_can_change_currency", False)
+
+    @can_change_currency.setter
+    def can_change_currency(self, value: bool) -> None:
+        self._can_change_currency = value
+
 
 class Category(Base):
     __tablename__ = "categories"

@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.finance.models import Account, Category, CategoryBudget, Posting, ScheduledFinanceItem
-from app.finance.queries import get_account
+from app.finance.queries import get_account, lock_accounts
 from app.finance.schemas import AccountCreate, AccountUpdate, CategoryCreate, CategoryUpdate
 
 SUPPORTED_CURRENCIES = {"PLN", "EUR", "USD"}
@@ -19,16 +19,25 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCrea
     account = Account(user_id=user_id, **data.model_dump(exclude={"currency"}), currency=currency)
     db.add(account)
     await db.flush()
+    account.can_change_currency = True
     return account
 
 
 async def update_account(
     db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID, data: AccountUpdate
 ) -> Account | None:
+    if data.currency is not None:
+        await lock_accounts(db, user_id, {account_id}, exclusive=True)
     account = await get_account(db, user_id, account_id)
     if account is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    if (
+        "currency" in update_data
+        and update_data["currency"] != account.currency
+        and not account.can_change_currency
+    ):
+        raise ValueError("Account currency is locked by history, schedules or import links")
     for key, value in update_data.items():
         setattr(account, key, value)
     await db.flush()

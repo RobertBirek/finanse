@@ -25,6 +25,7 @@ class AccountCreate(BaseModel):
 
 class AccountUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
     type: str | None = Field(default=None, pattern=r"^(checking|savings|cash|credit|investment)$")
     is_active: bool | None = None
     is_budget_account: bool | None = None
@@ -37,6 +38,13 @@ class AccountUpdate(BaseModel):
 
     _normalize_iban = field_validator("iban")(normalize_iban)
     _normalize_bic = field_validator("bic")(normalize_bic)
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, value: str | None) -> str:
+        if value is None or value.upper() not in {"PLN", "EUR", "USD"}:
+            raise ValueError("Unsupported currency")
+        return value.upper()
 
     @field_validator("name", "type", "is_active", "is_budget_account")
     @classmethod
@@ -54,6 +62,7 @@ class AccountResponse(BaseModel):
     name: str
     type: str
     currency: str
+    can_change_currency: bool = False
     is_active: bool
     is_budget_account: bool
     balance_pln: int = 0

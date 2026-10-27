@@ -7,7 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
-from app.finance.models import Account, Category, FinancialTransaction, Posting
+from app.finance.models import (
+    Account,
+    ActualImportMapping,
+    Category,
+    FinancialTransaction,
+    Posting,
+    ScheduledFinanceItem,
+)
 from app.finance.schemas import TransactionResponse, TransactionSearch, TransactionSearchResponse
 
 
@@ -38,6 +45,18 @@ def _account_rows(user_id: uuid.UUID):
             Account,
             func.coalesce(balances.c.balance, 0),
             func.coalesce(balances.c.balance_source, 0),
+            (Account.source == "manual")
+            & ~select(Posting.id).where(Posting.account_id == Account.id).exists()
+            & ~select(ScheduledFinanceItem.id)
+            .where(ScheduledFinanceItem.account_id == Account.id)
+            .exists()
+            & ~select(ActualImportMapping.id)
+            .where(
+                ActualImportMapping.user_id == Account.user_id,
+                ActualImportMapping.entity_id == Account.id,
+                ActualImportMapping.entity_type == "account",
+            )
+            .exists(),
         )
         .outerjoin(balances, balances.c.account_id == Account.id)
         .where(Account.user_id == user_id)
@@ -47,9 +66,10 @@ def _account_rows(user_id: uuid.UUID):
 async def get_accounts(db: AsyncSession, user_id: uuid.UUID) -> list[Account]:
     result = await db.execute(_account_rows(user_id).order_by(Account.name, Account.id))
     accounts = []
-    for account, balance, balance_source in result.all():
+    for account, balance, balance_source, can_change_currency in result.all():
         account._balance = int(balance)
         account._balance_source = int(balance_source)
+        account.can_change_currency = bool(can_change_currency)
         accounts.append(account)
     return accounts
 
@@ -61,10 +81,33 @@ async def get_account(
     row = result.one_or_none()
     if row is None:
         return None
-    account, balance, balance_source = row
+    account, balance, balance_source, can_change_currency = row
     account._balance = int(balance)
     account._balance_source = int(balance_source)
+    account.can_change_currency = bool(can_change_currency)
     return account
+
+
+async def lock_accounts(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    account_ids: set[uuid.UUID],
+    *,
+    exclusive: bool = False,
+) -> dict[uuid.UUID, Account]:
+    """Serialize currency changes against first postings/plans until commit.
+
+    Readers may share locks; currency changes require an exclusive lock. Refresh
+    existing identity-map objects after waiting, and lock transfers in ID order.
+    """
+    result = await db.execute(
+        select(Account)
+        .where(Account.user_id == user_id, Account.id.in_(account_ids))
+        .order_by(Account.id)
+        .with_for_update(read=not exclusive)
+        .execution_options(populate_existing=True)
+    )
+    return {account.id: account for account in result.scalars().all()}
 
 
 async def get_transactions(

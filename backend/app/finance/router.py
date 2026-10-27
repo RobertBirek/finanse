@@ -116,7 +116,10 @@ async def update_account_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    account = await update_account(db, current_user.id, account_id, data)
+    try:
+        account = await update_account(db, current_user.id, account_id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
     await db.refresh(account)

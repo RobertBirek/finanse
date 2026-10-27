@@ -156,3 +156,81 @@ describe("AccountRow inactive accounts and IBAN copying", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("AccountRow currency editing", () => {
+  it("offers supported currencies and submits a changed currency on an empty account", () => {
+    const input = props({
+      account: { ...account, can_change_currency: true },
+      editing: true,
+    });
+    render(<AccountRow {...input} />);
+    const currency = screen.getByRole("combobox", { name: "Waluta" });
+    expect(currency).toBeEnabled();
+    expect(currency).toHaveValue("PLN");
+    fireEvent.change(currency, { target: { value: "EUR" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz konto Rachunek główny" }),
+    );
+    expect(input.updateMutation.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: account.id, currency: "EUR" }),
+      expect.anything(),
+    );
+  });
+
+  it.each([false, undefined])(
+    "locks currency when capability is %s even if balance is zero",
+    (capability) => {
+      render(
+        <AccountRow
+          {...props({
+            account: {
+              ...account,
+              balance_pln: 0,
+              can_change_currency: capability,
+            },
+            editing: true,
+          })}
+        />,
+      );
+      expect(screen.getByRole("combobox", { name: "Waluta" })).toBeDisabled();
+      expect(screen.getByLabelText("Nazwa")).toBeEnabled();
+      expect(
+        screen.getByText(/Walutę można zmienić tylko/i),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("does not resubmit an unchanged currency while editing other metadata", () => {
+    const input = props({
+      account: { ...account, can_change_currency: true },
+      editing: true,
+    });
+    render(<AccountRow {...input} />);
+    fireEvent.change(screen.getByLabelText("Nazwa"), {
+      target: { value: "Nowa nazwa" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz konto Rachunek główny" }),
+    );
+    const [payload] = vi.mocked(input.updateMutation.mutate).mock.calls[0];
+    expect(payload.name).toBe("Nowa nazwa");
+    expect(payload).not.toHaveProperty("currency");
+  });
+
+  it("explains a stale currency conflict and leaves editing available", () => {
+    const input = props({
+      account: { ...account, can_change_currency: true },
+      editing: true,
+    });
+    input.updateMutation.variables = { id: account.id, currency: "USD" };
+    input.updateMutation.error = Object.assign(new Error("Conflict"), {
+      response: { status: 409 },
+    });
+    render(<AccountRow {...input} />);
+    expect(
+      screen.getByText(/Waluta konta jest zablokowana/i),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Nazwa")).toBeEnabled();
+    expect(input.onCancelEdit).not.toHaveBeenCalled();
+  });
+});

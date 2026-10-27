@@ -2,6 +2,38 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-27 — Pierwszy slice walut po zatwierdzeniu roadmapy
+
+- Użytkownik „ok, działaj” po planie: waluty → Q7 → pozostałe zobowiązania,
+  Goodie i darowizny. Zaczęto od samodzielnego slice walut, bez danych produkcji.
+- Istniejący czysty worktree przełączono na `feat/account-currency` od main11a625d.
+  Zastane niezatwierdzone dokumenty analizy Velo w /opt/finanse pozostają nietknięte.
+- Spec/plan w docs/superpowers/{specs,plans}/2026-10-27-account-currency*.md.
+  Capability z DB obejmuje historię/pending, dowolne harmonogramy i import mapping/source;
+  blokada nie wynika z zerowego salda. Jawne null/nieobsługiwane waluty422, konflikt409,
+  ta sama waluta idempotentna, owner404. Pozostałe pola nie mutują przy konflikcie.
+- TDD: backend RED15 → GREEN16, potem konkurencja/stale ORM RED6 → GREEN6;
+  targeted backend+queries25 PASS. Frontend RED4 → GREEN31 account-focused.
+  PostgreSQL testowy wyłącznie lokalna baza finanse_test:55432.
+- Row locks FOR SHARE w walidacji transakcji/planów i FOR UPDATE przy zmianie waluty,
+  order by account.id oraz populate_existing zapobiegają wyścigom i starej walucie ORM.
+- Niezależne review bez blokad, skorygowano setup testu nieaktywnego harmonogramu
+  (create schema ignoruje is_active, test powinien jawnie dezaktywować przez serwis).
+  Frontend235/E2E47+1skip, ESLint/tsc/build i axe edycji PASS, mypy65/Ruff PASS.
+  Pełny backend812 PASS (8 proxy deselected,2 znane warningi bibliotek), Ruff/mypy PASS;
+  pierwszy run przekroczył limit narzędzia240s, pełne ponowienie trwało493,83s.
+  E2E początkowo wybierał kontrolkę tworzenia zamiast edycji — poprawiono selektor,
+  nie produkt. Mypy backing-property uzupełniono typowanym setterem, bez migracji.
+  Po setterze końcowe targeted25 i ponownie Ruff/mypy PASS.
+  Logbackend: /tmp/opencode/account-currency-gate/backend.log;
+  raportE2E: /tmp/opencode/account-currency-e2e-green-report.
+  Bez migracji/deployu/importów; Q7 jeszcze nie implementowano.
+- Rozpoznanie następnego slice Q7: obecny plan miesięczny ma jedną kategorię,
+  a expense wymaga dokładnie jednego postingu konta. Nie wystarczy nazwać kapitału
+  kategorią kosztu: nie zmniejszy to długu w księdze i zawyży raporty. Potrzebne
+  jawne postingi zobowiązania, zgodne raportowanie kosztów oraz trwałe powiązanie
+  raty z istniejącą płatnością zamiast ponownego tworzenia transakcji Actual.
+
 ## 2026-10-27 — Poprawki UI scalone, wypchnięte i wdrożone
 
 - Użytkownik polecił: „scal, commit, push do main i wdróż”. Main scalono fast-forward

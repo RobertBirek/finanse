@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.finance.entities import SUPPORTED_CURRENCIES
 from app.finance.models import Account, Category
+from app.finance.queries import lock_accounts
 
 
 def _validate_posting_sum(postings: list, txn_type: str) -> None:
@@ -44,10 +45,7 @@ async def _validate_transaction_postings(
     account_ids = {posting.account_id for posting in postings if posting.account_id is not None}
     accounts: dict[uuid.UUID, Account] = {}
     if account_ids:
-        account_result = await db.execute(
-            select(Account).where(Account.user_id == user_id, Account.id.in_(account_ids))
-        )
-        accounts = {account.id: account for account in account_result.scalars().all()}
+        accounts = await lock_accounts(db, user_id, account_ids)
 
     category_ids = {posting.category_id for posting in postings if posting.category_id is not None}
     categories: dict[uuid.UUID, Category] = {}

@@ -11,6 +11,8 @@ export interface Account {
   name: string;
   type: string;
   currency: string;
+  /** Server-derived: never infer editability from a zero balance. */
+  can_change_currency?: boolean;
   is_active: boolean;
   is_budget_account: boolean;
   balance_pln: number;
@@ -35,6 +37,7 @@ export interface Category {
 
 export interface AccountUpdateInput {
   name?: string;
+  currency?: string;
   type?: string;
   is_active?: boolean;
   is_budget_account?: boolean;

@@ -33,6 +33,8 @@ export function AccountRow({
 }: AccountRowProps) {
   const [draftName, setDraftName] = useState(account.name);
   const [draftType, setDraftType] = useState(account.type);
+  const [draftCurrency, setDraftCurrency] = useState(account.currency);
+  const currencyEditable = account.can_change_currency === true;
   const [draftBudget, setDraftBudget] = useState(account.is_budget_account);
   const [draftIban, setDraftIban] = useState(account.iban ?? "");
   const [draftBankName, setDraftBankName] = useState(account.bank_name ?? "");
@@ -51,7 +53,10 @@ export function AccountRow({
 
   const updateErrorForRow =
     updateMutation.variables?.id === account.id
-      ? apiErrorDetail(updateMutation.error)
+      ? isConflict(updateMutation.error) &&
+        updateMutation.variables.currency !== undefined
+        ? "Waluta konta jest zablokowana — konto ma historię, harmonogram lub powiązanie z importem."
+        : apiErrorDetail(updateMutation.error)
       : null;
   const deleteErrorForRow =
     deleteMutation.variables === account.id
@@ -63,6 +68,7 @@ export function AccountRow({
   function startEdit() {
     setDraftName(account.name);
     setDraftType(account.type);
+    setDraftCurrency(account.currency);
     setDraftBudget(account.is_budget_account);
     setDraftIban(account.iban ?? "");
     setDraftBankName(account.bank_name ?? "");
@@ -78,6 +84,9 @@ export function AccountRow({
         id: account.id,
         name: draftName,
         type: draftType,
+        ...(currencyEditable && draftCurrency !== account.currency
+          ? { currency: draftCurrency }
+          : {}),
         is_budget_account: draftBudget,
         ...(draftIban !== (account.iban ?? "")
           ? { iban: draftIban.trim() || null }
@@ -280,6 +289,26 @@ export function AccountRow({
           <div className="flex flex-wrap items-end gap-3">
             <div>
               <label
+                htmlFor={`account-edit-currency-${account.id}`}
+                className="mb-1 block text-xs text-gray-400"
+              >
+                Waluta
+              </label>
+              <select
+                id={`account-edit-currency-${account.id}`}
+                className="input"
+                value={draftCurrency}
+                disabled={!currencyEditable || rowPending}
+                aria-describedby={`account-currency-help-${account.id}`}
+                onChange={(event) => setDraftCurrency(event.target.value)}
+              >
+                <option value="PLN">PLN</option>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+            <div>
+              <label
                 htmlFor="account-edit-type"
                 className="mb-1 block text-xs text-gray-400"
               >
@@ -308,6 +337,13 @@ export function AccountRow({
               Budżetowe
             </label>
           </div>
+          <p
+            id={`account-currency-help-${account.id}`}
+            className="text-xs text-gray-500"
+          >
+            Walutę można zmienić tylko na ręcznym koncie bez historii,
+            harmonogramów i powiązań importowych.
+          </p>
           <div hidden={draftType === "cash"}>
             <div>
               <label
