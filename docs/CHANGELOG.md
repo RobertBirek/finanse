@@ -17,6 +17,14 @@ Wszystkie istotne zmiany w projekcie.
   lint/typecheck/build PASS; niezależne review bez blokad.
 - Zmiany tylko w frontendzie; bez migracji, importów i wdrożenia produkcyjnego.
 
+## [Reviewed] — 2026-10-27 — Przegląd użyteczności po wdrożeniu
+
+- Przegląd40 kombinacji widok/szerokość/motyw na dokładnym frontendzie wydania
+  z fikcyjnym API. Potwierdzono gubienie okresu raportu, kontrast archiwalnych kont
+  i brak obsługi odmowy kopiowania IBAN-u. Bez zmian kodu, danych lub deployu.
+- Brak zalogowanej sesji produkcyjnej; nie deklarujemy testu rzeczywistych danych.
+  Raport i kolejność poprawek: `docs/audits/2026-10-27-finance-ui-review.md`.
+
 ## [1b42e34] — 2026-10-26 — Nowy interfejs finansów i ustawień
 
 ### Added

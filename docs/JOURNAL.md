@@ -2,6 +2,18 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-27 — Zatwierdzone scalenie i wdrożenie poprawek UI (w toku)
+
+- Użytkownik polecił: „scal, commit, push do main i wdróż”. Main scalono fast-forward
+  do kodu 550b0f0. Zachowano wcześniejszą dokumentację przeglądu; konflikty dotyczyły
+  wyłącznie dwóch wpisów dokumentacyjnych, obie historie zachowano.
+- Ponowny gate na main: 230 unit / 43 E2E + 1 celowy desktop skip,
+  ESLint/tsc/build PASS. Backend, zależności i konfiguracja Nginx bez zmian.
+- Zakres deployu wyłącznie frontend. Backup/restore i kontrola pakietu przed
+  przełączeniem, pełny Compose i rollback frontendu do 1b42e34; bez migracji/importów.
+- Zastaną dokumentację zabezpieczono dodatkowo w stash
+  `pre-ui-fixes-deploy-review-docs-20261027` (nie usuwać automatycznie).
+
 ## 2026-10-27 — Zaakceptowane poprawki po przeglądzie UI
 
 - Użytkownik odpowiedział „tak” na trzy poprawki: okres, kontrast archiwalnych
@@ -24,6 +36,22 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Nie zmieniano danych, nie wykonywano importu Velo ani deployu. Zastana dokumentacja
   przeglądu w /opt/finanse pozostaje nietknięta i niezatwierdzona w Git; należy ją
   zachować przy późniejszej integracji. Plan: docs/plans/2026-10-27-finance-ui-fixes.md.
+
+## 2026-10-27 — Przegląd UI bez zmieniania danych
+
+- Użytkownik zaakceptował przegląd i listę poprawek, nie implementację.
+  Publiczne hashe JS/CSS odpowiadają wydaniu1b42e34. Chroniona produkcja kieruje
+  anonimowego testera do/login; brak udostępnionej sesji, bez prób tworzenia tokenów.
+- Przegląd10 stron×2viewporty×2motywy na dokładnym release-dist i przechwyconych
+  fikcyjnych API. Brak produkcyjnego DB, mutacji/API POST i zmian kodu.
+- Potwierdzono3 problemyP2: miesiąc resetuje się przy Wstecz i zmianie zakładki;
+  opacity-60 obniża kontrast nieaktywnych kont; Clipboard rejection jest nieobsłużone
+  i nie daje użytkownikowi informacji. Szybki Transfer działa po oczekiwaniu na dialog.
+- W macierzy40 bez overflow; axe36 bez naruszeń,4 warianty kont z problemem kontrastu.
+  Duże saldo i budżet na320/375/768/1440 dodatkowo sprawdzone; bez potwierdzonego overflow.
+- Raport `docs/audits/2026-10-27-finance-ui-review.md`, artefakty prywatnie
+  `/tmp/opencode/finance-ui-review-20261027/`. Dokumentacja bez commita/pusha;
+  aplikacja i dane nietknięte. Dalej akceptacja trzech poprawek, nie automatyczny deploy.
 
 ## 2026-10-26 — Nowy interfejs finansów wdrożony po jawnej zgodzie
 

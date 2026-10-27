@@ -34,6 +34,12 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   HTTPS/assets/auth/browser i niezmienność historycznych danych/original uploads PASS.
 - [x] `/public/makieta` zawarte w nowym obrazie i zweryfikowane przez HTTPS.
 - [ ] Zebrać uwagi użytkownika do działającego UI na produkcji; poprawki małymi zmianami.
+- [x] Przegląd40 wariantów dokładnego frontendowego wydania z fixtures (27.10):
+  raport `docs/audits/2026-10-27-finance-ui-review.md`, bez mutacji produkcyjnych.
+- [x] Po akceptacji poprawiono zachowanie miesiąca w URL/powrocie/zakładkach.
+- [x] Po akceptacji poprawiono kontrast nieaktywnych kont w obu motywach.
+- [x] Po akceptacji obsłużono sukces/odmowę/niedostępność kopiowania IBAN-u.
+- [ ] Ocena zalogowanej produkcji: potrzebny uzgodniony dostęp; fixtures jej nie zastępują.
 
 ---
 
