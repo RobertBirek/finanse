@@ -12,7 +12,10 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Kopiowanie IBAN-u: sukces, odmowa, brak API, ręczne kopiowanie i Ukryj.
 - [x] Końcowy frontend gate: 230 unit, 43 E2E + 1 celowy skip,
   lint/typecheck/build PASS; ponowne niezależne review bez blokad.
-- [ ] Osobne wdrożenie poprawek; produkcja nadal używa wydania 1b42e34.
+- [x] Po osobnej zgodzie scalono/push main i wdrożono frontend e5ce5f5;
+  backend/worker nadal 1b42e34. Backup/restore, CI i smoke PASS.
+- [x] Końcowa obserwacja 11/11 PASS, bez restartów/błędów i zmian danych;
+  atomowo zaktualizowano metadane wydania, rollback zachowany.
 - [ ] Ocena zalogowanej produkcji — testy fixtures jej nie zastępują.
 
 ## Przeprojektowanie UI/UX finansów (2026-10-26)

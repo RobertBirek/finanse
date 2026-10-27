@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Unreleased] — 2026-10-27 — Poprawki po przeglądzie finansów
+## [e5ce5f5] — 2026-10-27 — Poprawki po przeglądzie finansów
 
 ### Fixed
 - Okres finansów zapisany w URL, zachowany po odświeżeniu, powrocie z historii
@@ -15,7 +15,12 @@ Wszystkie istotne zmiany w projekcie.
 - Regresje jednostkowe i E2E na fikcyjnym API, w tym axe dla kont archiwalnych.
 - Weryfikacja: frontend 230 unit / 43 E2E + 1 celowy skip,
   lint/typecheck/build PASS; niezależne review bez blokad.
-- Zmiany tylko w frontendzie; bez migracji, importów i wdrożenia produkcyjnego.
+- Po osobnej zgodzie scalono/push main i wdrożono sam frontend. Backup 0c35f0fe
+  i izolowany restore PASS, CI obu domen PASS; bez migracji i importów.
+  HTTPS/assets/auth/browser i niezmienność danych/usług poza frontendem PASS.
+  Pięciominutowa obserwacja 11/11 PASS, bez restartów i nowych błędów aplikacji;
+  metadane wydania zaktualizowane, rollback zachowany.
+  Raport: `docs/audits/2026-10-27-release-ui-fixes.md`.
 
 ## [Reviewed] — 2026-10-27 — Przegląd użyteczności po wdrożeniu
 

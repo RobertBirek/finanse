@@ -2,7 +2,7 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
-## 2026-10-27 — Zatwierdzone scalenie i wdrożenie poprawek UI (w toku)
+## 2026-10-27 — Poprawki UI scalone, wypchnięte i wdrożone
 
 - Użytkownik polecił: „scal, commit, push do main i wdróż”. Main scalono fast-forward
   do kodu 550b0f0. Zachowano wcześniejszą dokumentację przeglądu; konflikty dotyczyły
@@ -13,6 +13,21 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   przełączeniem, pełny Compose i rollback frontendu do 1b42e34; bez migracji/importów.
 - Zastaną dokumentację zabezpieczono dodatkowo w stash
   `pre-ui-fixes-deploy-review-docs-20261027` (nie usuwać automatycznie).
+- Wypchnięto main e5ce5f5 (kod 550b0f0 + dokumentacja). CI40496488681 success:
+  backend790 + proxy/container5, frontend230/E2E43+1skip, lint/types/build PASS.
+  Backup0c35f0fe i systemd restore success/0; journal wiąże próbę z tym snapshotem.
+- Frontend zbudowany z archiwum Git dokładnego SHA; provenance i hashe zachowane.
+  Pakiet `/opt/finanse/webapp/releases/e5ce5f5`, offline obraz i exact-dist E2E PASS.
+  Pełny Compose zmienił tylko obraz frontendu, backend/worker pozostały 1b42e34.
+- HTTPS/assets/auth/browser375/1440 PASS. Wszystkie kolumny finansów (w tym dane
+  bankowe), dokumenty/ustawienia/mapowania i oryginały uploads bez zmian.
+  Identyfikatory i czasy startu usług poza frontendem bez zmian; żadnych importów.
+- Pięciominutowa obserwacja11/11 PASS:0restartów/nowych błędów aplikacji i brak
+  zmian danych. Powtórny gate PASS, active-release.json zaktualizowany atomowo.
+  Rollback frontend-only w pakiecie zachowany; bez restore/downgrade bazy.
+- Raport: `docs/audits/2026-10-27-release-ui-fixes.md`. Prywatne dowody:
+  `/tmp/opencode/release-ui-fixes-550b0f0/`. Ocena zalogowanej produkcji nadal
+  wymaga użytkownika; nie zastępowano jej tokenem ani mutującym smoke testem.
 
 ## 2026-10-27 — Zaakceptowane poprawki po przeglądzie UI
 

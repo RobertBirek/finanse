@@ -12,4 +12,5 @@ bez danych produkcyjnych, migracji i importu Velo. Wdrożenie osobnym krokiem.
 - [x] Aktualizacja CHANGELOG/TASKS/JOURNAL, podsumowanie stanu wdrożenia.
 
 Backend niezmieniony; wywołanie jego testów odrzucone przez użytkownika, bez ponawiania.
-Produkcja bez zmian. Oddzielne wdrożenie pozostaje kolejnym krokiem.
+Po osobnej zgodzie użytkownika scalono/push main i wdrożono sam frontend.
+Raport: docs/audits/2026-10-27-release-ui-fixes.md.
