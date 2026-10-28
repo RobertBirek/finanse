@@ -19,6 +19,7 @@ import { Advisor } from "./pages/Advisor";
 import { Documents } from "./pages/Documents";
 import { Settings } from "./pages/Settings";
 import { FinanceSettings } from "./pages/FinanceSettings";
+import { FinanceLoans } from "./pages/FinanceLoans";
 
 export default function App() {
   const fetchUser = useAuthStore((s) => s.fetchUser);
@@ -83,6 +84,7 @@ export default function App() {
             path="forecast"
             element={<FinanceCashflow configure settingsSection="forecast" />}
           />
+          <Route path="loans" element={<FinanceLoans />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/today" replace />} />

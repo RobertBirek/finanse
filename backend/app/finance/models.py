@@ -169,6 +169,76 @@ class FinancialTransaction(Base):
     )
 
 
+class LoanAgreement(Base):
+    __tablename__ = "loan_agreements"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="RESTRICT"), nullable=False
+    )
+    payment_account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="RESTRICT"), nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    __table_args__ = (
+        CheckConstraint("account_id <> payment_account_id", name="ck_loan_distinct_accounts"),
+        UniqueConstraint("account_id", name="uq_loan_agreement_account"),
+    )
+
+
+class LoanInstallment(Base):
+    __tablename__ = "loan_installments"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    loan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("loan_agreements.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    number: Mapped[int] = mapped_column(nullable=False)
+    due_date: Mapped[date] = mapped_column(Date, nullable=False)
+    principal_pln: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    interest_pln: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    fees_pln: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("loan_id", "number", name="uq_loan_installment_number"),
+        CheckConstraint("number > 0", name="ck_loan_installment_number"),
+        CheckConstraint(
+            "principal_pln >= 0 AND interest_pln >= 0 AND fees_pln >= 0",
+            name="ck_loan_installment_components",
+        ),
+        CheckConstraint(
+            "principal_pln + interest_pln + fees_pln > 0", name="ck_loan_installment_total"
+        ),
+        CheckConstraint(
+            "principal_pln + interest_pln + fees_pln <= 9007199254740991",
+            name="ck_loan_installment_safe_total",
+        ),
+    )
+
+
+class LoanPaymentLink(Base):
+    __tablename__ = "loan_payment_links"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    installment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("loan_installments.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_transactions.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+
+
 class Posting(Base):
     __tablename__ = "postings"
 

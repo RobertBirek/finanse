@@ -20,7 +20,8 @@ def test_account_metadata_migration_extends_single_current_head() -> None:
     config = Config(str(backend / "alembic.ini"))
     config.set_main_option("script_location", str(backend / "migrations"))
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["b8e4c2f1a7d9"]
+    assert len(scripts.get_heads()) == 1
+    assert "b8e4c2f1a7d9" in {revision.revision for revision in scripts.walk_revisions()}
     revision = scripts.get_revision("b8e4c2f1a7d9")
     assert revision is not None
     assert revision.down_revision == "c7f8c620460d"

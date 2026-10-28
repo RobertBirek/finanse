@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.finance.loan_router import router as loan_router
 from app.finance.models import FinancialTransaction, Posting
 from app.finance.schemas import (
     AccountCreate,
@@ -75,6 +76,7 @@ from app.identity.models import User
 from app.identity.router import get_current_user
 
 router = APIRouter()
+router.include_router(loan_router)
 
 
 @router.post("/accounts", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
@@ -332,7 +334,12 @@ async def update_transaction_endpoint(
     try:
         txn = await update_transaction(db, current_user.id, transaction_id, data)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        code = (
+            status.HTTP_409_CONFLICT
+            if "linked loan payment" in str(e)
+            else status.HTTP_422_UNPROCESSABLE_ENTITY
+        )
+        raise HTTPException(status_code=code, detail=str(e))
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
     return txn
@@ -344,7 +351,10 @@ async def delete_transaction_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
-    deleted = await delete_transaction(db, current_user.id, transaction_id)
+    try:
+        deleted = await delete_transaction(db, current_user.id, transaction_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

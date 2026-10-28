@@ -5,7 +5,14 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.finance.models import Account, Category, CategoryBudget, Posting, ScheduledFinanceItem
+from app.finance.models import (
+    Account,
+    Category,
+    CategoryBudget,
+    LoanAgreement,
+    Posting,
+    ScheduledFinanceItem,
+)
 from app.finance.queries import get_account, lock_accounts
 from app.finance.schemas import AccountCreate, AccountUpdate, CategoryCreate, CategoryUpdate
 
@@ -54,7 +61,15 @@ async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.
         .where(ScheduledFinanceItem.account_id == account_id)
         .limit(1)
     )
-    if posting.first() is not None or scheduled.first() is not None:
+    loan = await db.execute(
+        select(LoanAgreement.id)
+        .where(
+            (LoanAgreement.account_id == account_id)
+            | (LoanAgreement.payment_account_id == account_id)
+        )
+        .limit(1)
+    )
+    if posting.first() is not None or scheduled.first() is not None or loan.first() is not None:
         raise ValueError("Account has records; deactivate it instead of deleting")
     await db.delete(account)
     await db.flush()

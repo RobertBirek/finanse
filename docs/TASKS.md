@@ -12,8 +12,16 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   backend812/frontend235/E2E47+1skip, lint/types/build PASS i review bez blokad
   w gałęzi `feat/account-currency`. Bez zmian produkcji.
 - [ ] Osobna integracja/wdrożenie walut po potwierdzonym gate.
-- [ ] Q7 jako pierwszy pionowy slice zobowiązań: kapitał, odsetki/opłaty,
+- [x] Q7 jako pierwszy pionowy slice zobowiązań: plan kapitału, odsetek/opłat,
   harmonogram jako plan i przypisywanie rzeczywistych płatności bez duplikatów.
+  Potwierdzono przypisanie dostarczonego harmonogramu do Q7. Projekt pierwszej
+  iteracji (plan + link istniejących transferów, bez księgowania) przygotowany
+  w `docs/superpowers/specs/2026-10-27-loan-schedule-design.md`; builder check zakończony,
+  implementacja backend/frontend i targeted gate32 PASS; frontend243/E2E59+1skip PASS.
+- [~] Po jawnej zgodzie28.10: pełny gate, integracja/main/push i wdrożenie obu slice'ów
+  (waluta + Q7) z backup/restore i addytywną migracją. Bez importu i korekt historii.
+- [ ] Kolejny slice Q7: rzeczywiste księgowanie nowych spłat kapitału/odsetek/opłat,
+  uzgodnienie historycznych transferów i niedublowana integracja z prognozą.
 - [ ] Rozszerzenie na kartę Velo i Allegro Pay (również oprocentowane raty).
 - [ ] Pożyczki rodzinne: umowy i spłaty, bez zamiany na darowiznę automatycznie.
 - [ ] Goodie: oczekujący/zatwierdzony/wypłacony, brak podwójnego przychodu;
@@ -100,6 +108,13 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   do17.09,rachunek za sierpień i księgowania początku października;potwierdzić mapowanie
   kont. Nie usuwać2 zapisów PA bez odpowiednika w wrześniowym PDF,nie dodawać4 korekt
   ani nie zmieniać kwoty zakupu automatycznie. Zgodne saldo końcowe karty nie wystarcza.
+- [x] Pogłębienie Velo 27.10 bez zapisu: świeży owner-scoped READ ONLY,
+  dokładne mosty sald, dwie operacje rachunku i konflikt karty zachowane z Actual;
+  rekordy i oryginały bez zmian. Raport `docs/audits/2026-10-27-velo-reconciliation.md`.
+- [ ] Uzyskać brakujące wyciągi Velo: sierpień rachunku, księgowania 01–06.10,
+  poprzedni cykl karty do 17.09 i potwierdzenie mapowania kont. Nadal NO IMPORT.
+  Użytkownik obecnie ma wyłącznie dotychczasowe cztery źródła; folder Drive
+  zweryfikowany SHA-256, bez nowych dowodów. Zadanie czeka na dokumenty.
 - [x] Zatwierdzona ograniczona poprawka mapowania Actual: regresja RED → GREEN,
   74 testy importera i backend666 PASS (8 proxy deselected), review bez blokad. Próba z wymaganym uzgodnieniem
   sald na kopii wykonana i wycofana przy kolejnej blokadzie; historia zachowana.

@@ -2,6 +2,26 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-28 — Plan rat i powiązania płatności Q7
+
+### Added
+- Umowy kredytów/pożyczek PLN, raty z kapitałem/odsetkami/opłatami i jawne powiązanie
+  istniejących przelewów. Pokrycie częściowe/pełne wyliczane z postingów, bez duplikatów.
+- Ustawienia finansów → Kredyty i pożyczki: formularze, kandydaci z paginacją,
+  odpinanie metadanych i wyraźne rozróżnienie planu, księgi i uzgodnionego kapitału.
+- Addytywna migracja trzech pustych tabel `c2d7e9a4f801` po `b8e4c2f1a7d9`.
+
+### Fixed
+- Blokady waluty/usunięcia obu kont umowy, także archiwalnej; ochrona powiązanego
+  przelewu przed zmianą daty/pending i usunięciem. Niezmienione wartości są idempotentne.
+- Ścisłe kwoty całkowite, konflikt bez ujawniania SQL, odświeżanie ORM po blokadzie;
+  serializacja przypisywania/odpinania i ochrony przed nadmiernym pokryciem raty.
+- Pełny backend844 PASS (8 proxy deselected,2 znane warningi bibliotek), osobno
+  proxy5 PASS; Ruff/mypy PASS. Frontend243/E2E59+1skip, lint/types/build PASS.
+  Wdrożenie po zgodzie użytkownika w toku; backup6ebdef50/restore success/0.
+- Sam plan/link nie rozksięgowuje dawnych odsetek i nie tworzy kosztu ani prognozy.
+  Brak importu rzeczywistego harmonogramu lub korekt Velo.
+
 ## [Unreleased] — 2026-10-27 — Bezpieczna edycja waluty konta
 
 ### Added
@@ -20,6 +40,16 @@ Wszystkie istotne zmiany w projekcie.
   ESLint/tsc/build i axe edycji PASS; niezależne review bez blokad.
 - Backend: 812 PASS (8 proxy deselected, 2 znane warningi bibliotek), Ruff/mypy PASS;
   końcowe ponowienie 25 testów walut/queries po uzupełnieniu typowania PASS.
+
+## [Reviewed] — 2026-10-27 — Pogłębienie uzgodnienia Velo
+
+- Read-only odświeżenie i mosty sald rachunku/karty; zlokalizowano składniki różnic
+  oraz potwierdzono daty/kwoty trzech spornych operacji w dostarczonym eksporcie Actual.
+- Brak nowych wyciągów nadal blokuje uzgodnienie otwarcia i zapis; bez importów,
+  automatycznych korekt ani zmian kodu. Końcowy guard rekordów/originals PASS.
+- Raport bez prywatnych kwot: `docs/audits/2026-10-27-velo-reconciliation.md`.
+- Ponownie udostępniony folder Drive zawiera cztery identyczne hashami źródła;
+  brak nowych dokumentów do rozstrzygnięcia różnic. Bez ponawiania importu/analizy.
 
 ## [e5ce5f5] — 2026-10-27 — Poprawki po przeglądzie finansów
 

@@ -12,6 +12,7 @@ from app.finance.models import (
     ActualImportMapping,
     Category,
     FinancialTransaction,
+    LoanAgreement,
     Posting,
     ScheduledFinanceItem,
 )
@@ -49,6 +50,12 @@ def _account_rows(user_id: uuid.UUID):
             & ~select(Posting.id).where(Posting.account_id == Account.id).exists()
             & ~select(ScheduledFinanceItem.id)
             .where(ScheduledFinanceItem.account_id == Account.id)
+            .exists()
+            & ~select(LoanAgreement.id)
+            .where(
+                (LoanAgreement.account_id == Account.id)
+                | (LoanAgreement.payment_account_id == Account.id)
+            )
             .exists()
             & ~select(ActualImportMapping.id)
             .where(

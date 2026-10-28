@@ -10,6 +10,7 @@ from app.finance import (
     dates,
     entities,
     ledger_validation,
+    loans,
     queries,
     reporting,
     transactions,
@@ -37,6 +38,17 @@ create_transaction = transactions.create_transaction
 create_exchange_transaction = transactions.create_exchange_transaction
 update_transaction = transactions.update_transaction
 delete_transaction = transactions.delete_transaction
+
+create_loan = loans.create_loan
+update_loan = loans.update_loan
+get_loan = loans.get_loan
+get_loans = loans.get_loans
+create_loan_installment = loans.create_loan_installment
+update_loan_installment = loans.update_loan_installment
+delete_loan_installment = loans.delete_loan_installment
+link_loan_payment = loans.link_loan_payment
+unlink_loan_payment = loans.unlink_loan_payment
+get_loan_payment_candidates = loans.get_loan_payment_candidates
 
 get_financial_summary = reporting.get_financial_summary
 get_category_summary = reporting.get_category_summary

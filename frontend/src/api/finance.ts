@@ -300,14 +300,19 @@ export function buildCategoryTree(summary: CategorySummary): CategoryGroup[] {
   ];
 }
 
-export function parsePlnToGrosze(raw: string): number | null {
+export function parsePlnToGrosze(
+  raw: string,
+  allowZero = false,
+): number | null {
   const normalized = raw.replace(/\s/g, "").replace(",", ".");
   if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null;
 
   const [whole, fractional = ""] = normalized.split(".");
   const grosze = Number(whole) * 100 + Number(fractional.padEnd(2, "0"));
 
-  return Number.isSafeInteger(grosze) && grosze > 0 ? grosze : null;
+  return Number.isSafeInteger(grosze) && (allowZero ? grosze >= 0 : grosze > 0)
+    ? grosze
+    : null;
 }
 
 export function buildTransactionPostings(

@@ -9,9 +9,9 @@ from sqlalchemy.orm import selectinload
 
 from app.finance.dates import _local_today
 from app.finance.ledger_validation import _validate_posting_sum, _validate_transaction_postings
-from app.finance.models import FinancialTransaction, Posting
+from app.finance.models import FinancialTransaction, LoanPaymentLink, Posting
 from app.finance.nbp_rates import NbpRateProvider
-from app.finance.queries import get_accounts, get_transaction
+from app.finance.queries import get_accounts
 from app.finance.schemas import ExchangeCreate, PostingCreate, TransactionCreate, TransactionUpdate
 from app.work.service import validate_project_reference
 
@@ -158,10 +158,30 @@ async def create_exchange_transaction(
 async def update_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID, data: TransactionUpdate
 ) -> FinancialTransaction | None:
-    txn = await get_transaction(db, user_id, transaction_id)
+    txn = (
+        await db.execute(
+            select(FinancialTransaction)
+            .where(
+                FinancialTransaction.id == transaction_id, FinancialTransaction.user_id == user_id
+            )
+            .options(selectinload(FinancialTransaction.postings))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
     if txn is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    if ("transaction_date" in update_data and update_data["transaction_date"] != txn.date) or (
+        "is_pending" in update_data and update_data["is_pending"] != txn.is_pending
+    ):
+        linked = await db.scalar(
+            select(LoanPaymentLink.id)
+            .where(LoanPaymentLink.transaction_id == transaction_id)
+            .limit(1)
+        )
+        if linked is not None:
+            raise ValueError("Cannot change date or pending status of a linked loan payment")
     if any(
         update_data.get(key, True) is None
         for key in ("transaction_date", "description", "is_pending")
@@ -181,9 +201,27 @@ async def update_transaction(
 async def delete_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID
 ) -> bool:
-    txn = await get_transaction(db, user_id, transaction_id)
+    txn = (
+        await db.execute(
+            select(FinancialTransaction)
+            .where(
+                FinancialTransaction.id == transaction_id, FinancialTransaction.user_id == user_id
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
     if txn is None:
         return False
+    if (
+        await db.scalar(
+            select(LoanPaymentLink.id)
+            .where(LoanPaymentLink.transaction_id == transaction_id)
+            .limit(1)
+        )
+        is not None
+    ):
+        raise ValueError("Cannot delete a linked loan payment")
     await db.delete(txn)
     await db.flush()
     return True

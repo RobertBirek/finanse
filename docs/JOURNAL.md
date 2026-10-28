@@ -2,6 +2,106 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-28 — Dokończenie Q7 i zgoda na main/produkcję
+
+- Podagent backendu zakończył pracę limitem bez raportu. Koordynator przejął istniejący
+  kod, bez ponownego budowania frontendu. Początkowo były tylko2 testy backendu.
+- Uzupełniono kontrakty/API, negatywne przypadki, niezmienność wszystkich kolumn
+  transakcji/postingów i raportów, paginację, owner404, walutę obu ról konta oraz
+  rzeczywiste dwusesyjne próby blokad. Migracja na izolowanej bazie zachowuje stare
+  konta i ledger, dodaje trzy puste tabele; sprawdzono jeden Alembic head.
+- RED wykrył: luźne typy kwot, puste nazwy, obce konto422 zamiast404, SQL w błędzie,
+  blokadę no-op PATCH i użycie starej kwoty raty z identity map. GREEN po poprawkach.
+  Osobna regresja RED→GREEN wymusza identyczną serializację loan przy link/unlink.
+- Ostatni targeted gate32 PASS, Ruff/mypy68 PASS. Frontend243 unit/59 E2E+1skip
+  oraz lint/types/build PASS. Niezależny review całości bez ważnych blokad; przegląd
+  ostatnich poprawek i procedury wdrożenia w toku.
+- Użytkownik jawnie polecił: „tak, wypchaj od razu do main i wdróż”. Zgoda obejmuje
+  oba slice'y (waluta konta + raty/linki), aplikacje i addytywną migrację schematu.
+  Nie obejmuje importu dokumentu Q7, historycznych odsetek, korekt Velo ani danych.
+- Trwa pełny backend gate na finanse_test:55432 (sh_1811c3081001XSuRdJxIaLpnXt),
+  świeży frontend gate i backup/restore. Dowody wdrożenia poza Git:
+  `/tmp/opencode/release-loans-20261028/`. Produkcja jeszcze nie przełączona.
+- Świeży gate proxy/kontenerów5 PASS, Ruff/mypy68 PASS. Review ostatnich poprawek
+  i prywatnego skryptu rollout bez ważnych uwag (ses_e7ee069d7ffeGC8Htjxzq1ArZ2).
+  Pozostałe tła: frontend sh_1811dbcd50016z4Fdxn5EFKfkf, backup/restore
+  sh_1811d9247001Jld2FlkSeDyhEv — nie uruchamiać ponownie w czasie ich pracy.
+- Pierwszy pełny backend gate:841 PASS/1 FAIL,8 proxy deselected,2 znane warningi.
+  Regresja zwykłego PATCH transakcji: blokujący odczyt ORM bez selectinload wygaszał
+  postings, co dawało MissingGreenlet przy serializacji odpowiedzi (HTTP500).
+  Dodano2 regresje API (przelew powiązany/niepowiązany), obserwowano RED; po dodaniu
+  selectinload test_loans+test_integrity47 PASS oraz Ruff/mypy PASS.
+  Pełne ponowienie po poprawce: sh_1812f3fd60012IC7C7lt0G0NJL, log
+  `/tmp/opencode/release-loans-20261028/backend-final.log`. Push/deploy nadal wstrzymane.
+- Backup6ebdef50 i restore success/0. Świeży frontend gate243/59+1skip PASS.
+- Końcowy pełny backend po poprawce:844 PASS,8 proxy deselected,2 znane warningi,
+  596,88s. Wszystkie gate'y zielone. Integracja/push i wydanie po jawnej zgodzie;
+  nie ponawiać implementacji. Main po fast-forward ma dokładnie ten sam kod.
+- Dokumenty Velo z main zabezpieczone w `pre-loans-release-velo-docs-20261028`
+  i przeniesione do tej gałęzi bez utraty dodanych linii. Nie stosować ponownie
+  stash po scaleniu — treść już zachowana. Stash pozostawić jako dodatkową kopię.
+- Main ma zastane dokumenty Velo i prywatne webapp/. Zachować je przy integracji,
+  nie dodawać prywatnego webapp do Git. Poprzednie obrazy/override pozostają rollbackiem;
+  wycofanie aplikacji pozostawia nowe addytywne tabele, bez downgrade/restore produkcji.
+
+## 2026-10-27 — Projekt pierwszego slice Q7
+
+- Użytkownik potwierdził, że dostarczony harmonogram dotyczy Audi Q7, po wcześniejszym
+  „ok, działaj” dla etapu Q7. Potwierdzenie nie jest zgodą na korektę dawnych zapisów.
+- Lokalny odczyt zachowanych źródeł potwierdził arytmetykę59 rat oraz różnicę pomiędzy
+  pełnym transferem a częścią kapitałową. To porównanie z harmonogramem, nie dowód
+  rzeczywistego wykonania bankowego; brak nowych wyciągów nadal obowiązuje.
+- Pierwszy projekt ogranicza się do umowy, rat kapitał/odsetki/opłaty i ręcznych
+  linków do istniejących transferów. Link nie tworzy kosztu ani nie przepisuje postingów;
+  saldo księgowe nie jest podpisane jako uzgodniony kapitał. Bez automatycznego
+  włączenia do wspólnej prognozy, żeby nie zdublować dawnych harmonogramów.
+- Spec/plan: `docs/superpowers/{specs/2026-10-27-loan-schedule-design.md,
+  plans/2026-10-27-loan-schedule.md}`. Builder check zakończony: doprecyzowano
+  kontrakt odpowiedzi, blokady edycji transakcji, FK/unikalność, safe integer kwot,
+  paginację i guardy obu ról konta. Brak dalszych decyzji użytkownika dla tego slice.
+- Implementacja ruszyła w gałęzi `feat/loan-schedule` od0d52f9d: backend i frontend
+  mają rozdzielonych wykonawców, koordynator owns frontend/e2e/ i dokumentację.
+  Backend targeted pytest wyłącznie przez jego wykonawcę (wspólna finanse_test:55432);
+  nie uruchamiać drugiego pytest równolegle. Pełny gate i review po integracji.
+- W toku: sesja backend ses_e8167b723ffe7QD7wTHBpF56C0, frontend
+  ses_e81677873ffeIWDNbBIgKE1rys. Nie ponawiać ich pracy po przerwaniu kontekstu.
+  Frontend zakończył implementację i poprawki review. Reviewer
+  ses_e8161a244ffeKtzpPBLI3NNBtF potwierdził zamknięcie ważnych uwag.
+- E2E `frontend/e2e/{loan-fixtures.ts,loans.spec.ts}` obejmuje plan→partial→paid,
+  unlink,409, formularz trzech składników, paginację i pending; tylko syntetyczne dane.
+  Pierwszy wykonany E2E6 PASS/2 FAIL wykazał kontrast jasnego motywu. Naprawiono
+  klasy lokalne. Końcowy build PASS, E2E59 PASS +1 dotychczasowy skip;
+  Vitest243 PASS, lint/types i git diff --check PASS po poprawkach.
+  Używamy istniejącego /usr/bin/google-chrome przez PLAYWRIGHT_CHROMIUM_EXECUTABLE.
+- Końcowy audyt w `docs/audits/2026-10-27-loan-schedule.md` nadal w toku,
+  bez oznaczania modułu jako ukończony przed pełnym backend gate i review całości.
+- Produkcja, historia/Actual mappings i harmonogram jako plik źródłowy bez zmian.
+
+## 2026-10-27 — Analiza Velo wyłącznie odczytowa
+
+- Po wdrożeniu użytkownik zaakceptował analizę rozbieżności Velo bez zapisywania
+  zmian finansowych. Nie otrzymano nowych bankowych źródeł.
+- Następnie użytkownik podał folder Drive: bezpośredni odczyt potwierdził cztery
+  pliki (CSV/rachunek/karta/harmonogram) identyczne SHA-256 z zachowanymi źródłami.
+  Bez zewnętrznych wyszukiwarek, logowania, uploadu i ponownego importu. Użytkownik
+  nie ma obecnie dodatkowych wyciągów — dalsze uzgodnienie czeka, bez korekt.
+- Odtworzono mosty sald w groszach: dwie PA-only operacje z29.09 wyjaśniają całą
+  różnicę wrześniowych obrotów rachunku; karta ma kompensację otwarcia i obrotów.
+  Cztery korekty odsetek i konflikt zakupu nie mogą być poprawiane samodzielnie.
+- Istniejący parser Actual użyty tylko do odczytu ro/immutable eksportu potwierdził
+  daty i kwoty trzech spornych operacji. Pierwszy check audytowy wymagał poprawnej
+  normalizacji znaków/category legs zgodnej z importerem; bez zmian produktu.
+- Świeże owner-scoped ORM REPEATABLE READ + READ ONLY przed/po:1086 rekordów,
+  pełny snapshot i oryginały niezmienione. Stare kolumny również zgodne z24.10.
+- Potrzebne: sierpień rachunku, księgowania01–06.10, poprzedni wyciąg karty do17.09,
+  potwierdzenie mapowania. Wyjaśniono arytmetykę, nie źródło bankowe: NO IMPORT.
+- Raport `docs/audits/2026-10-27-velo-reconciliation.md`; prywatne kwoty/dowody
+  `/tmp/opencode/velo-reconciliation-20261027/`. Niezależny przegląd bez blokad
+  rachunkowych potwierdził obie arytmetyki i lineage; nie potwierdza tożsamości bankowej.
+  Trwały prywatny pakiet z manifestem hashów:
+  `/opt/finanse/webapp/imports/velo-reconciliation-20261027` (0700/0600).
+  Brak deployu, migracji, importów, mutacji użytkownika i zmian kodu aplikacji.
+
 ## 2026-10-27 — Pierwszy slice walut po zatwierdzeniu roadmapy
 
 - Użytkownik „ok, działaj” po planie: waluty → Q7 → pozostałe zobowiązania,
