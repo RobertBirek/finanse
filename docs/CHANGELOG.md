@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Unreleased] — 2026-10-28 — Plan rat i powiązania płatności Q7
+## [9db255b] — 2026-10-28 — Plan rat i powiązania płatności Q7
 
 ### Added
 - Umowy kredytów/pożyczek PLN, raty z kapitałem/odsetkami/opłatami i jawne powiązanie
@@ -18,11 +18,15 @@ Wszystkie istotne zmiany w projekcie.
   serializacja przypisywania/odpinania i ochrony przed nadmiernym pokryciem raty.
 - Pełny backend844 PASS (8 proxy deselected,2 znane warningi bibliotek), osobno
   proxy5 PASS; Ruff/mypy PASS. Frontend243/E2E59+1skip, lint/types/build PASS.
-  Wdrożenie po zgodzie użytkownika w toku; backup6ebdef50/restore success/0.
+  Po zgodzie użytkownika main/push i wdrożenie9db255b z addytywną migracją:
+  backup6ebdef50/restore i rehearsal PASS, CI obu domen success, HTTPS/assets/auth/
+  browser oraz niezmienność historii/uploads/usług danych PASS. Obserwacja5-min10/10
+  PASS, metadane runtime zaktualizowane atomowo, rollback zachowany.
+  Raport: `docs/audits/2026-10-28-release-loans.md`.
 - Sam plan/link nie rozksięgowuje dawnych odsetek i nie tworzy kosztu ani prognozy.
   Brak importu rzeczywistego harmonogramu lub korekt Velo.
 
-## [Unreleased] — 2026-10-27 — Bezpieczna edycja waluty konta
+## [9db255b] — 2026-10-28 — Bezpieczna edycja waluty konta
 
 ### Added
 - Waluta PLN/EUR/USD w edycji ustawień konta; backend wylicza możliwość zmiany
@@ -34,8 +38,9 @@ Wszystkie istotne zmiany w projekcie.
 - PATCH waluty nie jest już ignorowany. Null/nieobsługiwane wartości odrzucane,
   historia/pending/zerowe saldo z postingami/harmonogram/import blokują zmianę409.
   Konflikt nie zmienia innych pól; obecna waluta może być przesłana ponownie.
-- Bez migracji, przeliczania historii, importu i deployu. Pierwszy slice zatwierdzonej
-  kolejności; Q7 i pozostałe zobowiązania pozostają kolejnymi iteracjami.
+- Sam slice walut nie wymaga migracji, przeliczania historii ani importu. Lokalnie
+  gotowy27.10; wydany28.10 razem z metadanymi Q7 w9db255b. Pozostałe zobowiązania
+  pozostają kolejnymi iteracjami.
 - Frontend: 235 testów jednostkowych, 47 E2E + 1 celowy desktop skip,
   ESLint/tsc/build i axe edycji PASS; niezależne review bez blokad.
 - Backend: 812 PASS (8 proxy deselected, 2 znane warningi bibliotek), Ruff/mypy PASS;

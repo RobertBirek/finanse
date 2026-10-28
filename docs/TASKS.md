@@ -11,15 +11,17 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Slice walut: bezpieczny PATCH, capability, UI i testy konkurencji;
   backend812/frontend235/E2E47+1skip, lint/types/build PASS i review bez blokad
   w gałęzi `feat/account-currency`. Bez zmian produkcji.
-- [ ] Osobna integracja/wdrożenie walut po potwierdzonym gate.
+- [x] Integracja/wdrożenie walut po potwierdzonym gate — razem z Q7 w9db255b (28.10).
 - [x] Q7 jako pierwszy pionowy slice zobowiązań: plan kapitału, odsetek/opłat,
   harmonogram jako plan i przypisywanie rzeczywistych płatności bez duplikatów.
   Potwierdzono przypisanie dostarczonego harmonogramu do Q7. Projekt pierwszej
   iteracji (plan + link istniejących transferów, bez księgowania) przygotowany
   w `docs/superpowers/specs/2026-10-27-loan-schedule-design.md`; builder check zakończony,
   implementacja backend/frontend i targeted gate32 PASS; frontend243/E2E59+1skip PASS.
-- [~] Po jawnej zgodzie28.10: pełny gate, integracja/main/push i wdrożenie obu slice'ów
+- [x] Po jawnej zgodzie28.10: pełny gate, integracja/main/push i wdrożenie obu slice'ów
   (waluta + Q7) z backup/restore i addytywną migracją. Bez importu i korekt historii.
+- [x] Końcowa obserwacja wydania9db255b:10/10 PASS, brak restartów/błędów i zmian
+  starych danych; atomowa aktualizacja metadanych runtime, rollback zachowany.
 - [ ] Kolejny slice Q7: rzeczywiste księgowanie nowych spłat kapitału/odsetek/opłat,
   uzgodnienie historycznych transferów i niedublowana integracja z prognozą.
 - [ ] Rozszerzenie na kartę Velo i Allegro Pay (również oprocentowane raty).

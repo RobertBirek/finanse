@@ -85,8 +85,8 @@ bez floating-point do obliczeń groszy, możliwość wprowadzenia0 dla składnik
 ### Task 4: Gate i dokumentacja
 
 - [x] Pełne pytest na lokalnej finanse_test, Ruff/mypy, Vitest/ESLint/tsc/build/E2E.
-- [ ] Świeży review całości, ważne uwagi naprawione TDD, dokumentacja trzech plików.
-- [ ] Małe commity w gałęzi, bez merge/push/migracji/deployu produkcyjnego.
+- [x] Świeży review całości, ważne uwagi naprawione TDD, dokumentacja trzech plików.
+- [x] Kod w9db255b; po osobnej zgodzie28.10 main/push i migracja/deploy.
 
 ## Progress
 
@@ -131,3 +131,10 @@ bez floating-point do obliczeń groszy, możliwość wprowadzenia0 dla składnik
   Testy samego przelewu w różnych ratach są sekwencyjne +DB UNIQUE; współbieżne
   testy sprawdzają limit pokrycia i link vs zmiana/usunięcie transakcji, nie każdą
   kombinację dwóch umów. Niezależny review protokołu blokad nie wykrył blokad.
+- Main/push9db255b i CI40644862567 success. Backup6ebdef50/restore/rehearsal,
+  exact-image hashes/exact-package E2E i HTTPS/assets/auth/browser PASS.
+  Produkcja przełączona b8→c2 +backend/worker/frontend9db; stare dane/uploads/
+  data services bez zmian. Trwa wyłącznie obserwacja/finalizacja; nie ponawiać apply.
+- Finalizacja zakończona: obserwacja5-min10/10 PASS, metadane atomowo zaktualizowane,
+  skonsolidowany override zgodny z runtime. Powtórna weryfikacja PASS. Bez importu,
+  kosztów historycznych, nowych realnych umów lub harmonogramu użytkownika.

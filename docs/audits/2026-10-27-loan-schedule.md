@@ -11,6 +11,10 @@
 - Oryginalne dokumenty, produkcyjna historia, mapping Actual, Velo: bez zmian.
 - Brak produkcyjnej migracji, importu dokumentu, merge/push/deploy.
 
+Powyżej zakres etapu implementacji.28.10 po osobnej jawnej zgodzie main/push/deploy
+i addytywna migracja zakończone w9db255b; import/korekty nadal niewykonane.
+Raport wydania: `2026-10-28-release-loans.md` (backup/restore/CI/smoke/obserwacja PASS).
+
 ## Weryfikacja
 
 - Frontend: świeże pełne Vitest **243/243**, ESLint i TypeScript PASS po poprawkach

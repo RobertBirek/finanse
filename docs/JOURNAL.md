@@ -2,6 +2,28 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-28 — Q7 i waluty na main oraz produkcji
+
+- Po pełnym gate844 backend/5 proxy/243 unit frontend/59 E2E+1skip, lint/types/build
+  i review scalono fast-forward main i wypchnięto9db255b (w tym waluty0d52f9d).
+  CI40644862567 success dla obu domen, dodatkowe exact-package E2E59+1skip PASS.
+- Backup6ebdef50 + restore success/0. Próba migracji na świeżej kopii w izolowanym
+  PostgreSQL(tmpfs/network-none) PASS. Początkowa readiness na Unix sockecie trafiła
+  w restart initdb; końcowy TCP loopback usunął wyścig narzędzia, bez zmian produkcji.
+- Wersjonowany pakiet `/opt/finanse/webapp/releases/9db255b`, obrazy z Git archiwum
+  dokładnego SHA, offline i przypięte ID, pełny Compose/hardening/env bez driftu.
+- Produkcja zmigrowana b8→c2 (trzy puste tabele), aplikacje backend/worker/frontend
+  przełączone do9db. HTTPS/assets/auth i read-only browser375/1440 PASS. Wszystkie
+  stare kolumny ledger/pozostałych tabel i hashe uploads niezmienione; data services
+  nie restartowane, żadnych importów/korekt/realnych mutacji smoke.
+- Końcowa5-min obserwacja10/10 PASS,0 restartów/nowych błędów i zmian starych danych.
+  Active-release metadata zaktualizowane atomowo; konsolidacja override zgodna
+  z runtime. Ponowny guard PASS, tymczasowe env sekretów usunięte.
+  Nie ponawiać apply: wydanie zakończone. Prywatne dowody i rollback:
+  `/tmp/opencode/release-loans-20261028/` oraz pakiet wydania.
+- Raport: `docs/audits/2026-10-28-release-loans.md`. Stash istniejących docs Velo
+  zachowany, nie stosować ponownie (treść już w main). Worktree pozostawić.
+
 ## 2026-10-28 — Dokończenie Q7 i zgoda na main/produkcję
 
 - Podagent backendu zakończył pracę limitem bez raportu. Koordynator przejął istniejący
