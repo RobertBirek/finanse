@@ -66,7 +66,7 @@ async def retry_document_ocr(
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
 ):
     try:
-        document = await request_ocr_retry(
+        document, response_json = await request_ocr_retry(
             db,
             current_user.id,
             document_id,
@@ -74,8 +74,10 @@ async def retry_document_ocr(
         )
     except LookupError:
         return JSONResponse(content={"detail": "Document not found"}, status_code=404)
+    except ValueError:
+        return JSONResponse(content={"detail": "Idempotency key conflict"}, status_code=409)
     await db.commit()
     from app.worker import enqueue_process_document
 
     await enqueue_process_document(str(document.id))
-    return {"id": str(document.id), "status": "pending"}
+    return response_json

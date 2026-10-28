@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.documents import extractor
+from app.documents.review_schemas import ReviewSuggestion
 from app.documents.schemas import DocumentFinancialData
 
 VALID = {
@@ -21,18 +22,55 @@ VALID = {
     "date": "2026-10-20",
     "category_suggestion": "Food",
 }
+
+REVIEW_VALID = {
+    "document_type": "receipt",
+    "fields": {
+        "supplier_name": "Shop",
+        "supplier_tax_id": None,
+        "number": None,
+        "issue_date": "2026-10-20",
+        "sale_date": None,
+        "due_date": None,
+        "description": "Purchase",
+        "payee_iban": None,
+        "total": "12.30",
+        "currency": "PLN",
+    },
+    "provenance": {"total": "llm", "currency": "llm"},
+    "parser_version": "untrusted",
+}
 INVALID_FIELDS = [
-    {"detected": "true"}, {"detected": "false"}, {"detected": 1}, {"detected": 0},
-    {"amount": "12345"}, {"amount": True}, {"amount": 123.45}, {"amount": 12345.0},
-    {"amount": 0}, {"amount": -1}, {"amount": 2**63},
-    {"amount": float("nan")}, {"amount": float("inf")},
-    {"currency": "GBP"}, {"currency": None}, {"currency": "pln"},
-    {"type": "transfer"}, {"type": "exchange"},
-    {"description": "   "}, {"description": {}}, {"description": "a" * 2001},
-    {"date": "2026-02-30"}, {"date": "20261020"}, {"date": "2026-10-20T10:00:00Z"},
-    {"date": 1792454400}, {"date": True},
-    {"category_suggestion": {}}, {"category_suggestion": "a" * 201},
-    {"sql": "SELECT 1"}, {"account_id": str(uuid.uuid4())},
+    {"detected": "true"},
+    {"detected": "false"},
+    {"detected": 1},
+    {"detected": 0},
+    {"amount": "12345"},
+    {"amount": True},
+    {"amount": 123.45},
+    {"amount": 12345.0},
+    {"amount": 0},
+    {"amount": -1},
+    {"amount": 2**63},
+    {"amount": float("nan")},
+    {"amount": float("inf")},
+    {"currency": "GBP"},
+    {"currency": None},
+    {"currency": "pln"},
+    {"type": "transfer"},
+    {"type": "exchange"},
+    {"description": "   "},
+    {"description": {}},
+    {"description": "a" * 2001},
+    {"date": "2026-02-30"},
+    {"date": "20261020"},
+    {"date": "2026-10-20T10:00:00Z"},
+    {"date": 1792454400},
+    {"date": True},
+    {"category_suggestion": {}},
+    {"category_suggestion": "a" * 201},
+    {"sql": "SELECT 1"},
+    {"account_id": str(uuid.uuid4())},
 ]
 
 
@@ -59,7 +97,9 @@ async def test_invalid_model_fields_fail_closed(provider, changed):
     provider.close.assert_awaited_once()
 
 
-@pytest.mark.parametrize("raw", ["[]", "null", "true", "123", '"text"', "{}", "not JSON", "{", None, ""])
+@pytest.mark.parametrize(
+    "raw", ["[]", "null", "true", "123", '"text"', "{}", "not JSON", "{", None, ""]
+)
 async def test_non_object_or_incomplete_output_has_no_detection(provider, raw):
     output(provider, raw)
     assert await extractor.extract_financial_data("OCR text") == {"detected": False}
@@ -80,10 +120,14 @@ async def test_valid_output_is_normalized_and_remains_only_a_suggestion(provider
 
 
 async def test_unknown_date_and_category_are_not_guessed(provider):
-    data = {key: value for key, value in VALID.items() if key not in {"date", "category_suggestion"}}
+    data = {
+        key: value for key, value in VALID.items() if key not in {"date", "category_suggestion"}
+    }
     output(provider, json.dumps(data))
     assert await extractor.extract_financial_data("OCR text") == {
-        **data, "date": None, "category_suggestion": None,
+        **data,
+        "date": None,
+        "category_suggestion": None,
     }
 
 
@@ -120,6 +164,20 @@ async def test_rejected_payload_is_not_logged(provider, caplog):
     assert "PRIVATE_MODEL_OUTPUT" not in caplog.text
     assert "PRIVATE_OCR_TEXT" not in caplog.text
     assert "did not match the schema" in caplog.text
+
+
+async def test_review_extraction_returns_typed_suggestion_with_configured_provider(provider):
+    """Would fail if review extraction returned an unvalidated mapping or model-supplied provider."""
+    output(provider, json.dumps(REVIEW_VALID))
+
+    suggestion = await extractor.extract_review_data("Receipt OCR")
+
+    assert isinstance(suggestion, ReviewSuggestion)
+    assert suggestion.fields.total == "12.30"
+    assert (
+        suggestion.parser_version
+        == f"{extractor.settings.LLM_PROVIDER}:{extractor.settings.LLM_MODEL}"
+    )
 
 
 @pytest.mark.parametrize("changed", INVALID_FIELDS + [{"detected": False}])

@@ -1,7 +1,7 @@
 import hashlib
 import json
 import uuid
-from typing import Any, Literal, cast
+from typing import Literal, cast
 
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -188,8 +188,7 @@ async def process_review_revision(
         revision.status, revision.error_code = "incomplete", "ocr_text_unavailable"
         return revision
     try:
-        suggestion = await extract_review_data(text.extracted_text)
-        parsed = ReviewSuggestion.model_validate(suggestion)
+        parsed = await extract_review_data(text.extracted_text)
     except ReviewExtractionError as error:
         revision.status, revision.error_code = "incomplete", error.code
         return revision
@@ -217,7 +216,7 @@ async def process_review_revision(
 
 async def request_ocr_retry(
     db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID, *, context: MutationContext
-) -> Document:
+) -> tuple[Document, dict[str, object]]:
     """Explicitly requeue OCR; list and review reads never retry a document."""
     document = (
         await db.execute(
@@ -228,6 +227,22 @@ async def request_ocr_retry(
     ).scalar_one_or_none()
     if document is None:
         raise LookupError("document_not_found")
+    request_hash = hashlib.sha256(
+        json.dumps({"document_id": str(document_id)}, sort_keys=True).encode()
+    ).hexdigest()
+    receipt = (
+        await db.execute(
+            select(FinanceCommandReceipt).where(
+                FinanceCommandReceipt.user_id == user_id,
+                FinanceCommandReceipt.action == "retry_document_ocr",
+                FinanceCommandReceipt.key == context.idempotency_key,
+            )
+        )
+    ).scalar_one_or_none()
+    if receipt is not None:
+        if receipt.request_hash != request_hash:
+            raise ValueError("idempotency_key_reused")
+        return document, receipt.response_json
     document.status = DocumentStatus.PENDING
     document.attempt_count = 0
     document.next_attempt_at = None
@@ -235,7 +250,20 @@ async def request_ocr_retry(
     await log_event(
         db, user_id, "document", str(document_id), "retry_ocr", performed_by=context.performed_by
     )
-    return document
+    response_json: dict[str, object] = {"id": str(document.id), "status": "pending"}
+    db.add(
+        FinanceCommandReceipt(
+            user_id=user_id,
+            action="retry_document_ocr",
+            key=context.idempotency_key,
+            request_hash=request_hash,
+            entity_id=document.id,
+            result_ids=[str(document.id)],
+            version=None,
+            response_json=response_json,
+        )
+    )
+    return document, response_json
 
 
 async def pending_review_ids(db: AsyncSession) -> list[uuid.UUID]:
@@ -250,7 +278,7 @@ async def pending_review_ids(db: AsyncSession) -> list[uuid.UUID]:
     )
 
 
-async def extract_review_data(text: str) -> dict[str, Any]:
+async def extract_review_data(text: str) -> ReviewSuggestion:
     from app.documents.extractor import extract_review_data as extract
 
     return await extract(text)

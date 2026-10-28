@@ -77,7 +77,7 @@ async def extract_financial_data(text: str) -> dict[str, Any]:
     return result.model_dump(mode="json")
 
 
-async def extract_review_data(text: str) -> dict[str, Any]:
+async def extract_review_data(text: str) -> ReviewSuggestion:
     """Return only a schema-valid review suggestion; malformed output is explicit failure."""
     from app.documents.review_service import ReviewExtractionError
 
@@ -105,7 +105,7 @@ async def extract_review_data(text: str) -> dict[str, Any]:
         suggestion = ReviewSuggestion.model_validate_json(response.choices[0].message.content)
         # Provider/model metadata is configuration, never an untrusted model claim or a secret.
         suggestion.parser_version = f"{settings.LLM_PROVIDER}:{settings.LLM_MODEL}"
-        return suggestion.model_dump(mode="json")
+        return suggestion
     except ValidationError as error:
         logger.warning("Document review extraction did not match the schema")
         raise ReviewExtractionError("invalid_model_output") from error

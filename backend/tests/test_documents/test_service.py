@@ -383,6 +383,7 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     from app import worker
     from app.documents import review_service
     from app.documents.models import DocumentExtractionRevision
+    from app.documents.review_schemas import ReviewSuggestion
     from app.documents.schemas import DocumentStatus
 
     image_content = valid_png_bytes()
@@ -404,26 +405,28 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
         AsyncMock(return_value="\n" if extraction_failure == "empty" else "Receipt text"),
     )
     extraction = AsyncMock(
-        return_value={
-            "document_type": "receipt",
-            "fields": {
-                "supplier_name": None,
-                "supplier_tax_id": None,
-                "number": None,
-                "issue_date": None,
-                "sale_date": None,
-                "due_date": None,
-                "description": "Test",
-                "payee_iban": None,
-                "total": "1.00",
-                "currency": "PLN",
-            },
-            "provenance": {"total": "llm", "currency": "llm"},
-            "parser_version": "review-v1",
-        }
+        return_value=ReviewSuggestion.model_validate(
+            {
+                "document_type": "receipt",
+                "fields": {
+                    "supplier_name": None,
+                    "supplier_tax_id": None,
+                    "number": None,
+                    "issue_date": None,
+                    "sale_date": None,
+                    "due_date": None,
+                    "description": "Test",
+                    "payee_iban": None,
+                    "total": "1.00",
+                    "currency": "PLN",
+                },
+                "provenance": {"total": "llm", "currency": "llm"},
+                "parser_version": "review-v1",
+            }
+        )
     )
     if extraction_failure == "invalid":
-        extraction.return_value["fields"]["total"] = "invalid"
+        extraction.side_effect = review_service.ReviewExtractionError("invalid_model_output")
     elif extraction_failure:
         extraction.side_effect = ValueError("Invalid model response")
     monkeypatch.setattr(review_service, "extract_review_data", extraction)

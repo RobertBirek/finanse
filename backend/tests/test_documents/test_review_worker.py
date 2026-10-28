@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app import worker
 from app.documents import review_service, service
 from app.documents.models import DocumentExtractionRevision
+from app.documents.review_schemas import ReviewSuggestion
 from app.identity.models import User
 from app.inbox.models import InboxItem
 from test_documents.fixtures import valid_pdf_bytes
@@ -44,27 +45,30 @@ async def test_worker_creates_review_revision_not_legacy_inbox(
         review_service,
         "extract_review_data",
         AsyncMock(
-            return_value={
-                "document_type": "receipt",
-                "fields": {
-                    "supplier_name": None,
-                    "supplier_tax_id": None,
-                    "number": None,
-                    "issue_date": None,
-                    "sale_date": None,
-                    "due_date": None,
-                    "description": "Zakup",
-                    "payee_iban": None,
-                    "total": "1.00",
-                    "currency": "PLN",
-                },
-                "provenance": {"total": "llm", "currency": "llm"},
-                "parser_version": "review-v1",
-            }
+            return_value=ReviewSuggestion.model_validate(
+                {
+                    "document_type": "receipt",
+                    "fields": {
+                        "supplier_name": None,
+                        "supplier_tax_id": None,
+                        "number": None,
+                        "issue_date": None,
+                        "sale_date": None,
+                        "due_date": None,
+                        "description": "Zakup",
+                        "payee_iban": None,
+                        "total": "1.00",
+                        "currency": "PLN",
+                    },
+                    "provenance": {"total": "llm", "currency": "llm"},
+                    "parser_version": "review-v1",
+                }
+            )
         ),
     )
 
     await worker.process_document({}, str(document_id))
+    await worker.process_document({}, str(document_id))  # duplicate delivery after recovery
 
     async with sessions() as db:
         revisions = (
