@@ -2,6 +2,15 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Reviewed] — 2026-10-28 — Kontrola wymuszonej zmiany waluty
+
+- Po potwierdzeniu EUR wykonano ograniczony odczyt konta i zależności właściwego
+  właściciela. Historia ma inną walutę źródłową; prosta zmiana etykiety nie jest
+  przeliczeniem. Użytkownik potwierdził, że historyczne kwoty są w EUR. Bez zmiany
+  danych produkcyjnych, migracji lub deployu. Następnie zatwierdzono także wycenę
+  PLN wg NBP: operator-only korekta w gałęzi, targeted13/lint/types i próba na kopii
+  PASS; pełny gate/review przed zapisem. Prywatny raport poza Git.
+
 ## [9db255b] — 2026-10-28 — Plan rat i powiązania płatności Q7
 
 ### Added

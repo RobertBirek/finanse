@@ -2,6 +2,66 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-28 — Zatwierdzona korekta EUR i wyceny PLN: wykonanie
+
+- Użytkownik zatwierdził wprost także historyczną wycenę PLN wg NBP i zmianę obu
+  stron wskazanych operacji. Zgoda dotyczy wyłącznie tego właściciela i konta,
+  nie Velo, innych kont o tej samej nazwie ani ogólnego wyłączenia guardów.
+- Gałąź `fix/confirmed-eur-currency` od79cfa78. Operator-only serwis
+  `backend/app/finance/currency_correction.py`: preview/digest, owner/shape/dependency
+  checks, account+transaction locks, świeży snapshot, nested transaction i audit.
+  Nie jest dołączony do routera lub narzędzi AI; zwykła edycja nadal blokuje historię.
+- Testy: początkowo brak modułu; po implementacji naprawiono fixture User/audit FK
+  i wymagany description. Targeted13 PASS (preview, FX, drift/approval/owner,
+  złe postingi, audit rollback, zależności, dwusesyjna konkurencja), Ruff/mypy69 PASS.
+- Świeży backup1732c2cc i restore success/0. Podgląd prawdziwych kursów NBP gotowy;
+  identyczna korekta z digestem przećwiczona na świeżej kopii produkcji w tmpfs/
+  network-none. Guard potwierdza ledger=0, zachowanie źródłowych liczb oraz wszystkich
+  innych kolumn/danych i dokładnie jeden nowy event audytu.
+- Prywatne plan/kwoty/ID/harness: `/tmp/opencode/revolut-eur-20261028/`.
+  Uruchomienie jednorazowym procesem z dokładnym hashem serwisu; bez wymiany obrazów,
+  migracji, modyfikacji oryginalnych plików lub bezpośredniego mutującego SQL.
+- Trwa pełny backend gate sh_1818993b2001dwfwtipoCuJYdt, log backend-final.log w tym
+  prywatnym katalogu. Frontend243/lint/types PASS. Review końcowy
+  ses_e7e7347fcffeiVFh58rY9Z6iD2 w toku. Nie uruchamiać apply przed ich sukcesem.
+- Produkcja jeszcze bez korekty: istnieje preview.json i rehearsal-proof.json,
+  brak applied.json. Nie ponawiać preview przez nadpisanie pliku; przy zmianie kodu
+  zachować stary podgląd, wygenerować nowy i ponowić próbę przed zatwierdzonym zapisem.
+- Pierwszy review zatrzymał apply: wymagany niezależny pin zatwierdzenia, powtórna
+  weryfikacja oficjalnego NBP podczas apply, fingerprint wszystkich domen i dokładny
+  audit owner/action/old/new, oraz fail-closed kontrole odporne na Python -O.
+  Wdrożono poprawki. Test podmienionego kursu z przeliczonym digestem RED→GREEN;
+  targeted14/Ruff/mypy69 PASS. Brak pinu i zmiana innych danych odrzucane także -O.
+- Nowy preview i osobny pin0400 po niezależnym pobraniu NBP; kopia ponownie PASS
+  z pełnym guardem. Izolowana kopia odtwarza świeżo potwierdzone kursy offline tylko
+  przy twardym sprawdzeniu database=currency_test/host127.0.0.1/usercopy;
+  produkcja zawsze ponownie pyta NBP. Stare dowody zachowane z sufiksem before-review.
+- Pierwszy pełny backend857 PASS dotyczył wersji sprzed uwag. Końcowy pełny run po
+  poprawkach: sh_1819d184c0010dXyL8mQjUPmZM, backend-final.log. Re-review tego samego
+  zakresu ses_e7e7347fcffeiVFh58rY9Z6iD2 w toku. Produkcja nadal bez zapisu.
+
+## 2026-10-28 — Wymuszona zmiana waluty: tylko diagnostyka
+
+- Użytkownik poprosił o zmianę istniejącego konta „na siłę”, następnie potwierdził
+  EUR zamiast niepoprawnego kodu EU. Nie jest to zgoda na zgadywanie dawnych kursów.
+- Pierwszy read-only odczyt odrzucił niejednoznaczną nazwę. Właściwy owner ustalony
+  z zachowanego prywatnego audytu, potem dokładne owner-scoped ORM READ ONLY.
+  Nie modyfikować innych kont o tej samej nazwie ani tworzyć tokena użytkownika.
+- Potwierdzono zależność importową i historyczne postingi w innej walucie źródłowej,
+  z kursem1. Sama zmiana Account.currency spowodowałaby błędną etykietę sumy źródłowej.
+  Potrzebne potwierdzenie, w jakich jednostkach są rzeczywiste historyczne kwoty.
+- Brak zapisów produkcyjnych, kodu, migracji, importów lub deployu. Prywatne ID
+  i raport: `/tmp/opencode/revolut-eur-20261028/account-review.json` (poza Git).
+- Następnie użytkownik potwierdził: wszystkie historyczne kwoty tego konta są EUR.
+  Uzupełniony owner-scoped odczyt obu stron wykazał wyłącznie przychody/wydatki
+  z kategoriową stroną przeciwną; obecna wycena bazowa jest1:1. Potwierdzenie waluty
+  nie potwierdza kursów ani dotychczasowych wartości PLN. Prywatne szczegóły:
+  `/tmp/opencode/revolut-eur-20261028/transactions-review.json`.
+- Mały plan korekty: konto i obie strony wskazanych operacji, kwoty źródłowe EUR
+  bez zmian, wycena PLN według istniejącej polityki NBP (fail-closed przy braku
+  kursu), atomowy owner-scoped zapis z backupem i audytem. Zmieni raporty PLN,
+  dlatego wymaga akceptacji tego zakresu przed implementacją/zapisem.
+
 ## 2026-10-28 — Q7 i waluty na main oraz produkcji
 
 - Po pełnym gate844 backend/5 proxy/243 unit frontend/59 E2E+1skip, lint/types/build

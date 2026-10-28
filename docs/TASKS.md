@@ -6,6 +6,12 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Waluty i zobowiązania (2026-10-27)
 
+- [~] Osobna korekta waluty istniejącego konta po prośbie o EUR: read-only kontrola
+  zakończona; użytkownik potwierdził historyczne kwoty jako EUR. Uzyskać akceptację
+  wyceny PLN historycznymi kursami NBP dla obu stron zapisów zatwierdzona. Podgląd,
+  backup/restore i próba na kopii PASS, targeted13 i lint/types PASS; pełny gate/review
+  w toku. Nie zmieniać samej etykiety salda ani nie osłabiać globalnej blokady walut.
+
 - [x] Użytkownik zaakceptował kolejność: waluty, Q7, karta/Allegro Pay z odsetkami,
   pożyczki rodzinne, Goodie i darowizny. Nie zmieniać przy okazji historii Velo.
 - [x] Slice walut: bezpieczny PATCH, capability, UI i testy konkurencji;
