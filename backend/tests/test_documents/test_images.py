@@ -8,6 +8,7 @@ def jpeg_with_orientation_and_gps() -> bytes:
     image = Image.new("RGB", (2, 4), "red")
     exif = Image.Exif()
     exif[274] = 6
+    exif[34853] = {1: "N", 2: (52.0, 0.0, 0.0), 3: "E", 4: (21.0, 0.0, 0.0)}
     output = BytesIO()
     image.save(output, format="JPEG", exif=exif)
     return output.getvalue()
@@ -17,12 +18,16 @@ def jpeg_with_orientation_and_gps() -> bytes:
 async def test_orientation_without_gps():
     from app.documents.images import normalize_image
 
-    result = await normalize_image(jpeg_with_orientation_and_gps(), "image/jpeg")
+    original = jpeg_with_orientation_and_gps()
+    with Image.open(BytesIO(original)) as image:
+        assert image.getexif().get_ifd(34853)[1] == "N"
+
+    result = await normalize_image(original, "image/jpeg")
 
     assert result.startswith(b"\xff\xd8")
     with Image.open(BytesIO(result)) as image:
         assert image.size == (4, 2)
-        assert image.getexif().get(34853) is None
+        assert image.getexif().get_ifd(34853) == {}
 
 
 @pytest.mark.asyncio

@@ -38,11 +38,42 @@ async def test_heic_original_unchanged_and_preview_jpeg(
 
 
 @pytest.mark.asyncio
-async def test_phone_generic_mime_detected_not_filename_trusted():
-    from app.documents.validation import validate_document_content
+@pytest.mark.integration
+@pytest.mark.parametrize("declared_mime", [None, "application/octet-stream"])
+async def test_phone_generic_mime_is_detected_by_upload_endpoint(
+    async_client, db_session, monkeypatch, tmp_path, declared_mime
+):
+    from app.documents import service
+    from app.identity.router import get_current_user
+    from app.main import app
 
+    boundary = "phone-upload-boundary"
+    headers = [b'Content-Disposition: form-data; name="file"; filename="blob"']
+    if declared_mime is not None:
+        headers.append(f"Content-Type: {declared_mime}".encode())
     content = valid_heic_bytes()
-    assert await validate_document_content(content, "application/octet-stream") == "image/heif"
+    body = b"\r\n".join(
+        [
+            f"--{boundary}".encode(),
+            *headers,
+            b"",
+            content,
+            f"--{boundary}--\r\n".encode(),
+        ]
+    )
+    monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=uuid.uuid4())
+    try:
+        response = await async_client.post(
+            "/api/documents/upload",
+            content=body,
+            headers={"content-type": f"multipart/form-data; boundary={boundary}"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["document"]["mime_type"] == "image/heif"
 
 
 @pytest.mark.asyncio

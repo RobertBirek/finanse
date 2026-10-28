@@ -50,10 +50,11 @@ async def upload_document(
     _limit: Annotated[None, Depends(upload_rate_limit)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    if file.content_type not in ALLOWED_MIME_TYPES:
+    declared_mime = file.content_type or ""
+    if declared_mime not in ALLOWED_MIME_TYPES:
         return JSONResponse(
             content={
-                "detail": f"Unsupported file type: {file.content_type}. Allowed: PDF, JPG, PNG, HEIC."
+                "detail": f"Unsupported file type: {declared_mime}. Allowed: PDF, JPG, PNG, HEIC."
             },
             status_code=400,
         )
@@ -73,7 +74,7 @@ async def upload_document(
             current_user.id,
             bytes(content),
             file.filename or "untitled",
-            file.content_type,
+            declared_mime,
         )
     except StorageQuotaExceededError:
         return JSONResponse(content={"detail": "Document storage quota exceeded"}, status_code=413)
