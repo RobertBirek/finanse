@@ -24,6 +24,11 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Prywatne dowody: `/tmp/opencode/revolut-eur-20261028/`. Kod/dokumentacja lokalnie
   w `fix/confirmed-eur-currency`; nie scalono/push nowego kodu do main.
 - Raport: `docs/audits/2026-10-28-confirmed-currency-correction.md`.
+- Domknięcie plików: porównanie wszystkich oryginałów z właściwym świeżym backupem
+  1732c2cc PASS. Pierwsza próba odczytu Restic przekroczyła120s; poprawne pełne
+  środowisko backupu i znana ścieżka archiwum pozwoliły zweryfikować hashe bez
+  restore produkcji. Tymczasowy archive usunięty. Dowody utrwalone w
+  `/opt/finanse/webapp/maintenance/confirmed-eur-20261028-51bf351` (0700/0600).
 
 ## 2026-10-28 — Zatwierdzona korekta EUR i wyceny PLN: wykonanie
 

@@ -41,8 +41,11 @@
   źródłowe i PLN zgodne z odpowiedzią operatora; HTTPS health200.
 - Kontenery aplikacji nie były wymieniane; nie wykonywano importu ani korekt Velo.
 - Prywatne dowody (bez danych w Git): `/tmp/opencode/revolut-eur-20261028/`.
-  Porównanie uploads wymaga świeżego backupu1732, nie starszej bazy wydania9db;
-  weryfikacja plików z tego backupu w toku. Serwis korekty nie wykonuje operacji na plikach.
+  Końcowe porównanie oryginalnych plików z właściwym backupem1732 PASS;
+  żadnego istniejącego oryginału nie nadpisano. Starszy baseline wydania9db
+  nie był właściwą bazą porównania tej operacji.
+- Trwałe, prywatne dowody z manifestem hashów:
+  `/opt/finanse/webapp/maintenance/confirmed-eur-20261028-51bf351` (0700/0600).
 
 ## Stan kodu
 
