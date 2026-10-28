@@ -21,7 +21,7 @@ def test_loan_migration_is_the_single_head() -> None:
     config = Config(str(backend / "alembic.ini"))
     config.set_main_option("script_location", str(backend / "migrations"))
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["c2d7e9a4f801"]
+    assert scripts.get_heads() == ["7f8ce92bda94"]
     assert scripts.get_revision("c2d7e9a4f801").down_revision == "b8e4c2f1a7d9"
 
 

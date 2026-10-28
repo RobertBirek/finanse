@@ -2,11 +2,13 @@ import uuid
 from datetime import date
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
     Date,
     ForeignKey,
+    Index,
     Numeric,
     String,
     Text,
@@ -237,6 +239,166 @@ class LoanPaymentLink(Base):
         nullable=False,
         unique=True,
     )
+
+
+class FinancialDocument(Base):
+    __tablename__ = "financial_documents"
+    __table_args__ = (
+        CheckConstraint(
+            "kind IS NULL OR kind IN ('invoice', 'receipt')", name="ck_financial_document_kind"
+        ),
+        CheckConstraint(
+            "review IN ('draft', 'approved', 'rejected')", name="ck_financial_document_review"
+        ),
+        CheckConstraint(
+            "declaration IN ('unknown', 'payable', 'declared_paid')",
+            name="ck_financial_document_declaration",
+        ),
+        CheckConstraint(
+            "lifecycle IN ('active', 'archived', 'cancelled')",
+            name="ck_financial_document_lifecycle",
+        ),
+        CheckConstraint(
+            "recurring_decision IS NULL OR recurring_decision = 'separate'",
+            name="ck_financial_document_recurring_decision",
+        ),
+        CheckConstraint(
+            "currency IS NULL OR currency IN ('PLN', 'EUR', 'USD')",
+            name="ck_financial_document_currency",
+        ),
+        CheckConstraint(
+            "total_minor IS NULL OR (total_minor > 0 AND total_minor <= 9007199254740991)",
+            name="ck_financial_document_total_minor",
+        ),
+        CheckConstraint("version >= 1", name="ck_financial_document_version"),
+        CheckConstraint(
+            "review <> 'approved' OR (kind IS NOT NULL AND supplier_name IS NOT NULL "
+            "AND description IS NOT NULL AND total_minor IS NOT NULL AND currency IS NOT NULL)",
+            name="ck_financial_document_approved_complete",
+        ),
+        Index("ix_financial_documents_user_due_date", "user_id", "due_date"),
+        Index("ix_financial_documents_user_review", "user_id", "review"),
+        Index("ix_financial_documents_user_lifecycle", "user_id", "lifecycle"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    supplier_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    supplier_tax_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    number: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    issue_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    sale_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    payee_iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("categories.id", ondelete="RESTRICT"), nullable=True
+    )
+    payment_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="RESTRICT"), nullable=True
+    )
+    total_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    review: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="draft", server_default="draft"
+    )
+    declaration: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="unknown", server_default="unknown"
+    )
+    lifecycle: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="active", server_default="active"
+    )
+    recurring_decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    version: Mapped[int] = mapped_column(nullable=False, default=1, server_default="1")
+
+
+class FinancialDocumentSource(Base):
+    __tablename__ = "financial_document_sources"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    financial_document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_documents.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+
+
+class DocumentPaymentAllocation(Base):
+    __tablename__ = "document_payment_allocations"
+    __table_args__ = (
+        UniqueConstraint(
+            "financial_document_id", "posting_id", name="uq_document_payment_allocation"
+        ),
+        CheckConstraint("amount_minor > 0", name="ck_document_payment_allocation_amount"),
+        CheckConstraint(
+            "amount_minor <= 9007199254740991", name="ck_document_payment_allocation_safe_amount"
+        ),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    financial_document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_documents.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    posting_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("postings.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class RecurringOccurrenceCoverage(Base):
+    __tablename__ = "recurring_occurrence_coverages"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "scheduled_item_id",
+            "occurrence_date",
+            name="uq_recurring_coverage_occurrence",
+        ),
+        UniqueConstraint("financial_document_id", name="uq_recurring_coverage_document"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    scheduled_item_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("scheduled_finance_items.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    occurrence_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    financial_document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_documents.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+
+
+class FinanceCommandReceipt(Base):
+    __tablename__ = "finance_command_receipts"
+    __table_args__ = (
+        UniqueConstraint("user_id", "action", "key", name="uq_finance_command_receipt"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+    key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    result_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    version: Mapped[int | None] = mapped_column(nullable=True)
+    response_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
 
 
 class Posting(Base):
