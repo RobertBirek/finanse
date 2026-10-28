@@ -30,10 +30,10 @@ Identyfikatory/kwoty tylko w prywatnym `/tmp/opencode/revolut-eur-20261028/`.
   drift, brak kursu, mieszana waluta/transfer/dependency, brak zatwierdzonego digestu.
 - [x] GREEN: `backend/app/finance/currency_correction.py` i integration tests (14 PASS).
 - [x] Prywatny podgląd rzeczywistych danych i oficjalnych kursów; brak zgadywania.
-- [ ] Pełny pytest + Ruff/mypy, niezależny review; świeży backup/restore.
-- [ ] Próba na izolowanej kopii, potem jednorazowy zapis po ponownym guardzie.
-- [ ] Świeży odczyt salda EUR/PLN, invariantów, audytu i niezmienności reszty danych.
-- [ ] CHANGELOG/TASKS/JOURNAL z wynikiem, bez prywatnych danych w Git.
+- [x] Pełny pytest + Ruff/mypy, niezależny review; świeży backup/restore.
+- [x] Próba na izolowanej kopii, potem jednorazowy zapis po ponownym guardzie.
+- [x] Świeży odczyt salda EUR/PLN, invariantów, audytu i niezmienności reszty mapped danych.
+- [x] CHANGELOG/TASKS/JOURNAL z wynikiem, bez prywatnych danych w Git.
 
 Targeted13/Ruff/mypy69 PASS; backup1732c2cc i restore success/0; identyczna korekta
 na izolowanej świeżej kopii produkcji PASS. Pełny backend i świeży review w toku.
@@ -43,6 +43,11 @@ Review zatrzymał pierwszy apply:4 uwagi poprawione (niezależny pin, live NBP p
 apply, wszystkie mapped tables +dokładny audit, kontrole explicit raise zamiast assert).
 Podmieniony NBP rate/recomputed digest RED→GREEN. Regeneracja preview i próba na
 kopii ponownie PASS; -O nie wyłącza guardów. Final full pytest i scoped re-review w toku.
+
+Zamknięcie: backend858 PASS, review zamknął4 uwagi do kodu. Brakujący review-proof
+z pinem został uzupełniony po teście; approval CLI literalnie z sealed pliku.
+Apply produkcyjny i fresh READ ONLY PASS (6 transakcji/12 postingów,EUR,1 audit).
+Nie powtarzać operacji. Kod lokalnie51bf351, bez nowego deployu/main/push.
 
 ## Spójność interfejsów
 

@@ -2,14 +2,16 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Reviewed] — 2026-10-28 — Kontrola wymuszonej zmiany waluty
+## [Corrected] — 2026-10-28 — Potwierdzona waluta EUR i wycena NBP
 
-- Po potwierdzeniu EUR wykonano ograniczony odczyt konta i zależności właściwego
-  właściciela. Historia ma inną walutę źródłową; prosta zmiana etykiety nie jest
-  przeliczeniem. Użytkownik potwierdził, że historyczne kwoty są w EUR. Bez zmiany
-  danych produkcyjnych, migracji lub deployu. Następnie zatwierdzono także wycenę
-  PLN wg NBP: operator-only korekta w gałęzi, targeted13/lint/types i próba na kopii
-  PASS; pełny gate/review przed zapisem. Prywatny raport poza Git.
+- Po potwierdzeniu kwot EUR i osobnej zgodzie na wycenę NBP skorygowano jedno konto
+  i obie strony6 operacji. Kwoty źródłowe/ID/daty/kategorie/mapowania zachowane,
+  PLN przeliczone oficjalnymi kursami; ledger zbilansowany i audit old/new zapisany.
+- Operator-only serwis: pełny backend858/frontend243, lint/types, backup1732c2cc/
+  restore, kopia produkcji i świeży odczyt po commicie PASS. Bez importu, migracji,
+  zmiany zwykłych guardów lub wdrażania nowych obrazów. Kod lokalnie w51bf351.
+- Raport: `docs/audits/2026-10-28-confirmed-currency-correction.md`; prywatne dane
+  i identyfikatory pozostają poza Git.
 
 ## [9db255b] — 2026-10-28 — Plan rat i powiązania płatności Q7
 

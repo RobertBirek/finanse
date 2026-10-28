@@ -2,6 +2,29 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-28 — Korekta EUR wykonana i potwierdzona
+
+- Po oddzielnej zgodzie na źródłową walutę i wycenę PLN wykonano jednorazową korektę
+  jednego owner-scoped konta actual oraz obu stron6 operacji. Nie zmieniano liczb
+  źródłowych, ID/dat/kategorii/kierunków/budget-impact/mapowań ani innych kont.
+- Serwis lokalny51bf351. Końcowy backend858 PASS,8 proxy deselected,2 znane warningi;
+  Ruff/mypy69 i frontend243/lint/types PASS. Backup1732c2cc/restore i powtórzona kopia
+  produkcji PASS. Review potwierdził zamknięcie4 uwag do kodu; poświadczenie scope,
+  sealed pin i końcowy pełny gate zostały uzupełnione przed apply.
+- Produkcyjny operator użył literalnego niezależnego pinu i dokładnie zahashowanego
+  serwisu/guarda; ponowny NBP i snapshot zgodne z planem. Wszystkie mapped tables
+  oraz dokładny audit old/new sprawdzone przed commitem. applied.json potwierdza
+  sukces — NIE PONAWIAĆ apply ani nie używać starszych preview-before-review.
+- Fresh READ ONLY verified.json: EUR,6 operacji/12 postingów, prawidłowe NBP/PLN,
+  ledger=0,1 audit event, zgodne salda źródłowe i PLN. Aplikacja healthy; bez nowych
+  obrazów/migracji/importu/korekt Velo. Zwykłe API nadal nie pozwala wymuszać waluty.
+- Weryfikacja oryginalnych plików nie powinna używać starszego baseline wydania9db,
+  który różni się już od świeżego stanu. Trwa odczyt uploads z właściwego backupu1732
+  (sh_181b86ef7001x8w4zlj0uzO1FX); nie wykonuje restore bazy lub plików produkcji.
+- Prywatne dowody: `/tmp/opencode/revolut-eur-20261028/`. Kod/dokumentacja lokalnie
+  w `fix/confirmed-eur-currency`; nie scalono/push nowego kodu do main.
+- Raport: `docs/audits/2026-10-28-confirmed-currency-correction.md`.
+
 ## 2026-10-28 — Zatwierdzona korekta EUR i wyceny PLN: wykonanie
 
 - Użytkownik zatwierdził wprost także historyczną wycenę PLN wg NBP i zmianę obu
