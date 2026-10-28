@@ -67,7 +67,7 @@ async def run_validation_process(command: list[str], content: bytes, timeout: fl
                 raise UnsupportedDocumentFormatError("Document validation failed")
             result = json.loads(output)
             mime = result.get("mime") if isinstance(result, dict) else None
-            if mime not in {"application/pdf", "image/png", "image/jpeg"}:
+            if mime not in {"application/pdf", "image/png", "image/jpeg", "image/heif"}:
                 raise UnsupportedDocumentFormatError("Unsupported document format")
             return str(mime)
     except (TimeoutError, json.JSONDecodeError, UnicodeError) as error:
@@ -108,7 +108,12 @@ async def validate_document_content(content: bytes, declared_mime: str) -> str:
             )
         except OSError as error:
             raise DocumentValidationUnavailableError from error
-        if mime != declared_mime:
+        aliases = {"image/heic": "image/heif", "image/heif": "image/heif"}
+        normalized_declared_mime = aliases.get(declared_mime, declared_mime)
+        if (
+            declared_mime not in {"", "application/octet-stream"}
+            and mime != normalized_declared_mime
+        ):
             raise UnsupportedDocumentFormatError("Unsupported document format or MIME mismatch")
         return mime
     finally:

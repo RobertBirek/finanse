@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import async_session_factory
 from app.documents import service
+from app.documents.images import normalize_image
 from app.documents.models import Document
 from app.documents.ocr_client import OCRResponseTooLargeError, post_bounded
 from app.documents.retry import is_retryable_ocr_error, retry_delay_seconds
@@ -133,7 +134,12 @@ async def _process_content(db: AsyncSession, doc: Document) -> None:
     async with httpx.AsyncClient(timeout=120.0) as client:
         converted = None
         if doc.mime_type.startswith("image/"):
-            converted = await _convert_image_to_pdf(client, file_path, original_content)
+            image_content = original_content
+            image_path = file_path
+            if doc.mime_type == "image/heif":
+                image_content = await normalize_image(original_content, doc.mime_type)
+                image_path = "document.jpg"
+            converted = await _convert_image_to_pdf(client, image_path, image_content)
         ocr_pdf = await _ocr_pdf(
             client, file_path, converted if converted is not None else original_content
         )

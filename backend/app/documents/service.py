@@ -95,7 +95,7 @@ async def store_document(
     mime_type: str,
 ) -> tuple[Document, bool]:
     """Store content and return an explicit duplicate flag under a per-content lock."""
-    await validate_document_content(content, mime_type)
+    mime_type = await validate_document_content(content, mime_type)
 
     sha256_hash = compute_sha256(content)
     # Global lock serializes quota admission across users until the DB commit.
