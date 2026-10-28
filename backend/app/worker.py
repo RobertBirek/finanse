@@ -8,7 +8,6 @@ from typing import ClassVar
 import httpx
 from arq import create_pool, cron
 from arq.connections import ArqRedis, RedisSettings
-from openai import OpenAIError
 from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +19,7 @@ from app.documents.images import normalize_image
 from app.documents.models import Document
 from app.documents.ocr_client import OCRResponseTooLargeError, post_bounded
 from app.documents.retry import is_retryable_ocr_error, retry_delay_seconds
+from app.documents.review_service import pending_review_ids, process_review_revision
 from app.documents.schemas import DocumentStatus
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,16 @@ async def enqueue_process_document(document_id: str) -> None:
     redis: ArqRedis = await create_pool(REDIS_SETTINGS)
     try:
         await redis.enqueue_job("process_document", document_id, _job_id=f"document:{document_id}")
+    finally:
+        await redis.aclose()
+
+
+async def enqueue_prepare_document_review(revision_id: str) -> None:
+    redis: ArqRedis = await create_pool(REDIS_SETTINGS)
+    try:
+        await redis.enqueue_job(
+            "prepare_document_review", revision_id, _job_id=f"document-review:{revision_id}"
+        )
     finally:
         await redis.aclose()
 
@@ -79,6 +89,15 @@ async def dispatch_pending_documents(ctx) -> None:
     for document_id in ids:
         await ctx["redis"].enqueue_job(
             "process_document", str(document_id), _job_id=f"document:{document_id}"
+        )
+
+
+async def dispatch_pending_document_reviews(ctx) -> None:
+    async with async_session_factory() as db:
+        revision_ids = await pending_review_ids(db)
+    for revision_id in revision_ids:
+        await ctx["redis"].enqueue_job(
+            "prepare_document_review", str(revision_id), _job_id=f"document-review:{revision_id}"
         )
 
 
@@ -146,25 +165,19 @@ async def _process_content(db: AsyncSession, doc: Document) -> None:
         text = await _pdf_to_text(client, ocr_pdf)
     await service.save_extracted_text(db, doc.id, text, ocr_engine="stirling")
     if text.strip():
-        try:
-            from app.documents.extractor import create_inbox_from_document, extract_financial_data
+        from app.documents.review_service import prepare_review
+        from app.finance.bills_schemas import MutationContext
 
-            async with db.begin_nested():
-                data = await extract_financial_data(text)
-                if data.get("detected"):
-                    await create_inbox_from_document(
-                        db, doc.user_id, doc.id, doc.original_name, data
-                    )
-        except (
-            OpenAIError,
-            SQLAlchemyError,
-            ValueError,
-            KeyError,
-            TypeError,
-            RuntimeError,
-            AttributeError,
-        ):
-            logger.warning("Financial extraction failed for document %s", doc.id)
+        revision = await prepare_review(
+            db,
+            doc.user_id,
+            doc.id,
+            refresh=True,
+            context=MutationContext(
+                idempotency_key=f"ocr-review:{doc.id}:{doc.attempt_count}", performed_by="system"
+            ),
+        )
+        await process_review_revision(db, revision.id)
 
 
 async def process_document(ctx, document_id: str) -> None:
@@ -225,9 +238,19 @@ async def process_document(ctx, document_id: str) -> None:
         await db.commit()
 
 
+async def prepare_document_review(ctx, revision_id: str) -> None:
+    async with async_session_factory() as db:
+        revision = await process_review_revision(db, uuid.UUID(revision_id))
+        if revision is not None:
+            await db.commit()
+
+
 class WorkerSettings:
-    functions: ClassVar = [process_document]
+    functions: ClassVar = [process_document, prepare_document_review]
     redis_settings: ClassVar = REDIS_SETTINGS
-    cron_jobs: ClassVar = [cron(dispatch_pending_documents, second={0, 30}, run_at_startup=True)]
+    cron_jobs: ClassVar = [
+        cron(dispatch_pending_documents, second={0, 30}, run_at_startup=True),
+        cron(dispatch_pending_document_reviews, second={15, 45}, run_at_startup=True),
+    ]
     keep_result = 0
     job_timeout = settings.DOCUMENT_JOB_TIMEOUT_SECONDS

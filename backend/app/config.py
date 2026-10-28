@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://api.deepseek.com"
     LLM_MODEL: str = "deepseek-v4-pro"
+    LLM_PROVIDER: str = "configured"
     CORS_ORIGINS: str = DEFAULT_CORS_ORIGINS
     TRUSTED_ORIGINS: str | None = None
     TRUSTED_PROXY_HOSTS: str = "frontend"
