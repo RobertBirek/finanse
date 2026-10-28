@@ -2,6 +2,36 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-28 — Podgląd harmonogramu Q7, bez zapisu aplikacyjnego
+
+- Użytkownik zaakceptował wyłącznie podgląd59 rat i porównanie istniejącej płatności.
+  Nie jest to zgoda na tworzenie umowy/rat/linków, nową transakcję lub korektę księgi.
+- Oryginalny loan-schedule.pdf i zachowany tekst zgodne hashami z manifestem24.10.
+  Świeża ekstrakcja pypdf plain zgadza się z wcześniejszym tekstem dla wszystkich59
+  wierszy. Tryb layout przenosił saldo jednego wiersza do osobnej linii; nie zgadywano
+  wartości, wykorzystano pełną ekstrakcję plain. PDF i pozostałe oryginały bez zmian.
+- Kwoty przetworzone Decimal→grosze, bez float/LLM obliczeń. Numery1–59 unikalne,
+  terminy rosnące i dokładnie z PDF, kapitał+odsetki=raty, mosty sald i finał0 PASS.
+  Opłaty dodatkowe w tych wierszach0 wynikają z sumy kolumn, nie potwierdzają braku
+  innych kosztów umowy. Harmonogram obowiązuje warunkowo do zmiany stopy/umowy.
+- Owner z poprzedniego prywatnego audytu; dwa świeże RR+READ ONLY snapshoty tych
+  samych tabel finansów/audytu identyczne. Brak umowy kredytowej w nowym module;
+  konto zadłużenia Actual aktywne/PLN/budżetowe — flagi nie zmieniamy automatycznie.
+- Jedna kwalifikująca się, niepowiązana transakcja transfer odpowiada pierwszemu
+  terminowi/kwocie; rachunek spłaty aktywny PLN. To kandydat z księgi, nie niezależny
+  dowód bankowego wykonania. Nowe linki lub płatności nie zostały utworzone.
+- Różnica dokumentowego kapitału po pierwszej racie i bezwzględnego salda księgowego
+  odpowiada odsetkom pierwszej raty: dawny transfer obniżył dług całą kwotą.
+  Nie poprawiać tego przy samym imporcie planu/linku. Brak pozycji Q7/Audi w obecnych
+  harmonogramach; nowy moduł i tak nie dopisuje rat do wspólnej prognozy.
+- Prywatny komplet59 wierszy PREVIEW.md/CSV/JSON, walidowany Pydantic payload i
+  import-proposal.json: `/tmp/opencode/q7-preview-20261028/`. Trwała kopia0700/0600
+  i manifest: `/opt/finanse/webapp/maintenance/q7-preview-20261028/`.
+- Produkt bez zmian: bez testów/deployu/migracji lub mutacji PostgreSQL; wykonano
+  kontrole źródeł/arytmetyki/Pydantic i niezmienności odczytowej. Kwoty/ID poza Git.
+- Następny krok wymaga osobnej zgody: zapis metadanych umowy,59 rat i wskazanego
+  pierwszego linku, atomowo z audytem i ponownym snapshot guardem, bez korekt historii.
+
 ## 2026-10-28 — Korekta EUR wykonana i potwierdzona
 
 - Po oddzielnej zgodzie na źródłową walutę i wycenę PLN wykonano jednorazową korektę

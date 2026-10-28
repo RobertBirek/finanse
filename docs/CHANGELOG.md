@@ -2,6 +2,15 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Reviewed] — 2026-10-28 — Podgląd harmonogramu Q7 bez zapisu
+
+- Po zgodzie użytkownika przygotowano komplet59 rat z oryginalnego PDF, z kontrolą
+  hashów i niezależną ekstrakcją. Sumy składników, mosty kapitału i finał0 zgodne.
+- Właścicielski READ ONLY odczyt potwierdził kandydata istniejącej pierwszej płatności
+  oraz różnicę planu i księgi odpowiadającą jej odsetkom. Bez automatycznej korekty.
+- Nie zapisano umowy/rat/linków ani prognozy; księga i audyt identyczne przed/po.
+  Pełny podgląd, CSV i propozycja importu tylko w prywatnym pakiecie poza Git.
+
 ## [Corrected] — 2026-10-28 — Potwierdzona waluta EUR i wycena NBP
 
 - Po potwierdzeniu kwot EUR i osobnej zgodzie na wycenę NBP skorygowano jedno konto

@@ -29,6 +29,10 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   starych danych; atomowa aktualizacja metadanych runtime, rollback zachowany.
 - [ ] Kolejny slice Q7: rzeczywiste księgowanie nowych spłat kapitału/odsetek/opłat,
   uzgodnienie historycznych transferów i niedublowana integracja z prognozą.
+- [x] Podgląd59 rat Q7 z oryginalnego PDF, walidacja arytmetyki i kandydat pierwszej
+  płatności; źródła i właścicielska księga/audyt bez zmian (wyłącznie READ ONLY).
+- [ ] Po osobnej zgodzie: zapisać umowę,59 rat i jawny link pierwszej płatności;
+  bez duplikowania przelewu, korekty starych odsetek lub automatycznego cashflow.
 - [ ] Rozszerzenie na kartę Velo i Allegro Pay (również oprocentowane raty).
 - [ ] Pożyczki rodzinne: umowy i spłaty, bez zamiany na darowiznę automatycznie.
 - [ ] Goodie: oczekujący/zatwierdzony/wypłacony, brak podwójnego przychodu;
