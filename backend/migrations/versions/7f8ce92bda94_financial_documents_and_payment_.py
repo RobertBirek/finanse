@@ -264,7 +264,7 @@ def upgrade() -> None:
             ["financial_document_id"], ["financial_documents.id"], ondelete="RESTRICT"
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("document_id"),
+        sa.UniqueConstraint("document_id", name="uq_financial_document_source_document"),
     )
     op.create_index(
         op.f("ix_financial_document_sources_financial_document_id"),

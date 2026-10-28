@@ -76,6 +76,40 @@ async def test_allocation_positive_and_unique(db_session):
     with pytest.raises(IntegrityError):
         await db_session.flush()
 
+    await db_session.rollback()
+    bill = FinancialDocument(user_id=user_id)
+    transaction = FinancialTransaction(user_id=user_id, description="Duplicate", type="expense")
+    db_session.add_all([bill, transaction])
+    await db_session.flush()
+    posting = Posting(
+        transaction_id=transaction.id,
+        source_amount=1,
+        source_currency="PLN",
+        base_amount_pln=1,
+        direction="debit",
+    )
+    db_session.add(posting)
+    await db_session.flush()
+    db_session.add(
+        DocumentPaymentAllocation(
+            user_id=user_id,
+            financial_document_id=bill.id,
+            posting_id=posting.id,
+            amount_minor=1,
+        )
+    )
+    await db_session.flush()
+    db_session.add(
+        DocumentPaymentAllocation(
+            user_id=user_id,
+            financial_document_id=bill.id,
+            posting_id=posting.id,
+            amount_minor=1,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await db_session.flush()
+
 
 @pytest.mark.integration
 async def test_coverage_occurrence_unique(db_session):

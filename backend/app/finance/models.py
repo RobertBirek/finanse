@@ -314,6 +314,9 @@ class FinancialDocument(Base):
 
 class FinancialDocumentSource(Base):
     __tablename__ = "financial_document_sources"
+    __table_args__ = (
+        UniqueConstraint("document_id", name="uq_financial_document_source_document"),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     financial_document_id: Mapped[uuid.UUID] = mapped_column(
@@ -326,7 +329,6 @@ class FinancialDocumentSource(Base):
         UUID(as_uuid=True),
         ForeignKey("documents.id", ondelete="RESTRICT"),
         nullable=False,
-        unique=True,
     )
 
 
