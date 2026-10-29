@@ -288,15 +288,22 @@ async def find_duplicate_bills(
         candidate_tax = (candidate.supplier_tax_id or "").replace("-", "").replace(" ", "").upper()
         candidate_number = (candidate.number or "").strip().upper()
         reasons: list[str] = []
-        if tax_id and number and tax_id == candidate_tax and number == candidate_number:
+        same_date = data.issue_date is not None and candidate.issue_date == data.issue_date
+        if (
+            tax_id
+            and number
+            and tax_id == candidate_tax
+            and number == candidate_number
+            and same_date
+        ):
             reasons.append("supplier_tax_id_number_currency_amount")
         elif (
-            not number
+            same_date
             and candidate.supplier_name
             and candidate.supplier_name.strip().casefold() == supplier
         ):
             reasons.append("supplier_amount_currency")
-        if reasons and (data.issue_date is None or candidate.issue_date == data.issue_date):
+        if reasons:
             answer.append(DuplicateCandidate(id=candidate.id, reasons=reasons))
     return answer
 
@@ -469,12 +476,15 @@ async def attach_source(
             ).scalars()
         }
         bill = bills.get(bill_id)
+        moved_from_id: uuid.UUID | None = None
         if bill is None:
             raise LookupError("bill_not_found")
         if bill.version != expected_version:
             raise RuntimeError("version_conflict")
         if source is not None and source.financial_document_id != bill.id:
             old = bills.get(source.financial_document_id)
+            old_bill_id = source.financial_document_id
+            moved_from_id = old_bill_id
             allocations = await db.scalar(
                 select(func.count())
                 .select_from(DocumentPaymentAllocation)
@@ -494,6 +504,20 @@ async def attach_source(
                 raise ValueError("source_cannot_be_moved")
             source.financial_document_id = bill.id
             old.version += 1
+            await log_event(
+                db,
+                user_id,
+                "financial_document",
+                str(old.id),
+                "detach_source",
+                new_state={
+                    "document_id": str(document_id),
+                    "from_bill_id": str(old_bill_id),
+                    "to_bill_id": str(bill.id),
+                    "version": old.version,
+                },
+                performed_by=context.performed_by,
+            )
         elif source is None:
             db.add(
                 FinancialDocumentSource(
@@ -507,7 +531,12 @@ async def attach_source(
             "financial_document",
             str(bill.id),
             "attach_source",
-            new_state={"document_id": str(document_id), "version": bill.version},
+            new_state={
+                "document_id": str(document_id),
+                "from_bill_id": str(moved_from_id) if moved_from_id is not None else None,
+                "to_bill_id": str(bill.id),
+                "version": bill.version,
+            },
             performed_by=context.performed_by,
         )
         return await _response(db, bill)
