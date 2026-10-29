@@ -175,6 +175,7 @@ async def _response(db: AsyncSession, bill: FinancialDocument) -> BillResponse:
             scheduled_item_id=coverage.scheduled_item_id,
             occurrence_date=coverage.occurrence_date,
             choice="replace",
+            source_lifecycle=cast(Any, bill.lifecycle),
         ),
         forecast_exclusion_reasons=[],
     )
@@ -565,6 +566,9 @@ async def set_bill_lifecycle(
     context: MutationContext,
 ) -> BillResponse:
     async def operation() -> BillResponse:
+        from app.finance.document_guards import lock_document_mutations
+
+        await lock_document_mutations(db, user_id)
         bill = await _bill(db, user_id, bill_id, lock=True)
         if bill is None:
             raise LookupError("bill_not_found")

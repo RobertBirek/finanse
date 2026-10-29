@@ -28,6 +28,7 @@ from app.finance.models import (
     FinancialTransaction,
     LoanPaymentLink,
     Posting,
+    ScheduledFinanceItem,
 )
 from app.finance.schemas import PostingCreate, TransactionCreate
 from app.finance.transactions import create_transaction
@@ -150,6 +151,9 @@ async def allocate_payment(
         if bill.version != data.version:
             raise RuntimeError("version_conflict")
         _, posting = await _locked_payment(db, user_id, data.posting_id)
+        conflicts = await _recurring_conflicts(db, user_id, bill, posting)
+        if conflicts and data.confirm_recurring_conflict is not True:
+            raise ValueError("recurring_conflict_confirmation_required")
         if await db.scalar(
             select(DocumentPaymentAllocation.id).where(
                 DocumentPaymentAllocation.financial_document_id == bill.id,
@@ -442,7 +446,9 @@ async def get_payment_candidates(
                     unallocated_minor=capacity,
                     reasons=reasons,
                     legacy_inbox_reference=str(transaction.id) if legacy else None,
-                    recurring_conflicts=[],
+                    recurring_conflicts=await _recurring_conflicts(db, user_id, bill, posting),
+                    recurring_forecast_before_pln=posting.source_amount,
+                    recurring_forecast_after_pln=0,
                 )
             )
     items.sort(
@@ -456,3 +462,43 @@ async def get_payment_candidates(
     return BillCandidatePage(
         items=items[offset : offset + limit], total=len(items), limit=limit, offset=offset
     )
+
+
+async def _recurring_conflicts(
+    db: AsyncSession, user_id: uuid.UUID, bill: FinancialDocument, posting: Posting
+) -> list[str]:
+    """A read-only warning; allocation still requires an explicit confirmation."""
+    if posting.account_id is None:
+        return []
+    transaction_date = await db.scalar(
+        select(FinancialTransaction.date).where(FinancialTransaction.id == posting.transaction_id)
+    )
+    if transaction_date is None:
+        return []
+    categories = set(
+        (
+            await db.scalars(
+                select(Posting.category_id).where(
+                    Posting.transaction_id == posting.transaction_id,
+                    Posting.category_id.is_not(None),
+                )
+            )
+        ).all()
+    )
+    rows = list(
+        (
+            await db.scalars(
+                select(ScheduledFinanceItem).where(
+                    ScheduledFinanceItem.user_id == user_id,
+                    ScheduledFinanceItem.is_active.is_(True),
+                    ScheduledFinanceItem.type == "expense",
+                    ScheduledFinanceItem.account_id == posting.account_id,
+                    ScheduledFinanceItem.category_id.in_(categories),
+                )
+            )
+        ).all()
+    )
+    return [
+        f"recurring:{item.id}:{date(transaction_date.year, transaction_date.month, item.due_day)}"
+        for item in rows
+    ]

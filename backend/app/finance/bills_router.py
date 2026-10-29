@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.finance.bill_coverage import decide_coverage, get_coverage_candidates, unlink_coverage
 from app.finance.bill_payments import (
     allocate_payment,
     get_payment_candidates,
@@ -32,6 +33,7 @@ from app.finance.bills_schemas import (
     BillPaymentCreate,
     BillResponse,
     BillUpdate,
+    CoverageDecision,
     DuplicateCandidate,
     MutationContext,
 )
@@ -132,6 +134,62 @@ async def payment_candidates_endpoint(
             include_older=include_older,
         )
     except LookupError as error:
+        raise _error(error)
+
+
+@router.get("/{bill_id}/coverage-candidates")
+async def coverage_candidates_endpoint(
+    bill_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        return await get_coverage_candidates(db, current_user.id, bill_id)
+    except LookupError as error:
+        raise _error(error)
+
+
+@router.post("/{bill_id}/coverage", response_model=BillResponse)
+async def decide_coverage_endpoint(
+    bill_id: uuid.UUID,
+    data: CoverageDecision,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+):
+    try:
+        response = await decide_coverage(
+            db, current_user.id, bill_id, data, context=_context(idempotency_key)
+        )
+        await db.commit()
+        return response
+    except (LookupError, RuntimeError, ValueError) as error:
+        await db.rollback()
+        raise _error(error)
+
+
+@router.delete("/{bill_id}/coverage", response_model=BillResponse)
+async def unlink_coverage_endpoint(
+    bill_id: uuid.UUID,
+    expected_version: int,
+    confirm_unlink: bool,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+):
+    try:
+        response = await unlink_coverage(
+            db,
+            current_user.id,
+            bill_id,
+            expected_version,
+            confirm_unlink=confirm_unlink,
+            context=_context(idempotency_key),
+        )
+        await db.commit()
+        return response
+    except (LookupError, RuntimeError, ValueError) as error:
+        await db.rollback()
         raise _error(error)
 
 

@@ -13,9 +13,11 @@ from app.finance.dates import _add_month, _local_today, _payday_bounds
 from app.finance.models import (
     Account,
     Category,
+    DocumentPaymentAllocation,
     FinanceSettings,
     FinancialTransaction,
     Posting,
+    RecurringOccurrenceCoverage,
     ScheduledFinanceItem,
 )
 from app.finance.queries import get_account
@@ -124,6 +126,9 @@ async def update_scheduled_item(
     item_id: uuid.UUID,
     data: ScheduledFinanceItemUpdate,
 ) -> ScheduledFinanceItem | None:
+    from app.finance.document_guards import lock_document_mutations
+
+    await lock_document_mutations(db, user_id)
     result = await db.execute(
         select(ScheduledFinanceItem).where(
             ScheduledFinanceItem.id == item_id, ScheduledFinanceItem.user_id == user_id
@@ -132,6 +137,15 @@ async def update_scheduled_item(
     item = result.scalar_one_or_none()
     if item is None:
         return None
+    if await db.scalar(
+        select(RecurringOccurrenceCoverage.id)
+        .where(
+            RecurringOccurrenceCoverage.user_id == user_id,
+            RecurringOccurrenceCoverage.scheduled_item_id == item.id,
+        )
+        .limit(1)
+    ):
+        raise ValueError("Scheduled item with coverage cannot be changed; unlink coverage first")
     update_data = data.model_dump(exclude_unset=True)
     amount_method = update_data.get("amount_method", item.amount_method)
     fixed_amount = update_data.get("fixed_amount_pln", item.fixed_amount_pln)
@@ -154,6 +168,9 @@ async def update_scheduled_item(
 
 
 async def delete_scheduled_item(db: AsyncSession, user_id: uuid.UUID, item_id: uuid.UUID) -> bool:
+    from app.finance.document_guards import lock_document_mutations
+
+    await lock_document_mutations(db, user_id)
     result = await db.execute(
         select(ScheduledFinanceItem).where(
             ScheduledFinanceItem.id == item_id, ScheduledFinanceItem.user_id == user_id
@@ -162,6 +179,15 @@ async def delete_scheduled_item(db: AsyncSession, user_id: uuid.UUID, item_id: u
     item = result.scalar_one_or_none()
     if item is None:
         return False
+    if await db.scalar(
+        select(RecurringOccurrenceCoverage.id)
+        .where(
+            RecurringOccurrenceCoverage.user_id == user_id,
+            RecurringOccurrenceCoverage.scheduled_item_id == item.id,
+        )
+        .limit(1)
+    ):
+        raise ValueError("Scheduled item with coverage cannot be deleted; unlink coverage first")
     await db.delete(item)
     await db.flush()
     return True
@@ -196,7 +222,18 @@ async def _matching_actuals(
     if end is not None:
         stmt = stmt.where(FinancialTransaction.date <= end)
     result = await db.execute(stmt)
-    return [(transaction, int(amount)) for transaction, amount in result.all()]
+    rows = [(transaction, int(amount)) for transaction, amount in result.all()]
+    allocated = set(
+        (
+            await db.scalars(
+                select(FinancialTransaction.id)
+                .join(Posting, Posting.transaction_id == FinancialTransaction.id)
+                .join(DocumentPaymentAllocation, DocumentPaymentAllocation.posting_id == Posting.id)
+                .where(FinancialTransaction.user_id == user_id)
+            )
+        ).all()
+    )
+    return [row for row in rows if row[0].id not in allocated]
 
 
 async def _resolve_scheduled_amount(
@@ -251,6 +288,11 @@ async def get_cashflow_forecast(
         )
     horizon_end = today + timedelta(days=settings.forecast_horizon_days - 1)
     items = [item for item in await get_scheduled_items(db, user_id) if item.is_active]
+    from app.finance.bill_forecast import project_bill_cashflows
+
+    bill_projection = await project_bill_cashflows(
+        db, user_id, today=today, horizon_end=horizon_end
+    )
     day_changes = {
         today + timedelta(days=offset): 0 for offset in range(settings.forecast_horizon_days)
     }
@@ -263,6 +305,24 @@ async def get_cashflow_forecast(
             if due_date > horizon_end:
                 continue
             amount = await _resolve_scheduled_amount(db, user_id, item, today)
+            if (item.id, due_date) in bill_projection.covered_occurrences:
+                suggestions.append(
+                    CashflowSuggestion(
+                        source="recurring",
+                        source_key=f"recurring:{item.id}:{due_date.isoformat()}",
+                        scheduled_item_id=item.id,
+                        name=item.name,
+                        type=cast(Literal["income", "expense"], item.type),
+                        due_date=due_date,
+                        amount_minor=amount,
+                        currency=item.currency,
+                        amount_pln=amount,
+                        status="matched_actual",
+                        included_in_forecast=False,
+                        exclusion_reasons=["covered_by_financial_document"],
+                    )
+                )
+                continue
             actual_id = None
             matching = await _matching_actuals(
                 db,
@@ -294,10 +354,14 @@ async def get_cashflow_forecast(
                     day_changes[effective_date] += direction * amount
             suggestions.append(
                 CashflowSuggestion(
+                    source="recurring",
+                    source_key=f"recurring:{item.id}:{due_date.isoformat()}",
                     scheduled_item_id=item.id,
                     name=item.name,
                     type=cast(Literal["income", "expense"], item.type),
                     due_date=due_date,
+                    amount_minor=amount,
+                    currency=item.currency,
                     amount_pln=amount,
                     status=status,
                     included_in_forecast=included,
@@ -306,6 +370,10 @@ async def get_cashflow_forecast(
             )
         month = _add_month(month)
 
+    for projected_day, change in bill_projection.day_changes_pln.items():
+        if projected_day in day_changes:
+            day_changes[projected_day] += change
+    suggestions.extend(bill_projection.entries)
     opening_balance = await _budget_balance(db, user_id)
     balance = opening_balance
     days = []
@@ -331,9 +399,11 @@ async def get_cashflow_forecast(
         lowest_balance_pln=min([opening_balance, *(day.projected_balance_pln for day in days)]),
         days=days,
         suggestions=sorted(
-            suggestions, key=lambda suggestion: (suggestion.due_date, suggestion.name)
+            suggestions, key=lambda suggestion: (suggestion.due_date or date.max, suggestion.name)
         ),
         budgets=budgets,
+        has_excluded_obligations=bool(bill_projection.exclusions),
+        excluded_obligation_reasons=bill_projection.exclusions,
     )
 
 
@@ -344,6 +414,9 @@ async def confirm_scheduled_item(
     *,
     today: date | None = None,
 ) -> FinancialTransaction | None:
+    from app.finance.document_guards import lock_document_mutations
+
+    await lock_document_mutations(db, user_id)
     result = await db.execute(
         select(ScheduledFinanceItem)
         .where(
@@ -392,7 +465,9 @@ async def confirm_scheduled_item(
         (
             candidate
             for candidate in forecast.suggestions
-            if candidate.scheduled_item_id == item.id and candidate.due_date <= effective_today
+            if candidate.scheduled_item_id == item.id
+            and candidate.due_date is not None
+            and candidate.due_date <= effective_today
         ),
         None,
     )
@@ -400,6 +475,19 @@ async def confirm_scheduled_item(
         raise ValueError("Scheduled item has no confirmable occurrence")
     if suggestion.status not in {"due", "overdue"} or suggestion.amount_pln is None:
         raise ValueError(f"Scheduled item cannot be confirmed with status {suggestion.status}")
+    if suggestion.due_date is None:
+        raise ValueError("Scheduled item has no confirmable occurrence")
+    covered = await db.scalar(
+        select(RecurringOccurrenceCoverage.id)
+        .where(
+            RecurringOccurrenceCoverage.user_id == user_id,
+            RecurringOccurrenceCoverage.scheduled_item_id == item.id,
+            RecurringOccurrenceCoverage.occurrence_date == suggestion.due_date,
+        )
+        .limit(1)
+    )
+    if covered is not None:
+        raise ValueError("Scheduled item occurrence is covered by a financial document")
 
     amount = suggestion.amount_pln
     account_direction = "credit" if item.type == "income" else "debit"

@@ -75,6 +75,7 @@ class AllocationCreate(BaseModel):
     version: StrictInt = Field(ge=1)
     posting_id: uuid.UUID
     amount_minor: StrictInt = Field(gt=0, le=MAX_SAFE_MINOR)
+    confirm_recurring_conflict: Literal[True] | None = None
 
 
 class BillPaymentCreate(BaseModel):
@@ -115,6 +116,13 @@ class CoverageResponse(BaseModel):
     scheduled_item_id: uuid.UUID
     occurrence_date: dt.date
     choice: Literal["replace", "separate"]
+    source_lifecycle: BillLifecycle
+
+
+class CoverageCandidate(BaseModel):
+    scheduled_item_id: uuid.UUID
+    occurrence_date: dt.date
+    name: str
 
 
 class BillResponse(BaseModel):
@@ -156,6 +164,8 @@ class BillCandidate(BaseModel):
     reasons: list[str]
     legacy_inbox_reference: str | None = None
     recurring_conflicts: list[str]
+    recurring_forecast_before_pln: int | None = None
+    recurring_forecast_after_pln: int | None = None
 
 
 class BillPage(BaseModel):
