@@ -5,6 +5,12 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.finance.bill_payments import (
+    allocate_payment,
+    get_payment_candidates,
+    record_bill_payment,
+    unlink_payment,
+)
 from app.finance.bills import (
     approve_bill,
     attach_source,
@@ -16,10 +22,13 @@ from app.finance.bills import (
     update_bill,
 )
 from app.finance.bills_schemas import (
+    AllocationCreate,
     BillApprove,
+    BillCandidatePage,
     BillFilters,
     BillLifecycleUpdate,
     BillPage,
+    BillPaymentCreate,
     BillResponse,
     BillUpdate,
     DuplicateCandidate,
@@ -95,6 +104,86 @@ async def get_bill_endpoint(
     if response is None:
         raise HTTPException(404, "Bill not found")
     return response
+
+
+@router.get("/{bill_id}/candidates", response_model=BillCandidatePage)
+async def payment_candidates_endpoint(
+    bill_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
+    try:
+        return await get_payment_candidates(
+            db, current_user.id, bill_id, limit=limit, offset=offset
+        )
+    except LookupError as error:
+        raise _error(error)
+
+
+@router.post("/{bill_id}/allocations", response_model=BillResponse)
+@router.put("/{bill_id}/allocations", response_model=BillResponse)
+async def allocate_payment_endpoint(
+    bill_id: uuid.UUID,
+    data: AllocationCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+):
+    try:
+        response = await allocate_payment(
+            db, current_user.id, bill_id, data, context=_context(idempotency_key)
+        )
+        await db.commit()
+        return response
+    except (LookupError, RuntimeError, ValueError) as error:
+        await db.rollback()
+        raise _error(error)
+
+
+@router.delete("/{bill_id}/allocations/{allocation_id}", response_model=BillResponse)
+async def unlink_payment_endpoint(
+    bill_id: uuid.UUID,
+    allocation_id: uuid.UUID,
+    expected_version: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+):
+    try:
+        response = await unlink_payment(
+            db,
+            current_user.id,
+            bill_id,
+            allocation_id,
+            expected_version,
+            context=_context(idempotency_key),
+        )
+        await db.commit()
+        return response
+    except (LookupError, RuntimeError, ValueError) as error:
+        await db.rollback()
+        raise _error(error)
+
+
+@router.post("/{bill_id}/payments", response_model=BillResponse)
+async def record_payment_endpoint(
+    bill_id: uuid.UUID,
+    data: BillPaymentCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+):
+    try:
+        response = await record_bill_payment(
+            db, current_user.id, bill_id, data, context=_context(idempotency_key)
+        )
+        await db.commit()
+        return response
+    except (LookupError, RuntimeError, ValueError) as error:
+        await db.rollback()
+        raise _error(error)
 
 
 @router.post("/{bill_id}/approve", response_model=BillResponse)
