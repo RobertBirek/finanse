@@ -269,6 +269,97 @@ async def test_foreign_document_review_route_returns_404(
 
 
 @pytest.mark.integration
+async def test_retry_ocr_route_replay_enqueues_once_and_preserves_receipt_response(
+    async_client, db_session, tmp_path, monkeypatch
+):
+    """Would fail if a same-key HTTP replay enqueued OCR work after its receipt was committed."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from app import worker
+    from app.identity.router import get_current_user
+    from app.main import app
+
+    monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
+    enqueue = AsyncMock()
+    monkeypatch.setattr(worker, "enqueue_process_document", enqueue)
+    user = User(email="review-retry-route@example.com", password_hash="hash", display_name="Review")
+    db_session.add(user)
+    await db_session.flush()
+    document, _ = await service.store_document(
+        db_session, user.id, valid_pdf_bytes(), "retry-route.pdf", "application/pdf"
+    )
+    document.status, document.attempt_count = "error", 3
+    await db_session.commit()
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=user.id)
+    try:
+        first = await async_client.post(
+            f"/api/documents/{document.id}/retry-ocr", headers={"Idempotency-Key": "route-retry"}
+        )
+        document.attempt_count = 2  # worker progress after the accepted queue delivery
+        await db_session.commit()
+        replay = await async_client.post(
+            f"/api/documents/{document.id}/retry-ocr", headers={"Idempotency-Key": "route-retry"}
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert first.status_code == replay.status_code == 202
+    assert replay.json() == first.json() == {"id": str(document.id), "status": "pending"}
+    assert enqueue.await_count == 1
+    assert document.attempt_count == 2
+
+
+@pytest.mark.integration
+async def test_retry_ocr_route_keeps_durable_pending_recovery_when_enqueue_fails(
+    async_client, db_session, tmp_path, monkeypatch
+):
+    """Would fail if a Redis outage turned a committed OCR retry into a client failure."""
+    from types import SimpleNamespace
+
+    from app import worker
+    from app.identity.router import get_current_user
+    from app.main import app
+
+    monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
+    monkeypatch.setattr(
+        worker, "enqueue_process_document", AsyncMock(side_effect=OSError("Redis down"))
+    )
+    user = User(
+        email="review-retry-outage@example.com", password_hash="hash", display_name="Review"
+    )
+    db_session.add(user)
+    await db_session.flush()
+    document, _ = await service.store_document(
+        db_session, user.id, valid_pdf_bytes(), "retry-outage.pdf", "application/pdf"
+    )
+    document.status, document.attempt_count = "error", 3
+    await db_session.commit()
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=user.id)
+    try:
+        response = await async_client.post(
+            f"/api/documents/{document.id}/retry-ocr", headers={"Idempotency-Key": "route-outage"}
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    await db_session.refresh(document)
+    receipt = (
+        await db_session.execute(
+            select(FinanceCommandReceipt).where(
+                FinanceCommandReceipt.action == "retry_document_ocr",
+                FinanceCommandReceipt.key == "route-outage",
+            )
+        )
+    ).scalar_one()
+    assert response.status_code == 202
+    assert response.json() == {"id": str(document.id), "status": "pending"}
+    assert document.status == "pending"
+    assert document.attempt_count == 0
+    assert receipt.response_json == response.json()
+
+
+@pytest.mark.integration
 async def test_retry_ocr_replays_same_key_without_resetting_again(
     db_session, tmp_path, monkeypatch
 ):
@@ -283,14 +374,14 @@ async def test_retry_ocr_replays_same_key_without_resetting_again(
         db_session, user.id, valid_pdf_bytes(), "failed.pdf", "application/pdf"
     )
     document.status, document.attempt_count, document.last_error_code = "error", 3, "output_limit"
-    first, _first_response = await review_service.request_ocr_retry(
+    first = await review_service.request_ocr_retry(
         db_session, user.id, document.id, context=MutationContext(idempotency_key="retry-once")
     )
     await db_session.commit()
-    first.attempt_count = 2  # simulate the queued OCR worker consuming the retried budget
+    first.document.attempt_count = 2  # simulate the queued OCR worker consuming the retried budget
     await db_session.commit()
 
-    replayed, replay_response = await review_service.request_ocr_retry(
+    replayed = await review_service.request_ocr_retry(
         db_session, user.id, document.id, context=MutationContext(idempotency_key="retry-once")
     )
 
@@ -300,9 +391,10 @@ async def test_retry_ocr_replays_same_key_without_resetting_again(
         .scalars()
         .all()
     )
-    assert replayed.id == first.id
-    assert replayed.attempt_count == 2
-    assert replay_response == {"id": str(document.id), "status": "pending"}
+    assert replayed.document.id == first.document.id
+    assert replayed.document.attempt_count == 2
+    assert replayed.response_json == {"id": str(document.id), "status": "pending"}
+    assert replayed.is_new is False
     assert len(receipts) == 1
     assert len(audits) == 1
 

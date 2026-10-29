@@ -1,8 +1,10 @@
+import logging
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -13,6 +15,7 @@ from app.identity.models import User
 from app.identity.router import get_current_user
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/{document_id}/review", response_model=ReviewResponse)
@@ -66,7 +69,7 @@ async def retry_document_ocr(
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
 ):
     try:
-        document, response_json = await request_ocr_retry(
+        result = await request_ocr_retry(
             db,
             current_user.id,
             document_id,
@@ -77,7 +80,12 @@ async def retry_document_ocr(
     except ValueError:
         return JSONResponse(content={"detail": "Idempotency key conflict"}, status_code=409)
     await db.commit()
-    from app.worker import enqueue_process_document
+    if result.is_new:
+        from app.worker import enqueue_process_document
 
-    await enqueue_process_document(str(document.id))
-    return response_json
+        try:
+            await enqueue_process_document(str(result.document.id))
+        except (OSError, TimeoutError, RedisError):
+            # The committed pending document is recovered by the periodic dispatcher.
+            logger.warning("Document %s awaits retry OCR queue recovery", result.document.id)
+    return result.response_json

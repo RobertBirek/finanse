@@ -23,6 +23,15 @@ class ReviewExtractionError(Exception):
         self.code = code
 
 
+class OCRRetryResult:
+    def __init__(
+        self, document: Document, response_json: dict[str, object], *, is_new: bool
+    ) -> None:
+        self.document = document
+        self.response_json = response_json
+        self.is_new = is_new
+
+
 def _response(revision: DocumentExtractionRevision) -> ReviewResponse:
     suggestion = ReviewSuggestion.model_validate(
         {
@@ -216,7 +225,7 @@ async def process_review_revision(
 
 async def request_ocr_retry(
     db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID, *, context: MutationContext
-) -> tuple[Document, dict[str, object]]:
+) -> OCRRetryResult:
     """Explicitly requeue OCR; list and review reads never retry a document."""
     document = (
         await db.execute(
@@ -242,7 +251,7 @@ async def request_ocr_retry(
     if receipt is not None:
         if receipt.request_hash != request_hash:
             raise ValueError("idempotency_key_reused")
-        return document, receipt.response_json
+        return OCRRetryResult(document, receipt.response_json, is_new=False)
     document.status = DocumentStatus.PENDING
     document.attempt_count = 0
     document.next_attempt_at = None
@@ -263,7 +272,7 @@ async def request_ocr_retry(
             response_json=response_json,
         )
     )
-    return document, response_json
+    return OCRRetryResult(document, response_json, is_new=True)
 
 
 async def pending_review_ids(db: AsyncSession) -> list[uuid.UUID]:
