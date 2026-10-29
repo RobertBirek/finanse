@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     DOCUMENT_OCR_TEXT_MAX_BYTES: PositiveInt = 2 * 1024 * 1024
     DOCUMENT_MAX_ATTEMPTS: PositiveInt = 3
     DOCUMENT_RETRY_DELAYS_SECONDS: tuple[PositiveInt, ...] = (30, 120)
+    BILL_PAYMENT_CANDIDATE_DATE_WINDOW_DAYS: PositiveInt = 30
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     OPENAI_API_KEY: str = ""

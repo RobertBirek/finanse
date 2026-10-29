@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
@@ -113,10 +114,22 @@ async def payment_candidates_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    query: Annotated[str | None, Query(max_length=200)] = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    include_older: bool = False,
 ):
     try:
         return await get_payment_candidates(
-            db, current_user.id, bill_id, limit=limit, offset=offset
+            db,
+            current_user.id,
+            bill_id,
+            limit=limit,
+            offset=offset,
+            query=query,
+            date_from=date_from,
+            date_to=date_to,
+            include_older=include_older,
         )
     except LookupError as error:
         raise _error(error)

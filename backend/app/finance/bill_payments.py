@@ -1,12 +1,14 @@
 """Explicit document-payment allocation; ledger writes are limited to confirmed new expenses."""
 
 import uuid
+from datetime import date, timedelta
 
 from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit.service import log_event
+from app.config import settings
 from app.finance.bills import _response, _run_bill_command
 from app.finance.bills_schemas import (
     AllocationCreate,
@@ -46,6 +48,12 @@ def _eligible(transaction: FinancialTransaction, posting: Posting) -> bool:
         transaction.type == "expense"
         and not transaction.is_pending
         and transaction.date <= _local_today()
+        and len(transaction.postings) >= 2
+        and sum(
+            item.base_amount_pln if item.direction == "debit" else -item.base_amount_pln
+            for item in transaction.postings
+        )
+        == 0
         and len(account_debits) == 1
         and account_debits[0].id == posting.id
         and posting.source_currency == "PLN"
@@ -344,7 +352,16 @@ async def record_bill_payment(
 
 
 async def get_payment_candidates(
-    db: AsyncSession, user_id: uuid.UUID, bill_id: uuid.UUID, *, limit: int, offset: int
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    bill_id: uuid.UUID,
+    *,
+    limit: int,
+    offset: int,
+    query: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    include_older: bool = False,
 ) -> BillCandidatePage:
     bill = await db.scalar(
         select(FinancialDocument).where(
@@ -383,6 +400,8 @@ async def get_payment_candidates(
             )
         ).scalars()
     )
+    reference_date = bill.due_date or bill.issue_date or _local_today()
+    normalized_query = query.strip().lower() if query else None
     items: list[BillCandidate] = []
     for transaction in transactions:
         for posting in transaction.postings:
@@ -397,6 +416,28 @@ async def get_payment_candidates(
                 continue
             account = await db.get(Account, posting.account_id)
             legacy = transaction.id in legacy_targets
+            if (date_from is not None and transaction.date < date_from) or (
+                date_to is not None and transaction.date > date_to
+            ):
+                continue
+            if normalized_query and normalized_query not in (
+                f"{transaction.description} {account.name if account else ''}".lower()
+            ):
+                continue
+            older_than_window = transaction.date < reference_date - timedelta(
+                days=settings.BILL_PAYMENT_CANDIDATE_DATE_WINDOW_DAYS
+            )
+            if older_than_window and not (include_older or normalized_query or legacy):
+                continue
+            reasons = [
+                "amount_exact"
+                if posting.source_amount == bill.total_minor
+                else "amount_difference",
+                "date_older_than_window" if older_than_window else "date_within_window",
+                "eligible_expense",
+            ]
+            if legacy:
+                reasons.insert(0, "legacy_inbox_target")
             items.append(
                 BillCandidate(
                     transaction_id=transaction.id,
@@ -405,9 +446,7 @@ async def get_payment_candidates(
                     account=account.name if account else "",
                     amount_minor=posting.source_amount,
                     unallocated_minor=capacity,
-                    reasons=["legacy_inbox_target", "eligible_expense"]
-                    if legacy
-                    else ["eligible_expense"],
+                    reasons=reasons,
                     legacy_inbox_reference=str(transaction.id) if legacy else None,
                     recurring_conflicts=[],
                 )

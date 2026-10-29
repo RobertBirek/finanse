@@ -4,6 +4,7 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import func, select
 
+from app.documents.models import Document
 from app.finance.bills import approve_bill
 from app.finance.bills_schemas import (
     AllocationCreate,
@@ -26,6 +27,7 @@ from app.finance.models import (
 from app.finance.schemas import PostingCreate, TransactionCreate
 from app.finance.transactions import create_transaction
 from app.identity.models import User
+from app.inbox.models import InboxItem
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -111,7 +113,7 @@ async def expense(
     return posting.id, account, category
 
 
-async def test_allocate_partial_full_then_unlink(db_session, monkeypatch) -> None:
+async def test_allocate_partial_full_then_unlink(db_session) -> None:
     from app.finance.bill_payments import allocate_payment, unlink_payment
 
     owner = await create_owner(db_session)
@@ -209,13 +211,26 @@ async def test_record_payment_retry_creates_one_expense(db_session) -> None:
         )
         == 2
     )
+    payment = await db_session.scalar(
+        select(FinancialTransaction).where(FinancialTransaction.source == "document_payment")
+    )
+    assert payment is not None
+    postings = list(
+        await db_session.scalars(select(Posting).where(Posting.transaction_id == payment.id))
+    )
+    assert len(postings) >= 2
+    assert (
+        sum(
+            item.base_amount_pln if item.direction == "debit" else -item.base_amount_pln
+            for item in postings
+        )
+        == 0
+    )
 
 
 async def test_candidates_hide_cross_owner_and_prioritize_legacy_target(db_session) -> None:
-    from app.documents.models import Document
     from app.finance.bill_payments import get_payment_candidates
     from app.finance.models import FinancialDocumentSource
-    from app.inbox.models import InboxItem
 
     owner = await create_owner(db_session)
     other = await create_owner(db_session)
@@ -475,3 +490,167 @@ async def test_split_category_expense_links_once_without_ledger_write(db_session
         context=MutationContext(idempotency_key="split-unlink"),
     )
     assert await db_session.scalar(select(func.count()).select_from(Posting)) == before
+
+
+async def test_persisted_unbalanced_expense_is_fail_closed(db_session) -> None:
+    from app.finance.bill_payments import allocate_payment, get_payment_candidates
+
+    owner = await create_owner(db_session)
+    bill = await setup_bill(db_session, owner)
+    account = Account(user_id=owner, name="Malformed", type="checking", currency="PLN")
+    db_session.add(account)
+    await db_session.flush()
+    transaction = FinancialTransaction(
+        user_id=owner,
+        date=_local_today(),
+        description="Malformed",
+        type="expense",
+        is_pending=False,
+    )
+    db_session.add(transaction)
+    await db_session.flush()
+    posting = Posting(
+        transaction_id=transaction.id,
+        account_id=account.id,
+        source_amount=10_000,
+        source_currency="PLN",
+        base_amount_pln=10_000,
+        fx_rate=1,
+        fx_rate_source="manual",
+        direction="debit",
+    )
+    db_session.add(posting)
+    await db_session.flush()
+    before_version = bill.version
+    assert not (await get_payment_candidates(db_session, owner, bill.id, limit=10, offset=0)).items
+    with pytest.raises(ValueError, match="posting_not_eligible"):
+        await allocate_payment(
+            db_session,
+            owner,
+            bill.id,
+            AllocationCreate(version=2, posting_id=posting.id, amount_minor=1),
+            context=MutationContext(idempotency_key="malformed"),
+        )
+    assert bill.version == before_version
+    assert await db_session.scalar(select(func.count()).select_from(DocumentPaymentAllocation)) == 0
+
+
+async def test_allocation_sequence_preserves_ledger_and_capacity_invariants(db_session) -> None:
+    from app.finance.bill_payments import allocate_payment, unlink_payment
+
+    owner = await create_owner(db_session)
+    first_bill = await setup_bill(db_session, owner, 10_000)
+    second_bill = await setup_bill(db_session, owner, 10_000)
+    posting_id, _, _ = await expense(db_session, owner, 7_000)
+
+    async def ledger_snapshot() -> tuple[list[tuple], list[tuple]]:
+        transactions = list(
+            await db_session.scalars(select(FinancialTransaction).order_by(FinancialTransaction.id))
+        )
+        postings = list(await db_session.scalars(select(Posting).order_by(Posting.id)))
+        return (
+            [
+                (item.id, item.date, item.description, item.type, item.is_pending, item.source)
+                for item in transactions
+            ],
+            [
+                (
+                    item.id,
+                    item.transaction_id,
+                    item.account_id,
+                    item.category_id,
+                    item.source_amount,
+                    item.source_currency,
+                    item.base_amount_pln,
+                    item.fx_rate,
+                    item.fx_rate_source,
+                    item.direction,
+                    item.is_budget_impact,
+                )
+                for item in postings
+            ],
+        )
+
+    async def assert_invariants() -> None:
+        allocated = await db_session.scalar(
+            select(func.coalesce(func.sum(DocumentPaymentAllocation.amount_minor), 0)).where(
+                DocumentPaymentAllocation.posting_id == posting_id
+            )
+        )
+        assert allocated <= 7_000
+        for bill in (first_bill, second_bill):
+            paid = await db_session.scalar(
+                select(func.coalesce(func.sum(DocumentPaymentAllocation.amount_minor), 0)).where(
+                    DocumentPaymentAllocation.financial_document_id == bill.id
+                )
+            )
+            assert paid <= 10_000
+
+    before = await ledger_snapshot()
+    first = await allocate_payment(
+        db_session,
+        owner,
+        first_bill.id,
+        AllocationCreate(version=2, posting_id=posting_id, amount_minor=5_000),
+        context=MutationContext(idempotency_key="sequence-first"),
+    )
+    await assert_invariants()
+    assert first == await allocate_payment(
+        db_session,
+        owner,
+        first_bill.id,
+        AllocationCreate(version=2, posting_id=posting_id, amount_minor=5_000),
+        context=MutationContext(idempotency_key="sequence-first"),
+    )
+    with pytest.raises(ValueError, match="allocation_exceeds_posting_capacity"):
+        await allocate_payment(
+            db_session,
+            owner,
+            second_bill.id,
+            AllocationCreate(version=2, posting_id=posting_id, amount_minor=3_000),
+            context=MutationContext(idempotency_key="sequence-too-much"),
+        )
+    await assert_invariants()
+    second = await allocate_payment(
+        db_session,
+        owner,
+        second_bill.id,
+        AllocationCreate(version=2, posting_id=posting_id, amount_minor=2_000),
+        context=MutationContext(idempotency_key="sequence-second"),
+    )
+    await assert_invariants()
+    allocation = await db_session.scalar(
+        select(DocumentPaymentAllocation).where(
+            DocumentPaymentAllocation.financial_document_id == first_bill.id
+        )
+    )
+    assert allocation is not None
+    await unlink_payment(
+        db_session,
+        owner,
+        first_bill.id,
+        allocation.id,
+        first.version,
+        context=MutationContext(idempotency_key="sequence-unlink"),
+    )
+    await assert_invariants()
+    assert second.paid_minor == 2_000
+    assert await ledger_snapshot() == before
+
+
+async def test_candidates_require_deliberate_older_search_and_explain_reasons(db_session) -> None:
+    from app.finance.bill_payments import get_payment_candidates
+
+    owner = await create_owner(db_session)
+    bill = await setup_bill(db_session, owner)
+    old_posting, _, _ = await expense(db_session, owner, 10_000, days=-31)
+    assert not (await get_payment_candidates(db_session, owner, bill.id, limit=10, offset=0)).items
+    page = await get_payment_candidates(
+        db_session, owner, bill.id, limit=10, offset=0, include_older=True
+    )
+    candidate = next(item for item in page.items if item.posting_id == old_posting)
+    assert {"amount_exact", "date_older_than_window", "eligible_expense"} <= set(candidate.reasons)
+    searched = await get_payment_candidates(
+        db_session, owner, bill.id, limit=10, offset=0, query="expense"
+    )
+    assert old_posting in {item.posting_id for item in searched.items}
