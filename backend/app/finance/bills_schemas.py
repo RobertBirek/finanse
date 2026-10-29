@@ -34,6 +34,7 @@ class BillApprove(BaseModel):
     total_minor: StrictInt = Field(gt=0, le=MAX_SAFE_MINOR)
     currency: Literal["PLN", "EUR", "USD"]
     declaration: PaymentDeclaration | None = None
+    duplicate_decision: Literal["separate"] | None = None
 
     @model_validator(mode="after")
     def default_receipt_declaration(self) -> "BillApprove":
@@ -58,6 +59,16 @@ class BillUpdate(BaseModel):
     total_minor: StrictInt | None = Field(default=None, gt=0, le=MAX_SAFE_MINOR)
     currency: Literal["PLN", "EUR", "USD"] | None = None
     declaration: PaymentDeclaration | None = None
+
+
+class DuplicateCandidate(BaseModel):
+    id: uuid.UUID
+    reasons: list[str]
+
+
+class BillLifecycleUpdate(BaseModel):
+    expected_version: StrictInt = Field(ge=1)
+    lifecycle: BillLifecycle
 
 
 class AllocationCreate(BaseModel):

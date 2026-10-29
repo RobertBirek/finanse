@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.finance.bills_router import router as bills_router
 from app.finance.loan_router import router as loan_router
 from app.finance.models import FinancialTransaction, Posting
 from app.finance.schemas import (
@@ -77,6 +78,7 @@ from app.identity.router import get_current_user
 
 router = APIRouter()
 router.include_router(loan_router)
+router.include_router(bills_router)
 
 
 @router.post("/accounts", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)

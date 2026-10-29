@@ -207,7 +207,13 @@ async def delete_document(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    deleted = await service.delete_document(db, current_user.id, document_id)
+    try:
+        deleted = await service.delete_document(db, current_user.id, document_id)
+    except ValueError:
+        return JSONResponse(
+            content={"detail": "Document is linked to a financial document"}, status_code=409
+        )
+
     if not deleted:
         return JSONResponse(content={"detail": "Document not found"}, status_code=404)
     return {"message": "Document deleted"}
