@@ -177,6 +177,7 @@ async def _response(db: AsyncSession, bill: FinancialDocument) -> BillResponse:
             choice="replace",
             source_lifecycle=cast(Any, bill.lifecycle),
         ),
+        recurring_decision=cast(Any, bill.recurring_decision),
         forecast_exclusion_reasons=[],
     )
 

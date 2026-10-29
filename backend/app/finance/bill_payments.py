@@ -18,16 +18,18 @@ from app.finance.bills_schemas import (
     BillResponse,
     MutationContext,
 )
-from app.finance.dates import _local_today
+from app.finance.dates import _add_month, _local_today
 from app.finance.document_guards import lock_document_mutations
 from app.finance.models import (
     Account,
     DocumentPaymentAllocation,
+    FinanceSettings,
     FinancialDocument,
     FinancialDocumentSource,
     FinancialTransaction,
     LoanPaymentLink,
     Posting,
+    RecurringOccurrenceCoverage,
     ScheduledFinanceItem,
 )
 from app.finance.schemas import PostingCreate, TransactionCreate
@@ -436,6 +438,9 @@ async def get_payment_candidates(
             ]
             if legacy:
                 reasons.insert(0, "legacy_inbox_target")
+            conflicts, forecast_before, forecast_after = await _recurring_conflict_effects(
+                db, user_id, posting
+            )
             items.append(
                 BillCandidate(
                     transaction_id=transaction.id,
@@ -446,9 +451,9 @@ async def get_payment_candidates(
                     unallocated_minor=capacity,
                     reasons=reasons,
                     legacy_inbox_reference=str(transaction.id) if legacy else None,
-                    recurring_conflicts=await _recurring_conflicts(db, user_id, bill, posting),
-                    recurring_forecast_before_pln=posting.source_amount,
-                    recurring_forecast_after_pln=0,
+                    recurring_conflicts=conflicts,
+                    recurring_forecast_before_pln=forecast_before,
+                    recurring_forecast_after_pln=forecast_after,
                 )
             )
     items.sort(
@@ -468,13 +473,25 @@ async def _recurring_conflicts(
     db: AsyncSession, user_id: uuid.UUID, bill: FinancialDocument, posting: Posting
 ) -> list[str]:
     """A read-only warning; allocation still requires an explicit confirmation."""
+    conflicts, _, _ = await _recurring_conflict_effects(db, user_id, posting)
+    return conflicts
+
+
+async def _recurring_conflict_effects(
+    db: AsyncSession, user_id: uuid.UUID, posting: Posting
+) -> tuple[list[str], int | None, int | None]:
+    """Return forecast changes caused by allocating this actual payment.
+
+    An allocation makes the transaction ineligible for the recurring actual matcher.
+    Therefore these are occurrence-specific forecast values, not the posting amount.
+    """
     if posting.account_id is None:
-        return []
+        return [], None, None
     transaction_date = await db.scalar(
         select(FinancialTransaction.date).where(FinancialTransaction.id == posting.transaction_id)
     )
     if transaction_date is None:
-        return []
+        return [], None, None
     categories = set(
         (
             await db.scalars(
@@ -498,7 +515,76 @@ async def _recurring_conflicts(
             )
         ).all()
     )
-    return [
-        f"recurring:{item.id}:{date(transaction_date.year, transaction_date.month, item.due_day)}"
-        for item in rows
-    ]
+    today = _local_today()
+    settings = await db.scalar(select(FinanceSettings).where(FinanceSettings.user_id == user_id))
+    horizon_days = settings.forecast_horizon_days if settings is not None else 30
+    grace_days = settings.overdue_grace_days if settings is not None else 3
+    horizon_end = today + timedelta(days=horizon_days - 1)
+    covered = set(
+        (
+            await db.execute(
+                select(
+                    RecurringOccurrenceCoverage.scheduled_item_id,
+                    RecurringOccurrenceCoverage.occurrence_date,
+                ).where(RecurringOccurrenceCoverage.user_id == user_id)
+            )
+        )
+        .tuples()
+        .all()
+    )
+    conflicts: list[str] = []
+    before = 0
+    after = 0
+    month = date(today.year, today.month, 1)
+    from app.finance.cashflow import _matching_actuals, _resolve_scheduled_amount
+
+    while month <= horizon_end:
+        for item in rows:
+            due_date = date(month.year, month.month, item.due_day)
+            if (
+                due_date > horizon_end
+                or due_date < today - timedelta(days=grace_days)
+                or (item.id, due_date) in covered
+            ):
+                continue
+            amount_before = await _resolve_scheduled_amount(db, user_id, item, today)
+            if amount_before is None:
+                continue
+            current_matches = await _matching_actuals(
+                db,
+                user_id,
+                item,
+                start=due_date - timedelta(days=grace_days),
+                end=due_date + timedelta(days=grace_days),
+            )
+            if not any(
+                transaction.id == posting.transaction_id and amount == amount_before
+                for transaction, amount in current_matches
+            ):
+                continue
+            amount_after = await _resolve_scheduled_amount(
+                db,
+                user_id,
+                item,
+                today,
+                exclude_transaction_ids={posting.transaction_id},
+            )
+            after_matches = (
+                await _matching_actuals(
+                    db,
+                    user_id,
+                    item,
+                    start=due_date - timedelta(days=grace_days),
+                    end=due_date + timedelta(days=grace_days),
+                    exclude_transaction_ids={posting.transaction_id},
+                )
+                if amount_after is not None
+                else []
+            )
+            conflicts.append(f"recurring:{item.id}:{due_date.isoformat()}")
+            if amount_after is not None and not any(
+                amount == amount_after for _, amount in after_matches
+            ):
+                after += amount_after
+        month = _add_month(month)
+    return conflicts, before, after

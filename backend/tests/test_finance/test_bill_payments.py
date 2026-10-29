@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 
 import pytest
 from sqlalchemy import func, select
@@ -24,7 +24,8 @@ from app.finance.models import (
     LoanPaymentLink,
     Posting,
 )
-from app.finance.schemas import PostingCreate, TransactionCreate
+from app.finance.schemas import PostingCreate, ScheduledFinanceItemCreate, TransactionCreate
+from app.finance.service import create_scheduled_item
 from app.finance.transactions import create_transaction
 from app.identity.models import User
 from app.inbox.models import InboxItem
@@ -272,6 +273,105 @@ async def test_candidates_hide_cross_owner_and_prioritize_legacy_target(db_sessi
     assert [item.posting_id for item in page.items] == [eligible]
     assert page.items[0].legacy_inbox_reference == str(legacy_txn_id)
     assert hidden not in {item.posting_id for item in page.items}
+
+
+async def test_candidate_conflict_uses_matched_occurrence_forecast_effects(db_session) -> None:
+    from app.finance.bill_payments import allocate_payment, get_payment_candidates
+
+    owner = await create_owner(db_session)
+    bill = await setup_bill(db_session, owner)
+    posting_id, account, category = await expense(db_session, owner, 12_000)
+    transaction = await db_session.scalar(
+        select(FinancialTransaction).join(Posting).where(Posting.id == posting_id)
+    )
+    assert transaction is not None
+    transaction.date = date(2026, 10, 28)
+    first = await create_scheduled_item(
+        db_session,
+        owner,
+        ScheduledFinanceItemCreate(
+            name="Matched",
+            type="expense",
+            account_id=account.id,
+            category_id=category.id,
+            currency="PLN",
+            due_day=28,
+            amount_method="fixed",
+            fixed_amount_pln=12_000,
+        ),
+    )
+    second = await create_scheduled_item(
+        db_session,
+        owner,
+        ScheduledFinanceItemCreate(
+            name="Also matched",
+            type="expense",
+            account_id=account.id,
+            category_id=category.id,
+            currency="PLN",
+            due_day=28,
+            amount_method="fixed",
+            fixed_amount_pln=12_000,
+        ),
+    )
+    await create_scheduled_item(
+        db_session,
+        owner,
+        ScheduledFinanceItemCreate(
+            name="Outside matching window",
+            type="expense",
+            account_id=account.id,
+            category_id=category.id,
+            currency="PLN",
+            due_day=5,
+            amount_method="fixed",
+            fixed_amount_pln=99_000,
+        ),
+    )
+    await db_session.flush()
+
+    page = await get_payment_candidates(db_session, owner, bill.id, limit=10, offset=0)
+    candidate = next(item for item in page.items if item.posting_id == posting_id)
+
+    assert set(candidate.recurring_conflicts) == {
+        f"recurring:{first.id}:2026-10-28",
+        f"recurring:{second.id}:2026-10-28",
+    }
+    assert candidate.recurring_forecast_before_pln == 0
+    assert candidate.recurring_forecast_after_pln == 24_000
+    with pytest.raises(ValueError, match="recurring_conflict_confirmation_required"):
+        await allocate_payment(
+            db_session,
+            owner,
+            bill.id,
+            AllocationCreate(version=bill.version, posting_id=posting_id, amount_minor=10_000),
+            context=MutationContext(idempotency_key="conflict-without-ack"),
+        )
+    allocated = await allocate_payment(
+        db_session,
+        owner,
+        bill.id,
+        AllocationCreate(
+            version=bill.version,
+            posting_id=posting_id,
+            amount_minor=10_000,
+            confirm_recurring_conflict=True,
+        ),
+        context=MutationContext(idempotency_key="conflict-with-ack"),
+    )
+    assert allocated.reconciliation == "full"
+    from app.finance.cashflow import get_cashflow_forecast
+
+    forecast = await get_cashflow_forecast(db_session, owner, today=date(2026, 10, 28))
+    reappearing = [
+        entry
+        for entry in forecast.suggestions
+        if entry.scheduled_item_id in {first.id, second.id} and entry.due_date == date(2026, 10, 28)
+    ]
+    assert [entry.amount_pln for entry in reappearing if entry.included_in_forecast] == [
+        12_000,
+        12_000,
+    ]
 
 
 async def test_fx_and_loan_linked_expenses_are_not_allocatable(db_session) -> None:

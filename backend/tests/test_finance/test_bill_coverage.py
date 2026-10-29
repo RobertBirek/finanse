@@ -6,6 +6,7 @@ from test_bill_payments import create_owner, setup_bill
 from test_cashflow import scheduled_item_data
 
 from app.finance.bill_coverage import decide_coverage, get_coverage_candidates, unlink_coverage
+from app.finance.bills import set_bill_lifecycle
 from app.finance.bills_schemas import CoverageDecision, MutationContext
 from app.finance.models import RecurringOccurrenceCoverage
 from app.finance.schemas import AccountCreate, CategoryCreate
@@ -68,14 +69,23 @@ async def test_bill10000_vs_schedule10000_replace_once(db_session) -> None:
 
 async def test_coverage_separate_and_unlink_require_explicit_confirmation(db_session) -> None:
     owner, bill, item = await _covered_bill(db_session)
+    original_version = bill.version
     separate = await decide_coverage(
         db_session,
         owner,
         bill.id,
-        CoverageDecision(version=bill.version, choice="separate"),
+        CoverageDecision(version=original_version, choice="separate"),
         context=MutationContext(idempotency_key="separate"),
     )
     assert separate.coverage is None
+    replay = await decide_coverage(
+        db_session,
+        owner,
+        bill.id,
+        CoverageDecision(version=original_version, choice="separate"),
+        context=MutationContext(idempotency_key="separate"),
+    )
+    assert replay == separate
 
     replaced = await decide_coverage(
         db_session,
@@ -107,3 +117,49 @@ async def test_coverage_separate_and_unlink_require_explicit_confirmation(db_ses
         context=MutationContext(idempotency_key="unlink-yes"),
     )
     assert unlinked.coverage is None
+
+
+async def test_covered_legacy_confirm_refuses_and_lifecycle_keeps_tombstone(db_session) -> None:
+    owner, bill, item = await _covered_bill(db_session)
+    replaced = await decide_coverage(
+        db_session,
+        owner,
+        bill.id,
+        CoverageDecision(
+            version=bill.version,
+            choice="replace",
+            scheduled_item_id=item.id,
+            occurrence_date=date(2026, 10, 28),
+        ),
+        context=MutationContext(idempotency_key="covered"),
+    )
+    from app.finance.cashflow import confirm_scheduled_item
+
+    with pytest.raises(ValueError):
+        await confirm_scheduled_item(db_session, owner, item.id, today=date(2026, 10, 28))
+    archived = await set_bill_lifecycle(
+        db_session,
+        owner,
+        bill.id,
+        "archived",
+        replaced.version,
+        context=MutationContext(idempotency_key="archive-covered"),
+    )
+    assert archived.coverage is not None
+    assert (
+        await db_session.scalar(
+            select(RecurringOccurrenceCoverage).where(
+                RecurringOccurrenceCoverage.financial_document_id == bill.id
+            )
+        )
+        is not None
+    )
+    cancelled = await set_bill_lifecycle(
+        db_session,
+        owner,
+        bill.id,
+        "cancelled",
+        archived.version,
+        context=MutationContext(idempotency_key="cancel-covered"),
+    )
+    assert cancelled.coverage is not None

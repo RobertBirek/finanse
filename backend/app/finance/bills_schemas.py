@@ -151,6 +151,7 @@ class BillResponse(BaseModel):
     allocations: list[AllocationResponse]
     extraction_revision_id: uuid.UUID | None = None
     coverage: CoverageResponse | None = None
+    recurring_decision: Literal["separate"] | None = None
     forecast_exclusion_reasons: list[str]
 
 

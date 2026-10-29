@@ -200,6 +200,7 @@ async def _matching_actuals(
     *,
     start: date | None = None,
     end: date | None = None,
+    exclude_transaction_ids: set[uuid.UUID] | None = None,
 ) -> list[tuple[FinancialTransaction, int]]:
     account_posting = aliased(Posting)
     category_posting = aliased(Posting)
@@ -233,15 +234,23 @@ async def _matching_actuals(
             )
         ).all()
     )
-    return [row for row in rows if row[0].id not in allocated]
+    excluded = allocated | (exclude_transaction_ids or set())
+    return [row for row in rows if row[0].id not in excluded]
 
 
 async def _resolve_scheduled_amount(
-    db: AsyncSession, user_id: uuid.UUID, item: ScheduledFinanceItem, today: date
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    item: ScheduledFinanceItem,
+    today: date,
+    *,
+    exclude_transaction_ids: set[uuid.UUID] | None = None,
 ) -> int | None:
     if item.amount_method == "fixed":
         return item.fixed_amount_pln
-    actuals = await _matching_actuals(db, user_id, item, end=today)
+    actuals = await _matching_actuals(
+        db, user_id, item, end=today, exclude_transaction_ids=exclude_transaction_ids
+    )
     return actuals[0][1] if actuals else None
 
 

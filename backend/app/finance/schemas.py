@@ -339,6 +339,17 @@ class CashflowSuggestion(BaseModel):
     actual_transaction_id: uuid.UUID | None = None
     exclusion_reasons: list[str] = Field(default_factory=list)
 
+    @model_validator(mode="after")
+    def validate_source_identity(self) -> "CashflowSuggestion":
+        if not self.source_key:
+            raise ValueError("source_key is required")
+        if self.source == "recurring":
+            if self.scheduled_item_id is None or self.financial_document_id is not None:
+                raise ValueError("recurring source requires only scheduled_item_id")
+        elif self.financial_document_id is None or self.scheduled_item_id is not None:
+            raise ValueError("financial_document source requires only financial_document_id")
+        return self
+
 
 class CashflowBudgetSummary(BaseModel):
     total_budget_pln: int

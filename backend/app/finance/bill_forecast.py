@@ -12,6 +12,7 @@ from app.finance.models import (
     DocumentPaymentAllocation,
     FinancialDocument,
     RecurringOccurrenceCoverage,
+    ScheduledFinanceItem,
 )
 from app.finance.schemas import CashflowSuggestion
 
@@ -46,6 +47,7 @@ async def project_bill_cashflows(
         ).scalars()
     )
     covered = {(row.scheduled_item_id, row.occurrence_date) for row in coverage_rows}
+    covered_bill_ids = {row.financial_document_id for row in coverage_rows}
     entries: list[CashflowSuggestion] = []
     changes: dict[date, int] = {}
     exclusions: list[str] = []
@@ -78,6 +80,26 @@ async def project_bill_cashflows(
             reasons.append("outside_horizon")
         if bill.currency != "PLN":
             reasons.append("currency_without_pln_fx")
+        if (
+            bill.id not in covered_bill_ids
+            and bill.recurring_decision is None
+            and bill.due_date is not None
+            and bill.payment_account_id is not None
+            and bill.category_id is not None
+            and await db.scalar(
+                select(ScheduledFinanceItem.id)
+                .where(
+                    ScheduledFinanceItem.user_id == user_id,
+                    ScheduledFinanceItem.is_active.is_(True),
+                    ScheduledFinanceItem.type == "expense",
+                    ScheduledFinanceItem.account_id == bill.payment_account_id,
+                    ScheduledFinanceItem.category_id == bill.category_id,
+                )
+                .limit(1)
+            )
+            is not None
+        ):
+            reasons.append("coverage_unresolved")
         account = (
             await db.get(Account, bill.payment_account_id) if bill.payment_account_id else None
         )
