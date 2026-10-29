@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.finance.document_guards import guard_bill_account_change, lock_document_mutations
 from app.finance.models import (
     Account,
     Category,
@@ -33,12 +34,19 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCrea
 async def update_account(
     db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID, data: AccountUpdate
 ) -> Account | None:
+    update_data = data.model_dump(exclude_unset=True)
+    if "currency" in update_data:
+        await lock_document_mutations(db, user_id)
+        existing = await get_account(db, user_id, account_id)
+        if existing is not None and update_data["currency"] != existing.currency:
+            await guard_bill_account_change(
+                db, user_id, account_id, {"currency": update_data["currency"]}
+            )
     if data.currency is not None:
         await lock_accounts(db, user_id, {account_id}, exclusive=True)
     account = await get_account(db, user_id, account_id)
     if account is None:
         return None
-    update_data = data.model_dump(exclude_unset=True)
     if (
         "currency" in update_data
         and update_data["currency"] != account.currency
@@ -52,6 +60,8 @@ async def update_account(
 
 
 async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID) -> bool:
+    await lock_document_mutations(db, user_id)
+    await guard_bill_account_change(db, user_id, account_id, {"delete": True})
     account = await get_account(db, user_id, account_id)
     if account is None:
         return False
@@ -164,6 +174,13 @@ async def delete_category(db: AsyncSession, user_id: uuid.UUID, category_id: uui
     category = result.scalar_one_or_none()
     if category is None:
         return False
+    from app.finance.models import FinancialDocument
+
+    bill = await db.execute(
+        select(FinancialDocument.id)
+        .where(FinancialDocument.user_id == user_id, FinancialDocument.category_id == category_id)
+        .limit(1)
+    )
     posting = await db.execute(
         select(Posting.id).where(Posting.category_id == category_id).limit(1)
     )
@@ -176,7 +193,7 @@ async def delete_category(db: AsyncSession, user_id: uuid.UUID, category_id: uui
         select(CategoryBudget.id).where(CategoryBudget.category_id == category_id).limit(1)
     )
     child = await db.execute(select(Category.id).where(Category.parent_id == category_id).limit(1))
-    if any(result.first() is not None for result in (posting, scheduled, budget, child)):
+    if any(result.first() is not None for result in (posting, scheduled, budget, child, bill)):
         raise ValueError("Category has records; deactivate it instead of deleting")
     await db.delete(category)
     await db.flush()

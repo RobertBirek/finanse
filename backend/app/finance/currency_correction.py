@@ -18,6 +18,7 @@ from sqlalchemy.orm import selectinload
 
 from app.audit.service import log_event
 from app.finance.dates import _local_today
+from app.finance.document_guards import guard_allocated_transaction_change, lock_document_mutations
 from app.finance.ledger_validation import _validate_posting_sum
 from app.finance.models import (
     Account,
@@ -226,7 +227,12 @@ async def apply_correction(
     finally:
         await provider.close()
     async with db.begin_nested():
+        await lock_document_mutations(db, user_id)
         account, transactions = await _load(db, user_id, plan.account_id, lock=True)
+        for transaction in transactions:
+            await guard_allocated_transaction_change(
+                db, user_id, transaction.id, {"currency": "EUR"}
+            )
         before = _state(account, transactions)
         if (
             _digest(before) != plan.before_hash

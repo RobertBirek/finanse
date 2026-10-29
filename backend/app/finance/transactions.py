@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.finance.dates import _local_today
+from app.finance.document_guards import guard_allocated_transaction_change, lock_document_mutations
 from app.finance.ledger_validation import _validate_posting_sum, _validate_transaction_postings
 from app.finance.models import FinancialTransaction, LoanPaymentLink, Posting
 from app.finance.nbp_rates import NbpRateProvider
@@ -158,6 +159,10 @@ async def create_exchange_transaction(
 async def update_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID, data: TransactionUpdate
 ) -> FinancialTransaction | None:
+    await lock_document_mutations(db, user_id)
+    await guard_allocated_transaction_change(
+        db, user_id, transaction_id, data.model_dump(exclude_unset=True)
+    )
     txn = (
         await db.execute(
             select(FinancialTransaction)
@@ -201,6 +206,8 @@ async def update_transaction(
 async def delete_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID
 ) -> bool:
+    await lock_document_mutations(db, user_id)
+    await guard_allocated_transaction_change(db, user_id, transaction_id, {"delete": True})
     txn = (
         await db.execute(
             select(FinancialTransaction)

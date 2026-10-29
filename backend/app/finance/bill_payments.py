@@ -19,6 +19,7 @@ from app.finance.bills_schemas import (
     MutationContext,
 )
 from app.finance.dates import _local_today
+from app.finance.document_guards import lock_document_mutations
 from app.finance.models import (
     Account,
     DocumentPaymentAllocation,
@@ -31,13 +32,6 @@ from app.finance.models import (
 from app.finance.schemas import PostingCreate, TransactionCreate
 from app.finance.transactions import create_transaction
 from app.inbox.models import InboxItem
-
-
-async def lock_document_mutations(db: AsyncSession, user_id: uuid.UUID) -> None:
-    """Serialize every owner's allocation mutation before any row lock (Task 6 contract)."""
-    await db.execute(
-        select(func.pg_advisory_xact_lock(func.hashtext(f"bill-allocation:{user_id}")))
-    )
 
 
 def _eligible(transaction: FinancialTransaction, posting: Posting) -> bool:
