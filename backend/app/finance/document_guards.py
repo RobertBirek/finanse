@@ -65,3 +65,20 @@ async def guard_bill_account_change(
     )
     if referenced is not None:
         raise ValueError("Account is referenced by a financial document")
+
+
+async def guard_bill_category_change(
+    db: AsyncSession, user_id: uuid.UUID, category_id: uuid.UUID, changes: dict[str, object]
+) -> None:
+    """Prevent changing/deleting categories referenced by a financial document."""
+    from app.finance.models import FinancialDocument
+
+    if not changes:
+        return
+    referenced = await db.scalar(
+        select(FinancialDocument.id)
+        .where(FinancialDocument.user_id == user_id, FinancialDocument.category_id == category_id)
+        .limit(1)
+    )
+    if referenced is not None:
+        raise ValueError("Category is referenced by a financial document")
