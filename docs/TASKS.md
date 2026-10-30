@@ -6,6 +6,41 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Waluty i zobowiązania (2026-10-27)
 
+- [x] Zaprojektować wspólny obieg dokumentów finansowych przed rozszerzeniem Q7:
+  użytkownik wybrał wyłącznie upload w aplikacji (bez Google/integracji), także zdjęcia
+  faktur i paragonów aparatem telefonu. Ustalić rejestr faktur, termin/pozostałą kwotę,
+  powiązanie opłaconych z księgą i nieopłaconych z Nadchodzącymi, bez podwójnego kosztu.
+  Obecne Dokumenty/OCR/Inbox nie stanowią rejestru zobowiązań; projekt zaakceptowany.
+  Użytkownik zatwierdził zmianę priorytetu: faktury/paragony przed Q7. Projekt
+  `docs/superpowers/specs/2026-10-28-financial-document-workflow-design.md` gotowy,
+  builder check po3 doprecyzowaniach bez istotnych pytań. Użytkownik zaakceptował zakres
+  i obsługę HEIC/HEIF z lokalną konwersją do JPEG zamiast ręcznej zmiany formatu.
+- [x] Przygotować plan implementacji dokumentów:10 zadań TDD, HEIC w ograniczonym
+  procesie, rejestr/alokacje/cashflow, stare uploady, retry/IDOR/konkurencja i test aparatu.
+  `docs/superpowers/plans/2026-10-28-financial-document-workflow.md`.
+- [x] Użytkownik wybrał subagent-driven: niezależne wykonanie i review każdego taska.
+- [x] Implementacja oprogramowania planu w linked worktree, gałąź `feat/financial-document-workflow`.
+  Bazowy frontend243 PASS; backend858 PASS/8 proxy deselected na zgodnych zależnościach.
+  Zadanie1 (HEIC/prywatny podgląd) zamknięte po poprawkach i ponownym review;
+  backend867/frontend243 PASS, lint/types PASS. Zadanie2 zamknięte po rzeczywistym
+  teście migracji i scoped review (backend874/frontend243). Zadanie3: odczyt/propozycje
+  i obsługa istniejących uploadów zamknięte po poprawkach/review; backend886/frontend243
+  i lint/types PASS. Zadanie4 rejestr/approve/duplikaty zamknięte po review, backend900/
+  frontend243 PASS. Zadanie5 zakończone po review, backend915/frontend243 PASS.
+  Zadanie6 ochrona księgi i operatorowego Actual zamknięte po review;
+  backend924/frontend243/lint/types PASS. Zadanie7 coverage/Nadchodzące zakończone
+  po poprawkach/review, backend933/frontend243/lint/types PASS. Zadanie8 zamknięte po
+  poprawkach/review, backend934/frontend251/lint/types/build/browser PASS.
+  Zadanie9 rejestr/rozliczenia/cashflow UI zamknięte po3rundachpoprawek/review;
+  frontend278/lint/types/build, backend936 (bez późniejszych zmian backendu) PASS.
+  Zadanie10 workflow/E2E/migracja/parser po poprawkach i review;
+  końcowy gate941backend/278frontend/75E2E+1celowyskip, lint/types/build PASS.
+  Bez zgody na deploy/import/korekty danych.
+- [~] Całościowy przegląd bezpieczeństwa/zgodności gałęzi i zamknięcie raportu.
+- [ ] BLOCKED: rzeczywisty Android/iPhone aparat/galeria/dużeHEIC — brak urządzeń;
+  viewport i syntetyczny parser nie zastępują certyfikacji telefonu.
+- [ ] Osobna zgoda na merge/push/deploy/migrację produkcji lub przygotowanie starych PDF.
+
 - [x] Osobna korekta waluty istniejącego konta po prośbie o EUR: potwierdzone kwoty
   źródłowe i zatwierdzona wycena PLN wg NBP; konto i obie strony6 operacji poprawione.
   Backend858/frontend243, lint/types, backup1732c2cc/restore/kopia/guard/audit i świeży

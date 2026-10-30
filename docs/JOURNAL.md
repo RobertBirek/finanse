@@ -2,6 +2,657 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-30 — Task10 review clean, całościowy review gałęzi
+
+- Commit4d8abf0 poprawia100/120E2E, HEIFfixture i dowód pg_blocking_pids.
+  Scopedreview spec✅/Approved, wszystkie3Important+Minor domknięte.
+- Final941backend/8deselected/10knownwarnings w770.71s; frontend278/75E2E+1celowyskip,
+  lint/types/build i Ruff/mypy81 PASS. ParserDocker i syntheticmigrationrestore PASS.
+- Dokumentacja aktualizowana, kolejnym gate jest broadbranchsecurity/spec/qualityreview.
+  Prawdziwe telefonyBLOCKED, brak zgody na produkcję/importy/push/merge.
+
+## 2026-10-30 — Task10 poprawka testów ready, fullgate powtarzany
+
+- Explicit100/120 singleforecastcase, pg_blocking_pids rzeczywistych sesji i HEIF
+  capabilities/selector poprawione. Worker75E2E+1skip/278unit/5workflowPASS.
+- Controllerbackend+frontendfullgate w tle, sessionID/logi w ledger. Ruff/mypy81
+  i diffcheck PASS. Nofixcommit przedwynikami; produkcja bez zmian.
+
+## 2026-10-30 — Task10 review wymaga3 dowodów testowych
+
+- Brak jawnego E2E100estimate→120invoice singleupcoming, concurrentapproval używa
+  sleep0 zamiast dowodu DBwait, HEIF capability fixture nie odpowiada uploadowi.
+  Worker poprawia te3 i ordinalselector; bez productioncodechanges.
+- Backendfullgate powtórzyć po zmianie concurrencytest, parser/migrationsource
+  bez zmian. Task10 niezamknięte, broadreview czeka.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task10 testcommit i niezależny review
+
+- Controller powtórzył frontend278/lint/types/build/73E2E+1znanydesktopskip PASS.
+  Backend941/8deselected10knownwarnings, Ruff/mypy81, parser/migracja PASS.
+- Commitd2187de tylko4testpaths. Task10review w toku; potem broadbranchreview.
+- Dokumentacja funkcji zostanie zapisana osobno z selektywnym indexem; niezwiązane
+  zastane hunki Velo/Q7 pozostaną dirty. Bez push/deploy/importów i productionchanges.
+
+## 2026-10-30 — Backend941 PASS, E2Efix wznowiony po limicie
+
+- Fullbackend941/8proxydeselected/10knownwarnings w796.98s. Testy backendu zakończone.
+- E2Efixworker przerwany limitem; świeży przejmuje dokładnie3błędy fixture/waitstate,
+  zachowuje częściowe zmiany i ponowi wszystkieE2E. Bez backendmutacji/commituTask10.
+- Parser/migracja PASS; urządzeniaBLOCKED, produkcja bez zmian.
+
+## 2026-10-30 — FullE2E ujawnił3 błędy integracji testów
+
+- Frontend278/lint/types/build PASS. WszystkieE2E:70 PASS,1znanyskip,3FAIL:
+  sharedfixture nieobsługuje upload-capabilities (desktop/mobile reliability) oraz
+  mobilemanualapproval wyścig dwóchprzycisków. Nie ma akceptacji gate z tym wynikiem.
+- Wykonawca diagnozuje trace i poprawia fixture/waitstate, nie wyłącza assertClean,
+  nie zwiększa timeoutów/nie dodaje sleep. Backendfullgate nadalw toku; bez DB w fixie.
+- Parser/migracja PASS, produkcja bez zmian.
+
+## 2026-10-30 — Task10 migracja i syntheticrestore PASS
+
+- Niezależny PostgreSQL16.14: c2→7f8ce92bda94, downgrade/reupgrade, sentinel rows
+  dokument/inbox/ledger/SHA/oldcolumns i suma0 zachowane. Dump odtworzony do osobnej
+  bazy task10restore nahead; loopbackcontainer usunięty po próbie.
+- Wyłącznie syntetyczne dane, bez dostępu do produkcji lub zwykłego finanse_test.
+  Artefakty pozaGit w /tmp/opencode/task10-migration-validation, raport w ledger.
+- Końcowy backend/frontendfullgate nadal w toku.
+
+## 2026-10-30 — Task10 focused6E2E/4workflow, brakujące akceptacje dopinane
+
+- Nowe stałe6E2E i4backendworkflow PASS. Przed pełnym gate raport ujawnił brak
+  E2E uploadHEIC→attach UI i receiptdeclaredpaid bezalokacji; worker je dopisuje.
+- Rzeczywisty concurrentapproval wymaga nazwanego istniejącego testu lub nowego
+  two-sessionregression, nie ogólnego odwołania do prepare source race.
+- ParserDocker PASS, niezależna syntetyczna migracja w toku. No fullgate/commitTask10yet.
+  Produkcja bez zmian; devicecertificationBLOCKED.
+
+## 2026-10-30 — Task10 parserDocker PASS
+
+- Lokalny uniqueimage de1985e61cbb Python3.12.15/Pillow12.3.0/pillow-heif1.8.1;
+  restrictednetworknone/read-only/nonroot test syntetyczny HEIF→JPEG/originalhash/
+  orientacja/GPS stripping PASS. Raport/artifacts pozaGit w ledger.
+- Workflow/E2E implementacja nadal w toku; devicecheck prawdziwych telefonów BLOCKED.
+  Brak deployu/Compose/DB operations w validatorze; produkcja bez zmian.
+
+## 2026-10-30 — Task9 zakończony, finał Task10
+
+- Commitafae51b domyka repeated409state; scopedreview rundy3 spec✅/Approved,
+  brak nowych findings. Task9 complete(950629a..afae51b), Task7/8followups domknięte.
+- Frontend278/lint/types/build i Ruff/mypy81 PASS. Backend byte-identical do936PASS;
+  w finale uruchomić pełny zestaw świeżo. Task10 workflow/E2E/parser/migracja/docs.
+- Prawdziwe Android/iPhone niedostępne: oznaczyć devicecheck BLOCKED, nie mylić
+  viewporttest z certyfikacją aparatu. Bez deployu/importu danych użytkownika.
+
+## 2026-10-30 — Task9 runda3: stan powtórnych409
+
+- Runda2 domknęła canonicalkeys, initialattachguard i footer. Review znalazł2luki
+  utrzymanego stanu: coveragecomparison poack i currentVersion z draft przedattach409.
+  Kolejny konflikt musi zawsze wymagać kolejnego właściwego refetch.
+- Wykonawca resetuje state minimalnie i dodaje second-conflict oraz draft→attach
+  regresje. Base d47fbf4, Task9 nadalotwarte; produkcja bez zmian.
+
+## 2026-10-30 — Task9 runda2 commit i review
+
+- Fullbackend936/8deselected/10knownwarnings w744.98s, frontend277/lint/types/build,
+  Ruff/mypy81 i targeted409browser PASS. Selfreview przedcommitem wykrył zły tekstowy
+  placeholder; poprawiono właściwy footer i przywrócono income. Frontend gate świeżo
+  powtórzony po korekcie, backend byte-identical (diffempty) do ukończonego testu936.
+- Commitd47fbf4 tylko9frontendpaths. Scopedreview rundy2 w toku; Task9 jeszczeotwarty.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task9 runda2 ready, pełny gate i targeted409browser
+
+- Deepcanonicalintentkeys, blokada attach409/freshtargetversion i coverage
+  decide/unlink409refetchack poprawione z regresjami, tekst—PLN usunięty.
+- Fresh frontend277/46files lint/types/build i backendRuff/mypy81 PASS.
+  Fullbackendround2 w tle; targetedbrowser sprawdza tylko attach+coverage409.
+  Brak commitu poprawki. Produkcja bez zmian.
+
+## 2026-10-30 — Task9 review rundy1: trzy konkretne luki
+
+- Główne poprzednie braki i partialoutcome domknięte, ale intent serializer płytko
+  usuwa nestedapprovaldata, attachconfirm omija disabled409, coverage decide/unlink
+  nie ma real409refetch/compareack. Te3 Important kierowane do rundy2.
+- Drobny tekst „—PLN” przy unavailablelimit poprawiany razem. Nie rozszerzać zakresu.
+  Base08fde49, brak nowych zmian produkcji.
+
+## 2026-10-30 — Task9 poprawka zapisana, ponowny review
+
+- Targetedbrowserfix PASS: nullcurrency/filtry/coverage/incomplete/409refreshack.
+  DocReviewredirecterrors w tej próbie tylko unitcoverage, nie deklarowaćbrowser.
+- Commit08fde49 tylko16frontendpaths; full936backend273frontend lint/types/build
+  i Ruff/mypy81 PASS. Niezależny scopedreview rundy1 w toku przed Task10.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task9 runda1 fullgate gotowy, browser wznowiony po limicie
+
+- Finalne testyA/B/C zakończone: frontend273/45files/lint/types/build PASS;
+  backendRuff/mypy81 PASS, fullbackend936/8deselected/10knownwarnings w737.83s.
+- Browserfixround worker przerwany limitem; świeży kończy wyłącznie targeted
+  syntetyczną walidację zmian. Brak commitu poprawki, scopedreview po tym wyniku.
+  Logi/sessionID w ledger. Produkcja bez zmian.
+
+## 2026-10-30 — Task9 finał rundy1 przekazany świeżemu wykonawcy
+
+- DocReview409guard gotowy, frontend270/lint/types/build PASS. Pozostały dokładnie
+  statefulQueryClient partialoutcome, lifecycle/unlink retrykey tests oraz callerkey
+  contract approve/attach (hook nie może sam zmieniać klucza retry).
+- Świeży wykonawca kończy tylko te3 elementy; cała reszta poprawek zachowana.
+  Ta sama runda1/basefbea9ed, brak fullbackend/commitu poprawki.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task9 efekty/klucze/niepełna prognoza poprawione
+
+- Concretecoverage/lifecycle effects i tombstonecopy, wspólne klucze intent oraz
+  incompletewarnings woverview/detailed gotowe w kodzie; focusedlint/types/tests PASS.
+- Ten sam wykonawca kończy real409refetch/compare/blockresubmit, partialoutcome,
+  prepare/retryerrors i stablekeynetworktests. Brak fullgate/commitu poprawki.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task9 runda1: pierwsze3 poprawki gotowe, reszta przejęta
+
+- DocReviewredirect, nullcurrency bezPLN i wyłączone settlement, pełne filtry gotowe
+  w niezacommitowanym kodzie, focusedlint/types/tests PASS.
+- Świeży wykonawca kończy pozostałe4–8: konkretne efekty, stablekeys, real409refetch,
+  incomplete-limit i partialoutcome test. Ta sama runda1/base fbea9ed, brak fullgate.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task9 review wymaga poprawek kontraktów UI
+
+- Important: brak billlink poapprove/attach, nullcurrency traktowana jakoPLN wdetail,
+  niepełne filtry, niekonkretne skutki coverage/lifecycle, UUID perclick dla części
+  mutacji,409bezrealrefetch/compare, bezwarunkowa obietnica safe-limit i brak outcome
+  partialallocation→remaining+forecasttest. Pełna lista i runda1 w ledger.
+- Wykonawca poprawia w istniejącym UI; nie zmieniamy księgi ani zakresu funkcji.
+  Drobne błędy prepare/retryfeedback i assertions kwot domykane razem.
+- Task9 niezamknięte, Task10 czeka; produkcja bez zmian.
+
+## 2026-10-30 — Task9 fullgate i commit, review w toku
+
+- Backend936/8deselected/10knownwarnings w731.10s; frontend263/lint/types/build,
+  backendRuff/mypy81 i browser375/1440 light/dark PASS.
+- Commitfbea9ed obejmuje tylko23source/testpathsTask9. Niezależny spec/qualityreview
+  sprawdza register/payment/coverage/idempotency/409/sourceunion; task niezamknięty.
+- Następnie Task10 E2E/workflow/końcowe bezpieczeństwo i dokumentacja. Produkcja bez zmian.
+
+## 2026-10-30 — Task9 poprawka daty i browser PASS, fullbackend wznowiony
+
+- Coverageestimate używa _local_today, deterministiclast_actualcutoff regresja5PASS;
+  Ruff/mypy81/diffcheck PASS. Pełny backend wznowiony, logtask-9-final-backend.log.
+- Syntetyczny browser375/1440 light/dark PASS bezImportant, screenshots pozaGit.
+  Frontend263/lint/types/build PASS; brak commitu i reviewTask9 do wyniku backendu.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task9 frontend263, backendlint wykrył datę bez strefy
+
+- Nowe UI/API testmatrix zakończone, fresh frontend263/lint/types/build PASS.
+- Isolated Ruff wykrył DTZ011 w nowym coverage estimate(date.today). Własny pełny
+  pytest przerwany po245 PASS przed poprawką, nie jest pełnym gate ani testfailure.
+  Wykonawca zastępuje datę istniejącym helperem domenowym i dodaje regresję.
+- Niezależna browserwalidacja Task9 trwa na syntetycznym API bez DB; log/sessionID
+  w ledger. Restartfullbackend dopiero po zakończeniu poprawki. Brak commituTask9.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task9 testy wznowione po limicie
+
+- Wykonawca przerwany limitem, bez nowego commitu i aktywnych runnerów.
+  HEAD950629a; zachowano całość częściowej implementacji i testów.
+- Świeży wykonawca kończy wyłącznie pozostały testmatrix i minimalne poprawki
+  ujawnione testami. Raport poprzednika użył backend/.venv zamiast izolowanego
+  pinnedenv; focused backend contract i fullgate powtórzyć we właściwym środowisku.
+- Produkcja bez zmian. Nie wznawiać ukończonych Tasks1–8.
+
+## 2026-10-30 — Task9 brakujące akcje wdrożone, testy kończone
+
+- Lifecycleconfirm, allocationhistoryunlink i coverageunlinkconfirm/estimate gotowe.
+  Additive backend: allocation IDs i estimate_amount_pln liczone współdzielnie;
+  focusedfrontend16/backendcoverage4 PASS. Brak fullgate i commitu.
+- Ta sama sesja wykonawcy kończy wyłącznie testmatrix walut/partial/409/idempotency/
+  sourceconfirmation/errorfeedback i fullfrontend; nie rozszerzać zakresu funkcji.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task9 świeży wykonawca brakujących akcji i testów
+
+- Dotychczasowy wykonawca dodał preview/original, search/date/older/paginację oraz
+  filtrowanie źródeł w ScheduledItemsList; nadal tylko14 istniejących focusedtests.
+- Świeży wykonawca kończy lifecycle, allocationunlink, konkretne coverageamount/
+  unlinkconfirm i wymagane nowe testyTask9. Backendcoveragecandidate nie ma estimate;
+  użyć autorytatywnej prognozy lub minimalnego additiveAPI, nie zgadywać kwoty.
+- Brak commitu/fullgateTask9, produkcja bez zmian. Zachować istniejący częściowy kod.
+
+## 2026-10-30 — Task9 podstawy gotowe, domykanie zachowania i testów
+
+- Route/register/detail, typedhooks płatności/coverage i źródła cashflow oraz
+  widoczne błędy DocumentReview w kodzie. Focused14/lint/types PASS, bez commitu.
+- Pozostały sourceactions/lifecycle/unlinkhistory, candidates search/date/older,
+  konkretne amountpreview coverage, audit wszystkich konsumentów forecast i testyTask9.
+  Wykonawca kontynuuje zawężone brakujące elementy. Nie powtarzać już gotowego UI/API.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task8 zakończony, Task9 rejestr i rozliczenia
+
+- Scoped review spec✅/Approved: duplikaty, pola ręczne, globalqueue i OCRretry oraz
+  testy kontraktów domknięte. Full934backend251frontend lint/types/build/browser PASS.
+  Task8 complete(4ba27f7..950629a).
+- Do Task9 przekazano2 drobne uwagi: widoczne komunikaty błędów mutacji/dupequery
+  DocumentReview i nieaktualny tekst o wyborze konta/kategorii dopiero w rejestrze.
+- Task9 doda register/detail route, rozliczenia, coverage dialog i wszystkich
+  konsumentów forecastunion/nullabledate. Produkcja i dane użytkownika bez zmian.
+
+## 2026-10-30 — Task8 poprawki zapisane, scoped review w toku
+
+- Fullbackend934/8deselected/10baselinewarnings w734.39s, frontend251/lint/types/build,
+  backendRuff/mypy81 i targetedbrowser375/1440 PASS. Commit950629a tylko6frontendpaths.
+- Duplikaty/pełne pola/globalqueue/OCRretry i testy sprawdza ponownie niezależny
+  reviewer. Nadal bez oznaczenia Task8 complete przed verdict.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task8 runda1 ready, fullgate i browser zmian
+
+- UI i wymagane testy kolejki/fullpayload/attachversion domknięte, frontend251
+  lint/types/build PASS. BackendRuff/mypy81 PASS; fullbackend w tle.
+- Syntetyczna przeglądarka dodatkowo sprawdza zmienione duplikaty/pola/OCRretry,
+  bez DB; oba logi/sessionID w ledger. Brak commitu poprawki/re-review na tym etapie.
+- Produkcja bez zmian.
+
+## 2026-10-30 — Task8 review wymaga domknięcia UI
+
+- Cztery Important: brak dupecandidate attach/separate, brak sale_date/category/account,
+  kolejka tylko per addFilescall (równoległe wybory/retry), brak jawnego OCRretry.
+- Wykonawca poprawia rundę1 i dodaje deferred-promise queue tests/fullmanualpayload/
+  duplicate/OCRretry/error. Wcześniejszy browserPASS potwierdzał wyłącznie opisane
+  ścieżki; nie zastępuje weryfikacji kompletności briefa. Task8 niezamknięte.
+- Task9 obsłuży DocumentSources i route rejestru. Produkcja bez zmian.
+
+## 2026-10-30 — Task8 browser PASS, commit i review
+
+- Syntetyczna przeglądarka375/1440 light/dark PASS: brak overflow, kamera attributes,
+  uploadretry, authblob preview/original, manualfallback, focus i Escape; bez nowych
+  błędów console/page. To nie certyfikacja prawdziwego aparatu.
+- Commit58ce13b tylko15 plików Task8. Full934backend248frontend/lint/types/build PASS.
+  Trwa niezależny spec/qualityreview, zadanie8 jeszcze niezamknięte.
+- Bez push/deploy/importów/zmian danych użytkownika.
+
+## 2026-10-30 — Task8 full backend zakończony
+
+- Fullbackend934 PASS/8 proxy deselected/10baselinewarnings w712.21s.
+  Frontend248/lint/types/build oraz backendRuff/mypy81 PASS na tym samym kodzie.
+- Czekamy na uruchomioną walidację browser375/1440 light/dark przed taskcommit;
+  następnie niezależny spec/qualityreview. Task8 nadal nie jest zakończone.
+- Bez zmian produkcji i operacji na dokumentach użytkownika.
+
+## 2026-10-30 — Task8 UI gotowe do fullgate i testu przeglądarki
+
+- Upload/review UI, prywatne blob preview/original, typedhooks i capabilitiesendpoint;
+  publiczny storage_path usunięty. Fresh frontend248/lint/types/build PASS;
+  backendRuff/mypy81 PASS. Brak commitu Task8.
+- Fullbackend w tle oraz niezależna walidacja przeglądarki375/1440 light/dark na
+  syntetycznym API, bez DB. SessionID/logi w ledger. Czekamy na oba wyniki, potem
+  commit/review. Emulacja nie jest certyfikacją aparatu Android/iPhone.
+- Produkcja bez zmian; brak deployu, importów i przygotowywania prawdziwych PDF.
+
+## 2026-10-29 — Task7 zakończony, Task8 interfejs dokumentów
+
+- Scoped re-review spec✅/Approved: brak nowych Critical/Important, unresolvedcoverage,
+  walidowana tożsamość źródła, rzeczywiste conflict-before/after i acceptance testy.
+  Full933backend243frontend lint/types PASS. Task7 complete(24ae6e8..4ba27f7).
+- Task8: upload z telefonu, autoryzowany oryginał/podgląd, ręczne review i approve
+  bez expense. Zachować istniejący styl/UI, nie robić kolejnego redesignu.
+- Task9 concretefollowup z review: api/finance źródła nullableunion i FinanceCashflow
+  lookup/keys/confirm/dateformat. Bez deployu/importów/zmian danych użytkownika.
+
+## 2026-10-29 — Task7 runda1 fullgate i commit poprawki
+
+- Backend933 PASS/8 proxy deselected/10 znanych warnings w826.69s; frontend243,
+  lint/types/Ruff/mypy81 PASS. Commit4ba27f7 tylko9 plików Task7.
+- Scoped re-review sprawdza unresolvedcoverage, kontrakt źródła, rzeczywiste
+  before/after i acceptance tests. Task7 nadal otwarte do verdict.
+- Bez deployu/push/importu lub zmian danych użytkownika.
+
+## 2026-10-29 — Task7 poprawki gotowe do ponownego pełnego gate
+
+- Shared helper kandydatów/alokacji wylicza rzeczywisty efekt konkretnego occurrence:
+  matching actual znika z heurystyki po alokacji, więc estymata może wrócić (0→kwota).
+  Uwzględnia coverage, grace/horizon i aktualne dopasowanie, nie samą kategorię.
+- Rozszerzone focused46 PASS: wyłączenia, separate replay, oldconfirm refusal,
+  tombstones archive/cancel, wiele reguł i wymagane potwierdzenie konfliktu.
+- Fullbackend Task7round1 uruchomiony, log/sessionID w ledger; frontend243/lint/types
+  oraz backendRuff/mypy81 PASS. Brak commitu poprawki i review; produkcja nietknięta.
+
+## 2026-10-29 — Task7 runda1: część poprawiona, skutki konfliktów pozostały
+
+- Coverage_unresolved, recurring_decision w odpowiedzi i walidacja tożsamości źródła
+  poprawione w niezacommitowanym kodzie, focused29 PASS; brak fullgate/commitu.
+- Świeży wykonawca kończy tę samą rundę: faktyczny before/after per occurrence
+  (alokacja może przywrócić estymatę), przypadki wielu reguł i komplet acceptance tests.
+- Nie oznaczać taska jako zakończonego przy placeholderach. Produkcja bez zmian.
+
+## 2026-10-29 — Task7 review: podwójna prognoza wymaga poprawki
+
+- Critical: brak coverage_unresolved powodował jednoczesne uwzględnianie faktury
+  i reguły przed decyzją replace/separate. Zadanie7 nie jest zakończone.
+- Important: kontrakt źródła z opcjonalnymi ID nie gwarantował poprawnych kombinacji;
+  before/after konfliktu było kwotą postingu→0 zamiast rzeczywistym efektem prognozy;
+  brakowało jawnych acceptance tests wyłączeń/oldconfirm/tombstone/nextmonth.
+- Wykonawca poprawia rundę1, focusedtesty przed fullgate. Task9 musi zmienić TSunion
+  i FinanceCashflow: rozróżnienie źródeł, nullabledate, klucze i brak oldconfirm dla bills.
+  Produkcja bez zmian.
+
+## 2026-10-29 — Task7 pełny gate i commit, review w toku
+
+- Backend928 PASS/8 proxy deselected/10 znanych ostrzeżeń w920.09s; frontend243,
+  Ruff/mypy81/lint/tsc PASS. Commit76b59e3 zawiera tylko backend Task7.
+- Trwa niezależny review coverage/prognozy/konfliktów; zadanie nie jest jeszcze
+  zakończone. Następny Task8 frontend upload i sprawdzanie dokumentów.
+- Brak push, wdrożenia, importów lub zmian danych użytkownika.
+
+## 2026-10-29 — Task7 focused gotowy, fullgate w toku
+
+- Coverage/forecast implementacja gotowa do fullgate:41 focused PASS, sharedlocks,
+  konkretne occurrence, tombstones, exclusions i potwierdzanie konfliktu alokacji.
+- Fullbackend w tle, sessionID/log w ledger. Frontend243/lint/types i backend
+  Ruff/mypy81 PASS. Brak commitu Task7; po gate selfreview/commit i niezależny review.
+- Task9 musi konsumować source union i ostrzeżenia: allocation
+  `confirm_recurring_conflict`, coverage DELETE `confirm_unlink=true`.
+  Nadal bez deployu/importów/zmian danych użytkownika.
+
+## 2026-10-29 — Task6 zakończony, Task7 coverage/prognoza
+
+- Commit24ae6e8 izoluje test kategorii i chroni operatorowy Actual replacement.
+  Pełny backend924/8 deselected/10znanychwarnings, frontend243/lint/types PASS.
+- Scoped re-review spec✅/Approved: oba findings fixed, executable lockordering
+  bez odwrotnej krawędzi (replacement/preserved-history są wykluczającymi trybami).
+  Deferred: baseline warnings i istniejący script-wide mypyerror, appgate czysty.
+- Task6 complete(e2ba212..24ae6e8). Task7: konkretne occurrence coverage,
+  jednorazowa pozostałość dokumentu i jawne powody wyłączenia z prognozy.
+  Brak zmian danych, importów, push lub deployu.
+
+## 2026-10-29 — Ochrona Actual gotowa do pełnego gate
+
+- Shared ownerlock i walidacja powiązań przed DML operatorowego replacement;
+  syntetyczny RED3 FK-failures→GREEN9 guardtests, importerfocused89 PASS.
+- Fullbackend w tle, logTask6round1 w ledger. Fresh Ruff(app/tests/script),
+  mypy(app79), frontend lint/tsc/243 PASS. Script-wide mypy ma istniejący błąd
+  dict.get(str|None) poza zmienionymi hunkami; odnotowany do końcowego triage.
+- Nadal runda1 review, brak commitu poprawki. Żadnych rzeczywistych importów.
+
+## 2026-10-29 — Review Task6: kategoria i ujawniona ścieżka Actual
+
+- Poprawiono test kategorii użytej wyłącznie przez dokument, focused6 PASS.
+- Weryfikacja importer-scan ujawniła direct SQL w operatorowym
+  `scripts/migrate_actual.py:replace_legacy_actual_data`. Pierwotne twierdzenie
+  „wyłącznie create_transaction” było niepełne. Task6 obejmuje znalezione mutatory,
+  więc ta ścieżka otrzymuje owner lock i fail-closed guards z testami syntetycznymi.
+- Nadal ta sama runda1 review; fullgate dopiero po zakończeniu zmiany. Nie uruchamiać
+  rzeczywistego importu, operatorowego replacement ani korekty na produkcji.
+
+## 2026-10-29 — Task6 pełny gate zakończony, review w toku
+
+- Backend920 PASS/8 proxy deselected/10 znanych ostrzeżeń,819.44s; frontend243,
+  lint/types PASS. Commit06ba495 obejmuje wyłącznie6 plików Task6.
+- Niezależny reviewer sprawdza ochronę/lock ordering, race i referencje metadanych.
+  Selfreview wskazuje, że test category DELETE ma również referencję postingu;
+  nie deklarować izolowanego pokrycia referencji samego dokumentu.
+- Task6 nadal niezakończony przed verdict. Następnie Task7 coverage/forecast,
+  bez wdrożenia, produkcyjnych migracji i działań na danych użytkownika.
+
+## 2026-10-29 — Task6 focused gate gotowy, pełny zestaw w toku
+
+- Świeży wykonawca zakończył focused78 PASS, w tym rzeczywisty two-session race,
+  odmowę korekty syntetycznej i idempotentne niezmienione daty/pending.
+  Nie ma jeszcze commitu. Pełny backend uruchomiony przez kontrolera; log/sessionID
+  w ledger, bez równoległych runnerów DB. Frontend243/lint/tsc i backendruff/mypy79 PASS.
+- Po pełnym wyniku explicit-path commit i niezależny review, dopiero potem Task7.
+  Wszystkie dane syntetyczne w finanse_test, produkcja nietknięta.
+
+## 2026-10-29 — Task6 przekazany do dokończenia testów
+
+- Poprzedni wykonawca dwukrotnie zakończył executionwindow przed pełnym deliverable;
+  nie było decyzji produktowej wymagającej użytkownika. Brak commitu Task6.
+- Zachowano centralny owner lock i guardy oraz3 testy. Świeży wykonawca kończy
+  wyłącznie brakujące focused tests/race/correction i poprawki wykryte testami;
+  kontroler uruchomi fullgate oddzielnie, potem commit/review. Nie pomijamy gate.
+- HEAD nadal e2ba212. Bez operacji produkcyjnych, sessionID/chronologia w ledger.
+
+## 2026-10-29 — Task5 zakończony, ochrona księgi następna
+
+- Commite2ba212: min2/suma wszystkich signedbase0 dla historycznego expense,
+  testy sekwencji alokacji/replay/odrzucenia/unlink i pełne snapshoty ledger,
+  konfigurowalne candidate datewindow oraz query/datebounds/include_older/reasons.
+  Backend915/frontend243/lint/types PASS, scoped review wszystkie findings addressed.
+- Task5 complete(1d99505..e2ba212). Task6 centralizuje wspólny owner allocation
+  lock i chroni mutatory ledger/metadata/importów przed zmianą linked expense.
+  Task7 prognoza i konflikty pozostają osobnym krokiem; brak deployu/mutacji produkcji.
+
+## 2026-10-29 — Wznowienie Task5 Round1 po limicie
+
+- Wykonawca przerwany limitem; HEAD nadal e4a4de7, jedyna częściowa zmiana kodowa
+  to test_bill_payments.py. Bez uruchomionych testów i bez nowego commitu poprawki.
+- Świeży wykonawca przejmuje tę samą rundę/base/findings: bilans istniejących
+  transakcji, testy invariantów i kandydaci dat/window/search. Zachować testy i nie
+  powtarzać ukończonych Tasks1–4. SessionID i dowody w SDD ledger.
+
+## 2026-10-29 — Task5 częściowe płatności zaimplementowane, invarianty w review
+
+- Commite4a4de7: jawne alokacje/unlink, candidates i atomic new expense PLN,
+  wersje/idempotency/audit i owner allocation lock. Backend912/frontend243 PASS.
+- Niezależny review wymaga sprawdzania bilansu całej historycznej transakcji przed
+  alokacją, property-sequence tests/snapshot niezmienności ledger (nie sam count)
+  i configured datewindow/explainable reasons oraz dostępu do starszych candidates.
+  Zlecono Task5 Round1, brak ukończenia taska przed scoped re-review.
+- Cross-task: Task6 ledger mutatory muszą brać wspólny lock PRZED row lockami;
+  Task7 ma wypełnić seam recurring_conflicts i coverage prognozy. Nie zgubić przy
+  zmianie kontekstu. Produkcja i dokumenty użytkownika bez zmian.
+
+## 2026-10-29 — Task4 zakończony, zaczynamy częściowe rozliczenia
+
+- Commit1d99505 poprawia fallback duplikatów bez NIP, audyt detach/attach obu stron
+  przenoszenia źródła, prawdziwy test dwóch sesji, zachowanie processed Inbox i puste
+  drafty nieobsługiwanych typów. Backend900/frontend243/lint/types PASS.
+- Scoped re-review: wszystkie findings fixed, brak nowego Critical/Important.
+  Uczciwie zapisano brak przechwyconego pre-fix RED przy tej wznowionej rundzie;
+  nie fabrykować dowodu. Review końcowy ma znać tę uwagę o procesie.
+- Task4 complete(f580be8..1d99505). Task5 alokacje częściowe, pojemność postingu,
+  idempotentne nowe expense rozpoczynany; zero działań na realnych fakturach/księdze.
+
+## 2026-10-29 — Rejestr zaimplementowany, Task4 w poprawkach review
+
+- Commit23494fd: prepare/approve/update/list/get rejestru, duplikaty, attach/move źródeł,
+  lifecycle i audyt/idempotency. Backend893 PASS, lint/mypy PASS. Zatwierdzanie nie
+  tworzy postingów. Dane użytkownika/produkcja nietknięte.
+- Review wymaga poprawy weak duplicate fallback gdy numer istnieje bez NIP,
+  pełnego audytu obu stron source move, rzeczywistego two-session race test oraz
+  regresji processed Inbox. Dodatkowo unsupported/multiple review emptydraft test.
+  Wykonawca Task4 poprawia Round1; scoped re-review przed Task5. Szczegóły w ledger.
+
+## 2026-10-29 — Task3 zakończony, rozpoczynamy rejestr faktur
+
+- Test-only commitf580be8 zamraża datę domenową cashflow na14.08.2026; asercje API
+  pierwsze200/powtórne422 zachowane. Niezależny przegląd spec/quality Approved.
+  Pełny backend886 PASS/8 proxy deselected/10known warnings, frontend243/lint/types PASS.
+- Task3 complete(b4c81e3..f580be8) po scoped review OCR i naprawie pełnego gate.
+  Task4 rejestr/approve/source/duplikaty rozpoczynany; to nadal zero nowych postingów
+  przy samym zatwierdzeniu faktury. Produkcja/stare dokumenty nietknięte.
+
+## 2026-10-29 — OCR replay review clean, gate starego testu daty
+
+- Commit0f210b7 poprawia kolejkę: service zwraca is_new, router enqueue tylko dla
+  nowej komendy; awaria Redis po commicie zachowuje pending i receipt do recovery.
+  Scoped re-review: finding addressed, brak nowego Critical/Important.
+- Focused11 PASS, lint/types i frontend243 PASS. Pełny backend885 PASS/1 FAIL:
+  stary test potwierdzenia cashflow używał dnia bieżącego29, schema pozwala1–28.
+  Nie rozszerzać reguły produkcyjnej dla naprawy testu. Zlecono deterministic date
+  fixture analogicznie do sąsiedniego testu, osobny test-only commit i review.
+- Task3 pozostaje w gate do pełnego zielonego zestawu. Nie przetwarzano dokumentów
+  użytkownika i nie wdrażano aplikacji; wszystkie działania na testowej bazie.
+
+## 2026-10-29 — Wznowienie po limicie wykonawcy Task3
+
+- Użytkownik polecił dokończyć. Sprawdzono ledger/log i częściowe zmiany Round2;
+  poprzedni agent zakończył błędem limitu, bez commitu lub końcowej weryfikacji.
+  Zachowano jego zmiany router/service/test, zadanie przejął świeży wykonawca.
+- Nadal Task3 Round2, FIX_BASEa0a7a7b, nie nowe zadanie ani powtórzenie Tasks1/2.
+  Nowy sessionID w SDD ledger. Weryfikacja i scoped review przed Task4.
+  Brak uruchomień na danych produkcyjnych; stare faktury użytkownika nietknięte.
+
+## 2026-10-28 — Task3 odczyt zaimplementowany, review retry w poprawkach
+
+- Commit98bf242: wersjonowane propozycje i osobny ARQ job/recovery, jawny OCR retry,
+  typowane nullable pola, brak nowego legacy Inbox expense. Backend879/frontend243,
+  lint/types PASS; nie uruchamiano ekstrakcji na realnych starych dokumentach.
+- Niezależny reviewer: replay retry-ocr nie używał receipt mimo Idempotency-Key
+  i ponownie resetował attempt_count. Brak wymaganych testów LLM timeout/manual
+  fallback, obcego404 i recovery-idempotencji. Zlecono poprawki wykonawcy Task3;
+  dodatkowo zgodny typ zwrotny ReviewSuggestion. Task3 nadal NIE complete.
+- Fix BASE98bf242, reviewer/implementer session IDs i pełne findings w SDD ledger.
+  Po poprawkach scoped re-review, dopiero potem Task4 rejestr/approve/duplikaty.
+- Fix round1 commita0a7a7b przeszedł backend884/frontend243 i lint/types; review
+  potwierdził zamknięcie pierwotnych uwag, ale wykrył nowe enqueue OCR także na replay
+  w routerze. Zlecono round2: enqueue tylko nowej komendy i endpoint-level test
+  tego samego klucza. Task3 nadal niezaliczony; nie pomijać ponownego przeglądu.
+
+## 2026-10-28 — Task2 review clean, Task3 odczyt i propozycje
+
+- Commitb4c81e3 uzupełnia test Alembic: lokalny disposable schema reset, upgrade
+  c2→7f, kontrola tabel/constraints i zachowanie synthetic legacy row, downgrade/reupgrade.
+  Dodatkowy test odrzuca duplikat pary dokument/posting. Nazwany source unique constraint
+  zgodny w ORM i migracji. Runner log i report w SDD workspace, nie dane produkcyjne.
+- Backend874/frontend243, lint/types PASS. Scoped re-review: wszystkie findings addressed,
+  brak nowej regresji; kontrola safety gate wyłącznie localhost finanse_test potwierdzona.
+  Task2 complete(0ad78ea..b4c81e3). Następny Task3, bez nowych księgowań/importów.
+- Task3 może rozszerzyć wąski enum ReviewSuggestion z foundation o statement/loan_schedule/
+  other, żeby nie interpretować wyciągu/harmonogramu jako jednej faktury. Dotyczy tylko
+  propozycji/rozpoznania, nie modeli ledger. Szczegóły/rulings i sessionIDs w ledger.
+
+## 2026-10-28 — Task2 modele gotowe, migration gate do uzupełnienia
+
+- Commit73e6517: modele rejestru/źródeł/alokacji/coverage/idempotencji i wersji
+  ekstrakcji, schematy oraz addytywna migracja7f8ce92bda94 poc2d7e9a4f801.
+  Backend874/frontend243 i lint/types PASS. Nie ma jeszcze nowego obiegu w UI.
+- Review spec❌/quality needs fixes: test migracji badał bytecode, a integracje
+  metadata.create_all nie dowodziły wykonania Alembic. Zlecono rzeczywisty integration
+  upgrade/downgrade/reupgrade z zachowaniem synthetic row i logiem; dodatkowo test
+  unikalności alokacji. Task2 nadal NIE complete. Następne zadanie po scoped re-review.
+- Produkcja, stare dokumenty i ledger bez zmian; runner migracji tylko lokalna finanse_test.
+
+## 2026-10-28 — Task1 review clean, Task2 rozpoczęty
+
+- Poprawka0ad78ea normalizuje brak multipart MIME przed walidacją i dodaje endpoint
+  tests dla None/octet-stream. Fixture testowa zawiera teraz rzeczywisty GPS IFD,
+  sprawdza jego obecność w oryginale i brak w pochodnej przy poprawnej orientacji.
+- Backend867 PASS/8 proxy deselected/10 warningów, frontend243 i lint/types PASS.
+  Scoped re-review oryginalnego reviewera: wszystkie2 Important+1 powiązana Minor
+  addressed, brak nowej regresji. Task1 complete (afb9350..0ad78ea), bez deployu.
+- Rozpoczęto Task2: relacyjne modele rejestru/źródeł/alokacji/coverage/idempotencji
+  i wersji ekstrakcji, addytywna migracja tylko lokalna. Nie powtarzać Task1 po compaction;
+  szczegółowy ledger `.superpowers/sdd/2026-10-28-financial-document-workflow/progress.md`.
+
+## 2026-10-28 — Task1 zaimplementowany, review wymaga dwóch poprawek
+
+- Commit26ae8bc obejmuje HEIC/HEIF, kanoniczne MIME i prywatne original/preview,
+  ograniczoną konwersję JPEG. Raport: backend866 PASS/8 proxy deselected/10 istniejących
+  warningów; frontend243, lint/types PASS. To nie ukończenie całego obiegu faktur.
+- Niezależny reviewer wskazał brak obsługi MIME=None w multipart przed parserem
+  oraz pozorny test usuwania GPS (fixture bez GPS). Poprawki zlecono oryginalnemu
+  wykonawcy, wraz z endpoint-level tests dla pustego/generic MIME; review fix diff
+  konieczne przed zaliczeniem Task1 i rozpoczęciem Task2. Szczegóły/sessionID w ledger.
+- Controller osobno odtworzył lokalny image HEIF contract: obraz169b966c73fe,
+  bez sieci, read-only, non-root, no-caps/no-new-privileges; parser=image/heif PASS.
+  Nie uruchamiano nic na produkcyjnych kontenerach ani danych. Nie dublowano DB suite.
+
+## 2026-10-28 — Start implementacji obiegu dokumentów, wariant z review każdego zadania
+
+- Użytkownik wybrał wariant1. W istniejącym linked worktree utworzono lokalną gałąź
+  `feat/financial-document-workflow` odafb9350. Innych dirty docs nie stashowano ani
+  nie commitowano automatycznie; nowe commity tylko ze wskazanymi ścieżkami tasków.
+- Sprawdzono bazę: frontend243/lint/tsc PASS, backend858 PASS/8 proxy deselected,
+  10 warningów bibliotek/aliasu422; ruff/mypy69 PASS przed zmianami. Pełny backend
+  na tym VPS trwa571s. Pierwsze próby120/600s na starym shared venv timeoutowały;
+  test migracji wymaga jawnego TEST_DATABASE_URL. Zdiagnozowano też stare zależności.
+- backend/.venv i frontend/node_modules wskazują do /opt; nie instalować tam nowych
+  pakietów. Przygotowano `/tmp/opencode/financial-document-venv` z kopii venv i poprawiono
+  shebangs; zainstalowano wymagania repo wyłącznie w kopii. Każde uruchomienie narzędzi
+  feature przez tę kopię, jawna lokalna finanse_test127.0.0.1:5432. Produkcja nietknięta.
+- SDD workspace/ledger per plan w `.superpowers/sdd/2026-10-28-financial-document-workflow/`;
+  preflight tasków i wspólnych plików/kontraktów zapisany. Przy odtworzeniu sesji
+  czytać ledger i git log, nie powtarzać ukończonych tasków. Niższa instrukcja skill
+  o modelach nie nadpisuje ograniczenia narzędzia (nie wybieramy modelu bez prośby).
+- Rozpoczęto wyłącznie Task1 u implementera, sessionID w ledger. Następnie osobny
+  reviewer spec+quality i fix-loop przed Task2. Raport wykonawcy nie jest zaliczeniem
+  taska. Pozostałe9 zadań oczekuje; żadnych deklaracji ukończenia całej funkcji.
+
+## 2026-10-28 — Zakres zaakceptowany, HEIC dopisany i plan implementacji
+
+- Użytkownik zaakceptował projekt, dopytał o format aparatu; zaakceptował propozycję
+  HEIC/HEIF→lokalna pochodna JPEG z zachowaniem prywatnego oryginału. Poprzednie
+  ograniczenie bez HEIC nie obowiązuje. Polecił kontynuować; brak zgody na deploy/import.
+- Aktualizacja spec i plan `docs/superpowers/plans/2026-10-28-financial-document-workflow.md`:
+  10 zadań TDD, dokładne moduły/kontrakty, idempotency/safe cents, owner scope,
+  alokacje w wielu sesjach, ledger guards, source-discriminated cashflow/coverage,
+  UI starych PDF i nowych zdjęć, niezależne review oraz real phone gate.
+- Sprawdzono obecny parser, worker, walidację, zależności, command definitions i flow
+  potwierdzania cyklicznego. Obecny mały4096-byte JSON IPC nie nadaje się do obrazów;
+  plan wymaga oddzielnego ograniczonego transportu dla JPEG. Kanoniczny MIME musi być
+  zapisany z parsera, nie z nagłówka telefonu. Aparat może dać pusty MIME/nazwę blob.
+- Oficjalne docs pillow-heif: plugin rejestruje się w procesie parsera, thumbnails=False,
+  nie w FastAPI; PyPI w chwili sprawdzenia1.8.1 ma cp312 wheels Linux i Python>=3.10.
+  To kandydat przypięty w planie; przed instalacją security/compatibility gate.
+  Nie instalowano biblioteki i nie tworzono obrazów/plików produktu.
+- Self-review planu obejmuje sekcje spec, zgodność typów i5 klas Review Focus. Plan
+  jest dokumentem, checkboxy realizacji puste; nie wykonano testów produktu ani DB.
+  W repo nadal inne niezacommitowane dokumenty tej rozmowy — nie stashować/commitować
+  automatycznie. Następny krok: przegląd planu i wybór wykonania, potem worktree/realizacja.
+
+## 2026-10-28 — Projekt faktury/paragony przed Q7, do akceptacji
+
+- Użytkownik zaakceptował zmianę kolejności, nie pełną specyfikację. Przygotowano
+  `docs/superpowers/specs/2026-10-28-financial-document-workflow-design.md` na bazie
+  istniejącego documents/worker/Inbox i cashflow; żadnych zmian produktu lub danych.
+- Kierunek: osobny stan odczytu/weryfikacji/deklaracji zapłaty/uzgodnienia, rejestr
+  handlowy w finance, kilka źródeł jednego zakupu, częściowe alokacje do postingów
+  istniejących expense. „Zarejestruj płatność” jawne i atomowe, nie zleca przelewu.
+  Rejestracja faktury nie generuje kosztu ani postingów, dokument paid != bank paid.
+- Autor proponuje ograniczenie pierwszego etapu: rejestr PLN/EUR/USD, rozliczenie
+  i sumy prognozy tylko PLN; PDF/JPEG/PNG i aparat, bez HEIC/składania kilku zdjęć.
+  Nie są to jeszcze potwierdzone przez użytkownika ograniczenia. Bez integracji Drive.
+- Nadchodzące z pozostałości faktury, nie kopia w monthly ScheduledFinanceItem.
+  Jawne pokrycie konkretnego wystąpienia usuwa podwójny plan; osobne kontrakty source
+  w forecast i zablokowany stary confirm pokrytych wystąpień. Brak terminu/konta/FX
+  nie może dawać pozornie kompletnej prognozy. Konto karty i spłata karty rozróżnione.
+- Builder check wskazał3 pytania; rozstrzygnięto: explicit coverage > heurystyka,
+  źródło unikalne także po archiwizacji (ponowne otwarcie), legacy processed Inbox
+  bez przepisywania historii (relacja i kandydat do ręcznego powiązania).
+  Ponowny check: „nothing important left”. To review projektowe, nie testy produktu.
+- Następnie przedstawić pełny zakres do akceptacji. Dopiero po zgodzie writing-plans
+  i plan implementacji. Nie uruchamiać OCR na starych uploadach, importów lub zmian
+  istniejących faktur bez osobnej zgody; ich stan produkcyjny nie był sprawdzany.
+
+## 2026-10-28 — Uzgodnienia obiegu dokumentów i istniejące faktury
+
+- Użytkownik chce wyłącznie dodawać dokumenty do aplikacji, bez Google ani innych
+  integracji; dodatkowo zdjęcia faktur/paragonów bezpośrednio z aparatu telefonu.
+  Pyta o wgrane faktury, rejestr i powiązanie z nadchodzącymi płatnościami.
+- Sprawdzono kod Dokumentów, workera i Inbox, zgodny w badanych plikach z /opt/finanse.
+  Istnieje lista plików/statusy odczytu, PDF/JPEG/PNG i przycisk Aparat. Zdjęcie→PDF→OCR
+  nie nadpisuje oryginału. Brak HEIC w walidacji. Upload jest pojedynczy, nie zbiorczy.
+- Worker po OCR próbuje rozpoznać jedną sugestię expense/income (kwota/waluta/opis/
+  data/kategoria) i zapisać ją w Inbox. Brak terminu płatności, numeru faktury, statusu
+  zapłaty lub rozliczenia częściowego. DONE oznacza odczyt, nie poprawne dane finansowe
+  ani zapłatę; błędy ekstrakcji finansowej nie muszą zmienić statusu DONE.
+- Inbox ma konwersję Transakcja wyłączoną. Nie ma obecnie automatycznej ścieżki
+  faktura→zobowiązanie→Nadchodzące; nie obiecywać użytkownikowi, że faktury już tam są.
+  Nie odczytywano jego konkretnych nowych uploadów ani ich statusów na produkcji.
+- Kierunek do zatwierdzenia: prywatny oryginał i odczyt z weryfikacją, rejestr faktur
+  z numerem/sprzedawcą/terminem/walutą/pozostałą kwotą, odrębny stan OCR i rozliczenia,
+  nieopłacone w Nadchodzących po zatwierdzeniu, opłacone/paragony jako dowód istniejącej
+  transakcji. Częściowe płatności i dopasowanie bez ponownego kosztu; duplikaty zdjęcie/
+  PDF wymagają czegoś więcej niż SHA. To projekt, nie wdrożenie lub zgoda na księgowanie.
+- Bez zmian produktu/DB/deployu. Następny krok: uzgodnić priorytet faktury→płatności
+  wobec dalszego Q7 i przygotować wspólny projekt, zamiast osobnych importerów.
+
 ## 2026-10-28 — Podgląd harmonogramu Q7, bez zapisu aplikacyjnego
 
 - Użytkownik zaakceptował wyłącznie podgląd59 rat i porównanie istniejącej płatności.

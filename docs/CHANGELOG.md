@@ -2,6 +2,52 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-10-30 — Obieg faktur i paragonów
+
+### Added
+- Prywatny oryginał i podgląd, bezpieczna pochodna HEIC/HEIF oraz wersjonowane
+  propozycje OCR z ręcznym retry. Rejestr faktur/paragonów ze źródłami i duplikatami.
+- Jawne częściowe alokacje istniejących wydatków PLN i osobna, potwierdzana rejestracja
+  nowej płatności. Sam upload lub zatwierdzenie dokumentu nie tworzy kosztu.
+- Faktury w Nadchodzących z pozostałą kwotą, konkretnym zastąpionym wystąpieniem
+  reguły, jawną decyzją replace/separate i powodami wyłączenia z prognozy PLN.
+- Interfejs aparatu i galerii, globalna kolejka wielu plików, prywatny podgląd,
+  ręczne sprawdzanie danych, jawne ponowienie OCR i decyzje attach/separate duplikatów.
+- Rejestr z filtrami, historią alokacji i źródłami, osobnym zapisem płatności,
+  coverage oraz jawnym odświeżeniem/porównaniem po konflikcie wersji409.
+
+### Fixed
+- Ochrona powiązanych transakcji i metadanych, wspólne blokady konkurencyjnych mutacji.
+  Etapy1–10 oprogramowania po poprawkach i niezależnych review; gate941backend/
+  278frontend/75E2E+1celowydesktopskip, lint/types/build PASS.
+- Brak podwójnej prognozy przed decyzją coverage; jawne ostrzeżenie rzeczywistego
+  skutku alokacji dla estymaty cyklicznej i potwierdzenie przed przypisaniem.
+- Stabilne klucze zagnieżdżonych decyzji i ponowione409 wymagające właściwego refetch.
+- Lokalny parserDocker i izolowana syntetyczna migracja/dump-restore PASS.
+- Funkcja pozostaje niewdrożona; całościowy przegląd gałęzi trwa. Certyfikacja
+  rzeczywistych Android/iPhone BLOCKED (brak urządzeń). Raport:
+  `docs/audits/2026-10-28-financial-document-workflow-verification.md`.
+  Bez importu, migracji produkcji lub zmian dokumentów użytkownika.
+
+## [Discussed] — 2026-10-28 — Dokumenty z aplikacji i zdjęć telefonu
+
+### Added
+- Projekt rejestru faktur/paragonów, jawnych alokacji istniejących płatności i integracji
+  z Nadchodzącymi bez powielania estymat cyklicznych. Dwa przebiegi builder check;
+  końcowo brak istotnych pytań. Zakres zaakceptowany przez użytkownika.
+- Plan implementacji10 zadań z kontraktami i gate testów, w tym HEIC/HEIF, częściowe
+  rozliczenia, ochrona księgi, brak podwójnej prognozy i obsługa istniejących uploadów.
+
+### Changed
+- Zakres przyszłego obiegu: wyłącznie dodawanie plików w aplikacji, bez Google Drive;
+  zdjęcia faktur/paragonów wymagane. Rozpoznano lukę między istniejącym OCR/Inbox
+  a rejestrem faktur, rozliczaniem i Nadchodzącymi. Bez implementacji lub zmian danych.
+- Użytkownik zatwierdził pierwszeństwo obiegu faktur i paragonów przed dalszym Q7.
+- Do pierwszego wydania włączono HEIC/HEIF: zachowanie oryginału i lokalna pochodna
+  JPEG bez danych lokalizacji, bez wymagania ręcznej konwersji na telefonie.
+- Po wyborze wariantu z niezależnymi przeglądami rozpoczęto implementację w lokalnej
+  gałęzi, od bezpiecznej obsługi zdjęć. Bez wdrożenia lub zmian dokumentów użytkownika.
+
 ## [Reviewed] — 2026-10-28 — Podgląd harmonogramu Q7 bez zapisu
 
 - Po zgodzie użytkownika przygotowano komplet59 rat z oryginalnego PDF, z kontrolą
