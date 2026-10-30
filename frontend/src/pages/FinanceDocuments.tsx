@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { AxiosError } from "axios";
 import { useSearchParams } from "react-router-dom";
 import {
-  stableKey,
+  useSerializedIntentKey,
   useBill,
   useBills,
   useUnlinkBillPayment,
@@ -24,6 +24,19 @@ export function FinanceDocuments() {
   const selected = useBill(selectedId);
   const lifecycle = useUpdateBillLifecycle();
   const unlinkPayment = useUnlinkBillPayment();
+  const keyFor = useSerializedIntentKey();
+  const [stale, setStale] = useState<{
+    before: number;
+    current?: number;
+  } | null>(null);
+  const staleError = (error: unknown) => {
+    if ((error as AxiosError).response?.status === 409 && selected.data)
+      setStale({ before: selected.data.version });
+  };
+  const updateFilter = <K extends keyof BillFilters>(
+    key: K,
+    value: BillFilters[K],
+  ) => setFilters((current) => ({ ...current, [key]: value, offset: 0 }));
   const select = (id: string | null) =>
     setParams((current) => {
       const next = new URLSearchParams(current);
@@ -55,6 +68,77 @@ export function FinanceDocuments() {
             <option value="receipt">Paragony</option>
           </select>
         </label>
+        <label className="text-sm text-gray-300">
+          Przegląd
+          <select
+            aria-label="Przegląd"
+            className="input ml-2"
+            value={filters.review ?? ""}
+            onChange={(event) =>
+              updateFilter(
+                "review",
+                (event.target.value || undefined) as BillFilters["review"],
+              )
+            }
+          >
+            <option value="">Wszystkie</option>
+            <option value="draft">Szkice</option>
+            <option value="approved">Zatwierdzone</option>
+            <option value="rejected">Odrzucone</option>
+          </select>
+        </label>
+        <label className="text-sm text-gray-300">
+          Deklaracja płatności
+          <select
+            aria-label="Deklaracja płatności"
+            className="input ml-2"
+            value={filters.declaration ?? ""}
+            onChange={(event) =>
+              updateFilter(
+                "declaration",
+                (event.target.value || undefined) as BillFilters["declaration"],
+              )
+            }
+          >
+            <option value="">Wszystkie</option>
+            <option value="unknown">Nieznana</option>
+            <option value="payable">Do zapłaty</option>
+            <option value="declared_paid">Deklarowana zapłata</option>
+          </select>
+        </label>
+        <label className="text-sm text-gray-300">
+          Termin od
+          <input
+            aria-label="Termin od"
+            type="date"
+            className="input ml-2"
+            value={filters.due_from ?? ""}
+            onChange={(event) =>
+              updateFilter("due_from", event.target.value || undefined)
+            }
+          />
+        </label>
+        <label className="text-sm text-gray-300">
+          Termin do
+          <input
+            aria-label="Termin do"
+            type="date"
+            className="input ml-2"
+            value={filters.due_to ?? ""}
+            onChange={(event) =>
+              updateFilter("due_to", event.target.value || undefined)
+            }
+          />
+        </label>
+        <input
+          aria-label="Szukaj dokumentu"
+          className="input"
+          placeholder="Sprzedawca, numer lub opis"
+          value={filters.query ?? ""}
+          onChange={(event) =>
+            updateFilter("query", event.target.value || undefined)
+          }
+        />
         <label className="text-sm text-gray-300">
           Stan
           <select
@@ -132,22 +216,73 @@ export function FinanceDocuments() {
             onPayment={() => setDialog("payment")}
             onCoverage={() => setDialog("coverage")}
             onLifecycle={(nextLifecycle) =>
-              lifecycle.mutate({
-                billId: selected.data.id,
-                expected_version: selected.data.version,
-                lifecycle: nextLifecycle,
-                idempotencyKey: stableKey(),
-              })
+              lifecycle.mutate(
+                {
+                  billId: selected.data.id,
+                  expected_version: selected.data.version,
+                  lifecycle: nextLifecycle,
+                  idempotencyKey: keyFor({
+                    action: "lifecycle",
+                    billId: selected.data.id,
+                    version: selected.data.version,
+                    lifecycle: nextLifecycle,
+                  }),
+                },
+                { onError: staleError },
+              )
             }
             onUnlink={(allocationId) =>
-              unlinkPayment.mutate({
-                billId: selected.data.id,
-                allocationId,
-                expected_version: selected.data.version,
-                idempotencyKey: stableKey(),
-              })
+              unlinkPayment.mutate(
+                {
+                  billId: selected.data.id,
+                  allocationId,
+                  expected_version: selected.data.version,
+                  idempotencyKey: keyFor({
+                    action: "unlink-allocation",
+                    billId: selected.data.id,
+                    version: selected.data.version,
+                    allocationId,
+                  }),
+                },
+                { onError: staleError },
+              )
             }
+            actionsDisabled={!!stale}
           />
+          {stale ? (
+            <div className="mt-3 rounded border border-amber-700 p-3 text-sm text-amber-100">
+              Wersja przed zmianą: {stale.before}.
+              {stale.current != null
+                ? ` Aktualna wersja: ${stale.current}.`
+                : ""}
+              <div className="mt-2 flex gap-2">
+                <button
+                  className="btn-secondary"
+                  type="button"
+                  onClick={async () => {
+                    const result = await selected.refetch();
+                    if (result.data)
+                      setStale((value) =>
+                        value
+                          ? { ...value, current: result.data.version }
+                          : value,
+                      );
+                  }}
+                >
+                  Odśwież aktualny dokument
+                </button>
+                {stale.current != null ? (
+                  <button
+                    className="btn-primary"
+                    type="button"
+                    onClick={() => setStale(null)}
+                  >
+                    Rozumiem — podejmuję nową decyzję
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           {lifecycle.error || unlinkPayment.error ? (
             <p role="alert" className="mt-3 text-sm text-red-300">
               Nie udało się zmienić dokumentu. Pola pozostają bez zmian.{" "}

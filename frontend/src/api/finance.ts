@@ -255,6 +255,8 @@ export interface CashflowForecast {
   days: Array<{ date: string; projected_balance_pln: number }>;
   suggestions: CashflowSuggestion[];
   budgets: CashflowBudgetSummary;
+  has_excluded_obligations?: boolean;
+  excluded_obligation_reasons?: string[];
 }
 
 export function cashflowStatusLabel(status: CashflowStatus) {

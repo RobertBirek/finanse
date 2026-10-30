@@ -5,10 +5,25 @@ import {
 } from "../../../api/documents";
 import { type BillResponse } from "../../../api/bills";
 
-const amount = (value: number, currency: string) =>
-  new Intl.NumberFormat("pl-PL", { style: "currency", currency }).format(
-    value / 100,
+const amount = (value: number | null, currency: string | null) =>
+  value == null || currency == null
+    ? "—"
+    : new Intl.NumberFormat("pl-PL", { style: "currency", currency }).format(
+        value / 100,
+      );
+const lifecycleEffect = (bill: BillResponse) => {
+  const remaining = amount(bill.remaining_minor, bill.currency);
+  const coverage = bill.coverage;
+  return (
+    <>
+      Zmiana stanu usunie z prognozy pozostałe {remaining} faktury.
+      {coverage
+        ? ` Zastąpienie wystąpienia ${coverage.occurrence_date} pozostanie, więc estymata cykliczna nie wróci automatycznie.`
+        : ""}{" "}
+      Potwierdź świadomie.
+    </>
   );
+};
 function SourceFile({ documentId }: { documentId: string }) {
   const preview = useDocumentPreview(documentId);
   const original = useDocumentOriginal(documentId);
@@ -62,6 +77,7 @@ export function BillDetail({
   onCoverage,
   onLifecycle,
   onUnlink,
+  actionsDisabled = false,
 }: {
   bill: BillResponse;
   onClose: () => void;
@@ -69,8 +85,9 @@ export function BillDetail({
   onCoverage: () => void;
   onLifecycle: (lifecycle: BillResponse["lifecycle"]) => void;
   onUnlink: (allocationId: string) => void;
+  actionsDisabled?: boolean;
 }) {
-  const currency = bill.currency ?? "PLN";
+  const currency = bill.currency;
   const [pendingAction, setPendingAction] = useState<
     | { kind: "lifecycle"; lifecycle: BillResponse["lifecycle"] }
     | { kind: "unlink"; allocationId: string }
@@ -176,7 +193,9 @@ export function BillDetail({
         <button
           type="button"
           className="btn-primary"
-          disabled={currency !== "PLN" || bill.lifecycle !== "active"}
+          disabled={
+            actionsDisabled || currency !== "PLN" || bill.lifecycle !== "active"
+          }
           onClick={onPayment}
         >
           Powiąż płatność
@@ -184,7 +203,7 @@ export function BillDetail({
         <button
           type="button"
           className="btn-secondary"
-          disabled={bill.lifecycle !== "active"}
+          disabled={actionsDisabled || bill.lifecycle !== "active"}
           onClick={onCoverage}
         >
           Wpływ na prognozę
@@ -194,6 +213,7 @@ export function BillDetail({
             <button
               type="button"
               className="btn-secondary"
+              disabled={actionsDisabled}
               onClick={() =>
                 setPendingAction({ kind: "lifecycle", lifecycle: "archived" })
               }
@@ -203,6 +223,7 @@ export function BillDetail({
             <button
               type="button"
               className="btn-secondary"
+              disabled={actionsDisabled}
               onClick={() =>
                 setPendingAction({ kind: "lifecycle", lifecycle: "cancelled" })
               }
@@ -214,6 +235,7 @@ export function BillDetail({
           <button
             type="button"
             className="btn-secondary"
+            disabled={actionsDisabled}
             onClick={() =>
               setPendingAction({ kind: "lifecycle", lifecycle: "active" })
             }
@@ -234,7 +256,7 @@ export function BillDetail({
         >
           {pendingAction.kind === "unlink"
             ? "Odłączenie zmieni wyłącznie powiązanie dokumentu; zapis księgi pozostanie bez zmian."
-            : "Zmiana stanu może zmienić uwzględnienie dokumentu w prognozie. Potwierdź świadomie."}
+            : lifecycleEffect(bill)}
           <div className="mt-2 flex gap-2">
             <button
               type="button"

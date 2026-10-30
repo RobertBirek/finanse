@@ -1,9 +1,10 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { AxiosError } from "axios";
 import {
-  stableKey,
+  useSerializedIntentKey,
   useAllocateBillPayment,
   useBillCandidates,
+  useBill,
   useRecordBillPayment,
   type BillResponse,
 } from "../../../api/bills";
@@ -35,6 +36,7 @@ export function BillPaymentDialog({
     date_to: dateTo || undefined,
     include_older: includeOlder,
   });
+  const currentBill = useBill(bill.id, false);
   const allocate = useAllocateBillPayment();
   const record = useRecordBillPayment();
   const accounts = useAccounts();
@@ -44,21 +46,18 @@ export function BillPaymentDialog({
   const [category, setCategory] = useState(bill.category_id ?? "");
   const [mode, setMode] = useState<"link" | "record">("link");
   const [selected, setSelected] = useState<string | null>(null);
-  const idempotency = useRef<{ key: string; intent: string } | null>(null);
+  const keyFor = useSerializedIntentKey();
   const [conflict, setConflict] = useState(false);
+  const [comparison, setComparison] = useState<BillResponse | null>(null);
+  const [needsNewDecision, setNeedsNewDecision] = useState(false);
+  const activeBill = comparison ?? bill;
   const selectedCandidate = candidates.data?.items.find(
     (candidate) => candidate.posting_id === selected,
   );
   const value = minor(amount);
   const mutationError = allocate.error || record.error;
-  const keyFor = (intent: Record<string, unknown>) => {
-    const serialized = JSON.stringify(intent);
-    if (idempotency.current?.intent !== serialized)
-      idempotency.current = { intent: serialized, key: stableKey() };
-    return idempotency.current.key;
-  };
   const submit = () => {
-    if (value == null) return;
+    if (value == null || needsNewDecision) return;
     if (mode === "link" && selectedCandidate) {
       const confirm_recurring_conflict =
         selectedCandidate.recurring_conflicts.length && conflict
@@ -66,21 +65,27 @@ export function BillPaymentDialog({
           : undefined;
       allocate.mutate(
         {
-          billId: bill.id,
-          version: bill.version,
+          billId: activeBill.id,
+          version: activeBill.version,
           posting_id: selectedCandidate.posting_id,
           amount_minor: value,
           ...(confirm_recurring_conflict ? { confirm_recurring_conflict } : {}),
           idempotencyKey: keyFor({
             mode,
-            billId: bill.id,
-            version: bill.version,
+            billId: activeBill.id,
+            version: activeBill.version,
             posting_id: selectedCandidate.posting_id,
             amount_minor: value,
             confirm_recurring_conflict,
           }),
         },
-        { onSuccess: onClose },
+        {
+          onSuccess: onClose,
+          onError: (error) => {
+            if ((error as AxiosError).response?.status === 409)
+              setNeedsNewDecision(true);
+          },
+        },
       );
     }
     if (mode === "record" && account && category) {
@@ -89,8 +94,8 @@ export function BillPaymentDialog({
         bill.description ?? bill.supplier_name ?? "Płatność dokumentu";
       record.mutate(
         {
-          billId: bill.id,
-          version: bill.version,
+          billId: activeBill.id,
+          version: activeBill.version,
           account_id: account,
           category_id: category,
           payment_date,
@@ -99,8 +104,8 @@ export function BillPaymentDialog({
           confirm_new_payment: true,
           idempotencyKey: keyFor({
             mode,
-            billId: bill.id,
-            version: bill.version,
+            billId: activeBill.id,
+            version: activeBill.version,
             account_id: account,
             category_id: category,
             payment_date,
@@ -109,7 +114,13 @@ export function BillPaymentDialog({
             confirm_new_payment: true,
           }),
         },
-        { onSuccess: onClose },
+        {
+          onSuccess: onClose,
+          onError: (error) => {
+            if ((error as AxiosError).response?.status === 409)
+              setNeedsNewDecision(true);
+          },
+        },
       );
     }
   };
@@ -302,6 +313,39 @@ export function BillPaymentDialog({
             : ""}
         </p>
       ) : null}
+      {needsNewDecision ? (
+        <div className="mt-3 rounded border border-amber-700 p-3 text-sm text-amber-100">
+          Wersja przed zmianą: {bill.version}. Zapis jest zablokowany do
+          odświeżenia i świadomej nowej decyzji.
+          {comparison ? (
+            <p className="mt-1">
+              Aktualna wersja: {comparison.version}; pozostało:{" "}
+              {(comparison.remaining_minor / 100).toFixed(2)} PLN.
+            </p>
+          ) : null}
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={async () => {
+                const result = await currentBill.refetch();
+                if (result.data) setComparison(result.data);
+              }}
+            >
+              Odśwież aktualny dokument
+            </button>
+            {comparison ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setNeedsNewDecision(false)}
+              >
+                Rozumiem — podejmuję nową decyzję
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       <div className="mt-5 flex justify-end gap-2">
         <button type="button" className="btn-secondary" onClick={onClose}>
           Anuluj
@@ -311,6 +355,7 @@ export function BillPaymentDialog({
           className="btn-primary"
           disabled={
             value == null ||
+            needsNewDecision ||
             (mode === "link"
               ? !selectedCandidate ||
                 (!!selectedCandidate.recurring_conflicts.length && !conflict)

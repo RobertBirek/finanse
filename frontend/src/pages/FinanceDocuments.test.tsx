@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BillResponse } from "../api/bills";
@@ -71,5 +71,54 @@ describe("FinanceDocuments register", () => {
     renderRegister([{ ...bill, id: "unknown", currency: null }]);
     expect((await screen.findAllByText("—")).length).toBe(2);
     expect(screen.queryByText("100,00 zł")).not.toBeInTheDocument();
+  });
+
+  it("sends review, declaration, date and query filters and resets pagination", async () => {
+    const get = vi.spyOn(api, "get").mockResolvedValue({
+      data: { items: [], total: 100, limit: 25, offset: 25 },
+    } as never);
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter initialEntries={["/finances/documents"]}>
+          <FinanceDocuments />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByText("Łącznie: 100");
+    fireEvent.change(screen.getByLabelText("Szukaj dokumentu"), {
+      target: { value: "energia" },
+    });
+    fireEvent.change(screen.getByLabelText("Przegląd"), {
+      target: { value: "approved" },
+    });
+    fireEvent.change(screen.getByLabelText("Deklaracja płatności"), {
+      target: { value: "payable" },
+    });
+    fireEvent.change(screen.getByLabelText("Termin od"), {
+      target: { value: "2026-10-01" },
+    });
+    fireEvent.change(screen.getByLabelText("Termin do"), {
+      target: { value: "2026-10-31" },
+    });
+
+    await waitFor(() =>
+      expect(get).toHaveBeenLastCalledWith(
+        "/finance/bills",
+        expect.objectContaining({
+          params: expect.objectContaining({
+            query: "energia",
+            review: "approved",
+            declaration: "payable",
+            due_from: "2026-10-01",
+            due_to: "2026-10-31",
+            offset: 0,
+          }),
+        }),
+      ),
+    );
   });
 });

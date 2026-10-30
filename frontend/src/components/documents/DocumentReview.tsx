@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   useApproveBill,
   useAttachBillSource,
   useBill,
   useDuplicateCandidates,
   usePrepareBill,
+  useSerializedIntentKey,
   type BillApprove,
 } from "../../api/bills";
 import {
@@ -56,6 +58,7 @@ const mutationError = (error: unknown) =>
   "Nie udało się zapisać zmian. Popraw pola i spróbuj ponownie.";
 
 export function DocumentReview({ documentId, onClose }: Props) {
+  const navigate = useNavigate();
   const review = useDocumentReview(documentId);
   const preview = useDocumentPreview(documentId);
   const original = useDocumentOriginal(documentId);
@@ -64,6 +67,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
   const prepareBill = usePrepareBill();
   const approve = useApproveBill();
   const attach = useAttachBillSource();
+  const keyFor = useSerializedIntentKey();
   const [draftBill, setDraftBill] = useState<{
     id: string;
     version: number;
@@ -71,9 +75,12 @@ export function DocumentReview({ documentId, onClose }: Props) {
   const [attachTargetId, setAttachTargetId] = useState<string | null>(null);
   const duplicates = useDuplicateCandidates(draftBill?.id ?? null);
   const attachTarget = useBill(attachTargetId);
+  const currentDraft = useBill(draftBill?.id ?? null, false);
   const categories = useCategories();
   const accounts = useAccounts();
   const [form, setForm] = useState<Form>(empty);
+  const [conflict, setConflict] = useState<"draft" | "attach" | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const previewUrl = useMemo(
     () => (preview.data ? URL.createObjectURL(preview.data) : null),
     [preview.data],
@@ -138,7 +145,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
     );
   };
   const approveDraft = (separate: boolean) => {
-    if (!draftBill) return;
+    if (!draftBill || conflict) return;
     const total_minor = minor(form.total);
     if (total_minor === null) return;
     const data: BillApprove = {
@@ -159,7 +166,24 @@ export function DocumentReview({ documentId, onClose }: Props) {
       payment_account_id: form.payment_account_id || null,
       ...(separate ? { duplicate_decision: "separate" as const } : {}),
     };
-    approve.mutate({ billId: draftBill.id, data });
+    approve.mutate(
+      {
+        billId: draftBill.id,
+        data,
+        idempotencyKey: keyFor({
+          action: "approve-bill",
+          billId: draftBill.id,
+          data,
+        }),
+      },
+      {
+        onSuccess: (bill) => navigate(`/finances/documents?bill=${bill.id}`),
+        onError: (error) => {
+          if ((error as AxiosError).response?.status === 409)
+            setConflict("draft");
+        },
+      },
+    );
   };
   return (
     <Dialog
@@ -213,6 +237,16 @@ export function DocumentReview({ documentId, onClose }: Props) {
           )}
         </section>
         <section>
+          {prepare.error ? (
+            <p role="alert" className="mb-3 text-sm text-red-300">
+              Nie udało się przygotować przeglądu dokumentu. Spróbuj ponownie.
+            </p>
+          ) : null}
+          {retryOcr.error ? (
+            <p role="alert" className="mb-3 text-sm text-red-300">
+              Nie udało się ponowić OCR. Możesz poprawić pola ręcznie.
+            </p>
+          ) : null}
           {prepareBill.error || approve.error || attach.error ? (
             <p role="alert" className="mb-3 text-sm text-red-300">
               {mutationError(
@@ -223,6 +257,49 @@ export function DocumentReview({ documentId, onClose }: Props) {
                 ? " Dane pozostały w formularzu; odśwież przegląd i porównaj wersję dokumentu przed kolejną próbą."
                 : ""}
             </p>
+          ) : null}
+          {conflict ? (
+            <div className="mb-3 rounded border border-amber-700 p-3 text-sm text-amber-100">
+              Wersja przed zmianą:{" "}
+              {conflict === "draft"
+                ? draftBill?.version
+                : attachTarget.data?.version}
+              .
+              {currentVersion != null
+                ? ` Aktualna wersja: ${currentVersion}.`
+                : ""}
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={async () => {
+                    const result =
+                      conflict === "draft"
+                        ? await currentDraft.refetch()
+                        : await attachTarget.refetch();
+                    if (result.data) {
+                      setCurrentVersion(result.data.version);
+                      if (conflict === "draft" && draftBill)
+                        setDraftBill({
+                          ...draftBill,
+                          version: result.data.version,
+                        });
+                    }
+                  }}
+                >
+                  Odśwież aktualny dokument
+                </button>
+                {currentVersion != null ? (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setConflict(null)}
+                  >
+                    Rozumiem — podejmuję nową decyzję
+                  </button>
+                ) : null}
+              </div>
+            </div>
           ) : null}
           {review.isError || !review.data ? (
             <button
@@ -276,14 +353,31 @@ export function DocumentReview({ documentId, onClose }: Props) {
                   attachTarget={attachTarget.data}
                   attachTargetLoading={attachTarget.isLoading}
                   onConfirmAttach={(target) =>
-                    attach.mutate({
-                      billId: target.id,
-                      documentId,
-                      expectedVersion: target.version,
-                    })
+                    attach.mutate(
+                      {
+                        billId: target.id,
+                        documentId,
+                        expectedVersion: target.version,
+                        idempotencyKey: keyFor({
+                          action: "attach-bill-source",
+                          billId: target.id,
+                          documentId,
+                          expectedVersion: target.version,
+                        }),
+                      },
+                      {
+                        onSuccess: (bill) =>
+                          navigate(`/finances/documents?bill=${bill.id}`),
+                        onError: (error) => {
+                          if ((error as AxiosError).response?.status === 409)
+                            setConflict("attach");
+                        },
+                      },
+                    )
                   }
                   onSeparate={() => approveDraft(true)}
                   onApprove={() => approveDraft(false)}
+                  disabled={!!conflict}
                 />
               )}
             </>
@@ -452,6 +546,7 @@ function DuplicateChoices({
   onConfirmAttach,
   onSeparate,
   onApprove,
+  disabled,
 }: {
   candidates: { id: string; reasons: string[] }[];
   loading: boolean;
@@ -461,6 +556,7 @@ function DuplicateChoices({
   onConfirmAttach: (target: { id: string; version: number }) => void;
   onSeparate: () => void;
   onApprove: () => void;
+  disabled: boolean;
 }) {
   if (loading)
     return (
@@ -470,7 +566,12 @@ function DuplicateChoices({
     );
   if (!candidates.length)
     return (
-      <button type="button" className="btn-primary mt-3" onClick={onApprove}>
+      <button
+        type="button"
+        className="btn-primary mt-3"
+        onClick={onApprove}
+        disabled={disabled}
+      >
         Zatwierdź do rejestru
       </button>
     );
@@ -486,6 +587,7 @@ function DuplicateChoices({
           type="button"
           className="btn-secondary mt-2 mr-2"
           onClick={() => onAttach(candidate)}
+          disabled={disabled}
         >
           Dołącz do istniejącego
         </button>
@@ -504,7 +606,12 @@ function DuplicateChoices({
           Potwierdź dołączenie
         </button>
       )}
-      <button type="button" className="btn-primary mt-2" onClick={onSeparate}>
+      <button
+        type="button"
+        className="btn-primary mt-2"
+        onClick={onSeparate}
+        disabled={disabled}
+      >
         Zarejestruj osobno
       </button>
     </div>

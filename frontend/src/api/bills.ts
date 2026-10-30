@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import api from "../lib/api";
 
 export type BillKind = "invoice" | "receipt";
@@ -48,6 +49,9 @@ export type BillFilters = {
   review?: BillResponse["review"];
   declaration?: PaymentDeclaration;
   lifecycle?: BillResponse["lifecycle"];
+  due_from?: string;
+  due_to?: string;
+  query?: string;
   limit?: number;
   offset?: number;
 };
@@ -97,6 +101,16 @@ export type BillApprove = {
 export type DuplicateCandidate = { id: string; reasons: string[] };
 const headers = () => ({ "Idempotency-Key": crypto.randomUUID() });
 export const stableKey = () => crypto.randomUUID();
+/** Reuse a key only for an identical user decision; changed payloads are new intents. */
+export function useSerializedIntentKey() {
+  const current = useRef<{ key: string; serialized: string } | null>(null);
+  return (intent: Record<string, unknown>) => {
+    const serialized = JSON.stringify(intent, Object.keys(intent).sort());
+    if (current.current?.serialized !== serialized)
+      current.current = { serialized, key: stableKey() };
+    return current.current.key;
+  };
+}
 const invalidate = (
   client: ReturnType<typeof useQueryClient>,
   ledger = false,
@@ -131,13 +145,15 @@ export function useApproveBill() {
     mutationFn: async ({
       billId,
       data,
+      idempotencyKey,
     }: {
       billId: string;
       data: BillApprove;
+      idempotencyKey: string;
     }) =>
       (
         await api.post<BillResponse>(`/finance/bills/${billId}/approve`, data, {
-          headers: headers(),
+          headers: { "Idempotency-Key": idempotencyKey },
         })
       ).data,
     onSuccess: () => invalidate(client),
@@ -150,16 +166,21 @@ export function useAttachBillSource() {
       billId,
       documentId,
       expectedVersion,
+      idempotencyKey,
     }: {
       billId: string;
       documentId: string;
       expectedVersion: number;
+      idempotencyKey: string;
     }) =>
       (
         await api.post<BillResponse>(
           `/finance/bills/${billId}/sources/${documentId}`,
           undefined,
-          { params: { expected_version: expectedVersion }, headers: headers() },
+          {
+            params: { expected_version: expectedVersion },
+            headers: { "Idempotency-Key": idempotencyKey },
+          },
         )
       ).data,
     onSuccess: () => invalidate(client),
@@ -177,10 +198,10 @@ export function useDuplicateCandidates(billId: string | null) {
       ).data,
   });
 }
-export function useBill(billId: string | null) {
+export function useBill(billId: string | null, enabled = true) {
   return useQuery({
     queryKey: ["finance", "bills", billId],
-    enabled: !!billId,
+    enabled: !!billId && enabled,
     queryFn: async () =>
       (await api.get<BillResponse>(`/finance/bills/${billId}`)).data,
   });

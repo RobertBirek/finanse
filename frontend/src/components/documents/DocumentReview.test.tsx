@@ -26,7 +26,14 @@ const apiState = vi.hoisted(() => ({
   attach: vi.fn(),
   approve: vi.fn(),
   approveError: null as unknown,
+  prepareError: null as unknown,
+  retryOcrError: null as unknown,
+  navigate: vi.fn(),
+  refetchBill: vi
+    .fn()
+    .mockResolvedValue({ data: { id: "draft-1", version: 5 } }),
 }));
+vi.mock("react-router-dom", () => ({ useNavigate: () => apiState.navigate }));
 
 vi.mock("../../api/documents", () => ({
   useDocumentReview: () => ({
@@ -37,12 +44,18 @@ vi.mock("../../api/documents", () => ({
   usePrepareDocumentReview: () => ({
     mutate: apiState.prepare,
     isPending: false,
+    error: apiState.prepareError,
   }),
-  useRetryDocumentOcr: () => ({ mutate: apiState.retryOcr, isPending: false }),
+  useRetryDocumentOcr: () => ({
+    mutate: apiState.retryOcr,
+    isPending: false,
+    error: apiState.retryOcrError,
+  }),
   useDocumentPreview: () => ({ data: undefined, isLoading: false }),
   useDocumentOriginal: () => ({ data: undefined, isLoading: false }),
 }));
 vi.mock("../../api/bills", () => ({
+  useSerializedIntentKey: () => () => "review-intent-key",
   usePrepareBill: () => ({ mutate: apiState.prepare, isPending: false }),
   useApproveBill: () => ({
     mutate: apiState.approve,
@@ -56,6 +69,7 @@ vi.mock("../../api/bills", () => ({
   useBill: () => ({
     data: { id: "bill-existing", version: 9 },
     isLoading: false,
+    refetch: apiState.refetchBill,
   }),
   useAttachBillSource: () => ({ mutate: apiState.attach, isPending: false }),
 }));
@@ -127,6 +141,7 @@ describe("DocumentReview", () => {
     expect(apiState.approve).toHaveBeenCalledWith(
       expect.objectContaining({
         billId: "draft-1",
+        idempotencyKey: expect.any(String),
         data: expect.objectContaining({
           sale_date: "2026-10-02",
           category_id: "category-1",
@@ -134,6 +149,7 @@ describe("DocumentReview", () => {
           duplicate_decision: "separate",
         }),
       }),
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
     fireEvent.click(
       screen.getByRole("button", { name: "Dołącz do istniejącego" }),
@@ -141,11 +157,15 @@ describe("DocumentReview", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Potwierdź dołączenie" }),
     );
-    expect(apiState.attach).toHaveBeenCalledWith({
-      billId: "bill-existing",
-      documentId: "document-1",
-      expectedVersion: 9,
-    });
+    expect(apiState.attach).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billId: "bill-existing",
+        documentId: "document-1",
+        expectedVersion: 9,
+        idempotencyKey: expect.any(String),
+      }),
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
   });
 
   it("shows a distinct OCR retry action after an OCR error", () => {
@@ -154,6 +174,18 @@ describe("DocumentReview", () => {
     expect(apiState.retryOcr).toHaveBeenCalledWith({
       documentId: "document-1",
     });
+  });
+
+  it("shows separate prepare and OCR retry failures", () => {
+    apiState.prepareError = new Error("prepare failed");
+    apiState.retryOcrError = new Error("retry failed");
+    renderReview();
+    expect(
+      screen.getByText(/Nie udało się przygotować przeglądu dokumentu/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Nie udało się ponowić OCR/i)).toBeInTheDocument();
+    apiState.prepareError = null;
+    apiState.retryOcrError = null;
   });
 
   it("old_pdf_can_prepare_without_upload", () => {
@@ -182,10 +214,11 @@ describe("DocumentReview", () => {
   });
 
   it("keeps manual fields visible and tells the reviewer to refresh after a 409 approval conflict", async () => {
-    apiState.approve.mockImplementation(() => {
+    apiState.approve.mockImplementation((_input, options) => {
       apiState.approveError = {
         response: { status: 409, data: { detail: "version_conflict" } },
       };
+      options?.onError?.(apiState.approveError);
     });
     const rendered = renderReview();
     fireEvent.change(screen.getByLabelText("Data sprzedaży"), {
@@ -208,7 +241,37 @@ describe("DocumentReview", () => {
       /Dane pozostały w formularzu; odśwież przegląd i porównaj wersję dokumentu/,
     );
     expect(screen.getByLabelText("Data sprzedaży")).toHaveValue("2026-10-03");
+    expect(
+      screen.getByRole("button", { name: "Zarejestruj osobno" }),
+    ).toBeDisabled();
+    fireEvent.click(
+      screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
+    );
+    await screen.findByText(/Aktualna wersja: 5/);
+    fireEvent.click(
+      screen.getByRole("button", { name: /podejmuję nową decyzję/ }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Zarejestruj osobno" }),
+    ).toBeEnabled();
     apiState.approveError = null;
+    apiState.approve.mockReset();
+  });
+
+  it("opens the approved document register detail after a separate approval succeeds", async () => {
+    apiState.approve.mockImplementation((_input, options) =>
+      options?.onSuccess?.({ id: "approved-bill" }),
+    );
+    renderReview();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    await screen.findByRole("button", { name: "Zarejestruj osobno" });
+    fireEvent.click(screen.getByRole("button", { name: "Zarejestruj osobno" }));
+
+    expect(apiState.navigate).toHaveBeenCalledWith(
+      "/finances/documents?bill=approved-bill",
+    );
     apiState.approve.mockReset();
   });
 });

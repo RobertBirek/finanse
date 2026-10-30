@@ -69,4 +69,52 @@ describe("BillDetail", () => {
     expect(onLifecycle).toHaveBeenCalledWith("archived");
     expect(onUnlink).toHaveBeenCalledWith("allocation-1");
   });
+
+  it("never formats an unknown currency as PLN and blocks settlement", () => {
+    render(
+      <BillDetail
+        bill={{ ...bill, currency: null } as never}
+        onClose={vi.fn()}
+        onPayment={vi.fn()}
+        onCoverage={vi.fn()}
+        onLifecycle={vi.fn()}
+        onUnlink={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("—")).toHaveLength(2);
+    expect(screen.queryByText(/100,00\s*zł/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Powiąż płatność" }),
+    ).toBeDisabled();
+  });
+
+  it("explains that cancelling an invoice removes its remaining forecast amount but keeps its replacement coverage", () => {
+    render(
+      <BillDetail
+        bill={{
+          ...bill,
+          coverage: {
+            scheduled_item_id: "schedule-1",
+            occurrence_date: "2026-10-15",
+            choice: "replace",
+            source_lifecycle: "active",
+          },
+        }}
+        onClose={vi.fn()}
+        onPayment={vi.fn()}
+        onCoverage={vi.fn()}
+        onLifecycle={vi.fn()}
+        onUnlink={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Anuluj dokument" }));
+    expect(
+      screen.getByText(/usunie z prognozy pozostałe 60,00\s*zł/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/zastąpienie wystąpienia 2026-10-15 pozostanie/i),
+    ).toBeInTheDocument();
+  });
 });

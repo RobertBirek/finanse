@@ -102,7 +102,7 @@ describe("BillPaymentDialog", () => {
     ]);
   });
 
-  it("preserves entered fields after 409 and retries the identical payload with its stable idempotency key", async () => {
+  it("preserves entered fields after 409, refetches the current bill, and requires a new decision", async () => {
     const post = vi.spyOn(api, "post").mockRejectedValue({
       response: { status: 409, data: { detail: "version_conflict" } },
     });
@@ -117,18 +117,35 @@ describe("BillPaymentDialog", () => {
     await screen.findByRole("alert");
     expect(screen.getByLabelText("Kwota (PLN)")).toHaveValue("12.34");
     expect(screen.getByText(/Odśwież dokument i porównaj/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Powiąż płatność" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
+    ).toBeInTheDocument();
     const firstKey = (
       post.mock.calls[0][2] as { headers: { "Idempotency-Key": string } }
     ).headers["Idempotency-Key"];
+    vi.spyOn(api, "get").mockResolvedValue({
+      data: { ...bill, version: 5, paid_minor: 4000, remaining_minor: 6000 },
+    } as never);
+    fireEvent.click(
+      screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
+    );
+    await screen.findByText(/Aktualna wersja: 5/);
+    fireEvent.click(
+      screen.getByRole("button", { name: /podejmuję nową decyzję/ }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Powiąż płatność" }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
     expect(
       (post.mock.calls[1][2] as { headers: { "Idempotency-Key": string } })
         .headers["Idempotency-Key"],
-    ).toBe(firstKey);
+    ).not.toBe(firstKey);
     expect(post.mock.calls[1][1]).toMatchObject({
       posting_id: "p1",
       amount_minor: 1234,
+      version: 5,
     });
   });
 
@@ -146,6 +163,16 @@ describe("BillPaymentDialog", () => {
       post.mock.calls[0][2] as { headers: { "Idempotency-Key": string } }
     ).headers["Idempotency-Key"];
 
+    vi.spyOn(api, "get").mockResolvedValue({
+      data: { ...bill, version: 5 },
+    } as never);
+    fireEvent.click(
+      screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
+    );
+    await screen.findByText(/Aktualna wersja: 5/);
+    fireEvent.click(
+      screen.getByRole("button", { name: /podejmuję nową decyzję/ }),
+    );
     fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
       target: { value: "59.99" },
     });
@@ -156,7 +183,10 @@ describe("BillPaymentDialog", () => {
       (post.mock.calls[1][2] as { headers: { "Idempotency-Key": string } })
         .headers["Idempotency-Key"],
     ).not.toBe(firstKey);
-    expect(post.mock.calls[1][1]).toMatchObject({ amount_minor: 5999 });
+    expect(post.mock.calls[1][1]).toMatchObject({
+      amount_minor: 5999,
+      version: 5,
+    });
   });
 
   it("records a separate PLN expense only after showing candidates and invalidates ledger views", async () => {

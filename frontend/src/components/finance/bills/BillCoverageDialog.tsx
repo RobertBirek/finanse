@@ -2,12 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import api from "../../../lib/api";
 import {
-  stableKey,
+  useSerializedIntentKey,
   useBillCoverage,
   type BillResponse,
   type CoverageCandidate,
 } from "../../../api/bills";
 import { Dialog } from "../../Dialog";
+const pln = (value: number | null | undefined) =>
+  value == null
+    ? "niedostępna"
+    : new Intl.NumberFormat("pl-PL", {
+        style: "currency",
+        currency: "PLN",
+      }).format(value / 100);
 export function BillCoverageDialog({
   bill,
   onClose,
@@ -25,8 +32,14 @@ export function BillCoverageDialog({
       ).data,
   });
   const coverage = useBillCoverage();
+  const keyFor = useSerializedIntentKey();
   const [selected, setSelected] = useState<CoverageCandidate | null>(null);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const coveredEstimate = candidates.data?.find(
+    (candidate) =>
+      candidate.scheduled_item_id === bill.coverage?.scheduled_item_id &&
+      candidate.occurrence_date === bill.coverage?.occurrence_date,
+  )?.estimate_amount_pln;
   const decide = (choice: "replace" | "separate") =>
     coverage.decide.mutate(
       {
@@ -39,7 +52,14 @@ export function BillCoverageDialog({
               occurrence_date: selected.occurrence_date,
             }
           : {}),
-        idempotencyKey: stableKey(),
+        idempotencyKey: keyFor({
+          action: "coverage",
+          billId: bill.id,
+          version: bill.version,
+          choice,
+          scheduled_item_id: selected?.scheduled_item_id,
+          occurrence_date: selected?.occurrence_date,
+        }),
       },
       { onSuccess: onClose },
     );
@@ -54,11 +74,14 @@ export function BillCoverageDialog({
         <>
           <p className="mt-3 text-sm text-gray-300">
             Faktura zastępuje wystąpienie {bill.coverage.occurrence_date}.
-            Odpięcie przywróci estymatę cykliczną.
+            Faktura: {pln(bill.total_minor)}, pozostało:{" "}
+            {pln(bill.remaining_minor)}. Odpięcie przywróci estymatę{" "}
+            {pln(coveredEstimate)} dla tego terminu.
           </p>
           {confirmUnlink ? (
             <div className="mt-4 rounded border border-amber-700 p-3 text-sm text-amber-100">
-              Potwierdź: estymata cykliczna zostanie przywrócona do prognozy.
+              Potwierdź: estymata dla {bill.coverage.occurrence_date} (
+              {pln(coveredEstimate)}) zostanie przywrócona do prognozy.
               <div className="mt-2 flex gap-2">
                 <button
                   className="btn-primary"
@@ -68,7 +91,11 @@ export function BillCoverageDialog({
                       {
                         billId: bill.id,
                         expected_version: bill.version,
-                        idempotencyKey: stableKey(),
+                        idempotencyKey: keyFor({
+                          action: "unlink-coverage",
+                          billId: bill.id,
+                          version: bill.version,
+                        }),
                       },
                       { onSuccess: onClose },
                     )
