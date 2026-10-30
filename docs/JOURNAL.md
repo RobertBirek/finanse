@@ -2,6 +2,57 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-31 — Zatwierdzony projekt vision, plan implementacji ukończony
+
+- Użytkownik zaakceptował pełny projekt automatycznego odczytu zdjęć; następnie
+  polecił dokończyć przygotowanie. Zapisano szczegółowy plan8 zadań:
+  docs/superpowers/plans/2026-10-31-automatic-document-vision.md .
+- Zadania: modele/config/migracja -> normalizacja -> adapter strict JSON -> trwałe
+  joby/claim/CAS/limity/epoch -> upload/alternatywy -> status/polityka -> UI bez
+  utraty edycji -> invariants/E2E/migration/review. Każde ma RED/GREEN i commitgate.
+- Decyzje planu: oddzielne document_processing_jobs i usage/policy w PostgreSQL,
+  legacy default, nowy image review bez DocumentText, bez modelnames w kodzie.
+  Rezerwacja callu atomowa raz perlease; timeout/recovery nie obiecują exactlyoncebilling.
+- Self-review pokrycia spec/interfejsów/reviewfocus wykonany. Następny krok to
+  potwierdzenie planu/sposobu wykonania, nie odczyt produkcji lub aktywacja preview.
+- Tylko dokumentacja, bez zmian backend/frontend/infra, testów na prywatnych zdjęciach,
+  sekretów czy danych finansowych. Zastane dirtydocs Velo/Q7 zachowane.
+
+## 2026-10-30 — Projekt automatycznego odczytu obrazów, bez implementacji
+
+- Po porównaniu dwóch zdjęć użytkownik poprosił o plan i wybrał automatyczne
+  wysyłanie nowych zdjęć do zewnętrznego AI. Ręczne zatwierdzanie danych/płatności
+  pozostaje osobnym krokiem. To nie zgoda na wdrożenie ani aktywację preview.
+- Projekt: docs/superpowers/specs/2026-10-30-automatic-document-vision-design.md .
+  Osobna konfiguracja modelu vision, przygotowanie EXIF/RGB/bezGPS, trwałe zamiary
+  w DB, idempotencja/lease/limity i brak kosztów przy GET/duplikacie, legacy default.
+- Builder check ses_e70f96774ffepQb3s4XPfw0MgB wskazał dwa pytania o równoległy OCR
+  i fallback. Autor przyjął jawnie: vision zastępuje automatyczne OCR nowych obrazów,
+  brak automatycznego fallbacku; lokalne OCR tylko z akcji człowieka, bez chainedLLM.
+- PDF/finanse bez zmian; stare obrazy bez backfillu. Konkretny provider/model/klucz/
+  limity/egress są warunkiem oddzielnej aktywacji, nie są dziś włączane ani kopiowane.
+- Następny krok: zatwierdzenie pełnego projektu -> writing-plans. Nie pisać kodu
+  ani wykonywać migracji/retry danych przed zgodą. Zastane dirtydocs Velo zachowane.
+
+## 2026-10-30 — Diagnoza dwóch zdjęć telefonu, bez poprawki aplikacji
+
+- Użytkownik zgłosił problem po wykonaniu dwóch zdjęć i wyraził zgodę na zewnętrzny
+  odczyt wizyjny. Asystent odczytał obrazy w rozmowie przed tekstem OCR; nie jest to
+  benchmark API ani włączenie LLM w podglądzie. Szczegóły i odczyt poza repo.
+- Preview READ ONLY: oba JPEG done/attempt1, tekst762/569 znaków jest mocno
+  zniekształcony; tekst na obrazach bokiem. Obie rewizje incomplete/llm_unavailable.
+- Nie mylić zakończenia OCR z poprawnością odczytu. Obecny extractor.py wysyła tekst,
+  nie obraz, więc samo dołączenie klucza nie zastąpi ścieżki vision.
+- Probe EXIFtranspose+dodatkowy obrót kopii w pamięci używa tylko lokalnego Stirling,
+  bez zapisu oryginałów/retry/review/ledger: obie sumy odzyskane, dalsze błędy pozycji.
+  EXIF6 w obu oryginałach; kontrolny probe EXIF-only również odzyskał obie sumy
+  i czytelne nagłówki, nadal błędy cyfr/dat/pozycji. Worker pomija normalizację JPEG
+  przed OCR (wykonuje ją dla HEIF). Stany dokumentów/OCR/review i hashe oryginałów
+  przed/po obu probe identyczne. To diagnoza jakości, nie naprawa ani releasegate.
+  Raport: docs/audits/2026-10-30-phone-photo-diagnosis.md .
+- Brak poprawek kodu, wdrożenia, zmian konfiguracji AI lub płatności. Kolejny krok:
+  przedstawić wynik i uzgodnić zakres zmiany; nie automatyzować księgowania.
+
 ## 2026-10-30 — Izolowany podgląd PR5 uruchomiony i odebrany
 
 - Użytkownik zatwierdził osobny stack/hostHTTPS. `finanse-test.birek.online` działa

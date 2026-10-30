@@ -2,6 +2,30 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Planned] — 2026-10-31 — Plan automatycznego odczytu zdjęć
+
+- Użytkownik zatwierdził pełny projekt vision; przygotowano8 zadań TDD z dokładnymi
+  interfejsami, addytywną migracją, normalizacją EXIF, limitami/lease i testami UI.
+- Plan `docs/superpowers/plans/2026-10-31-automatic-document-vision.md` sprawdzony
+  względem projektu. Brak implementacji lub zmiany podglądu/produkcji; realny model,
+  klucz, retencja i egress pozostają osobnym warunkiem aktywacji.
+
+## [Designed] — 2026-10-30 — Automatyczny odczyt zdjęć przez AI
+
+- Po decyzji użytkownika „automatycznie” przygotowano projekt odczytu nowych obrazów
+  przez model wizyjny, bez obowiązkowego OCR, z ręcznym zatwierdzeniem i bez księgowania.
+- Projekt po builder check: osobna konfiguracja modelu, limity, trwałe rewizje,
+  normalizacja EXIF, prywatność i brak niejawnego przetwarzania starych zdjęć.
+  Pełny zakres czeka na zatwierdzenie; bez implementacji, migracji i aktywacji AI.
+
+## [Diagnosed] — 2026-10-30 — Zdjęcia telefonu w podglądzie
+
+- Po zgodzie porównano bezpośredni odczyt obrazów przez asystenta z zapisanym OCR
+  dwóch zdjęć: upload działa, lecz tekst OCR jest mocno zniekształcony przy tekście
+  bokiem. Puste pola review mają osobny powód: celowo wyłączony LLM w podglądzie.
+- Obecna integracja LLM otrzymuje tekst, nie obraz; nie wystarczy samo dodanie klucza.
+  Diagnoza bez zmian aplikacji, oryginałów i danych finansowych; szczegóły prywatnie.
+
 ## [Preview] — 2026-10-30 — Izolowany test dokumentów na telefonie
 
 ### Added

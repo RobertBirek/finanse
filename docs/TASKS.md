@@ -6,6 +6,16 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Waluty i zobowiązania (2026-10-27)
 
+- [x] Diagnoza dwóch zdjęć telefonu w podglądzie: upload poprawny, zapisany OCR
+  nieczytelny przy tekście bokiem; review incomplete/llm_unavailable. Bezpośredni
+  odczyt obrazów porównany po zgodzie, bez zapisów dokumentów lub płatności.
+- [~] Uzgodnić odczyt obrazów przez model wizyjny, normalizację orientacji JPEG przed
+  OCR i rozdzielenie statusu zadania od jakości/gotowości review. Użytkownik wybrał
+  automatyczne wysyłanie nowych zdjęć. Projekt automatic-document-vision2026-10-30
+  po builder check zatwierdzony w całości; szczegółowy plan8 zadań gotowy31.10,
+  czeka na odbiór i potwierdzenie wykonania. Vision zamiast równoległego OCR,
+  fallback lokalny tylko jawny. Brak implementacji i aktywacji AI w preview.
+
 - [x] Zaprojektować wspólny obieg dokumentów finansowych przed rozszerzeniem Q7:
   użytkownik wybrał wyłącznie upload w aplikacji (bez Google/integracji), także zdjęcia
   faktur i paragonów aparatem telefonu. Ustalić rejestr faktur, termin/pozostałą kwotę,
