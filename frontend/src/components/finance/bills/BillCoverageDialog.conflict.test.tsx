@@ -42,6 +42,7 @@ function renderDialog(
   );
 }
 function arrangeConflict() {
+  let version = 4;
   vi.spyOn(api, "get").mockImplementation((url) => {
     if (String(url).includes("coverage-candidates"))
       return Promise.resolve({
@@ -54,8 +55,9 @@ function arrangeConflict() {
           },
         ],
       } as never);
+    version += 1;
     return Promise.resolve({
-      data: { ...activeBill, version: 5, remaining_minor: 6000 },
+      data: { ...activeBill, version, remaining_minor: 6000 },
     } as never);
   });
 }
@@ -82,6 +84,19 @@ describe("BillCoverageDialog conflicts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Zastąp estymatę" }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
     expect(post.mock.calls[1][1]).toMatchObject({ version: 5 });
+    expect(
+      screen.queryByRole("button", { name: /podejmuję nową decyzję/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
+    );
+    await screen.findByText(/Aktualna wersja: 6/);
+    fireEvent.click(
+      screen.getByRole("button", { name: /podejmuję nową decyzję/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Zastąp estymatę" }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
+    expect(post.mock.calls[2][1]).toMatchObject({ version: 6 });
   });
 
   it("blocks coverage unlink after 409 until it refetches and acknowledges a new version", async () => {
@@ -115,5 +130,22 @@ describe("BillCoverageDialog conflicts", () => {
     expect(
       (remove.mock.calls[1][1] as { params: unknown }).params,
     ).toMatchObject({ expected_version: 5 });
+    expect(
+      screen.queryByRole("button", { name: /podejmuję nową decyzję/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
+    );
+    await screen.findByText(/Aktualna wersja: 6/);
+    fireEvent.click(
+      screen.getByRole("button", { name: /podejmuję nową decyzję/ }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Potwierdź odłączenie" }),
+    );
+    await waitFor(() => expect(remove).toHaveBeenCalledTimes(3));
+    expect(
+      (remove.mock.calls[2][1] as { params: unknown }).params,
+    ).toMatchObject({ expected_version: 6 });
   });
 });

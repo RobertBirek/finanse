@@ -72,8 +72,10 @@ export function BillCoverageDialog({
           if (
             (error as { response?: { status?: number } }).response?.status ===
             409
-          )
+          ) {
+            setComparison(null);
             setNeedsNewDecision(true);
+          }
         },
       },
     );
@@ -118,8 +120,10 @@ export function BillCoverageDialog({
                           if (
                             (error as { response?: { status?: number } })
                               .response?.status === 409
-                          )
+                          ) {
+                            setComparison(null);
                             setNeedsNewDecision(true);
+                          }
                         },
                       },
                     )

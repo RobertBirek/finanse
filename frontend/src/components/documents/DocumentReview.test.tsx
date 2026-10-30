@@ -295,6 +295,57 @@ describe("DocumentReview", () => {
     apiState.attach.mockReset();
   });
 
+  it("requires a target refetch after attach 409 even when a draft conflict was acknowledged", async () => {
+    apiState.approve.mockImplementation((_input, options) =>
+      options?.onError?.({ response: { status: 409 } }),
+    );
+    apiState.attach.mockImplementation((_input, options) =>
+      options?.onError?.({ response: { status: 409 } }),
+    );
+    apiState.refetchBill
+      .mockReset()
+      .mockResolvedValueOnce({ data: { id: "draft-1", version: 5 } })
+      .mockResolvedValueOnce({ data: { id: "bill-existing", version: 6 } });
+    renderReview();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    await screen.findByRole("button", { name: "Zarejestruj osobno" });
+    fireEvent.click(screen.getByRole("button", { name: "Zarejestruj osobno" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
+    );
+    await screen.findByText(/Aktualna wersja: 5/);
+    fireEvent.click(
+      screen.getByRole("button", { name: /podejmuję nową decyzję/ }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dołącz do istniejącego" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Potwierdź dołączenie" }),
+    );
+    expect(
+      screen.queryByRole("button", { name: /podejmuję nową decyzję/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
+    );
+    await screen.findByText(/Aktualna wersja: 6/);
+    fireEvent.click(
+      screen.getByRole("button", { name: /podejmuję nową decyzję/ }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Potwierdź dołączenie" }),
+    );
+    expect(apiState.attach).toHaveBeenLastCalledWith(
+      expect.objectContaining({ expectedVersion: 6 }),
+      expect.anything(),
+    );
+    apiState.approve.mockReset();
+    apiState.attach.mockReset();
+  });
+
   it("opens the approved document register detail after a separate approval succeeds", async () => {
     apiState.approve.mockImplementation((_input, options) =>
       options?.onSuccess?.({ id: "approved-bill" }),

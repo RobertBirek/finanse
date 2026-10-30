@@ -84,7 +84,9 @@ export function DocumentReview({ documentId, onClose }: Props) {
   const accounts = useAccounts();
   const [form, setForm] = useState<Form>(empty);
   const [conflict, setConflict] = useState<"draft" | "attach" | null>(null);
-  const [currentVersion, setCurrentVersion] = useState<number | null>(null);
+  const [refreshedConflict, setRefreshedConflict] = useState<
+    "draft" | "attach" | null
+  >(null);
   const previewUrl = useMemo(
     () => (preview.data ? URL.createObjectURL(preview.data) : null),
     [preview.data],
@@ -183,8 +185,10 @@ export function DocumentReview({ documentId, onClose }: Props) {
       {
         onSuccess: (bill) => navigate(`/finances/documents?bill=${bill.id}`),
         onError: (error) => {
-          if ((error as AxiosError).response?.status === 409)
+          if ((error as AxiosError).response?.status === 409) {
+            setRefreshedConflict(null);
             setConflict("draft");
+          }
         },
       },
     );
@@ -269,8 +273,12 @@ export function DocumentReview({ documentId, onClose }: Props) {
                 ? draftBill?.version
                 : attachTarget.data?.version}
               .
-              {currentVersion != null
-                ? ` Aktualna wersja: ${currentVersion}.`
+              {refreshedConflict === conflict
+                ? ` Aktualna wersja: ${
+                    conflict === "draft"
+                      ? draftBill?.version
+                      : attachComparison?.version
+                  }.`
                 : ""}
               <div className="mt-2 flex gap-2">
                 <button
@@ -282,7 +290,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
                         ? await currentDraft.refetch()
                         : await attachTarget.refetch();
                     if (result.data) {
-                      setCurrentVersion(result.data.version);
+                      setRefreshedConflict(conflict);
                       if (conflict === "draft" && draftBill)
                         setDraftBill({
                           ...draftBill,
@@ -298,7 +306,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
                 >
                   Odśwież aktualny dokument
                 </button>
-                {currentVersion != null ? (
+                {refreshedConflict === conflict ? (
                   <button
                     type="button"
                     className="btn-primary"
@@ -381,8 +389,11 @@ export function DocumentReview({ documentId, onClose }: Props) {
                         onSuccess: (bill) =>
                           navigate(`/finances/documents?bill=${bill.id}`),
                         onError: (error) => {
-                          if ((error as AxiosError).response?.status === 409)
+                          if ((error as AxiosError).response?.status === 409) {
+                            setAttachComparison(null);
+                            setRefreshedConflict(null);
                             setConflict("attach");
+                          }
                         },
                       },
                     )
