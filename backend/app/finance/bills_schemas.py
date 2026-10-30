@@ -104,6 +104,7 @@ class CoverageDecision(BaseModel):
 
 
 class AllocationResponse(BaseModel):
+    id: uuid.UUID
     posting_id: uuid.UUID
     amount_minor: int
 
@@ -123,6 +124,7 @@ class CoverageCandidate(BaseModel):
     scheduled_item_id: uuid.UUID
     occurrence_date: dt.date
     name: str
+    estimate_amount_pln: int | None
 
 
 class BillResponse(BaseModel):

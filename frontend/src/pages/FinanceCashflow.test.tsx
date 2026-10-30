@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FinanceCashflow } from "./FinanceCashflow";
 
@@ -89,6 +90,13 @@ const forecast = {
   },
 };
 
+const renderCashflow = () =>
+  render(
+    <MemoryRouter>
+      <FinanceCashflow />
+    </MemoryRouter>,
+  );
+
 describe("FinanceCashflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -145,7 +153,7 @@ describe("FinanceCashflow", () => {
   });
 
   it("pokazuje tylko konta budżetowe jako konto wypłaty", () => {
-    render(<FinanceCashflow />);
+    renderCashflow();
 
     expect(
       screen.getByRole("heading", { name: "Płynność" }),
@@ -161,7 +169,7 @@ describe("FinanceCashflow", () => {
   });
 
   it("chowa pole kwoty dla metody last_actual", () => {
-    render(<FinanceCashflow />);
+    renderCashflow();
 
     expect(screen.getByLabelText("Kwota (PLN)")).toBeInTheDocument();
 
@@ -193,7 +201,7 @@ describe("FinanceCashflow", () => {
       isError: false,
     });
 
-    render(<FinanceCashflow />);
+    renderCashflow();
 
     expect(screen.getByRole("button", { name: "Potwierdź" })).toBeDisabled();
   });
@@ -225,7 +233,7 @@ describe("FinanceCashflow", () => {
       isError: false,
     });
 
-    render(<FinanceCashflow />);
+    renderCashflow();
 
     fireEvent.click(screen.getByRole("button", { name: "Potwierdź" }));
 
@@ -241,7 +249,7 @@ describe("FinanceCashflow", () => {
   });
 
   it("wypełnia pola formularza przy przejściu z trybu tworzenia do edycji", () => {
-    render(<FinanceCashflow />);
+    renderCashflow();
 
     expect(screen.getByLabelText("Nazwa")).toHaveValue("");
 
@@ -280,7 +288,7 @@ describe("FinanceCashflow", () => {
       isError: false,
     });
 
-    render(<FinanceCashflow />);
+    renderCashflow();
 
     const trigger = screen.getByRole("button", { name: "Potwierdź" });
     trigger.focus();
@@ -304,6 +312,71 @@ describe("FinanceCashflow", () => {
     expect(trigger).toHaveFocus();
   });
 
+  it("opens a financial-document forecast source in its bill instead of the legacy confirmation", () => {
+    hooks.useCashflowForecast.mockReturnValue({
+      data: {
+        ...forecast,
+        suggestions: [
+          {
+            source: "financial_document",
+            source_key: "bill:bill-1",
+            scheduled_item_id: null,
+            financial_document_id: "bill-1",
+            name: "Faktura",
+            type: "expense",
+            due_date: null,
+            amount_pln: 1234,
+            status: "due",
+            included_in_forecast: true,
+            actual_transaction_id: null,
+            exclusion_reasons: [],
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    });
+    renderCashflow();
+    expect(
+      screen.getByRole("link", { name: "Otwórz dokument" }),
+    ).toHaveAttribute("href", "/finances/documents?bill=bill-1");
+    expect(
+      screen.queryByRole("button", { name: "Potwierdź" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/Brak terminu/)).toBeInTheDocument();
+  });
+
+  it("opens the legacy confirmation only for a recurring source", () => {
+    hooks.useCashflowForecast.mockReturnValue({
+      data: {
+        ...forecast,
+        suggestions: [
+          {
+            source: "recurring",
+            source_key: "recurring:item-1:2000-01",
+            scheduled_item_id: "item-1",
+            financial_document_id: null,
+            name: "Czynsz",
+            type: "expense",
+            due_date: "2000-01-01",
+            amount_pln: 250000,
+            status: "due",
+            included_in_forecast: true,
+            actual_transaction_id: null,
+            exclusion_reasons: [],
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    });
+    renderCashflow();
+    fireEvent.click(screen.getByRole("button", { name: "Potwierdź" }));
+    expect(
+      screen.getByRole("dialog", { name: "Potwierdź pozycję" }),
+    ).toBeInTheDocument();
+  });
+
   it("wyłącza dezaktywację i usunięcie w trakcie mutacji", () => {
     hooks.useUpdateScheduledFinanceItem.mockReturnValue({
       mutate: vi.fn(),
@@ -318,7 +391,7 @@ describe("FinanceCashflow", () => {
       variables: "item-1",
     });
 
-    render(<FinanceCashflow />);
+    renderCashflow();
 
     expect(screen.getByRole("button", { name: "Dezaktywuj" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Usuń" })).toBeDisabled();
@@ -335,7 +408,7 @@ describe("FinanceCashflow", () => {
       variables: "item-1",
     });
 
-    render(<FinanceCashflow />);
+    renderCashflow();
 
     expect(
       screen.getByText("Nie udało się usunąć pozycji."),
@@ -343,7 +416,7 @@ describe("FinanceCashflow", () => {
   });
 
   it("nie zamienia pustych pól liczbowych na 0", () => {
-    render(<FinanceCashflow />);
+    renderCashflow();
 
     const paydayDay = screen.getByLabelText(
       "Dzień wypłaty",

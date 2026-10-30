@@ -14,6 +14,7 @@ from app.finance.bills_schemas import (
     CoverageDecision,
     MutationContext,
 )
+from app.finance.dates import _local_today
 from app.finance.document_guards import lock_document_mutations
 from app.finance.models import RecurringOccurrenceCoverage, ScheduledFinanceItem
 
@@ -42,11 +43,14 @@ async def get_coverage_candidates(
             )
         ).scalars()
     )
+    from app.finance.cashflow import _resolve_scheduled_amount
+
     return [
         CoverageCandidate(
             scheduled_item_id=item.id,
             occurrence_date=date(bill.due_date.year, bill.due_date.month, item.due_day),
             name=item.name,
+            estimate_amount_pln=await _resolve_scheduled_amount(db, user_id, item, _local_today()),
         )
         for item in items
     ]

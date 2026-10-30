@@ -165,7 +165,9 @@ async def _response(db: AsyncSession, bill: FinancialDocument) -> BillResponse:
         reconciliation=cast(Any, reconciliation),
         sources=[SourceResponse(document_id=item.document_id) for item in sources],
         allocations=[
-            AllocationResponse(posting_id=item.posting_id, amount_minor=item.amount_minor)
+            AllocationResponse(
+                id=item.id, posting_id=item.posting_id, amount_minor=item.amount_minor
+            )
             for item in allocations
         ],
         extraction_revision_id=revision,

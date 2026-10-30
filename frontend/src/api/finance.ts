@@ -216,16 +216,28 @@ export interface ScheduledFinanceConfirmation {
 export type CashflowStatus =
   "due" | "overdue" | "overdue_uncertain" | "matched_actual" | "amount_unknown";
 
-export interface CashflowSuggestion {
-  scheduled_item_id: string;
+type CashflowSuggestionCommon = {
   name: string;
   type: "income" | "expense";
-  due_date: string;
+  due_date: string | null;
   amount_pln: number | null;
   status: CashflowStatus;
   included_in_forecast: boolean;
   actual_transaction_id: string | null;
-}
+  source_key: string;
+  exclusion_reasons: string[];
+};
+export type CashflowSuggestion =
+  | (CashflowSuggestionCommon & {
+      source: "recurring";
+      scheduled_item_id: string;
+      financial_document_id: null;
+    })
+  | (CashflowSuggestionCommon & {
+      source: "financial_document";
+      scheduled_item_id: null;
+      financial_document_id: string;
+    });
 
 export interface CashflowBudgetSummary {
   total_budget_pln: number;
@@ -377,6 +389,7 @@ export function canConfirmSuggestion(
   todayIso: string,
 ): boolean {
   return (
+    suggestion.due_date !== null &&
     (suggestion.status === "due" || suggestion.status === "overdue") &&
     suggestion.amount_pln !== null &&
     suggestion.amount_pln > 0 &&

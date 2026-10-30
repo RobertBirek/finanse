@@ -6,6 +6,7 @@ const tabs = [
   ["/finances/transactions", "Transakcje", false],
   ["/finances/budgets", "Budżet", false],
   ["/finances/cashflow", "Nadchodzące", false],
+  ["/finances/documents", "Dokumenty", false],
   ["/finances/reports", "Raporty", false],
 ] as const;
 

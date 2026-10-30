@@ -3,8 +3,9 @@ from datetime import date
 import pytest
 from sqlalchemy import select
 from test_bill_payments import create_owner, setup_bill
-from test_cashflow import scheduled_item_data
+from test_cashflow import create_expense, scheduled_item_data
 
+from app.finance import bill_coverage
 from app.finance.bill_coverage import decide_coverage, get_coverage_candidates, unlink_coverage
 from app.finance.bills import set_bill_lifecycle
 from app.finance.bills_schemas import CoverageDecision, MutationContext
@@ -65,6 +66,32 @@ async def test_bill10000_vs_schedule10000_replace_once(db_session) -> None:
     assert scheduled[0].included_in_forecast is False
     assert scheduled[0].exclusion_reasons == ["covered_by_financial_document"]
     assert any(entry.financial_document_id == bill.id for entry in forecast.suggestions)
+
+
+async def test_coverage_candidate_uses_shared_scheduled_estimate(db_session) -> None:
+    owner, bill, item = await _covered_bill(db_session)
+    candidates = await get_coverage_candidates(db_session, owner, bill.id)
+
+    assert candidates[0].estimate_amount_pln == item.fixed_amount_pln
+
+
+async def test_coverage_candidate_uses_finance_local_today_for_last_actual(
+    db_session, monkeypatch
+) -> None:
+    owner, bill, item = await _covered_bill(db_session)
+    item.amount_method = "last_actual"
+    item.fixed_amount_pln = None
+    await create_expense(
+        db_session, owner, item.account_id, item.category_id, 1_111, date(2026, 10, 27)
+    )
+    await create_expense(
+        db_session, owner, item.account_id, item.category_id, 2_222, date(2026, 10, 29)
+    )
+    monkeypatch.setattr(bill_coverage, "_local_today", lambda: date(2026, 10, 28), raising=False)
+
+    candidates = await get_coverage_candidates(db_session, owner, bill.id)
+
+    assert candidates[0].estimate_amount_pln == 1_111
 
 
 async def test_coverage_separate_and_unlink_require_explicit_confirmation(db_session) -> None:

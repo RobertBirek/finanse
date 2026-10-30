@@ -56,7 +56,9 @@ export function ConfirmScheduledItemDialog({
         <div className="flex justify-between gap-4">
           <dt className="text-gray-400">Termin</dt>
           <dd className="text-white">
-            {new Date(suggestion.due_date).toLocaleDateString("pl-PL")}
+            {suggestion.due_date
+              ? new Date(suggestion.due_date).toLocaleDateString("pl-PL")
+              : "Brak terminu"}
           </dd>
         </div>
         <div className="flex justify-between gap-4">

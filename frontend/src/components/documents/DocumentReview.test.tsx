@@ -25,6 +25,7 @@ const apiState = vi.hoisted(() => ({
   retryOcr: vi.fn(),
   attach: vi.fn(),
   approve: vi.fn(),
+  approveError: null as unknown,
 }));
 
 vi.mock("../../api/documents", () => ({
@@ -43,7 +44,11 @@ vi.mock("../../api/documents", () => ({
 }));
 vi.mock("../../api/bills", () => ({
   usePrepareBill: () => ({ mutate: apiState.prepare, isPending: false }),
-  useApproveBill: () => ({ mutate: apiState.approve, isPending: false }),
+  useApproveBill: () => ({
+    mutate: apiState.approve,
+    isPending: false,
+    error: apiState.approveError,
+  }),
   useDuplicateCandidates: () => ({
     data: [{ id: "bill-existing", reasons: ["same_number"] }],
     isLoading: false,
@@ -174,5 +179,36 @@ describe("DocumentReview", () => {
       },
       provenance: { supplier_name: "ocr", total: "ocr" },
     };
+  });
+
+  it("keeps manual fields visible and tells the reviewer to refresh after a 409 approval conflict", async () => {
+    apiState.approve.mockImplementation(() => {
+      apiState.approveError = {
+        response: { status: 409, data: { detail: "version_conflict" } },
+      };
+    });
+    const rendered = renderReview();
+    fireEvent.change(screen.getByLabelText("Data sprzedaży"), {
+      target: { value: "2026-10-03" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    await screen.findByRole("button", { name: "Zarejestruj osobno" });
+    fireEvent.click(screen.getByRole("button", { name: "Zarejestruj osobno" }));
+    rendered.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <DocumentReview documentId="document-1" onClose={vi.fn()} />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByText(/Dane pozostały w formularzu; odśwież przegląd/),
+    ).toHaveTextContent(
+      /Dane pozostały w formularzu; odśwież przegląd i porównaj wersję dokumentu/,
+    );
+    expect(screen.getByLabelText("Data sprzedaży")).toHaveValue("2026-10-03");
+    apiState.approveError = null;
+    apiState.approve.mockReset();
   });
 });

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   canConfirmSuggestion,
   cashflowStatusLabel,
@@ -39,11 +40,12 @@ export function FinanceCashflow({
   const todayIso = localTodayIso();
   const allItems = items.data ?? [];
   const suggestions = forecast.data?.suggestions ?? [];
-  const itemForDialog = suggestionForDialog
-    ? (allItems.find(
-        (item) => item.id === suggestionForDialog.scheduled_item_id,
-      ) ?? null)
-    : null;
+  const itemForDialog =
+    suggestionForDialog && suggestionForDialog.source !== "financial_document"
+      ? (allItems.find(
+          (item) => item.id === suggestionForDialog.scheduled_item_id,
+        ) ?? null)
+      : null;
 
   return (
     <div className="max-w-5xl">
@@ -111,7 +113,7 @@ export function FinanceCashflow({
                 const canConfirm = canConfirmSuggestion(suggestion, todayIso);
                 return (
                   <div
-                    key={suggestion.scheduled_item_id}
+                    key={suggestion.source_key}
                     className="card flex items-center justify-between gap-3 p-4"
                   >
                     <div className="min-w-0">
@@ -119,23 +121,34 @@ export function FinanceCashflow({
                         {suggestion.name}
                       </p>
                       <p className="mt-0.5 text-xs text-gray-500">
-                        {new Date(suggestion.due_date).toLocaleDateString(
-                          "pl-PL",
-                        )}{" "}
+                        {suggestion.due_date
+                          ? new Date(suggestion.due_date).toLocaleDateString(
+                              "pl-PL",
+                            )
+                          : "Brak terminu"}{" "}
                         · {cashflowStatusLabel(suggestion.status)}
                         {suggestion.amount_pln != null
                           ? ` · ${formatPLN(suggestion.amount_pln)} PLN`
                           : ""}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      disabled={!canConfirm}
-                      onClick={() => setSuggestionForDialog(suggestion)}
-                    >
-                      Potwierdź
-                    </button>
+                    {suggestion.source === "financial_document" ? (
+                      <Link
+                        className="btn-primary"
+                        to={`/finances/documents?bill=${suggestion.financial_document_id}`}
+                      >
+                        Otwórz dokument
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        disabled={!canConfirm}
+                        onClick={() => setSuggestionForDialog(suggestion)}
+                      >
+                        Potwierdź
+                      </button>
+                    )}
                   </div>
                 );
               })}

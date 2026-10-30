@@ -16,6 +16,7 @@ import {
 } from "../../api/documents";
 import { useAccounts, useCategories } from "../../api/finance";
 import { Dialog } from "../Dialog";
+import type { AxiosError } from "axios";
 
 type Props = { documentId: string; onClose: () => void };
 type Form = {
@@ -50,6 +51,9 @@ const empty: Form = {
 };
 const minor = (raw: string) =>
   /^\d+(\.\d{1,2})?$/.test(raw) ? Math.round(Number(raw) * 100) : null;
+const mutationError = (error: unknown) =>
+  (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ??
+  "Nie udało się zapisać zmian. Popraw pola i spróbuj ponownie.";
 
 export function DocumentReview({ documentId, onClose }: Props) {
   const review = useDocumentReview(documentId);
@@ -209,6 +213,17 @@ export function DocumentReview({ documentId, onClose }: Props) {
           )}
         </section>
         <section>
+          {prepareBill.error || approve.error || attach.error ? (
+            <p role="alert" className="mb-3 text-sm text-red-300">
+              {mutationError(
+                prepareBill.error || approve.error || attach.error,
+              )}
+              {(approve.error as AxiosError | null)?.response?.status === 409 ||
+              (attach.error as AxiosError | null)?.response?.status === 409
+                ? " Dane pozostały w formularzu; odśwież przegląd i porównaj wersję dokumentu przed kolejną próbą."
+                : ""}
+            </p>
+          ) : null}
           {review.isError || !review.data ? (
             <button
               type="button"
