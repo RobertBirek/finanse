@@ -62,7 +62,6 @@ class DocumentResponse(BaseModel):
     attempt_count: int = 0
     next_attempt_at: dt.datetime | None = None
     last_error_code: str | None = None
-    storage_path: str
     created_at: dt.datetime
     updated_at: dt.datetime
 
@@ -83,3 +82,8 @@ class DocumentTextResponse(BaseModel):
 class DocumentUploadResponse(BaseModel):
     document: DocumentResponse
     is_duplicate: bool = False
+
+
+class DocumentUploadCapabilities(BaseModel):
+    max_file_bytes: int
+    accepted_mime_types: list[str]

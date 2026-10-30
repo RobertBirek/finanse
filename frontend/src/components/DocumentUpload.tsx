@@ -1,178 +1,222 @@
-import { useRef, useState, DragEvent, ChangeEvent } from "react";
-import { useUploadDocument } from "../api/documents";
+import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
 import { isAxiosError } from "axios";
+import {
+  formatFileSize,
+  useDocumentUploadCapabilities,
+  useUploadDocument,
+} from "../api/documents";
+
+const ACCEPTED_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/heic",
+  "image/heif",
+];
+type UploadItem = {
+  id: number;
+  file: File;
+  state: "queued" | "uploading" | "success" | "error";
+  error?: string;
+};
+
+function errorMessage(error: unknown) {
+  const status = isAxiosError(error) ? error.response?.status : undefined;
+  if (status === 413)
+    return "Przekroczono limit pliku lub miejsca na dokumenty.";
+  if (status === 503 || status === 507)
+    return "Przesyłanie jest chwilowo niedostępne. Spróbuj później.";
+  return "Nie udało się przesłać dokumentu.";
+}
 
 export function DocumentUpload() {
-  const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadDocument();
-  const status = isAxiosError(upload.error)
-    ? upload.error.response?.status
-    : undefined;
-  const uploadError =
-    status === 413
-      ? "Przekroczono limit pliku lub miejsca na dokumenty. Wybierz mniejszy plik lub sprawdź limit przechowywania."
-      : status === 503 || status === 507
-        ? "Przesyłanie jest chwilowo niedostępne. Spróbuj później."
-        : "Nie udało się przesłać dokumentu. Wybierz plik ponownie, aby spróbować jeszcze raz.";
-
+  const capabilities = useDocumentUploadCapabilities();
+  const [dragActive, setDragActive] = useState(false);
+  const [items, setItems] = useState<UploadItem[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const handleFile = (file: File) => {
-    if (upload.isPending) return;
+  const nextId = useRef(0);
+  const queue = useRef<UploadItem[]>([]);
+  const draining = useRef(false);
+
+  const drainQueue = async () => {
+    if (draining.current) return;
+    draining.current = true;
+    while (queue.current.length) {
+      const item = queue.current.shift()!;
+      setItems((current) =>
+        current.map((entry) =>
+          entry.id === item.id ? { ...entry, state: "uploading" } : entry,
+        ),
+      );
+      try {
+        await upload.mutateAsync(item.file);
+        setItems((current) =>
+          current.map((entry) =>
+            entry.id === item.id ? { ...entry, state: "success" } : entry,
+          ),
+        );
+      } catch (error) {
+        setItems((current) =>
+          current.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, state: "error", error: errorMessage(error) }
+              : entry,
+          ),
+        );
+      }
+    }
+    draining.current = false;
+  };
+  const addFiles = (files: FileList | File[]) => {
     setValidationError(null);
-    if (
-      !/\.(pdf|jpe?g|png)$/i.test(file.name) ||
-      file.size === 0 ||
-      file.size > 20 * 1024 * 1024
-    ) {
+    const valid = Array.from(files).filter(
+      (file) =>
+        file.size > 0 &&
+        (file.type === "" ||
+          file.type === "application/octet-stream" ||
+          ACCEPTED_TYPES.includes(file.type)),
+    );
+    if (!valid.length) {
       setValidationError(
-        "Wybierz niepusty plik PDF, JPG lub PNG o rozmiarze do 20 MB.",
+        "Wybierz niepusty plik PDF, JPG, PNG, HEIC lub HEIF. CSV nie jest dokumentem do sprawdzenia.",
       );
       return;
     }
-    upload.mutate(file);
+    const newItems = valid.map((file) => ({
+      id: nextId.current++,
+      file,
+      state: "queued" as const,
+    }));
+    setItems((current) => [...current, ...newItems]);
+    queue.current.push(...newItems);
+    void drainQueue();
   };
-
-  const handleDrop = (e: DragEvent) => {
-    e.preventDefault();
+  const retry = (item: UploadItem) => {
+    const queued = { ...item, state: "queued" as const, error: undefined };
+    setItems((current) =>
+      current.map((entry) => (entry.id === item.id ? queued : entry)),
+    );
+    queue.current.push(queued);
+    void drainQueue();
+  };
+  const onChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) addFiles(event.target.files);
+    event.target.value = "";
+  };
+  const onDrop = (event: DragEvent) => {
+    event.preventDefault();
     setDragActive(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    addFiles(event.dataTransfer.files);
   };
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
-    e.target.value = "";
-  };
+  const limit = capabilities.data
+    ? `do ${formatFileSize(capabilities.data.max_file_bytes)}`
+    : "zgodnie z limitem konta";
 
   return (
     <div className="mb-6">
       <button
         type="button"
-        disabled={upload.isPending}
         aria-label="Wybierz dokument do przesłania"
         aria-describedby="upload-formats"
-        className={`w-full border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
-          dragActive
-            ? "border-advisor-400 bg-advisor-400/10"
-            : "border-gray-700 hover:border-gray-500 bg-gray-900"
-        }`}
-        onDragOver={(e) => {
-          e.preventDefault();
+        className={`w-full border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive ? "border-advisor-400 bg-advisor-400/10" : "border-gray-700 hover:border-gray-500 bg-gray-900"}`}
+        onDragOver={(event) => {
+          event.preventDefault();
           setDragActive(true);
         }}
         onDragLeave={() => setDragActive(false)}
-        onDrop={handleDrop}
+        onDrop={onDrop}
         onClick={() => fileInputRef.current?.click()}
       >
-        <svg
-          className="w-12 h-12 mx-auto mb-3 text-gray-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-          />
-        </svg>
         <span className="block text-gray-300 font-medium">
-          Upuść dokument tutaj lub kliknij, aby wybrać
+          Upuść dokumenty tutaj lub kliknij, aby wybrać
         </span>
         <span id="upload-formats" className="block text-gray-400 text-sm mt-1">
-          PDF, JPG, PNG — max 20 MB
+          PDF, JPG, PNG, HEIC, HEIF — {limit}
         </span>
       </button>
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
+        multiple
+        accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,application/pdf,image/jpeg,image/png,image/heic,image/heif"
         className="hidden"
-        onChange={handleChange}
+        onChange={onChange}
       />
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif"
         capture="environment"
         className="hidden"
-        onChange={handleChange}
+        onChange={onChange}
       />
       <div className="flex gap-3 mt-3">
         <button
           type="button"
-          disabled={upload.isPending}
-          onClick={(e) => {
-            e.stopPropagation();
-            cameraInputRef.current?.click();
-          }}
-          className="min-h-11 flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 text-sm transition-colors flex items-center justify-center gap-2"
+          onClick={() => cameraInputRef.current?.click()}
+          className="min-h-11 flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 text-sm"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
           Aparat
         </button>
-      </div>
-      {upload.isPending && (
-        <div
-          role="status"
-          className="mt-2 text-sm text-yellow-400 flex items-center gap-2"
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="min-h-11 flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 text-sm"
         >
-          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-              className="opacity-25"
-            />
-            <path
-              fill="currentColor"
-              className="opacity-75"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          Przesyłanie...
-        </div>
-      )}
+          Galeria lub pliki
+        </button>
+      </div>
       {validationError && (
         <p role="alert" className="mt-2 text-sm text-red-300">
           {validationError}
         </p>
       )}
-      {!validationError && upload.isError && (
-        <p role="alert" className="mt-2 text-sm text-red-300">
-          {uploadError}
-        </p>
-      )}
-      {!validationError && upload.isSuccess && (
+      {upload.isSuccess && items.length === 0 && (
         <p role="status" className="mt-2 text-sm text-green-300">
           {upload.data?.is_duplicate
             ? "Ten dokument jest już zapisany."
             : "Dokument przesłany. Stan odczytu sprawdzisz na liście."}
         </p>
+      )}
+      {items.length > 0 && (
+        <ul className="mt-3 space-y-2" aria-label="Stan przesyłania">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-center gap-2 rounded-lg bg-gray-900 p-3 text-sm"
+            >
+              <span className="min-w-0 flex-1 truncate text-gray-200">
+                {item.file.name}
+              </span>
+              <span role="status" className="text-gray-400">
+                {item.state === "uploading"
+                  ? "Przesyłanie…"
+                  : item.state === "queued"
+                    ? "Oczekuje"
+                    : item.state === "success"
+                      ? "Przesłano"
+                      : "Błąd"}
+              </span>
+              {item.state === "error" && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => retry(item)}
+                >
+                  Ponów
+                </button>
+              )}
+              {item.error && (
+                <span role="alert" className="text-red-300">
+                  {item.error}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

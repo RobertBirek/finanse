@@ -1,6 +1,6 @@
 import asyncio
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date
 from types import SimpleNamespace
 
 import pytest
@@ -641,7 +641,9 @@ async def test_cashflow_api_deletes_only_the_current_users_scheduled_item(db_ses
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_cashflow_api_confirms_due_item_once(db_session) -> None:
+async def test_cashflow_api_confirms_due_item_once(db_session, monkeypatch) -> None:
+    today = date(2026, 8, 14)
+    monkeypatch.setattr(cashflow, "_local_today", lambda: today)
     user_id = uuid.uuid4()
     account = await create_account(
         db_session, user_id, AccountCreate(name="Konto", type="checking")
@@ -652,9 +654,7 @@ async def test_cashflow_api_confirms_due_item_once(db_session) -> None:
     item = await create_scheduled_item(
         db_session,
         user_id,
-        scheduled_item_data(
-            account.id, category.id, due_day=datetime.now(UTC).astimezone().date().day
-        ),
+        scheduled_item_data(account.id, category.id, due_day=today.day),
     )
 
     async def override_current_user():

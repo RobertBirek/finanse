@@ -7,6 +7,19 @@ import warnings
 from io import BytesIO
 
 
+def _is_heif_container(content: bytes) -> bool:
+    """Allow HEIF brands only; pillow-heif can also decode unsupported AVIF."""
+    if len(content) < 16 or content[4:8] != b"ftyp":
+        return False
+    box_size = int.from_bytes(content[:4], "big")
+    if box_size < 16 or box_size > len(content):
+        return False
+    brands = {content[8:12], *[content[index : index + 4] for index in range(16, box_size, 4)]}
+    if brands & {b"avif", b"avis"}:
+        return False
+    return bool(brands & {b"heic", b"heix", b"hevc", b"hevx", b"heim", b"heis", b"mif1", b"msf1"})
+
+
 def detect_document_mime_type(
     content: bytes, max_pages: int = 100, max_pixels: int = 25_000_000
 ) -> str | None:
@@ -27,6 +40,19 @@ def detect_document_mime_type(
                 if count > max_pages:
                     return None
             return "application/pdf" if count else None
+        if _is_heif_container(content):
+            from pillow_heif import open_heif, register_heif_opener
+
+            register_heif_opener(thumbnails=False)
+            heif = open_heif(content)
+            if heif.primary_index is None or not 0 <= heif.primary_index < len(heif):
+                return None
+            image = heif[heif.primary_index].to_pillow()
+            with image:
+                if image.width * image.height > max_pixels:
+                    return None
+                image.load()
+            return "image/heif"
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             with Image.open(BytesIO(content)) as image:

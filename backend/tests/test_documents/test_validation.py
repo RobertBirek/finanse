@@ -25,6 +25,16 @@ async def test_valid_files_pass_isolated_validation(content, mime):
     assert await validate_document_content(content, mime) == mime
 
 
+def test_detect_document_mime_type_rejects_avif_branded_container():
+    from app.documents.validation_process import detect_document_mime_type
+
+    # A valid HEIC payload with an AVIF-compatible brand must not bypass the format allowlist.
+    from test_documents.fixtures import valid_heic_bytes
+
+    content = valid_heic_bytes().replace(b"heic", b"avif", 1)
+    assert detect_document_mime_type(content) is None
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "kind", ["mismatch", "truncated", "encrypted", "empty", "pages", "pixels", "frames"]

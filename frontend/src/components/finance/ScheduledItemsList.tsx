@@ -70,7 +70,7 @@ export function ScheduledItemsList({
     <div className="space-y-2">
       {items.map((item) => {
         const suggestion = suggestions.find(
-          (s) => s.scheduled_item_id === item.id,
+          (s) => s.source === "recurring" && s.scheduled_item_id === item.id,
         );
         const displayAmount =
           suggestion?.amount_pln != null

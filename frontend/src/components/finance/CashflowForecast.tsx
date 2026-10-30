@@ -68,11 +68,20 @@ export function CashflowForecast({
           label="Najniższe saldo"
           amount={forecast.lowest_balance_pln}
         />
-        <CashflowMetric
-          label="Bezpiecznie dziennie"
-          amount={forecast.safe_daily_limit_pln}
-          neutral
-        />
+        {forecast.has_excluded_obligations ? (
+          <div>
+            <p className="text-xs text-amber-300">Limit dzienny niepewny</p>
+            <p className="mt-1 text-sm text-amber-200">
+              Prognoza nie obejmuje wszystkich zobowiązań.
+            </p>
+          </div>
+        ) : (
+          <CashflowMetric
+            label="Bezpiecznie dziennie"
+            amount={forecast.safe_daily_limit_pln}
+            neutral
+          />
+        )}
         <div>
           <p className="text-xs text-gray-400">Następna wypłata</p>
           <p className="mt-1 text-xl font-bold text-white">
@@ -80,6 +89,14 @@ export function CashflowForecast({
           </p>
         </div>
       </div>
+      {forecast.has_excluded_obligations ? (
+        <p className="mt-3 text-xs text-amber-300">
+          Pominięte pozycje:{" "}
+          {forecast.excluded_obligation_reasons?.join(", ") ||
+            "brak pełnych danych"}
+          .
+        </p>
+      ) : null}
       <div className="mt-6 border-t border-gray-800 pt-4">
         <h3 className="mb-3 text-sm font-medium text-gray-400">
           Budżety w tym miesiącu

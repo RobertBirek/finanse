@@ -57,6 +57,9 @@ vi.mock("../api/documents", async (original) => ({
   useDocuments: mocks.docs,
   useDocumentText: mocks.text,
   useUploadDocument: mocks.upload,
+  useDocumentUploadCapabilities: () => ({
+    data: { max_file_bytes: 20 * 1024 * 1024, accepted_mime_types: [] },
+  }),
   useDeleteDocument: () => ({ mutate: mocks.mutate }),
 }));
 

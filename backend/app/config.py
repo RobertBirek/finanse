@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     DOCUMENT_VALIDATION_QUEUE_SECONDS: PositiveFloat = 2
     DOCUMENT_MAX_PAGES: PositiveInt = 100
     DOCUMENT_MAX_IMAGE_PIXELS: PositiveInt = 25_000_000
+    DOCUMENT_IMAGE_OUTPUT_MAX_BYTES: PositiveInt = 20 * 1024 * 1024
+    DOCUMENT_JPEG_QUALITY: PositiveInt = 90
+    DOCUMENT_PREVIEW_MAX_EDGE: PositiveInt = 1600
     DOCUMENT_USER_QUOTA_BYTES: PositiveInt = 1024 * 1024 * 1024
     DOCUMENT_GLOBAL_QUOTA_BYTES: PositiveInt = 10 * 1024 * 1024 * 1024
     DOCUMENT_MIN_FREE_BYTES: PositiveInt = 1024 * 1024 * 1024
@@ -47,12 +50,14 @@ class Settings(BaseSettings):
     DOCUMENT_OCR_TEXT_MAX_BYTES: PositiveInt = 2 * 1024 * 1024
     DOCUMENT_MAX_ATTEMPTS: PositiveInt = 3
     DOCUMENT_RETRY_DELAYS_SECONDS: tuple[PositiveInt, ...] = (30, 120)
+    BILL_PAYMENT_CANDIDATE_DATE_WINDOW_DAYS: PositiveInt = 30
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     OPENAI_API_KEY: str = ""
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://api.deepseek.com"
     LLM_MODEL: str = "deepseek-v4-pro"
+    LLM_PROVIDER: str = "configured"
     CORS_ORIGINS: str = DEFAULT_CORS_ORIGINS
     TRUSTED_ORIGINS: str | None = None
     TRUSTED_PROXY_HOSTS: str = "frontend"

@@ -324,14 +324,31 @@ class CashflowDay(BaseModel):
 
 
 class CashflowSuggestion(BaseModel):
-    scheduled_item_id: uuid.UUID
+    source: Literal["recurring", "financial_document"] = "recurring"
+    source_key: str | None = None
+    scheduled_item_id: uuid.UUID | None = None
+    financial_document_id: uuid.UUID | None = None
     name: str
     type: Literal["income", "expense"]
-    due_date: dt.date
+    due_date: dt.date | None
+    amount_minor: int | None = None
+    currency: str = "PLN"
     amount_pln: int | None
     status: Literal["due", "overdue", "overdue_uncertain", "matched_actual", "amount_unknown"]
     included_in_forecast: bool
     actual_transaction_id: uuid.UUID | None = None
+    exclusion_reasons: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_source_identity(self) -> "CashflowSuggestion":
+        if not self.source_key:
+            raise ValueError("source_key is required")
+        if self.source == "recurring":
+            if self.scheduled_item_id is None or self.financial_document_id is not None:
+                raise ValueError("recurring source requires only scheduled_item_id")
+        elif self.financial_document_id is None or self.scheduled_item_id is not None:
+            raise ValueError("financial_document source requires only financial_document_id")
+        return self
 
 
 class CashflowBudgetSummary(BaseModel):
@@ -350,6 +367,8 @@ class CashflowForecastResponse(BaseModel):
     days: list[CashflowDay]
     suggestions: list[CashflowSuggestion]
     budgets: CashflowBudgetSummary
+    has_excluded_obligations: bool = False
+    excluded_obligation_reasons: list[str] = Field(default_factory=list)
 
 
 class CategoryBudgetCreate(BaseModel):

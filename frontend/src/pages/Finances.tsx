@@ -161,13 +161,19 @@ export function Finances() {
             )}
             <div className="finance-runway-footer">
               <div>
-                <small>Orientacyjnie dziennie</small>
+                <small>
+                  {cashflow.data?.has_excluded_obligations
+                    ? "Limit dzienny niepewny"
+                    : "Orientacyjnie dziennie"}
+                </small>
                 <strong>
-                  {cashflow.data
+                  {cashflow.data && !cashflow.data.has_excluded_obligations
                     ? formatPLN(cashflow.data.safe_daily_limit_pln)
-                    : "—"}{" "}
-                  PLN
+                    : "—"}
                 </strong>
+                {cashflow.data?.has_excluded_obligations ? (
+                  <small>Prognoza nie obejmuje wszystkich zobowiązań.</small>
+                ) : null}
               </div>
               <Link to={`/finances/cashflow${periodSearch}`}>
                 Przejdź do płynności →

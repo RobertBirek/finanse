@@ -8,9 +8,13 @@ import {
 import { Dialog } from "./Dialog";
 import { QueryFeedback } from "./QueryFeedback";
 
-type Props = { document: DocumentData; onClose: () => void };
+type Props = {
+  document: DocumentData;
+  onClose: () => void;
+  onReview?: () => void;
+};
 
-export function DocumentViewer({ document: doc, onClose }: Props) {
+export function DocumentViewer({ document: doc, onClose, onReview }: Props) {
   const text = useDocumentText(doc.id, doc.status === "done");
   return (
     <Dialog
@@ -33,9 +37,16 @@ export function DocumentViewer({ document: doc, onClose }: Props) {
         >
           {STATUS_LABELS[doc.status]}
         </span>
-        <button type="button" onClick={onClose} className="btn-secondary">
-          Zamknij
-        </button>
+        <div className="flex gap-2">
+          {onReview && (
+            <button type="button" onClick={onReview} className="btn-primary">
+              Sprawdź dane
+            </button>
+          )}
+          <button type="button" onClick={onClose} className="btn-secondary">
+            Zamknij
+          </button>
+        </div>
       </div>
       <div className="p-4">
         {doc.status === "pending" || doc.status === "processing" ? (

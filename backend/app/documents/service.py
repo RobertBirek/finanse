@@ -95,7 +95,7 @@ async def store_document(
     mime_type: str,
 ) -> tuple[Document, bool]:
     """Store content and return an explicit duplicate flag under a per-content lock."""
-    await validate_document_content(content, mime_type)
+    mime_type = await validate_document_content(content, mime_type)
 
     sha256_hash = compute_sha256(content)
     # Global lock serializes quota admission across users until the DB commit.
@@ -202,6 +202,18 @@ async def delete_document(db: AsyncSession, user_id: uuid.UUID, document_id: uui
     doc = await get_document(db, user_id, document_id)
     if doc is None:
         return False
+    from app.finance.models import FinancialDocumentSource
+
+    linked = await db.scalar(
+        select(func.count())
+        .select_from(FinancialDocumentSource)
+        .where(
+            FinancialDocumentSource.document_id == document_id,
+            FinancialDocumentSource.user_id == user_id,
+        )
+    )
+    if linked:
+        raise ValueError("document_linked_to_financial_document")
     await db.delete(doc)
     await db.flush()
     return True

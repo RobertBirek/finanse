@@ -87,6 +87,7 @@ describe("Finances", () => {
         projected_balance_before_next_payday_pln: 450000,
         lowest_balance_pln: 300000,
         safe_daily_limit_pln: 10000,
+        has_excluded_obligations: true,
         days: [
           { date: "2026-10-20", projected_balance_pln: 500000 },
           { date: "2026-10-25", projected_balance_pln: 450000 },
@@ -151,6 +152,12 @@ describe("Finances", () => {
       screen.getByRole("img", { name: "Prognozowany przebieg salda" }),
     ).toBeInTheDocument();
     expect(screen.getByText("20.10.2026")).toBeInTheDocument();
+    expect(
+      screen.getByText("Przychody · konta budżetowe").parentElement,
+    ).toHaveTextContent(/PLN/);
+    expect(
+      screen.getByText("Limit dzienny niepewny").parentElement,
+    ).not.toHaveTextContent(/—\s*PLN/);
     expect(screen.getAllByText(/25.10.2026/).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /Zakup kawy/ })).toHaveAttribute(
       "href",

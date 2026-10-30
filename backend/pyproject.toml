@@ -26,6 +26,7 @@ dependencies = [
     "openai>=1.30.0",
     "python-multipart==0.0.32",
     "Pillow>=11.3.0,<13.0.0",
+    "pillow-heif==1.8.1",
     "pypdf>=6.0.0,<7.0.0",
 ]
 

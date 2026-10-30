@@ -97,4 +97,22 @@ describe("CashflowForecast — budżety", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
+
+  it("does not promise a safe daily amount when obligations were excluded", () => {
+    render(
+      <CashflowForecast
+        forecast={makeForecast({
+          has_excluded_obligations: true,
+          excluded_obligation_reasons: ["missing_due_date"],
+        })}
+        loading={false}
+        error={false}
+      />,
+    );
+
+    expect(screen.queryByText("Bezpiecznie dziennie")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/nie obejmuje wszystkich zobowiązań/i),
+    ).toBeInTheDocument();
+  });
 });

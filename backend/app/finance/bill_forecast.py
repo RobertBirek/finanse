@@ -1,0 +1,181 @@
+"""Read-only projection of approved payable financial documents into cashflow."""
+
+import uuid
+from dataclasses import dataclass
+from datetime import date, timedelta
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.finance.models import (
+    Account,
+    DocumentPaymentAllocation,
+    FinanceSettings,
+    FinancialDocument,
+    RecurringOccurrenceCoverage,
+    ScheduledFinanceItem,
+)
+from app.finance.schemas import CashflowSuggestion
+
+
+@dataclass
+class BillProjection:
+    entries: list[CashflowSuggestion]
+    day_changes_pln: dict[date, int]
+    exclusions: list[str]
+    covered_occurrences: set[tuple[uuid.UUID, date]]
+
+
+@dataclass(frozen=True)
+class BillForecastEligibility:
+    effective_due: date | None
+    reasons: list[str]
+
+    @property
+    def included(self) -> bool:
+        return not self.reasons and self.effective_due is not None
+
+
+async def bill_forecast_window(db: AsyncSession, user_id: uuid.UUID, *, today: date) -> date:
+    """Read the configured forecast horizon without creating settings during a GET."""
+    settings = await db.scalar(select(FinanceSettings).where(FinanceSettings.user_id == user_id))
+    horizon_days = settings.forecast_horizon_days if settings is not None else 30
+    return today + timedelta(days=horizon_days - 1)
+
+
+async def bill_forecast_eligibility(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    bill: FinancialDocument,
+    *,
+    today: date,
+    horizon_end: date,
+    covered: bool,
+) -> BillForecastEligibility:
+    """Single read-only eligibility rule shared by bill detail and cashflow projection."""
+    reasons: list[str] = []
+    effective_due = bill.due_date
+    if bill.lifecycle != "active":
+        reasons.append("inactive_lifecycle")
+    if bill.declaration == "unknown":
+        reasons.append("payment_declaration_unknown")
+    elif bill.declaration != "payable":
+        reasons.append("payment_not_payable")
+    if bill.due_date is None:
+        reasons.append("missing_due_date")
+    elif bill.due_date < today:
+        effective_due = today
+    elif bill.due_date > horizon_end:
+        reasons.append("outside_horizon")
+    if bill.currency != "PLN":
+        reasons.append("currency_without_pln_fx")
+    if (
+        not covered
+        and bill.recurring_decision is None
+        and bill.due_date is not None
+        and bill.payment_account_id is not None
+        and bill.category_id is not None
+        and await db.scalar(
+            select(ScheduledFinanceItem.id)
+            .where(
+                ScheduledFinanceItem.user_id == user_id,
+                ScheduledFinanceItem.is_active.is_(True),
+                ScheduledFinanceItem.type == "expense",
+                ScheduledFinanceItem.account_id == bill.payment_account_id,
+                ScheduledFinanceItem.category_id == bill.category_id,
+            )
+            .limit(1)
+        )
+        is not None
+    ):
+        reasons.append("coverage_unresolved")
+    account = await db.get(Account, bill.payment_account_id) if bill.payment_account_id else None
+    if account is None:
+        reasons.append("missing_payment_account")
+    elif (
+        account.user_id != user_id
+        or not account.is_active
+        or not account.is_budget_account
+        or account.currency != "PLN"
+    ):
+        reasons.append("payment_account_not_active_budget_pln")
+    return BillForecastEligibility(effective_due=effective_due, reasons=reasons)
+
+
+async def project_bill_cashflows(
+    db: AsyncSession, user_id: uuid.UUID, *, today: date, horizon_end: date
+) -> BillProjection:
+    bills = list(
+        (
+            await db.execute(
+                select(FinancialDocument).where(
+                    FinancialDocument.user_id == user_id, FinancialDocument.review == "approved"
+                )
+            )
+        ).scalars()
+    )
+    coverage_rows = list(
+        (
+            await db.execute(
+                select(RecurringOccurrenceCoverage).where(
+                    RecurringOccurrenceCoverage.user_id == user_id
+                )
+            )
+        ).scalars()
+    )
+    covered = {(row.scheduled_item_id, row.occurrence_date) for row in coverage_rows}
+    covered_bill_ids = {row.financial_document_id for row in coverage_rows}
+    entries: list[CashflowSuggestion] = []
+    changes: dict[date, int] = {}
+    exclusions: list[str] = []
+    for bill in bills:
+        paid = int(
+            await db.scalar(
+                select(func.coalesce(func.sum(DocumentPaymentAllocation.amount_minor), 0)).where(
+                    DocumentPaymentAllocation.financial_document_id == bill.id
+                )
+            )
+            or 0
+        )
+        remaining = max((bill.total_minor or 0) - paid, 0)
+        if remaining <= 0:
+            continue
+        eligibility = await bill_forecast_eligibility(
+            db,
+            user_id,
+            bill,
+            today=today,
+            horizon_end=horizon_end,
+            covered=bill.id in covered_bill_ids,
+        )
+        if eligibility.included:
+            assert eligibility.effective_due is not None
+            changes[eligibility.effective_due] = (
+                changes.get(eligibility.effective_due, 0) - remaining
+            )
+        else:
+            exclusions.extend(eligibility.reasons)
+        entries.append(
+            CashflowSuggestion(
+                source="financial_document",
+                source_key=f"financial_document:{bill.id}",
+                financial_document_id=bill.id,
+                name=bill.description or bill.supplier_name or "Financial document",
+                type="expense",
+                due_date=eligibility.effective_due,
+                amount_minor=remaining,
+                currency=bill.currency or "PLN",
+                amount_pln=remaining if bill.currency == "PLN" else None,
+                status="due"
+                if eligibility.effective_due is not None and eligibility.effective_due >= today
+                else "overdue",
+                included_in_forecast=eligibility.included,
+                exclusion_reasons=eligibility.reasons,
+            )
+        )
+    return BillProjection(
+        entries=entries,
+        day_changes_pln=changes,
+        exclusions=sorted(set(exclusions)),
+        covered_occurrences=covered,
+    )

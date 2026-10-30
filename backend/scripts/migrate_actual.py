@@ -43,6 +43,12 @@ from app.finance.actual_history import (
     validate_preserved_history,
 )
 from app.finance.actual_parser import ActualParser, TransactionDict
+from app.finance.document_guards import (
+    guard_allocated_transaction_change,
+    guard_bill_account_change,
+    guard_bill_category_change,
+    lock_document_mutations,
+)
 from app.finance.models import Account, ActualImportMapping, Category, FinancialTransaction, Posting
 from app.finance.nbp_rates import NbpRate, NbpRateProvider
 from app.finance.reconciliation import (
@@ -140,6 +146,9 @@ async def replace_legacy_actual_data(
     db: Any, user_id: uuid.UUID, blob_transaction_ids: set[str]
 ) -> None:
     """Delete only Actual-proven entities, rejecting any manual reference first."""
+    # This replacement path can delete historical ledger rows. Serialize it with
+    # document allocation mutations before reading the replacement graph.
+    await lock_document_mutations(db, user_id)
     actual_rows = (
         await db.execute(
             select(
@@ -199,6 +208,12 @@ async def replace_legacy_actual_data(
                 )
             ).scalars()
         )
+    for transaction_id in sorted(actual_transaction_ids, key=str):
+        await guard_allocated_transaction_change(db, user_id, transaction_id, {"delete": True})
+    for account_id in sorted(account_ids, key=str):
+        await guard_bill_account_change(db, user_id, account_id, {"replace": True})
+    for category_id in sorted(category_ids, key=str):
+        await guard_bill_category_change(db, user_id, category_id, {"replace": True})
     reference_filters = []
     if account_ids:
         reference_filters.append(Posting.account_id.in_(account_ids))

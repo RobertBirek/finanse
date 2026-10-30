@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import api from "../lib/api";
 import { Documents } from "./Documents";
@@ -35,6 +35,78 @@ function renderDocuments(
 }
 
 describe("document retry and admission feedback", () => {
+  it("camera_requests_environment_and_accepts_heic", () => {
+    const view = renderDocuments("done", null);
+    const camera = view.container.querySelector(
+      'input[capture="environment"]',
+    ) as HTMLInputElement;
+    expect(camera).toBeTruthy();
+    expect(camera.accept).toContain(".heic");
+    expect(camera.accept).toContain(".heif");
+  });
+  it("multi_upload_shows_per_file_success_failure", async () => {
+    vi.spyOn(api, "post")
+      .mockRejectedValueOnce({ isAxiosError: true, response: { status: 503 } })
+      .mockResolvedValueOnce({ data: { document: {}, is_duplicate: false } });
+    const view = renderDocuments("done", null);
+    const input = view.container.querySelector('input[type="file"]')!;
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File(["a"], "first.pdf", { type: "application/pdf" }),
+          new File(["b"], "second.pdf", { type: "application/pdf" }),
+        ],
+      },
+    });
+    expect(await screen.findByText("Przesłano")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("status").some((node) => node.textContent === "Błąd"),
+    ).toBe(true);
+    expect(api.post).toHaveBeenCalledTimes(2);
+  });
+  it("serializes_uploads_across_selections_and_retries_only_failed_item", async () => {
+    let resolveFirst!: (value: {
+      data: { document: object; is_duplicate: boolean };
+    }) => void;
+    let rejectSecond!: (reason: unknown) => void;
+    const first = new Promise<{
+      data: { document: object; is_duplicate: boolean };
+    }>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const second = new Promise<never>((_resolve, reject) => {
+      rejectSecond = reject;
+    });
+    vi.spyOn(api, "post")
+      .mockReturnValueOnce(first)
+      .mockReturnValueOnce(second)
+      .mockResolvedValue({
+        data: { document: {}, is_duplicate: false },
+      } as never);
+    const view = renderDocuments("done", null);
+    const [gallery] = Array.from(
+      view.container.querySelectorAll('input[type="file"]'),
+    );
+    fireEvent.change(gallery, {
+      target: {
+        files: [new File(["1"], "first.pdf", { type: "application/pdf" })],
+      },
+    });
+    fireEvent.change(gallery, {
+      target: {
+        files: [new File(["2"], "second.pdf", { type: "application/pdf" })],
+      },
+    });
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    resolveFirst({ data: { document: {}, is_duplicate: false } });
+    await screen.findByText("second.pdf");
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(2));
+    rejectSecond({ isAxiosError: true, response: { status: 503 } });
+    const retry = await screen.findByRole("button", { name: "Ponów" });
+    fireEvent.click(retry);
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(3));
+    expect(view.getByText("first.pdf")).toBeInTheDocument();
+  });
   it("shows scheduled retry without promising success", async () => {
     renderDocuments();
     expect(await screen.findByText(/Ponowna próba/)).toBeInTheDocument();

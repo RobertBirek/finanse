@@ -13,10 +13,44 @@ export interface DocumentData {
   attempt_count: number;
   next_attempt_at: string | null;
   last_error_code: string | null;
-  storage_path: string;
   created_at: string;
   updated_at: string;
 }
+
+export type DocumentReview = {
+  id: string;
+  document_id: string;
+  revision: number;
+  status: "pending" | "processing" | "ready" | "incomplete" | "error";
+  error_code: string | null;
+  document_type:
+    | "invoice"
+    | "receipt"
+    | "statement"
+    | "loan_schedule"
+    | "other"
+    | "unsupported"
+    | "multiple";
+  fields: {
+    supplier_name: string | null;
+    supplier_tax_id: string | null;
+    number: string | null;
+    issue_date: string | null;
+    sale_date: string | null;
+    due_date: string | null;
+    description: string | null;
+    payee_iban: string | null;
+    total: string | null;
+    currency: "PLN" | "EUR" | "USD" | null;
+  };
+  provenance: Record<string, string>;
+  parser_version: string | null;
+};
+export type DocumentUploadCapabilities = {
+  max_file_bytes: number;
+  accepted_mime_types: string[];
+};
+const mutationHeaders = () => ({ "Idempotency-Key": crypto.randomUUID() });
 
 export interface DocumentText {
   id: string;
@@ -80,6 +114,98 @@ export function useUploadDocument() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
+  });
+}
+
+export function useDocumentUploadCapabilities() {
+  return useQuery({
+    queryKey: ["documents", "upload-capabilities"],
+    queryFn: async () =>
+      (
+        await api.get<DocumentUploadCapabilities>(
+          "/documents/upload-capabilities",
+        )
+      ).data,
+    staleTime: 60_000,
+  });
+}
+
+export function useDocumentReview(id: string | null) {
+  return useQuery({
+    queryKey: ["documents", id, "review"],
+    enabled: !!id,
+    retry: false,
+    queryFn: async () =>
+      (await api.get<DocumentReview>(`/documents/${id}/review`)).data,
+  });
+}
+
+export function usePrepareDocumentReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      documentId,
+      refresh,
+    }: {
+      documentId: string;
+      refresh: boolean;
+    }) =>
+      (
+        await api.post<DocumentReview>(
+          `/documents/${documentId}/review/prepare`,
+          undefined,
+          { params: { refresh }, headers: mutationHeaders() },
+        )
+      ).data,
+    onSuccess: (review) =>
+      queryClient.setQueryData(
+        ["documents", review.document_id, "review"],
+        review,
+      ),
+  });
+}
+
+export function useRetryDocumentOcr() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ documentId }: { documentId: string }) =>
+      (
+        await api.post(`/documents/${documentId}/retry-ocr`, undefined, {
+          headers: mutationHeaders(),
+        })
+      ).data,
+    onSuccess: (_result, { documentId }) => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({
+        queryKey: ["documents", documentId, "review"],
+      });
+    },
+  });
+}
+
+export function useDocumentPreview(id: string | null) {
+  return useQuery({
+    queryKey: ["documents", id, "preview"],
+    enabled: !!id,
+    queryFn: async () =>
+      (
+        await api.get<Blob>(`/documents/${id}/preview`, {
+          responseType: "blob",
+        })
+      ).data,
+  });
+}
+
+export function useDocumentOriginal(id: string | null) {
+  return useQuery({
+    queryKey: ["documents", id, "original"],
+    enabled: !!id,
+    queryFn: async () =>
+      (
+        await api.get<Blob>(`/documents/${id}/original`, {
+          responseType: "blob",
+        })
+      ).data,
   });
 }
 

@@ -377,12 +377,14 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
 
+    from sqlalchemy import select
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
     from app import worker
-    from app.documents import extractor
+    from app.documents import review_service
+    from app.documents.models import DocumentExtractionRevision
+    from app.documents.review_schemas import ReviewSuggestion
     from app.documents.schemas import DocumentStatus
-    from app.inbox.service import get_inbox_items
 
     image_content = valid_png_bytes()
     document = await service.upload_document(
@@ -403,19 +405,31 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
         AsyncMock(return_value="\n" if extraction_failure == "empty" else "Receipt text"),
     )
     extraction = AsyncMock(
-        return_value={
-            "detected": True,
-            "type": "expense",
-            "amount": 100,
-            "currency": "PLN",
-            "description": "Test",
-        }
+        return_value=ReviewSuggestion.model_validate(
+            {
+                "document_type": "receipt",
+                "fields": {
+                    "supplier_name": None,
+                    "supplier_tax_id": None,
+                    "number": None,
+                    "issue_date": None,
+                    "sale_date": None,
+                    "due_date": None,
+                    "description": "Test",
+                    "payee_iban": None,
+                    "total": "1.00",
+                    "currency": "PLN",
+                },
+                "provenance": {"total": "llm", "currency": "llm"},
+                "parser_version": "review-v1",
+            }
+        )
     )
     if extraction_failure == "invalid":
-        extraction.return_value["amount"] = "100"
+        extraction.side_effect = review_service.ReviewExtractionError("invalid_model_output")
     elif extraction_failure:
         extraction.side_effect = ValueError("Invalid model response")
-    monkeypatch.setattr(extractor, "extract_financial_data", extraction)
+    monkeypatch.setattr(review_service, "extract_review_data", extraction)
     await worker.process_document({}, str(document_id))
     await worker.process_document({}, str(document_id))
     assert convert.await_count == ocr.await_count == 1
@@ -429,7 +443,29 @@ async def test_image_worker_uses_pdf_bytes_and_is_idempotent(
     )
     if extraction_failure == "empty":
         extraction.assert_not_awaited()
-    assert len(await get_inbox_items(db_session, user_id)) == (0 if extraction_failure else 1)
+    revisions = (
+        (
+            await db_session.execute(
+                select(DocumentExtractionRevision).where(
+                    DocumentExtractionRevision.document_id == document_id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if extraction_failure == "empty":
+        assert revisions == []
+    elif extraction_failure is True:
+        assert [(item.status, item.error_code) for item in revisions] == [
+            ("error", "financial_extraction_failed")
+        ]
+    elif extraction_failure == "invalid":
+        assert [(item.status, item.error_code) for item in revisions] == [
+            ("incomplete", "invalid_model_output")
+        ]
+    else:
+        assert [(item.status, item.data["total_minor"]) for item in revisions] == [("ready", 100)]
     redis = SimpleNamespace(enqueue_job=AsyncMock())
     pending = await service.upload_document(
         db_session, user_id, valid_pdf_bytes("pending"), "next.pdf", "application/pdf"

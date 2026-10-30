@@ -1,7 +1,19 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -47,3 +59,30 @@ class DocumentText(Base):
     )
 
     document: Mapped["Document"] = relationship("Document", back_populates="text")
+
+
+class DocumentExtractionRevision(Base):
+    __tablename__ = "document_extraction_revisions"
+    __table_args__ = (
+        UniqueConstraint("document_id", "revision", name="uq_document_extraction_revision"),
+        CheckConstraint("revision >= 1", name="ck_document_extraction_revision_number"),
+        CheckConstraint(
+            "status IN ('pending', 'processing', 'ready', 'incomplete', 'error')",
+            name="ck_document_extraction_revision_status",
+        ),
+        Index("ix_document_extraction_revisions_user_status", "user_id", "status"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    data: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    field_provenance: Mapped[dict[str, str]] = mapped_column(JSON, nullable=False)
+    parser_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
