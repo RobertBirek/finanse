@@ -26,7 +26,8 @@ nie zastępują poniższego statusu i dowodów kolejnych review.
 - [x] Task9 — rejestr, rozliczenia i source union UI; review po3rundach poprawek.
 - [x] Task10 — końcowy gate oprogramowania i task-review po poprawkach;941backend/
   278frontend/75E2E+1skip PASS, parserDocker i syntetyczna migracja/restore PASS.
-- [ ] Całościowy przegląd gałęzi — w toku przed zakończeniem sesji.
+- [x] Całościowy przegląd gałęzi —4Important domknięte jedną poprawką0524cb9;
+  scopedreview clean, finalgate949backend/279frontend/75E2E+1skip PASS.
 - [ ] Certyfikacja aparatu/galerii Android/iPhone — **BLOCKED**, brak urządzeń.
 - [ ] Deploy/import/przygotowanie dokumentów użytkownika — poza zgodą i poza tą realizacją.
 

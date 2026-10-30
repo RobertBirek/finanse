@@ -2,7 +2,9 @@
 
 Data: 2026-10-30. Gałąź: `feat/financial-document-workflow`.
 Nazwa pliku zachowuje datę zaakceptowanego planu; wyniki poniżej pochodzą z30.10.
-Status: gate oprogramowania i task-review PASS; całościowy review gałęzi w toku.
+Status: implementacja oprogramowania, gate i całościowy review z poprawką PASS.
+Finalny commit funkcjonalny: `0524cb9e13d7045833ac36b05940a01edbbd401f`.
+Gotowość kodu nie oznacza pełnej kwalifikacji wydania: prawdziwe telefony BLOCKED.
 Bez zgody na wdrożenie lub pracę na danych użytkownika.
 
 ## Zakres
@@ -20,13 +22,13 @@ Bez zgody na wdrożenie lub pracę na danych użytkownika.
 |---|---|---|
 | Nowe E2E | PASS,16 | Syntetyczne API,375/1440; częściowe/pełne rozliczenie, jawne100/120replacement, manualfallback, uploadHEIF/attach i paragon |
 | Nowy backend workflow | PASS,5 | Syntetyczny PostgreSQL; źródła/ledger, owner404 i rzeczywiste dwie sesje zatwierdzenia |
-| Pełny backend | PASS,941 | 8 proxy deselected,10 znanych ostrzeżeń,770.71s; ostatnie powtórzenie po poprawce dowodu blokady |
-| Pełny frontend/build/E2E | PASS, potwierdzone powtórzenie | Lint/types/278unit/build i75E2E PASS,1 celowy desktopskip; fixture i oczekiwanie na właściwą akcję poprawione |
+| Pełny backend | PASS,949 | 8 proxy deselected,10 znanych ostrzeżeń,844.82s; final-wave-full-backend.log |
+| Pełny frontend/build/E2E | PASS, potwierdzone powtórzenie | Lint/types/279unit/build i75E2E PASS,1 celowy desktopskip; po całej końcowej poprawce |
 | Ruff/mypy | PASS | Aplikacja81 modułów; lint również testów i zmienionego skryptu Actual |
 | Parser Docker | PASS | Python3.12.15/Pillow12.3.0/pillow-heif1.8.1; HEIF→JPEG, hash oryginału, orientacja/GPS |
 | Migracja/dump-restore | PASS | PostgreSQL16.14,upgrade/downgrade/reupgrade oraz odtworzenie osobnej bazy z syntetycznymi danymi |
 | Task10: review | PASS po poprawkach | Jawne100/120, HEIFcontract i pg_blocking_pids realnego oczekiwania na blokadę |
-| Cała gałąź: review | W toku | Niezależne spec/quality i bezpieczeństwo przed zakończeniem |
+| Cała gałąź: review | PASS po jednej wspólnej poprawce | 4Important domknięte w0524cb9; scopedreview bez nowych Critical/Important/Minor |
 | Android/iPhone | **BLOCKED** | Brak rzeczywistych urządzeń; viewport nie zastępuje aparatu/galerii |
 
 ## Powtarzalne scenariusze
@@ -59,6 +61,49 @@ Kontener był dostępny tylko na loopback i został usunięty po próbie.
 Artefakty: `/tmp/opencode/task10-migration-validation/`. Nie użyto danych produkcji.
 
 ## Ograniczenia i dalsze czynności
+
+Całościowy review wykrył4 ważne luki, których passing taskgate nie wykluczył:
+router nie przekazywał due/queryfilters, detail miał puste forecastreasons,
+update pokrytejfaktury nie blokował zmiany tożsamości oraz backend nie wymagał
+potwierdzenia wpływu archiwizacji/anulowania. Commit0524cb9 objął komplet poprawek
+i regresji: typedrouterfilters, sharedread-onlyeligibilityhelper, ownerlocked guard
+identitycoverage i server-enforcedconfirmation audytowany z pozostałością. Świeży
+gate949/279/75+1skip PASS oraz ponowna syntetyczna migracja/restore PASS.
+Końcowy scopedreview potwierdził zamknięcie wszystkich4findings bez nowych
+Critical/Important/Minor. Nie jest to zgoda na merge, push, deploy lub import.
+
+### Wynik końcowego przeglądu
+
+- `bills_router.py`: boundedquery i typed due-range trafiają do rzeczywistego API;
+  regresja sprawdza przefiltrowany total przed paginacją.
+- `bill_forecast.py` i `bills.py`: jedno read-only eligibility path dla odpowiedzi
+  rejestru i prognozy, jawny domain today/configuredhorizon, bez zapisu przy GET.
+- `bills.py`: shared ownerlock przed rowlocks i guard tożsamości coveredbill,
+  same-value dozwolone; niezależne sesje potwierdzają bezpieczeństwo race.
+- Lifecycle: backend wymaga literaltrue, audytuje pozostałość i skutek, requesthash
+  obejmuje potwierdzenie; UI wysyła je dopiero po jawnym potwierdzeniu człowieka.
+- Szeroki review nie znalazł Criticalsecurity/ledger; potwierdził owner-scope,
+  prywatne oryginały, bounded subprocess i brak automatycznego kosztu.
+- Pozostawiono jawnie10baselinewarnings, istniejący błąd script-wide mypy i brak
+  przechwyconego pre-fixRED w jednej historycznej rundzieTask4. To nie nowe defekty
+  produktu ani nie powód, by deklarować je naprawionymi.
+
+## Decyzje wykonawcze i koszt pomyłki
+
+1. Testy na repo-pinned zależnościach zamiast starego współdzielonego venv;
+   koszt pomyłki: ponowny test zgodności rzeczywistego runtime przed wydaniem.
+2. Istniejący izolowany worktree/nowa gałąź i kopia venv, bez zmian shareddeps;
+   koszt: odbudowa środowiska i czas testów.
+3. Model podagenta bez jawnego wskazywania, zgodnie z kontraktem narzędzia;
+   koszt: potencjalnie większy kontekst/koszt wykonania.
+4. Stary test cashflow z deterministyczną datą, bez poszerzania produkcyjnego due_day;
+   koszt: przeróbka testu, nie zmiana księgi.
+5. Rozszerzenie typów ReviewSuggestion o statement/loan_schedule/other zgodnie
+   z wymaganiem odróżniania źródeł; koszt: korekta enum/mapowaniaUI, nie finansów.
+6. Ochrona operatorowego Actualreplacement jako istniejącego mutatora Task6;
+   koszt: utrzymanie dodatkowych guardów/testów, bez uruchamiania importu.
+7. Oddzielne okna focusedimplementation i fullgate z zachowaniem gate przedcommitem;
+   koszt: dodatkowa koordynacja i czas testów, bez osłabiania invariantów.
 
 Pierwszy pełny E2E run miał70 PASS/1skip/3FAIL. Przyczyny potwierdzono:
 shared fixture nie obsługiwała `/documents/upload-capabilities`, a mobilny test

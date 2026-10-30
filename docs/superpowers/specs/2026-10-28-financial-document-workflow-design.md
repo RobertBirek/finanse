@@ -1,7 +1,7 @@
 # Obieg dokumentów finansowych: faktury, paragony i płatności
 
 Status: zakres zaakceptowany; Tasks1–10 oprogramowania zaimplementowane i po review.
-Końcowy gate941backend/278frontend/75E2E+1skip PASS; całościowy review gałęzi w toku (2026-10-30).
+Końcowy gate949backend/279frontend/75E2E+1skip i całościowy review PASS (2026-10-30).
 Certyfikacja rzeczywistych Android/iPhone pozostaje BLOCKED; viewport nie zastępuje urządzeń.
 Bez zgody na deploy, import istniejących danych lub korekty księgi.
 Data: 2026-10-28. Pierwszy etap przed dalszym rozszerzeniem Q7.

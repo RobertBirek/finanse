@@ -36,7 +36,9 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   Zadanie10 workflow/E2E/migracja/parser po poprawkach i review;
   końcowy gate941backend/278frontend/75E2E+1celowyskip, lint/types/build PASS.
   Bez zgody na deploy/import/korekty danych.
-- [~] Całościowy przegląd bezpieczeństwa/zgodności gałęzi i zamknięcie raportu.
+- [x] Całościowy przegląd bezpieczeństwa/zgodności gałęzi i zamknięcie raportu;
+  4Important poprawione w0524cb9, scopedreview bez nowych findings,
+  full949backend/279frontend/75E2E+1skip, lint/types/build i freshsyntheticrestore PASS.
 - [ ] BLOCKED: rzeczywisty Android/iPhone aparat/galeria/dużeHEIC — brak urządzeń;
   viewport i syntetyczny parser nie zastępują certyfikacji telefonu.
 - [ ] Osobna zgoda na merge/push/deploy/migrację produkcji lub przygotowanie starych PDF.

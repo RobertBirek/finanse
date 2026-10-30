@@ -2,6 +2,44 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-30 — Obieg dokumentów: oprogramowanie zakończone, bez wdrożenia
+
+- Końcowy scopedreview0524cb9: wszystkie4Important addressed, brak nowych
+  Critical/Important/Minor. Finalgate949backend/8deselected/10baselinewarnings,
+  279frontend/75E2E+1celowyskip, lint/types/build i Ruff/mypy81 PASS.
+- ParserDocker i freshsyntheticmigration/dumprestore PASS. Devicecert Android/iPhone
+  BLOCKED, nie mylić z375/1440emulacją. Brak merge/push/deploy/importów/realnych zmian.
+- Raport trwały docs/audits/2026-10-28-financial-document-workflow-verification.md
+  zawiera zakres, ograniczenia, reviewdisposition i7 decyzji wykonawczych z kosztami.
+- Gałąź feat/financial-document-workflow pozostawiona lokalnie; zachować istniejący
+  worktree i niezwiązane dirtydocs Velo/Q7. Następna integracja tylko po decyzji użytkownika.
+
+## 2026-10-30 — Końcowa poprawka0524cb9, fullgate i ostatni scopedreview
+
+- Backend949/8deselected/10knownwarnings w844.82s; frontend279/75E2E+1celowyskip,
+  lint/types/build/Ruff/mypy81 i świeża syntetyczna migracja/dumprestore PASS.
+- Commit0524cb9 tylko12source/testpaths, message-normalized z3170ee2 bez zmiany tree.
+  Ostatni scopedreview weryfikuje komplet4findings, reportfinal-rereview w ledger.
+- Produkcja bez zmian, brak merge/push/deploy/importów. TelefonyBLOCKED.
+
+## 2026-10-30 — Końcowe4 poprawki gotowe, pełny releasegate w toku
+
+- Filtrybackend/reasonshelper/coveredidentityguard/serverlifecycleconfirm poprawione;
+  focused19regressions i67finance PASS, frontend11focused oraz lint/types/Ruff/mypy81 PASS.
+- Fullbackend i frontend/E2E uruchomione, independentmigrationdumprestore ponawiane
+  na własnym syntetycznym kontenerze. Report/sessionID w ledger; potem fixcommit i
+  dokładnie jeden scopedreview całościowej poprawki. Produkcja bez zmian.
+
+## 2026-10-30 — Całościowy review: cztery Important, końcowa wspólna poprawka
+
+- NoCriticalsecurity/ledger, ale broadreview wykrył routerdroppingdue/query,
+  puste exclusionreasons wdetail, edycję identity pokrytejfaktury i client-only
+  lifecycleforecastconfirm. Gałąź jeszcze niegotowa do merge.
+- Jeden wykonawca naprawia komplet4findings, focusedTDD i kontraktyUI; potem fullgate
+  i dokładnie jeden scopedreview finalfixwave. Base5013e5f, final-fix-report w ledger.
+- Ostrzeżenia/scriptmypy/Task4REDcaveat jawnie odłożone, devicecertBLOCKED.
+  Produkcja bez zmian.
+
 ## 2026-10-30 — Task10 review clean, całościowy review gałęzi
 
 - Commit4d8abf0 poprawia100/120E2E, HEIFfixture i dowód pg_blocking_pids.

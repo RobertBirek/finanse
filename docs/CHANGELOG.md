@@ -18,13 +18,15 @@ Wszystkie istotne zmiany w projekcie.
 
 ### Fixed
 - Ochrona powiązanych transakcji i metadanych, wspólne blokady konkurencyjnych mutacji.
-  Etapy1–10 oprogramowania po poprawkach i niezależnych review; gate941backend/
-  278frontend/75E2E+1celowydesktopskip, lint/types/build PASS.
+  Etapy1–10 i końcowy review po poprawkach; gate949backend/
+  279frontend/75E2E+1celowydesktopskip, lint/types/build PASS.
 - Brak podwójnej prognozy przed decyzją coverage; jawne ostrzeżenie rzeczywistego
   skutku alokacji dla estymaty cyklicznej i potwierdzenie przed przypisaniem.
 - Stabilne klucze zagnieżdżonych decyzji i ponowione409 wymagające właściwego refetch.
 - Lokalny parserDocker i izolowana syntetyczna migracja/dump-restore PASS.
-- Funkcja pozostaje niewdrożona; całościowy przegląd gałęzi trwa. Certyfikacja
+- Końcowa wspólna poprawka domyka backendfilters/exclusionreasons, guard tożsamości
+  pokrytej faktury i server-enforced potwierdzenie wpływu archiwizacji/anulowania.
+- Funkcja pozostaje niewdrożona; całościowy przegląd gałęzi PASS. Certyfikacja
   rzeczywistych Android/iPhone BLOCKED (brak urządzeń). Raport:
   `docs/audits/2026-10-28-financial-document-workflow-verification.md`.
   Bez importu, migracji produkcji lub zmian dokumentów użytkownika.
