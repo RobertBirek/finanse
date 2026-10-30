@@ -7,6 +7,17 @@ Finalny commit funkcjonalny: `0524cb9e13d7045833ac36b05940a01edbbd401f`.
 Gotowość kodu nie oznacza pełnej kwalifikacji wydania: prawdziwe telefony BLOCKED.
 Bez zgody na wdrożenie lub pracę na danych użytkownika.
 
+## Publikacja do przeglądu — 2026-10-30
+
+Po osobnej zgodzie użytkownika wypchnięto gałąź funkcji i utworzono draft
+PR [#5](https://github.com/RobertBirek/finanse/pull/5) do `main`.
+Zgoda obejmuje tylko push/PR, nie merge, deploy, migrację ani import danych.
+Przed publikacją świeże949backend/279frontend/lint/types/build i Ruff/mypy81 PASS;
+backend840.39s,8proxy deselected,10znanychwarnings. Kod funkcjonalny niezmieniony
+względem0524cb9, wcześniejsze75E2E+1celowyskip pozostają dowodem tego samego kodu.
+CI GitHub uruchomiono przy utworzeniu PR; jego wynik sprawdzać oddzielnie od gate lokalnego.
+Draft pozostaje zablokowany kwalifikacyjnie brakiem prawdziwych telefonów.
+
 ## Zakres
 
 - Oryginał → OCR/propozycja → ręczna weryfikacja → rejestr → jawne rozliczenie.

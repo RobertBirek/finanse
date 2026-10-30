@@ -4,6 +4,12 @@ Wszystkie istotne zmiany w projekcie.
 
 ## [Unreleased] — 2026-10-30 — Obieg faktur i paragonów
 
+### Publication
+- Po osobnej zgodzie użytkownika wypchnięto `feat/financial-document-workflow`
+  i utworzono draft PR [#5](https://github.com/RobertBirek/finanse/pull/5) do `main`.
+  Bez scalania, wdrożenia lub operacji na danych produkcyjnych. CI przy utworzeniu
+  w kolejce; test prawdziwych Android/iPhone pozostaje BLOCKED.
+
 ### Added
 - Prywatny oryginał i podgląd, bezpieczna pochodna HEIC/HEIF oraz wersjonowane
   propozycje OCR z ręcznym retry. Rejestr faktur/paragonów ze źródłami i duplikatami.

@@ -2,6 +2,20 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-30 — Gałąź wypchnięta i draft PR5, bez integracji
+
+- Użytkownik zatwierdził rekomendację push+PR bez scalania/wdrożenia.
+  Sprawdzono CI: wyłącznie testy z jednorazowymi usługami, brak deploy step.
+- Przed push fresh backend949/8proxydeselected/10baselinewarnings w840.39s,
+  frontend279/lint/types/build i Ruff/mypy81 PASS. Kod backend/frontend identyczny
+  z0524cb9 i wcześniejszym całymE2E75+1celowyskip. Log backendu:
+  `/tmp/opencode/financial-document-pr-backend-20261030.log`.
+- `feat/financial-document-workflow` wypchnięta, draft PR5 do main:
+  https://github.com/RobertBirek/finanse/pull/5 . Przy utworzeniu CI w kolejce,
+  nie deklarować GitHubCI PASS na podstawie lokalnego gate.
+- `main` niezmieniony79cfa78, brak merge/pushmain/deploy/migracji/importów.
+  Worktree i zastane niezwiązane dirtydocs Velo/Q7 zachowane. Realphones BLOCKED.
+
 ## 2026-10-30 — Obieg dokumentów: oprogramowanie zakończone, bez wdrożenia
 
 - Końcowy scopedreview0524cb9: wszystkie4Important addressed, brak nowych
