@@ -219,6 +219,17 @@ export async function fixtures(
           : [];
     else if (url.pathname === "/api/documents/d1/text")
       body = { extracted_text: "Tekst testowego dokumentu" };
+    else if (url.pathname === "/api/documents/upload-capabilities")
+      body = {
+        max_file_bytes: 20 * 1024 * 1024,
+        accepted_mime_types: [
+          "application/pdf",
+          "image/heic",
+          "image/heif",
+          "image/jpeg",
+          "image/png",
+        ],
+      };
     else if (url.pathname === "/api/advisor/conversations")
       body = [
         {
