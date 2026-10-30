@@ -14,7 +14,7 @@ export const ids = {
 /** Stateful synthetic API: it records real UI contracts and never accepts an unregistered write. */
 export async function financialDocumentFixtures(
   page: Page,
-  options: { reviewError?: boolean } = {},
+  options: { reviewError?: boolean; invoiceTotalMinor?: number } = {},
 ) {
   const base = await fixtures(page);
   const mutations: Array<{
@@ -30,6 +30,7 @@ export async function financialDocumentFixtures(
     covered = false,
     heifUploaded = false,
     receiptApproved = false;
+  const invoiceTotalMinor = options.invoiceTotalMinor ?? 10000;
   const bill = () => ({
     id: ids.bill,
     kind: "invoice",
@@ -43,15 +44,16 @@ export async function financialDocumentFixtures(
     description: "Usługa testowa",
     category_id: "c1",
     payment_account_id: "a1",
-    total_minor: 10000,
+    total_minor: invoiceTotalMinor,
     currency: "PLN",
     declaration: "payable",
     lifecycle: "active",
     review: "approved",
     version,
     paid_minor: paid,
-    remaining_minor: 10000 - paid,
-    reconciliation: paid === 10000 ? "full" : paid ? "partial" : "none",
+    remaining_minor: invoiceTotalMinor - paid,
+    reconciliation:
+      paid === invoiceTotalMinor ? "full" : paid ? "partial" : "none",
     sources: [
       { document_id: ids.oldPdf },
       ...(attached ? [{ document_id: ids.heic }] : []),
@@ -109,6 +111,64 @@ export async function financialDocumentFixtures(
       last_error_code: "ocr_failed",
     },
   ];
+  const forecast = () => ({
+    last_payday: "2026-10-10",
+    next_payday: "2026-11-10",
+    opening_balance_pln: 50_000,
+    projected_balance_before_next_payday_pln: 38_000,
+    lowest_balance_pln: 38_000,
+    safe_daily_limit_pln: 1_000,
+    days: [],
+    budgets: { total_budget_pln: 0, total_spent_pln: 0, remaining_pln: 0 },
+    suggestions: [
+      ...(covered
+        ? []
+        : [
+            {
+              name: "Abonament — listopad",
+              type: "expense",
+              due_date: "2026-11-05",
+              amount_pln: 10000,
+              status: "due",
+              included_in_forecast: true,
+              actual_transaction_id: null,
+              source_key: "recurring-november",
+              exclusion_reasons: [],
+              source: "recurring",
+              scheduled_item_id: ids.schedule,
+              financial_document_id: null,
+            },
+          ]),
+      {
+        name: `Faktura ${invoiceTotalMinor / 100} — listopad`,
+        type: "expense",
+        due_date: "2026-11-05",
+        amount_pln: invoiceTotalMinor,
+        status: "due",
+        included_in_forecast: true,
+        actual_transaction_id: null,
+        source_key: "financial-document-november",
+        exclusion_reasons: [],
+        source: "financial_document",
+        scheduled_item_id: null,
+        financial_document_id: ids.bill,
+      },
+      {
+        name: "Abonament — grudzień",
+        type: "expense",
+        due_date: "2026-12-05",
+        amount_pln: 10000,
+        status: "due",
+        included_in_forecast: true,
+        actual_transaction_id: null,
+        source_key: "recurring-december",
+        exclusion_reasons: [],
+        source: "recurring",
+        scheduled_item_id: ids.schedule,
+        financial_document_id: null,
+      },
+    ],
+  });
   await page.route("**/api/**", async (route) => {
     const req = route.request(),
       url = new URL(req.url()),
@@ -144,8 +204,14 @@ export async function financialDocumentFixtures(
     if (path === "/api/documents/upload-capabilities" && method === "GET")
       return route.fulfill({
         json: {
-          max_file_bytes: 1000000,
-          accepted_mime_types: ["application/pdf", "image/heic"],
+          max_file_bytes: 20 * 1024 * 1024,
+          accepted_mime_types: [
+            "application/pdf",
+            "image/heic",
+            "image/heif",
+            "image/jpeg",
+            "image/png",
+          ],
         },
       });
     if (
@@ -235,6 +301,8 @@ export async function financialDocumentFixtures(
       return route.fulfill({
         json: [{ id: "c1", name: "Usługi", type: "expense", is_active: true }],
       });
+    if (path === "/api/finance/cashflow/forecast" && method === "GET")
+      return route.fulfill({ json: forecast() });
     if (path === "/api/finance/bills" && method === "GET")
       return route.fulfill({
         json: { items: [bill()], total: 1, limit: 25, offset: 0 },

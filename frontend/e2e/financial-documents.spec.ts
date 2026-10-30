@@ -47,6 +47,32 @@ for (const viewport of [375, 1440]) {
   });
 }
 
+test("replacing one 100 PLN occurrence leaves exactly one 120 PLN invoice upcoming", async ({
+  page,
+}) => {
+  const api = await financialDocumentFixtures(page, {
+    invoiceTotalMinor: 12000,
+  });
+  await page.goto("/finances/cashflow");
+  await expect(page.getByText("Faktura 120 — listopad")).toHaveCount(1);
+  await expect(page.getByText("Abonament — listopad")).toBeVisible();
+
+  await page.goto(`/finances/documents?bill=${ids.bill}`);
+  await page.getByRole("button", { name: "Wpływ na prognozę" }).click();
+  await expect(page.getByText("Wybierz konkretne wystąpienie.")).toBeVisible();
+  await expect(page.getByText(/estymata 100\.00 PLN/)).toBeVisible();
+  await page.getByRole("radio").check();
+  await page.getByRole("button", { name: "Zastąp estymatę" }).click();
+
+  await page.goto("/finances/cashflow");
+  const invoice = page.getByText("Faktura 120 — listopad");
+  await expect(invoice).toHaveCount(1);
+  await expect(invoice.locator("..")).toContainText("120,00 PLN");
+  await expect(page.getByText("Abonament — listopad")).toHaveCount(0);
+  await expect(page.getByText("Abonament — grudzień")).toBeVisible();
+  api.assertClean();
+});
+
 test("legacy PDF review remains manually usable after LLM/OCR error", async ({
   page,
 }) => {
@@ -87,6 +113,8 @@ for (const viewport of [375, 1440]) {
     const api = await financialDocumentFixtures(page);
     await page.goto("/documents");
     const chooser = page.locator('input[type="file"]').first();
+    await expect(page.getByText(/HEIF — do 20\.0 MB/)).toBeVisible();
+    await expect(chooser).toHaveAttribute("accept", /image\/heif/);
     await chooser.setInputFiles({
       name: "ten-sam-zakup.heif",
       mimeType: "image/heif",
@@ -104,7 +132,11 @@ for (const viewport of [375, 1440]) {
         ...Buffer.from("mif1"),
       ]),
     });
-    await expect(page.getByText("ten-sam-zakup.heif")).toBeVisible();
+    await expect(
+      page
+        .getByRole("list", { name: "Stan przesyłania" })
+        .getByText("ten-sam-zakup.heif"),
+    ).toBeVisible();
     await expect(page.getByText("Przesłano")).toBeVisible();
     await page
       .getByRole("button", { name: "Otwórz dokument: ten-sam-zakup.heif" })
@@ -142,13 +174,11 @@ for (const viewport of [375, 1440]) {
     await page
       .getByRole("button", { name: "Zatwierdź do rejestru", exact: true })
       .click();
-    await expect(
-      page.getByRole("button", { name: "Zatwierdź do rejestru", exact: true }),
-    ).toHaveCount(2);
-    await page
-      .getByRole("button", { name: "Zatwierdź do rejestru", exact: true })
-      .last()
-      .click();
+    const resolvedApproval = page.locator('button[type="button"]', {
+      hasText: "Zatwierdź do rejestru",
+    });
+    await expect(resolvedApproval).toBeVisible();
+    await resolvedApproval.click();
     await expect(page).toHaveURL(/\/finances\/documents\?bill=receipt-bill/);
     await expect(
       page.locator("dt", { hasText: "Uzgodnienie" }).locator(".."),

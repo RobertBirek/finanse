@@ -169,7 +169,7 @@ async def test_two_independent_sessions_approve_one_draft_once_without_ledger_en
     """The second real transaction waits for the row lock then sees the stale version."""
     import asyncio
 
-    from sqlalchemy import func
+    from sqlalchemy import func, text
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
     from app.finance.models import FinancialDocument, FinancialTransaction
@@ -181,7 +181,13 @@ async def test_two_independent_sessions_approve_one_draft_once_without_ledger_en
     )
     await db_session.commit()
     sessions = async_sessionmaker(db_session.bind, class_=AsyncSession, expire_on_commit=False)
-    first_ready, release_first = asyncio.Event(), asyncio.Event()
+    first_ready, second_connected, release_first = (
+        asyncio.Event(),
+        asyncio.Event(),
+        asyncio.Event(),
+    )
+    locker_pid: int | None = None
+    waiter_pid: int | None = None
     payload = BillApprove(
         version=draft.version,
         kind="receipt",
@@ -193,9 +199,17 @@ async def test_two_independent_sessions_approve_one_draft_once_without_ledger_en
     )
 
     async def approve(key: str, hold: bool):
+        nonlocal locker_pid, waiter_pid
         async with sessions() as session:
             try:
                 async with session.begin():
+                    backend_pid = await session.scalar(text("SELECT pg_backend_pid()"))
+                    assert backend_pid is not None
+                    if hold:
+                        locker_pid = backend_pid
+                    else:
+                        waiter_pid = backend_pid
+                        second_connected.set()
                     result = await approve_bill(
                         session,
                         owner,
@@ -211,11 +225,35 @@ async def test_two_independent_sessions_approve_one_draft_once_without_ledger_en
                 return error
 
     first = asyncio.create_task(approve("concurrent-first", True))
-    await first_ready.wait()
+    await asyncio.wait_for(first_ready.wait(), timeout=5)
     second = asyncio.create_task(approve("concurrent-second", False))
-    await asyncio.sleep(0)
-    assert not second.done()
-    release_first.set()
+    await asyncio.wait_for(second_connected.wait(), timeout=5)
+
+    async def wait_for_database_block() -> tuple[list[int], str | None]:
+        assert locker_pid is not None and waiter_pid is not None
+        async with sessions() as observer:
+            while True:
+                blocked = (
+                    await observer.execute(
+                        text(
+                            "SELECT pg_blocking_pids(:waiter_pid), wait_event_type "
+                            "FROM pg_stat_activity WHERE pid = :waiter_pid"
+                        ),
+                        {"waiter_pid": waiter_pid},
+                    )
+                ).one()
+                blockers, wait_event_type = blocked
+                if locker_pid in blockers:
+                    return blockers, wait_event_type
+                await asyncio.sleep(0.01)
+
+    try:
+        blockers, wait_event_type = await asyncio.wait_for(wait_for_database_block(), timeout=5)
+        assert locker_pid in blockers
+        assert wait_event_type == "Lock"
+        assert not second.done()
+    finally:
+        release_first.set()
     one, two = await asyncio.gather(first, second)
     assert sum(not isinstance(item, Exception) for item in (one, two)) == 1
     persisted = await db_session.get(FinancialDocument, draft.id)
