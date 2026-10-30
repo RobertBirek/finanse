@@ -17,6 +17,7 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 vi.mock("../../../api/bills", () => ({
   useSerializedIntentKey: () => () => "stable-key",
+  useBill: () => ({ refetch: vi.fn() }),
   useBillCoverage: () => ({
     decide: { mutate: vi.fn(), isPending: false, error: null },
     unlink: { mutate: unlink, isPending: false, error: null },

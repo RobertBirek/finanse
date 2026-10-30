@@ -101,11 +101,38 @@ export type BillApprove = {
 export type DuplicateCandidate = { id: string; reasons: string[] };
 const headers = () => ({ "Idempotency-Key": crypto.randomUUID() });
 export const stableKey = () => crypto.randomUUID();
+function canonicalIntent(value: unknown): unknown {
+  if (value === null || typeof value === "string" || typeof value === "boolean")
+    return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (Array.isArray(value))
+    return value.map((item) =>
+      item === undefined ||
+      typeof item === "function" ||
+      typeof item === "symbol"
+        ? null
+        : canonicalIntent(item),
+    );
+  if (typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      const item = (value as Record<string, unknown>)[key];
+      if (
+        item !== undefined &&
+        typeof item !== "function" &&
+        typeof item !== "symbol"
+      )
+        result[key] = canonicalIntent(item);
+    }
+    return result;
+  }
+  return undefined;
+}
 /** Reuse a key only for an identical user decision; changed payloads are new intents. */
 export function useSerializedIntentKey() {
   const current = useRef<{ key: string; serialized: string } | null>(null);
   return (intent: Record<string, unknown>) => {
-    const serialized = JSON.stringify(intent, Object.keys(intent).sort());
+    const serialized = JSON.stringify(canonicalIntent(intent));
     if (current.current?.serialized !== serialized)
       current.current = { serialized, key: stableKey() };
     return current.current.key;

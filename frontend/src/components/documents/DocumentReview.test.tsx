@@ -258,6 +258,43 @@ describe("DocumentReview", () => {
     apiState.approve.mockReset();
   });
 
+  it("blocks an attach conflict until a refreshed target version is acknowledged", async () => {
+    apiState.attach.mockReset();
+    apiState.attach.mockImplementation((_input, options) =>
+      options?.onError?.({ response: { status: 409 } }),
+    );
+    renderReview();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    await screen.findByRole("button", { name: "Dołącz do istniejącego" });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dołącz do istniejącego" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Potwierdź dołączenie" }),
+    );
+    expect(apiState.attach).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("button", { name: "Potwierdź dołączenie" }),
+    ).toBeDisabled();
+    fireEvent.click(
+      screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
+    );
+    await screen.findByText(/Aktualna wersja: 5/);
+    fireEvent.click(
+      screen.getByRole("button", { name: /podejmuję nową decyzję/ }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Potwierdź dołączenie" }),
+    );
+    expect(apiState.attach).toHaveBeenLastCalledWith(
+      expect.objectContaining({ expectedVersion: 5 }),
+      expect.anything(),
+    );
+    apiState.attach.mockReset();
+  });
+
   it("opens the approved document register detail after a separate approval succeeds", async () => {
     apiState.approve.mockImplementation((_input, options) =>
       options?.onSuccess?.({ id: "approved-bill" }),

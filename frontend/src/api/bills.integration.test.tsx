@@ -101,6 +101,58 @@ function IntentProbe() {
   );
 }
 
+function ApprovalIntentProbe() {
+  const [supplier, setSupplier] = useState("A");
+  const [reordered, setReordered] = useState(false);
+  const approve = useApproveBill();
+  const keyFor = useSerializedIntentKey();
+  const data = reordered
+    ? {
+        currency: "PLN" as const,
+        total_minor: 100,
+        description: "B",
+        category_id: "category-1",
+        supplier_name: supplier,
+        kind: "invoice" as const,
+        version: 1,
+      }
+    : {
+        version: 1,
+        kind: "invoice" as const,
+        supplier_name: supplier,
+        description: "B",
+        total_minor: 100,
+        currency: "PLN" as const,
+        category_id: "category-1",
+      };
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          approve.mutate({
+            billId: "draft",
+            data,
+            idempotencyKey: keyFor({
+              action: "approve",
+              billId: "draft",
+              data,
+            }),
+          })
+        }
+      >
+        approve
+      </button>
+      <button type="button" onClick={() => setSupplier("Changed")}>
+        change supplier
+      </button>
+      <button type="button" onClick={() => setReordered(true)}>
+        reorder fields
+      </button>
+    </>
+  );
+}
+
 describe("bill API integration", () => {
   it("refetches bill and cashflow state after allocating 40 of 100", async () => {
     const state = { paid_minor: 0, remaining_minor: 10000, forecast: 100 };
@@ -236,5 +288,28 @@ describe("bill API integration", () => {
       (post.mock.calls[1][2] as { headers: { "Idempotency-Key": string } })
         .headers["Idempotency-Key"],
     ).toBe("attach-intent");
+  });
+
+  it("keeps a nested approval retry key, changes nested data keys, and ignores deep object ordering", async () => {
+    const post = vi.spyOn(api, "post").mockResolvedValue({ data: {} } as never);
+    withClient(<ApprovalIntentProbe />);
+    fireEvent.click(screen.getByRole("button", { name: "approve" }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "approve" }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole("button", { name: "reorder fields" }));
+    fireEvent.click(screen.getByRole("button", { name: "approve" }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
+    fireEvent.click(screen.getByRole("button", { name: "change supplier" }));
+    fireEvent.click(screen.getByRole("button", { name: "approve" }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(4));
+
+    const key = (call: unknown[]) =>
+      (call[2] as { headers: { "Idempotency-Key": string } }).headers[
+        "Idempotency-Key"
+      ];
+    expect(key(post.mock.calls[0])).toBe(key(post.mock.calls[1]));
+    expect(key(post.mock.calls[2])).toBe(key(post.mock.calls[1]));
+    expect(key(post.mock.calls[3])).not.toBe(key(post.mock.calls[2]));
   });
 });

@@ -3,6 +3,7 @@ import { useState } from "react";
 import api from "../../../lib/api";
 import {
   useSerializedIntentKey,
+  useBill,
   useBillCoverage,
   type BillResponse,
   type CoverageCandidate,
@@ -32,9 +33,13 @@ export function BillCoverageDialog({
       ).data,
   });
   const coverage = useBillCoverage();
+  const currentBill = useBill(bill.id, false);
   const keyFor = useSerializedIntentKey();
   const [selected, setSelected] = useState<CoverageCandidate | null>(null);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const [comparison, setComparison] = useState<BillResponse | null>(null);
+  const [needsNewDecision, setNeedsNewDecision] = useState(false);
+  const activeBill = comparison ?? bill;
   const coveredEstimate = candidates.data?.find(
     (candidate) =>
       candidate.scheduled_item_id === bill.coverage?.scheduled_item_id &&
@@ -43,8 +48,8 @@ export function BillCoverageDialog({
   const decide = (choice: "replace" | "separate") =>
     coverage.decide.mutate(
       {
-        billId: bill.id,
-        version: bill.version,
+        billId: activeBill.id,
+        version: activeBill.version,
         choice,
         ...(choice === "replace" && selected
           ? {
@@ -54,14 +59,23 @@ export function BillCoverageDialog({
           : {}),
         idempotencyKey: keyFor({
           action: "coverage",
-          billId: bill.id,
-          version: bill.version,
+          billId: activeBill.id,
+          version: activeBill.version,
           choice,
           scheduled_item_id: selected?.scheduled_item_id,
           occurrence_date: selected?.occurrence_date,
         }),
       },
-      { onSuccess: onClose },
+      {
+        onSuccess: onClose,
+        onError: (error) => {
+          if (
+            (error as { response?: { status?: number } }).response?.status ===
+            409
+          )
+            setNeedsNewDecision(true);
+        },
+      },
     );
   return (
     <Dialog
@@ -86,18 +100,28 @@ export function BillCoverageDialog({
                 <button
                   className="btn-primary"
                   type="button"
+                  disabled={needsNewDecision}
                   onClick={() =>
                     coverage.unlink.mutate(
                       {
-                        billId: bill.id,
-                        expected_version: bill.version,
+                        billId: activeBill.id,
+                        expected_version: activeBill.version,
                         idempotencyKey: keyFor({
                           action: "unlink-coverage",
-                          billId: bill.id,
-                          version: bill.version,
+                          billId: activeBill.id,
+                          version: activeBill.version,
                         }),
                       },
-                      { onSuccess: onClose },
+                      {
+                        onSuccess: onClose,
+                        onError: (error) => {
+                          if (
+                            (error as { response?: { status?: number } })
+                              .response?.status === 409
+                          )
+                            setNeedsNewDecision(true);
+                        },
+                      },
                     )
                   }
                 >
@@ -150,7 +174,7 @@ export function BillCoverageDialog({
             <button
               className="btn-primary"
               type="button"
-              disabled={!selected}
+              disabled={!selected || needsNewDecision}
               onClick={() => decide("replace")}
             >
               Zastąp estymatę
@@ -158,6 +182,7 @@ export function BillCoverageDialog({
             <button
               className="btn-secondary"
               type="button"
+              disabled={needsNewDecision}
               onClick={() => decide("separate")}
             >
               Pokaż osobno
@@ -170,6 +195,34 @@ export function BillCoverageDialog({
           Nie udało się zmienić prognozy. Odśwież dokument i sprawdź aktualny
           stan.
         </p>
+      ) : null}
+      {needsNewDecision ? (
+        <div className="mt-3 rounded border border-amber-700 p-3 text-sm text-amber-100">
+          Wersja przed zmianą: {bill.version}. Zapis jest zablokowany do
+          odświeżenia.
+          {comparison ? <p>Aktualna wersja: {comparison.version}.</p> : null}
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={async () => {
+                const result = await currentBill.refetch();
+                if (result.data) setComparison(result.data);
+              }}
+            >
+              Odśwież aktualny dokument
+            </button>
+            {comparison ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setNeedsNewDecision(false)}
+              >
+                Rozumiem — podejmuję nową decyzję
+              </button>
+            ) : null}
+          </div>
+        </div>
       ) : null}
     </Dialog>
   );

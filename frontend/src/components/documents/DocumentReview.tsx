@@ -75,6 +75,10 @@ export function DocumentReview({ documentId, onClose }: Props) {
   const [attachTargetId, setAttachTargetId] = useState<string | null>(null);
   const duplicates = useDuplicateCandidates(draftBill?.id ?? null);
   const attachTarget = useBill(attachTargetId);
+  const [attachComparison, setAttachComparison] = useState<{
+    id: string;
+    version: number;
+  } | null>(null);
   const currentDraft = useBill(draftBill?.id ?? null, false);
   const categories = useCategories();
   const accounts = useAccounts();
@@ -284,6 +288,11 @@ export function DocumentReview({ documentId, onClose }: Props) {
                           ...draftBill,
                           version: result.data.version,
                         });
+                      if (conflict === "attach")
+                        setAttachComparison({
+                          id: result.data.id,
+                          version: result.data.version,
+                        });
                     }
                   }}
                 >
@@ -349,8 +358,11 @@ export function DocumentReview({ documentId, onClose }: Props) {
                 <DuplicateChoices
                   candidates={duplicates.data ?? []}
                   loading={duplicates.isLoading}
-                  onAttach={(candidate) => setAttachTargetId(candidate.id)}
-                  attachTarget={attachTarget.data}
+                  onAttach={(candidate) => {
+                    setAttachComparison(null);
+                    setAttachTargetId(candidate.id);
+                  }}
+                  attachTarget={attachComparison ?? attachTarget.data}
                   attachTargetLoading={attachTarget.isLoading}
                   onConfirmAttach={(target) =>
                     attach.mutate(
@@ -602,6 +614,7 @@ function DuplicateChoices({
           type="button"
           className="btn-secondary mt-2 mr-2"
           onClick={() => onConfirmAttach(attachTarget)}
+          disabled={disabled}
         >
           Potwierdź dołączenie
         </button>
