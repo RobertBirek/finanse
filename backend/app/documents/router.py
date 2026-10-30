@@ -16,6 +16,7 @@ from app.documents.schemas import (
     DocumentResponse,
     DocumentStatus,
     DocumentTextResponse,
+    DocumentUploadCapabilities,
     DocumentUploadResponse,
 )
 from app.documents.upload_limits import DocumentStorageFullError, StorageQuotaExceededError
@@ -41,6 +42,17 @@ preview_rate_limit = limit_upload(get_current_user)
 
 def _private_headers() -> dict[str, str]:
     return {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}
+
+
+@router.get("/upload-capabilities", response_model=DocumentUploadCapabilities)
+async def upload_capabilities(
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    del current_user
+    return DocumentUploadCapabilities(
+        max_file_bytes=settings.DOCUMENT_MAX_FILE_BYTES,
+        accepted_mime_types=sorted(mime for mime in ALLOWED_MIME_TYPES if mime),
+    )
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)

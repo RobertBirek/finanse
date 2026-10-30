@@ -35,6 +35,35 @@ function renderDocuments(
 }
 
 describe("document retry and admission feedback", () => {
+  it("camera_requests_environment_and_accepts_heic", () => {
+    const view = renderDocuments("done", null);
+    const camera = view.container.querySelector(
+      'input[capture="environment"]',
+    ) as HTMLInputElement;
+    expect(camera).toBeTruthy();
+    expect(camera.accept).toContain(".heic");
+    expect(camera.accept).toContain(".heif");
+  });
+  it("multi_upload_shows_per_file_success_failure", async () => {
+    vi.spyOn(api, "post")
+      .mockRejectedValueOnce({ isAxiosError: true, response: { status: 503 } })
+      .mockResolvedValueOnce({ data: { document: {}, is_duplicate: false } });
+    const view = renderDocuments("done", null);
+    const input = view.container.querySelector('input[type="file"]')!;
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File(["a"], "first.pdf", { type: "application/pdf" }),
+          new File(["b"], "second.pdf", { type: "application/pdf" }),
+        ],
+      },
+    });
+    expect(await screen.findByText("Przesłano")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("status").some((node) => node.textContent === "Błąd"),
+    ).toBe(true);
+    expect(api.post).toHaveBeenCalledTimes(2);
+  });
   it("shows scheduled retry without promising success", async () => {
     renderDocuments();
     expect(await screen.findByText(/Ponowna próba/)).toBeInTheDocument();

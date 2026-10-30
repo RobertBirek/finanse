@@ -31,7 +31,7 @@ beforeEach(() => {
 });
 
 describe("Inbox conversion safety", () => {
-  it("disables unsupported project and transaction conversions", () => {
+  it("inbox_legacy_refers_to_document_without_enabling_transaction_conversion", () => {
     render(<Inbox />);
     const project = screen.getByRole("button", { name: /Projekt.*wkrótce/ });
     const transaction = screen.getByRole("button", {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { QueryFeedback } from "../components/QueryFeedback";
 import {
   useInboxItems,
@@ -194,6 +195,14 @@ export function Inbox() {
                     <span className="text-xs px-2 py-0.5 rounded-sm bg-gray-800 text-gray-400">
                       {TARGET_LABELS[item.target_type] || item.target_type}
                     </span>
+                  )}
+                  {item.target_type === "document" && item.target_id && (
+                    <Link
+                      to="/documents"
+                      className="text-xs text-advisor-400 hover:underline"
+                    >
+                      Otwórz dokument
+                    </Link>
                   )}
                 </div>
               </div>

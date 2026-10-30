@@ -7,11 +7,13 @@ import {
   STATUS_COLORS,
 } from "../api/documents";
 import { DocumentViewer } from "./DocumentViewer";
+import { DocumentReview } from "./documents/DocumentReview";
 import { QueryFeedback } from "./QueryFeedback";
 
 export function DocumentList() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [viewingId, setViewingId] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
   const query = useDocuments(
     statusFilter ? { status: statusFilter } : undefined,
   );
@@ -132,6 +134,16 @@ export function DocumentList() {
         <DocumentViewer
           document={viewingDoc}
           onClose={() => setViewingId(null)}
+          onReview={() => {
+            setViewingId(null);
+            setReviewingId(viewingDoc.id);
+          }}
+        />
+      )}
+      {reviewingId && (
+        <DocumentReview
+          documentId={reviewingId}
+          onClose={() => setReviewingId(null)}
         />
       )}
     </div>
