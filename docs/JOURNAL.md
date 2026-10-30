@@ -2,6 +2,22 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-10-30 — Izolowany podgląd PR5 uruchomiony i odebrany
+
+- Użytkownik zatwierdził osobny stack/hostHTTPS. `finanse-test.birek.online` działa
+  na gitarchive6385f39; Composefinanse-doc-preview, własneinternalnetworks/PG/Redis/
+  uploads/Stirling/backend/worker/frontend, bez egressu/LLMkeys/rejestracji.
+- Caddy append-only newhost+ingress, validate/gracefulreload/rollbackguards. Stare
+  trasy/HTML i containerID/start/restartcount produkcji identyczne, bez DBodczytu.
+- Seed6fikcyjnychprzykładów +3rzeczywiste testowe uploadyPDF/JPEG/HEIF. OCRdone i
+  textnonempty; originalhash/previewnoGPS, manualapprove bez ledger/saldchange PASS.
+- HTTPSbrowser375/1440, EUR/review/privateblob i niezależnysecurityreview PASS.
+  Drobny duplicateidenticalnosniff nieblokujący; realphonecert nadal do użytkownika.
+- Prywatne infra i dowody `/docker/finanse-preview/`; hasło w0600, nie w repo.
+  Raport: docs/audits/2026-10-30-isolated-document-preview.md . Podgląd tymczasowy,
+  rollback usuwa wyłącznie własny host; nie usuwać volume/uploadów bez decyzji.
+- Brak merge/pushmain/deployprodukcyjnego/migracji/importów/danych z produkcji.
+
 ## 2026-10-30 — Gałąź wypchnięta i draft PR5, bez integracji
 
 - Użytkownik zatwierdził rekomendację push+PR bez scalania/wdrożenia.

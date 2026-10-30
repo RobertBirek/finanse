@@ -41,6 +41,9 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   full949backend/279frontend/75E2E+1skip, lint/types/build i freshsyntheticrestore PASS.
 - [ ] BLOCKED: rzeczywisty Android/iPhone aparat/galeria/dużeHEIC — brak urządzeń;
   viewport i syntetyczny parser nie zastępują certyfikacji telefonu.
+- [x] Po zgodzie uruchomiono izolowany podgląd `https://finanse-test.birek.online`
+  z osobnymi bazą/uploadami/OCR, fikcyjnymi danymi i bez LLM; HTTPS/API/browser/security
+  PASS. Login przekazany poza repo. To nie zastępuje testu powyżej na prawdziwym telefonie.
 - [x] Po osobnej zgodzie: push gałęzi i draft PR [#5](https://github.com/RobertBirek/finanse/pull/5)
   do `main`, bez merge/deploy. Przed push świeże949backend/279frontend/lint/types/build PASS.
 - [ ] Osobna zgoda na merge/deploy/migrację produkcji lub przygotowanie starych PDF.

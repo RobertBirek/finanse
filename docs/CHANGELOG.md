@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Preview] — 2026-10-30 — Izolowany test dokumentów na telefonie
+
+### Added
+- Zatwierdzony podgląd `https://finanse-test.birek.online` z fikcyjnymi danymi,
+  osobnym stackiem/bazą/uploadami i lokalnym OCR, bez kluczy LLM i rejestracji.
+- Rzeczywiste HTTPS uploadPDF/JPEG/HEIF, OCR, prywatny oryginał/preview, ręczne review
+  bez zmiany księgi oraz przeglądarka375/1440 PASS. Niezależny odbiór do testów właściciela.
+
+### Changed
+- Dodano tylko nowy host i dedykowany ingress w Caddy; stare trasy/HTML/ID i czasy
+  startu produkcji bez zmian. Brak merge/deploy/migracji/importu produkcji.
+- Test prawdziwych telefonów nadal wymaga użytkownika; raport
+  `docs/audits/2026-10-30-isolated-document-preview.md`, bez sekretów w Git.
+
 ## [Unreleased] — 2026-10-30 — Obieg faktur i paragonów
 
 ### Publication
