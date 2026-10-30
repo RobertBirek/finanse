@@ -165,6 +165,24 @@ export function usePrepareDocumentReview() {
   });
 }
 
+export function useRetryDocumentOcr() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ documentId }: { documentId: string }) =>
+      (
+        await api.post(`/documents/${documentId}/retry-ocr`, undefined, {
+          headers: mutationHeaders(),
+        })
+      ).data,
+    onSuccess: (_result, { documentId }) => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({
+        queryKey: ["documents", documentId, "review"],
+      });
+    },
+  });
+}
+
 export function useDocumentPreview(id: string | null) {
   return useQuery({
     queryKey: ["documents", id, "preview"],

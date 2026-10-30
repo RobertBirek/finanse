@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
 
 export type BillKind = "invoice" | "receipt";
@@ -48,6 +48,7 @@ export type BillApprove = {
   declaration?: PaymentDeclaration;
   duplicate_decision?: "separate";
 };
+export type DuplicateCandidate = { id: string; reasons: string[] };
 const headers = () => ({ "Idempotency-Key": crypto.randomUUID() });
 const invalidate = (client: ReturnType<typeof useQueryClient>) =>
   client.invalidateQueries({ queryKey: ["finance", "bills"] });
@@ -104,5 +105,25 @@ export function useAttachBillSource() {
         )
       ).data,
     onSuccess: () => invalidate(client),
+  });
+}
+export function useDuplicateCandidates(billId: string | null) {
+  return useQuery({
+    queryKey: ["finance", "bills", billId, "duplicates"],
+    enabled: !!billId,
+    queryFn: async () =>
+      (
+        await api.get<DuplicateCandidate[]>(
+          `/finance/bills/${billId}/duplicates`,
+        )
+      ).data,
+  });
+}
+export function useBill(billId: string | null) {
+  return useQuery({
+    queryKey: ["finance", "bills", billId],
+    enabled: !!billId,
+    queryFn: async () =>
+      (await api.get<BillResponse>(`/finance/bills/${billId}`)).data,
   });
 }

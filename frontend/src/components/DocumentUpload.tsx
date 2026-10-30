@@ -38,9 +38,14 @@ export function DocumentUpload() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
   const nextId = useRef(0);
+  const queue = useRef<UploadItem[]>([]);
+  const draining = useRef(false);
 
-  const runSequentially = async (newItems: UploadItem[]) => {
-    for (const item of newItems) {
+  const drainQueue = async () => {
+    if (draining.current) return;
+    draining.current = true;
+    while (queue.current.length) {
+      const item = queue.current.shift()!;
       setItems((current) =>
         current.map((entry) =>
           entry.id === item.id ? { ...entry, state: "uploading" } : entry,
@@ -63,6 +68,7 @@ export function DocumentUpload() {
         );
       }
     }
+    draining.current = false;
   };
   const addFiles = (files: FileList | File[]) => {
     setValidationError(null);
@@ -85,10 +91,17 @@ export function DocumentUpload() {
       state: "queued" as const,
     }));
     setItems((current) => [...current, ...newItems]);
-    void runSequentially(newItems);
+    queue.current.push(...newItems);
+    void drainQueue();
   };
-  const retry = (item: UploadItem) =>
-    void runSequentially([{ ...item, state: "queued", error: undefined }]);
+  const retry = (item: UploadItem) => {
+    const queued = { ...item, state: "queued" as const, error: undefined };
+    setItems((current) =>
+      current.map((entry) => (entry.id === item.id ? queued : entry)),
+    );
+    queue.current.push(queued);
+    void drainQueue();
+  };
   const onChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) addFiles(event.target.files);
     event.target.value = "";

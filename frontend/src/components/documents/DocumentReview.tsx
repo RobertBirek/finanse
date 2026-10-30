@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   useApproveBill,
+  useAttachBillSource,
+  useBill,
+  useDuplicateCandidates,
   usePrepareBill,
   type BillApprove,
 } from "../../api/bills";
@@ -9,7 +12,9 @@ import {
   useDocumentPreview,
   useDocumentReview,
   usePrepareDocumentReview,
+  useRetryDocumentOcr,
 } from "../../api/documents";
+import { useAccounts, useCategories } from "../../api/finance";
 import { Dialog } from "../Dialog";
 
 type Props = { documentId: string; onClose: () => void };
@@ -20,10 +25,13 @@ type Form = {
   total: string;
   currency: "PLN" | "EUR" | "USD";
   issue_date: string;
+  sale_date: string;
   due_date: string;
   number: string;
   supplier_tax_id: string;
   payee_iban: string;
+  category_id: string;
+  payment_account_id: string;
 };
 const empty: Form = {
   kind: "invoice",
@@ -32,10 +40,13 @@ const empty: Form = {
   total: "",
   currency: "PLN",
   issue_date: "",
+  sale_date: "",
   due_date: "",
   number: "",
   supplier_tax_id: "",
   payee_iban: "",
+  category_id: "",
+  payment_account_id: "",
 };
 const minor = (raw: string) =>
   /^\d+(\.\d{1,2})?$/.test(raw) ? Math.round(Number(raw) * 100) : null;
@@ -45,8 +56,19 @@ export function DocumentReview({ documentId, onClose }: Props) {
   const preview = useDocumentPreview(documentId);
   const original = useDocumentOriginal(documentId);
   const prepare = usePrepareDocumentReview();
+  const retryOcr = useRetryDocumentOcr();
   const prepareBill = usePrepareBill();
   const approve = useApproveBill();
+  const attach = useAttachBillSource();
+  const [draftBill, setDraftBill] = useState<{
+    id: string;
+    version: number;
+  } | null>(null);
+  const [attachTargetId, setAttachTargetId] = useState<string | null>(null);
+  const duplicates = useDuplicateCandidates(draftBill?.id ?? null);
+  const attachTarget = useBill(attachTargetId);
+  const categories = useCategories();
+  const accounts = useAccounts();
   const [form, setForm] = useState<Form>(empty);
   const previewUrl = useMemo(
     () => (preview.data ? URL.createObjectURL(preview.data) : null),
@@ -78,10 +100,13 @@ export function DocumentReview({ documentId, onClose }: Props) {
       total: fields.total ?? "",
       currency: fields.currency ?? "PLN",
       issue_date: fields.issue_date ?? "",
+      sale_date: fields.sale_date ?? "",
       due_date: fields.due_date ?? "",
       number: fields.number ?? "",
       supplier_tax_id: fields.supplier_tax_id ?? "",
       payee_iban: fields.payee_iban ?? "",
+      category_id: "",
+      payment_account_id: "",
     });
   }, [review.data]);
   const unsupported =
@@ -103,32 +128,47 @@ export function DocumentReview({ documentId, onClose }: Props) {
     prepareBill.mutate(
       { documentId },
       {
-        onSuccess: (bill) => {
-          const data: BillApprove = {
-            version: bill.version,
-            kind: form.kind,
-            supplier_name: form.supplier_name.trim(),
-            description: form.description.trim(),
-            total_minor,
-            currency: form.currency,
-            declaration: form.kind === "receipt" ? "declared_paid" : "unknown",
-            supplier_tax_id: form.supplier_tax_id || null,
-            number: form.number || null,
-            issue_date: form.issue_date || null,
-            due_date: form.due_date || null,
-            payee_iban: form.payee_iban || null,
-          };
-          approve.mutate({ billId: bill.id, data });
-        },
+        onSuccess: (bill) =>
+          setDraftBill({ id: bill.id, version: bill.version }),
       },
     );
+  };
+  const approveDraft = (separate: boolean) => {
+    if (!draftBill) return;
+    const total_minor = minor(form.total);
+    if (total_minor === null) return;
+    const data: BillApprove = {
+      version: draftBill.version,
+      kind: form.kind,
+      supplier_name: form.supplier_name.trim(),
+      description: form.description.trim(),
+      total_minor,
+      currency: form.currency,
+      declaration: form.kind === "receipt" ? "declared_paid" : "unknown",
+      supplier_tax_id: form.supplier_tax_id || null,
+      number: form.number || null,
+      issue_date: form.issue_date || null,
+      sale_date: form.sale_date || null,
+      due_date: form.due_date || null,
+      payee_iban: form.payee_iban || null,
+      category_id: form.category_id || null,
+      payment_account_id: form.payment_account_id || null,
+      ...(separate ? { duplicate_decision: "separate" as const } : {}),
+    };
+    approve.mutate({ billId: draftBill.id, data });
   };
   return (
     <Dialog
       label="Sprawdź dane dokumentu"
       onClose={onClose}
       panelClassName="w-full max-w-4xl rounded-xl border border-gray-700 bg-gray-900"
-      busy={prepare.isPending || prepareBill.isPending || approve.isPending}
+      busy={
+        prepare.isPending ||
+        retryOcr.isPending ||
+        prepareBill.isPending ||
+        approve.isPending ||
+        attach.isPending
+      }
     >
       <div className="flex items-center justify-between gap-3 border-b border-gray-800 p-4">
         <h2 className="text-lg font-semibold text-white">Sprawdź dane</h2>
@@ -187,6 +227,13 @@ export function DocumentReview({ documentId, onClose }: Props) {
                 <p role="alert" className="mt-3 text-sm text-red-300">
                   Nie udało się uzyskać propozycji od zewnętrznego dostawcy.
                   Możesz uzupełnić pola ręcznie.
+                  <button
+                    type="button"
+                    className="btn-secondary ml-2"
+                    onClick={() => retryOcr.mutate({ documentId })}
+                  >
+                    Ponów OCR
+                  </button>
                 </p>
               )}
               {unsupported ? (
@@ -202,6 +249,26 @@ export function DocumentReview({ documentId, onClose }: Props) {
                   provenance={review.data.provenance}
                   onSubmit={submit}
                   pending={prepareBill.isPending || approve.isPending}
+                  categories={categories.data ?? []}
+                  accounts={accounts.data ?? []}
+                />
+              )}
+              {draftBill && (
+                <DuplicateChoices
+                  candidates={duplicates.data ?? []}
+                  loading={duplicates.isLoading}
+                  onAttach={(candidate) => setAttachTargetId(candidate.id)}
+                  attachTarget={attachTarget.data}
+                  attachTargetLoading={attachTarget.isLoading}
+                  onConfirmAttach={(target) =>
+                    attach.mutate({
+                      billId: target.id,
+                      documentId,
+                      expectedVersion: target.version,
+                    })
+                  }
+                  onSeparate={() => approveDraft(true)}
+                  onApprove={() => approveDraft(false)}
                 />
               )}
             </>
@@ -218,12 +285,16 @@ function ReviewForm({
   provenance,
   onSubmit,
   pending,
+  categories,
+  accounts,
 }: {
   form: Form;
   update: (key: keyof Form, value: string) => void;
   provenance: Record<string, string>;
   onSubmit: () => void;
   pending: boolean;
+  categories: { id: string; name: string; type: string; is_active: boolean }[];
+  accounts: { id: string; name: string; is_active: boolean }[];
 }) {
   return (
     <form
@@ -253,11 +324,53 @@ function ReviewForm({
         required
       />
       <Field
+        label="Data sprzedaży"
+        value={form.sale_date}
+        onChange={(v) => update("sale_date", v)}
+        type="date"
+      />
+      <Field
         label="Opis"
         value={form.description}
         onChange={(v) => update("description", v)}
         required
       />
+      <label className="block text-sm text-gray-300">
+        Kategoria
+        <select
+          aria-label="Kategoria"
+          value={form.category_id}
+          onChange={(e) => update("category_id", e.target.value)}
+          className="input mt-1 w-full"
+        >
+          <option value="">Nie wybieraj teraz</option>
+          {categories
+            .filter((item) => item.is_active && item.type === "expense")
+            .map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+        </select>
+      </label>
+      <label className="block text-sm text-gray-300">
+        Konto płatności
+        <select
+          aria-label="Konto płatności"
+          value={form.payment_account_id}
+          onChange={(e) => update("payment_account_id", e.target.value)}
+          className="input mt-1 w-full"
+        >
+          <option value="">Nie wybieraj teraz</option>
+          {accounts
+            .filter((item) => item.is_active)
+            .map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+        </select>
+      </label>
       <Field
         label="Kwota"
         value={form.total}
@@ -312,6 +425,74 @@ function ReviewForm({
         Zatwierdź do rejestru
       </button>
     </form>
+  );
+}
+
+function DuplicateChoices({
+  candidates,
+  loading,
+  onAttach,
+  attachTarget,
+  attachTargetLoading,
+  onConfirmAttach,
+  onSeparate,
+  onApprove,
+}: {
+  candidates: { id: string; reasons: string[] }[];
+  loading: boolean;
+  onAttach: (candidate: { id: string; reasons: string[] }) => void;
+  attachTarget?: { id: string; version: number };
+  attachTargetLoading: boolean;
+  onConfirmAttach: (target: { id: string; version: number }) => void;
+  onSeparate: () => void;
+  onApprove: () => void;
+}) {
+  if (loading)
+    return (
+      <p role="status" className="mt-3 text-sm text-gray-400">
+        Sprawdzanie podobnych dokumentów…
+      </p>
+    );
+  if (!candidates.length)
+    return (
+      <button type="button" className="btn-primary mt-3" onClick={onApprove}>
+        Zatwierdź do rejestru
+      </button>
+    );
+  return (
+    <div className="mt-3 rounded-lg border border-yellow-700 p-3">
+      <p className="text-sm text-yellow-200">
+        Znaleziono podobny dokument. Wybierz świadomie: dołącz źródło albo
+        zarejestruj osobno.
+      </p>
+      {candidates.map((candidate) => (
+        <button
+          key={candidate.id}
+          type="button"
+          className="btn-secondary mt-2 mr-2"
+          onClick={() => onAttach(candidate)}
+        >
+          Dołącz do istniejącego
+        </button>
+      ))}
+      {attachTargetLoading && (
+        <span role="status" className="ml-2 text-sm text-gray-400">
+          Pobieranie wersji rejestru…
+        </span>
+      )}
+      {attachTarget && (
+        <button
+          type="button"
+          className="btn-secondary mt-2 mr-2"
+          onClick={() => onConfirmAttach(attachTarget)}
+        >
+          Potwierdź dołączenie
+        </button>
+      )}
+      <button type="button" className="btn-primary mt-2" onClick={onSeparate}>
+        Zarejestruj osobno
+      </button>
+    </div>
   );
 }
 function Field({
