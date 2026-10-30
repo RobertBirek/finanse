@@ -398,17 +398,23 @@ export function useUpdateBillLifecycle() {
       billId,
       expected_version,
       lifecycle,
+      confirm_forecast_effect,
       idempotencyKey,
     }: {
       billId: string;
       expected_version: number;
       lifecycle: BillResponse["lifecycle"];
+      confirm_forecast_effect?: true;
       idempotencyKey: string;
     }) =>
       (
         await api.post<BillResponse>(
           `/finance/bills/${billId}/lifecycle`,
-          { expected_version, lifecycle },
+          {
+            expected_version,
+            lifecycle,
+            ...(confirm_forecast_effect ? { confirm_forecast_effect } : {}),
+          },
           { headers: { "Idempotency-Key": idempotencyKey } },
         )
       ).data,

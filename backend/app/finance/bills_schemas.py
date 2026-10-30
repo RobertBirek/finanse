@@ -69,6 +69,7 @@ class DuplicateCandidate(BaseModel):
 class BillLifecycleUpdate(BaseModel):
     expected_version: StrictInt = Field(ge=1)
     lifecycle: BillLifecycle
+    confirm_forecast_effect: Literal[True] | None = None
 
 
 class AllocationCreate(BaseModel):

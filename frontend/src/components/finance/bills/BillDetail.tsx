@@ -83,7 +83,10 @@ export function BillDetail({
   onClose: () => void;
   onPayment: () => void;
   onCoverage: () => void;
-  onLifecycle: (lifecycle: BillResponse["lifecycle"]) => void;
+  onLifecycle: (
+    lifecycle: BillResponse["lifecycle"],
+    confirmForecastEffect?: true,
+  ) => void;
   onUnlink: (allocationId: string) => void;
   actionsDisabled?: boolean;
 }) {
@@ -264,7 +267,16 @@ export function BillDetail({
               onClick={() => {
                 if (pendingAction.kind === "unlink")
                   onUnlink(pendingAction.allocationId);
-                else onLifecycle(pendingAction.lifecycle);
+                else
+                  onLifecycle(
+                    pendingAction.lifecycle,
+                    pendingAction.lifecycle !== "active" &&
+                      bill.lifecycle === "active" &&
+                      bill.declaration === "payable" &&
+                      bill.remaining_minor > 0
+                      ? true
+                      : undefined,
+                  );
                 setPendingAction(null);
               }}
             >

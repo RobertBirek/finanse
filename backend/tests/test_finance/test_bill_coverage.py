@@ -7,8 +7,8 @@ from test_cashflow import create_expense, scheduled_item_data
 
 from app.finance import bill_coverage
 from app.finance.bill_coverage import decide_coverage, get_coverage_candidates, unlink_coverage
-from app.finance.bills import set_bill_lifecycle
-from app.finance.bills_schemas import CoverageDecision, MutationContext
+from app.finance.bills import set_bill_lifecycle, update_bill
+from app.finance.bills_schemas import BillUpdate, CoverageDecision, MutationContext
 from app.finance.models import RecurringOccurrenceCoverage
 from app.finance.schemas import AccountCreate, CategoryCreate
 from app.finance.service import create_account, create_category, create_scheduled_item
@@ -170,6 +170,7 @@ async def test_covered_legacy_confirm_refuses_and_lifecycle_keeps_tombstone(db_s
         bill.id,
         "archived",
         replaced.version,
+        confirm_forecast_effect=True,
         context=MutationContext(idempotency_key="archive-covered"),
     )
     assert archived.coverage is not None
@@ -190,3 +191,103 @@ async def test_covered_legacy_confirm_refuses_and_lifecycle_keeps_tombstone(db_s
         context=MutationContext(idempotency_key="cancel-covered"),
     )
     assert cancelled.coverage is not None
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [("due_date", date(2026, 11, 1)), ("payment_account_id", None), ("category_id", None)],
+)
+async def test_covered_bill_rejects_changed_forecast_identity_but_allows_same_value(
+    db_session, field, value
+) -> None:
+    """A coverage tombstone must never remain after a bill changes identity."""
+    owner, bill, item = await _covered_bill(db_session)
+    covered = await decide_coverage(
+        db_session,
+        owner,
+        bill.id,
+        CoverageDecision(
+            version=bill.version,
+            choice="replace",
+            scheduled_item_id=item.id,
+            occurrence_date=date(2026, 10, 28),
+        ),
+        context=MutationContext(idempotency_key=f"covered-{field}"),
+    )
+    same = await update_bill(
+        db_session,
+        owner,
+        bill.id,
+        BillUpdate(expected_version=covered.version, **{field: getattr(bill, field)}),
+        context=MutationContext(idempotency_key=f"same-{field}"),
+    )
+    with pytest.raises(ValueError, match="coverage"):
+        await update_bill(
+            db_session,
+            owner,
+            bill.id,
+            BillUpdate(expected_version=same.version, **{field: value}),
+            context=MutationContext(idempotency_key=f"changed-{field}"),
+        )
+
+
+async def test_real_concurrent_update_and_coverage_never_leave_a_stale_tombstone(
+    db_session,
+) -> None:
+    """Independent database sessions serialize identity edits with coverage creation."""
+    import asyncio
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    owner, bill, item = await _covered_bill(db_session)
+    bill_id, version = bill.id, bill.version
+    await db_session.commit()
+    sessions = async_sessionmaker(db_session.bind, class_=AsyncSession, expire_on_commit=False)
+
+    async def edit():
+        async with sessions() as session:
+            try:
+                result = await update_bill(
+                    session,
+                    owner,
+                    bill_id,
+                    BillUpdate(expected_version=version, due_date=date(2026, 11, 1)),
+                    context=MutationContext(idempotency_key="race-edit"),
+                )
+                await session.commit()
+                return result
+            except (RuntimeError, ValueError) as error:
+                await session.rollback()
+                return error
+
+    async def cover():
+        async with sessions() as session:
+            try:
+                result = await decide_coverage(
+                    session,
+                    owner,
+                    bill_id,
+                    CoverageDecision(
+                        version=version,
+                        choice="replace",
+                        scheduled_item_id=item.id,
+                        occurrence_date=date(2026, 10, 28),
+                    ),
+                    context=MutationContext(idempotency_key="race-coverage"),
+                )
+                await session.commit()
+                return result
+            except (RuntimeError, ValueError) as error:
+                await session.rollback()
+                return error
+
+    edited, covered = await asyncio.gather(edit(), cover())
+    assert sum(not isinstance(result, Exception) for result in (edited, covered)) == 1
+    persisted = await db_session.get(type(bill), bill_id)
+    assert persisted is not None
+    coverage = await db_session.scalar(
+        select(RecurringOccurrenceCoverage).where(
+            RecurringOccurrenceCoverage.financial_document_id == bill_id
+        )
+    )
+    assert coverage is None or persisted.due_date == date(2026, 10, 31)

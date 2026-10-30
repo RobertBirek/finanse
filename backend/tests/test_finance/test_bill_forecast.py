@@ -5,6 +5,7 @@ from test_bill_payments import create_owner, setup_bill
 
 from app.finance.bill_coverage import decide_coverage
 from app.finance.bill_forecast import project_bill_cashflows
+from app.finance.bills import get_bill
 from app.finance.bills_schemas import CoverageDecision, MutationContext
 from app.finance.schemas import (
     AccountCreate,
@@ -93,6 +94,77 @@ async def test_missing_date_fx_and_non_budget_account_have_explicit_exclusion_re
     assert "missing_due_date" in entries[missing_date.id].exclusion_reasons
     assert "currency_without_pln_fx" in entries[fx.id].exclusion_reasons
     assert "payment_account_not_active_budget_pln" in entries[inactive.id].exclusion_reasons
+
+
+async def test_bill_detail_uses_the_projection_exclusion_rules(db_session) -> None:
+    """A detail response must not hide the reason that excludes a payable bill."""
+    owner = await create_owner(db_session)
+    bill = await setup_bill(db_session, owner, currency="EUR")
+    bill.declaration = "payable"
+    detail = await get_bill(db_session, owner, bill.id)
+    assert detail is not None
+    assert "missing_due_date" in detail.forecast_exclusion_reasons
+    assert "missing_payment_account" in detail.forecast_exclusion_reasons
+    assert "currency_without_pln_fx" in detail.forecast_exclusion_reasons
+
+
+async def test_detail_explains_declaration_lifecycle_account_and_unresolved_coverage(
+    db_session,
+) -> None:
+    """Each non-inclusion branch is visible on the read-only bill response."""
+    owner = await create_owner(db_session)
+    today = date(2026, 10, 28)
+    valid_account = await create_account(
+        db_session, owner, AccountCreate(name="Valid", type="checking")
+    )
+    non_budget = await create_account(
+        db_session,
+        owner,
+        AccountCreate(name="Not budget", type="checking", is_budget_account=False),
+    )
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Coverage", type="expense")
+    )
+    await create_scheduled_item(
+        db_session,
+        owner,
+        ScheduledFinanceItemCreate(
+            name="Expected",
+            type="expense",
+            account_id=valid_account.id,
+            category_id=category.id,
+            currency="PLN",
+            due_day=today.day,
+            amount_method="fixed",
+            fixed_amount_pln=1_000,
+        ),
+    )
+    declared_paid, inactive, not_budget, unresolved, included = [
+        await setup_bill(db_session, owner) for _ in range(5)
+    ]
+    for bill in (declared_paid, inactive, not_budget, unresolved, included):
+        bill.due_date, bill.payment_account_id, bill.declaration = (
+            today,
+            valid_account.id,
+            "payable",
+        )
+    declared_paid.declaration = "declared_paid"
+    inactive.lifecycle = "archived"
+    not_budget.payment_account_id = non_budget.id
+    unresolved.category_id = category.id
+    await db_session.flush()
+
+    details = [
+        await get_bill(db_session, owner, bill.id)
+        for bill in (declared_paid, inactive, not_budget, unresolved, included)
+    ]
+    assert all(detail is not None for detail in details)
+    reasons = [detail.forecast_exclusion_reasons for detail in details if detail is not None]
+    assert "payment_not_payable" in reasons[0]
+    assert "inactive_lifecycle" in reasons[1]
+    assert "payment_account_not_active_budget_pln" in reasons[2]
+    assert "coverage_unresolved" in reasons[3]
+    assert reasons[4] == []
 
 
 async def test_invoice12000_replaces_estimate10000_only_this_occurrence(db_session) -> None:

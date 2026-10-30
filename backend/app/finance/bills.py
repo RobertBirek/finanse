@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit.service import log_event
 from app.documents.models import Document, DocumentExtractionRevision
 from app.documents.review_schemas import ReviewSuggestion
+from app.finance.bill_forecast import bill_forecast_eligibility, bill_forecast_window
 from app.finance.bills_schemas import (
     AllocationResponse,
     BillApprove,
@@ -26,6 +27,7 @@ from app.finance.bills_schemas import (
     MutationContext,
     SourceResponse,
 )
+from app.finance.dates import _local_today
 from app.finance.models import (
     Account,
     Category,
@@ -141,6 +143,16 @@ async def _response(db: AsyncSession, bill: FinancialDocument) -> BillResponse:
     total = bill.total_minor or 0
     remaining = max(total - paid, 0)
     reconciliation = "full" if total and remaining == 0 else "partial" if paid else "none"
+    today = _local_today()
+    horizon_end = await bill_forecast_window(db, bill.user_id, today=today)
+    eligibility = await bill_forecast_eligibility(
+        db,
+        bill.user_id,
+        bill,
+        today=today,
+        horizon_end=horizon_end,
+        covered=coverage is not None,
+    )
     return BillResponse(
         id=bill.id,
         kind=cast(Any, bill.kind),
@@ -180,7 +192,7 @@ async def _response(db: AsyncSession, bill: FinancialDocument) -> BillResponse:
             source_lifecycle=cast(Any, bill.lifecycle),
         ),
         recurring_decision=cast(Any, bill.recurring_decision),
-        forecast_exclusion_reasons=[],
+        forecast_exclusion_reasons=eligibility.reasons if remaining > 0 else [],
     )
 
 
@@ -391,12 +403,25 @@ async def update_bill(
     context: MutationContext,
 ) -> BillResponse:
     async def operation() -> BillResponse:
+        from app.finance.document_guards import lock_document_mutations
+
+        await lock_document_mutations(db, user_id)
         bill = await _bill(db, user_id, bill_id, lock=True)
         if bill is None:
             raise LookupError("bill_not_found")
         if bill.version != data.expected_version:
             raise RuntimeError("version_conflict")
         values = data.model_dump(exclude_unset=True, exclude={"expected_version"})
+        coverage = await db.scalar(
+            select(RecurringOccurrenceCoverage)
+            .where(RecurringOccurrenceCoverage.financial_document_id == bill.id)
+            .with_for_update()
+        )
+        if coverage is not None and any(
+            field in values and values[field] != getattr(bill, field)
+            for field in ("due_date", "payment_account_id", "category_id")
+        ):
+            raise ValueError("coverage_identity_change_requires_unlink")
         await _validate_links(db, user_id, data)
         allocated = await db.scalar(
             select(func.coalesce(func.sum(DocumentPaymentAllocation.amount_minor), 0)).where(
@@ -566,6 +591,7 @@ async def set_bill_lifecycle(
     lifecycle: BillLifecycle,
     expected_version: int,
     *,
+    confirm_forecast_effect: bool | None = None,
     context: MutationContext,
 ) -> BillResponse:
     async def operation() -> BillResponse:
@@ -577,6 +603,23 @@ async def set_bill_lifecycle(
             raise LookupError("bill_not_found")
         if bill.version != expected_version:
             raise RuntimeError("version_conflict")
+        paid = int(
+            await db.scalar(
+                select(func.coalesce(func.sum(DocumentPaymentAllocation.amount_minor), 0)).where(
+                    DocumentPaymentAllocation.financial_document_id == bill.id
+                )
+            )
+            or 0
+        )
+        remaining = max((bill.total_minor or 0) - paid, 0)
+        changes_forecast = (
+            bill.lifecycle == "active"
+            and lifecycle in {"archived", "cancelled"}
+            and bill.declaration == "payable"
+            and remaining > 0
+        )
+        if changes_forecast and not confirm_forecast_effect:
+            raise ValueError("forecast_effect_confirmation_required")
         if bill.lifecycle != lifecycle:
             bill.lifecycle = lifecycle
             bill.version += 1
@@ -586,7 +629,11 @@ async def set_bill_lifecycle(
                 "financial_document",
                 str(bill.id),
                 f"lifecycle_{lifecycle}",
-                new_state={"version": bill.version},
+                new_state={
+                    "version": bill.version,
+                    "confirmed_forecast_effect": changes_forecast,
+                    "confirmed_remaining_minor": remaining if changes_forecast else None,
+                },
                 performed_by=context.performed_by,
             )
         return await _response(db, bill)
@@ -596,7 +643,12 @@ async def set_bill_lifecycle(
         user_id,
         "set_bill_lifecycle",
         context.idempotency_key,
-        {"bill_id": str(bill_id), "lifecycle": lifecycle, "expected_version": expected_version},
+        {
+            "bill_id": str(bill_id),
+            "lifecycle": lifecycle,
+            "expected_version": expected_version,
+            "confirm_forecast_effect": confirm_forecast_effect,
+        },
         operation,
     )
 

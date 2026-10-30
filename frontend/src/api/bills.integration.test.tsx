@@ -75,6 +75,7 @@ function IntentProbe() {
             billId: "bill-1",
             expected_version: version,
             lifecycle: "archived",
+            confirm_forecast_effect: true,
             idempotencyKey: keyFor({ action: "lifecycle", version }),
           })
         }
@@ -238,7 +239,10 @@ describe("bill API integration", () => {
     expect(deleteHeader(remove.mock.calls[2])).not.toBe(
       deleteHeader(remove.mock.calls[1]),
     );
-    expect(post.mock.calls[2][1]).toMatchObject({ expected_version: 5 });
+    expect(post.mock.calls[2][1]).toMatchObject({
+      expected_version: 5,
+      confirm_forecast_effect: true,
+    });
     expect(
       (remove.mock.calls[2][1] as { params: unknown }).params,
     ).toMatchObject({ expected_version: 5 });

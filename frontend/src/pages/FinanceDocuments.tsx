@@ -215,17 +215,21 @@ export function FinanceDocuments() {
             onClose={() => select(null)}
             onPayment={() => setDialog("payment")}
             onCoverage={() => setDialog("coverage")}
-            onLifecycle={(nextLifecycle) =>
+            onLifecycle={(nextLifecycle, confirmForecastEffect) =>
               lifecycle.mutate(
                 {
                   billId: selected.data.id,
                   expected_version: selected.data.version,
                   lifecycle: nextLifecycle,
+                  ...(confirmForecastEffect
+                    ? { confirm_forecast_effect: true as const }
+                    : {}),
                   idempotencyKey: keyFor({
                     action: "lifecycle",
                     billId: selected.data.id,
                     version: selected.data.version,
                     lifecycle: nextLifecycle,
+                    confirm_forecast_effect: confirmForecastEffect ?? null,
                   }),
                 },
                 { onError: staleError },

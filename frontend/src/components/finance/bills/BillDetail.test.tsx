@@ -66,7 +66,7 @@ describe("BillDetail", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Potwierdź odłączenie" }),
     );
-    expect(onLifecycle).toHaveBeenCalledWith("archived");
+    expect(onLifecycle).toHaveBeenCalledWith("archived", undefined);
     expect(onUnlink).toHaveBeenCalledWith("allocation-1");
   });
 
@@ -116,5 +116,25 @@ describe("BillDetail", () => {
     expect(
       screen.getByText(/zastąpienie wystąpienia 2026-10-15 pozostanie/i),
     ).toBeInTheDocument();
+  });
+
+  it("passes forecast confirmation only after the explicit lifecycle confirmation", () => {
+    const onLifecycle = vi.fn();
+    render(
+      <BillDetail
+        bill={{ ...bill, declaration: "payable" }}
+        onClose={vi.fn()}
+        onPayment={vi.fn()}
+        onCoverage={vi.fn()}
+        onLifecycle={onLifecycle}
+        onUnlink={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Archiwizuj" }));
+    expect(onLifecycle).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Potwierdź zmianę stanu" }),
+    );
+    expect(onLifecycle).toHaveBeenCalledWith("archived", true);
   });
 });

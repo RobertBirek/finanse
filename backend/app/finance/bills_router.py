@@ -85,6 +85,9 @@ async def list_bills_endpoint(
     review: str | None = None,
     declaration: str | None = None,
     lifecycle: str | None = None,
+    due_from: date | None = None,
+    due_to: date | None = None,
+    query: Annotated[str | None, Query(max_length=200)] = None,
 ):
     return await list_bills(
         db,
@@ -92,7 +95,15 @@ async def list_bills_endpoint(
         limit=limit,
         offset=offset,
         filters=BillFilters.model_validate(
-            {"kind": kind, "review": review, "declaration": declaration, "lifecycle": lifecycle}
+            {
+                "kind": kind,
+                "review": review,
+                "declaration": declaration,
+                "lifecycle": lifecycle,
+                "due_from": due_from,
+                "due_to": due_to,
+                "query": query,
+            }
         ),
     )
 
@@ -369,6 +380,7 @@ async def lifecycle_endpoint(
             bill_id,
             data.lifecycle,
             data.expected_version,
+            confirm_forecast_effect=data.confirm_forecast_effect,
             context=_context(idempotency_key),
         )
         await db.commit()
