@@ -72,3 +72,7 @@ class ReviewResponse(ReviewSuggestion):
     revision: int
     status: Literal["pending", "processing", "ready", "incomplete", "error"]
     error_code: str | None = None
+    input_method: Literal["text", "image"] = "text"
+    warnings: tuple[
+        Literal["unreadable", "missing_required_fields", "unsupported_document"], ...
+    ] = ()
