@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import log_event
+from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
 from app.documents.models import Document, DocumentExtractionRevision, DocumentText
 from app.documents.review_schemas import ReviewResponse, ReviewSuggestion
 from app.documents.schemas import DocumentStatus
@@ -49,6 +50,11 @@ def _response(revision: DocumentExtractionRevision) -> ReviewResponse:
         revision=revision.revision,
         status=cast(Literal["pending", "processing", "ready", "incomplete", "error"], status),
         error_code=revision.error_code,
+        input_method=cast(Literal["text", "image"], revision.input_method),
+        warnings=cast(
+            tuple[Literal["unreadable", "missing_required_fields", "unsupported_document"], ...],
+            tuple(revision.warnings),
+        ),
     )
 
 
@@ -77,6 +83,8 @@ async def prepare_review(
     ).scalar_one_or_none()
     if document is None:
         raise LookupError("document_not_found")
+    if document.processing_method == "vision":
+        raise ValueError("use_vision_action")
 
     receipt = (
         await db.execute(
@@ -252,6 +260,35 @@ async def request_ocr_retry(
         if receipt.request_hash != request_hash:
             raise ValueError("idempotency_key_reused")
         return OCRRetryResult(document, receipt.response_json, is_new=False)
+    if document.processing_method == "vision":
+        from app.documents.job_service import create_local_ocr_intent
+
+        try:
+            job = await create_local_ocr_intent(
+                db, user_id, document_id, key=f"local-ocr:{document_id}:{context.idempotency_key}"
+            )
+        except ValueError as error:
+            if str(error) != "processing_active":
+                raise
+            raise ValueError("processing_active") from error
+        response_json: dict[str, object] = {
+            "id": str(document.id),
+            "status": "pending",
+            "job_id": str(job.id),
+        }
+        db.add(
+            FinanceCommandReceipt(
+                user_id=user_id,
+                action="retry_document_ocr",
+                key=context.idempotency_key,
+                request_hash=request_hash,
+                entity_id=job.id,
+                result_ids=[str(job.id)],
+                version=None,
+                response_json=response_json,
+            )
+        )
+        return OCRRetryResult(document, response_json, is_new=True)
     document.status = DocumentStatus.PENDING
     document.attempt_count = 0
     document.next_attempt_at = None
@@ -259,7 +296,7 @@ async def request_ocr_retry(
     await log_event(
         db, user_id, "document", str(document_id), "retry_ocr", performed_by=context.performed_by
     )
-    response_json: dict[str, object] = {"id": str(document.id), "status": "pending"}
+    legacy_response_json: dict[str, object] = {"id": str(document.id), "status": "pending"}
     db.add(
         FinanceCommandReceipt(
             user_id=user_id,
@@ -269,10 +306,80 @@ async def request_ocr_retry(
             entity_id=document.id,
             result_ids=[str(document.id)],
             version=None,
-            response_json=response_json,
+            response_json=legacy_response_json,
         )
     )
-    return OCRRetryResult(document, response_json, is_new=True)
+    return OCRRetryResult(document, legacy_response_json, is_new=True)
+
+
+async def prepare_vision_review(
+    db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID, *, context: MutationContext
+) -> tuple[DocumentExtractionRevision, uuid.UUID, bool]:
+    """Explicit image action; it creates a new image revision, never a text review."""
+    document = (
+        await db.execute(
+            select(Document)
+            .where(Document.id == document_id, Document.user_id == user_id)
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if document is None:
+        raise LookupError("document_not_found")
+    if not document.mime_type.startswith("image/"):
+        raise ValueError("vision_requires_image")
+    policy = await db.get(DocumentVisionPolicy, 1)
+    if policy is None or not policy.enabled:
+        raise ValueError("vision_disabled")
+    request_hash = _request_hash(document_id, True)
+    receipt = await db.scalar(
+        select(FinanceCommandReceipt).where(
+            FinanceCommandReceipt.user_id == user_id,
+            FinanceCommandReceipt.action == "prepare_document_vision",
+            FinanceCommandReceipt.key == context.idempotency_key,
+        )
+    )
+    if receipt is not None:
+        if receipt.request_hash != request_hash:
+            raise ValueError("idempotency_key_reused")
+        revision = await db.get(DocumentExtractionRevision, receipt.entity_id)
+        if revision is None:
+            raise RuntimeError("vision_receipt_missing_revision")
+        job = await db.scalar(
+            select(DocumentProcessingJob).where(DocumentProcessingJob.revision_id == revision.id)
+        )
+        assert job is not None
+        return revision, job.id, False
+    active = await db.scalar(
+        select(DocumentProcessingJob.id).where(
+            DocumentProcessingJob.document_id == document_id,
+            DocumentProcessingJob.state.in_(("pending", "processing")),
+        )
+    )
+    if active is not None:
+        raise ValueError("processing_active")
+    from app.documents.job_service import create_vision_intent
+
+    job = await create_vision_intent(
+        db, user_id, document_id, key=f"vision:{document_id}:{context.idempotency_key}"
+    )
+    assert job.revision_id is not None
+    revision = await db.get(DocumentExtractionRevision, job.revision_id)
+    assert revision is not None
+    response = _response(revision).model_dump(mode="json")
+    job.response_json = response
+    db.add(
+        FinanceCommandReceipt(
+            user_id=user_id,
+            action="prepare_document_vision",
+            key=context.idempotency_key,
+            request_hash=request_hash,
+            entity_id=revision.id,
+            result_ids=[str(revision.id)],
+            version=revision.revision,
+            response_json=response,
+        )
+    )
+    return revision, job.id, True
 
 
 async def pending_review_ids(db: AsyncSession) -> list[uuid.UUID]:

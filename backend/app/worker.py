@@ -15,6 +15,7 @@ from app.config import settings
 from app.database import async_session_factory
 from app.documents import service
 from app.documents.images import normalize_image
+from app.documents.job_models import DocumentProcessingJob
 from app.documents.models import Document
 from app.documents.ocr_client import OCRResponseTooLargeError
 from app.documents.ocr_pipeline import (
@@ -52,6 +53,14 @@ async def enqueue_prepare_document_review(revision_id: str) -> None:
         await redis.aclose()
 
 
+async def enqueue_process_document_job(job_id: str) -> None:
+    redis: ArqRedis = await create_pool(REDIS_SETTINGS)
+    try:
+        await redis.enqueue_job("process_document_job", job_id, _job_id=f"document-job:{job_id}")
+    finally:
+        await redis.aclose()
+
+
 async def dispatch_pending_documents(ctx) -> None:
     """PostgreSQL pending rows are durable work, Redis is only a delivery mechanism."""
     cutoff = datetime.now(UTC) - timedelta(seconds=settings.DOCUMENT_STALE_PROCESSING_SECONDS)
@@ -61,6 +70,7 @@ async def dispatch_pending_documents(ctx) -> None:
                 await db.execute(
                     select(Document)
                     .where(
+                        Document.processing_method == "legacy_ocr",
                         or_(
                             and_(
                                 Document.status == DocumentStatus.PENDING,
@@ -73,7 +83,7 @@ async def dispatch_pending_documents(ctx) -> None:
                                 Document.status == DocumentStatus.PROCESSING,
                                 Document.updated_at < cutoff,
                             ),
-                        )
+                        ),
                     )
                     .order_by(Document.created_at)
                     .limit(settings.DOCUMENT_DISPATCH_BATCH_SIZE)
@@ -102,6 +112,36 @@ async def dispatch_pending_document_reviews(ctx) -> None:
     for revision_id in revision_ids:
         await ctx["redis"].enqueue_job(
             "prepare_document_review", str(revision_id), _job_id=f"document-review:{revision_id}"
+        )
+
+
+async def dispatch_document_jobs(ctx) -> None:
+    """Deliver durable vision/local-OCR intents; legacy rows never enter this queue."""
+    from app.documents.job_service import recover_processing_jobs
+
+    now = datetime.now(UTC)
+    async with async_session_factory() as db:
+        recovered = await recover_processing_jobs(
+            db, now=now, limit=settings.DOCUMENT_DISPATCH_BATCH_SIZE
+        )
+        pending = list(
+            (
+                await db.execute(
+                    select(DocumentProcessingJob.id)
+                    .where(
+                        DocumentProcessingJob.state == "pending",
+                        (DocumentProcessingJob.next_attempt_at.is_(None))
+                        | (DocumentProcessingJob.next_attempt_at <= now),
+                    )
+                    .order_by(DocumentProcessingJob.created_at)
+                    .limit(settings.DOCUMENT_DISPATCH_BATCH_SIZE)
+                )
+            ).scalars()
+        )
+        await db.commit()
+    for job_id in dict.fromkeys([*recovered, *pending]):
+        await ctx["redis"].enqueue_job(
+            "process_document_job", str(job_id), _job_id=f"document-job:{job_id}"
         )
 
 
@@ -149,6 +189,8 @@ async def process_document(ctx, document_id: str) -> None:
             )
         ).scalar_one_or_none()
         if doc is None or doc.status not in {DocumentStatus.PENDING, DocumentStatus.PROCESSING}:
+            return
+        if getattr(doc, "processing_method", "legacy_ocr") != "legacy_ocr":
             return
         if doc.next_attempt_at is not None and doc.next_attempt_at > datetime.now(UTC):
             return
@@ -203,12 +245,72 @@ async def prepare_document_review(ctx, revision_id: str) -> None:
             await db.commit()
 
 
+async def process_document_job(ctx, job_id: str) -> None:
+    """Route durable jobs without letting image revisions use the legacy text worker."""
+    from app.documents.vision_worker import process_document_job as process_vision_job
+
+    async with async_session_factory() as db:
+        job = await db.get(DocumentProcessingJob, uuid.UUID(job_id))
+        kind = job.kind if job is not None else None
+    if kind == "vision":
+        await process_vision_job(ctx, job_id)
+    elif kind == "local_ocr":
+        await process_local_ocr_job(ctx, job_id)
+
+
+async def process_local_ocr_job(ctx, job_id: str) -> None:
+    """Explicit local OCR stores text only; it never prepares an LLM review."""
+    del ctx
+    from app.documents.job_service import JobOutcome, claim_processing_job, finish_processing_job
+
+    now = datetime.now(UTC)
+    async with async_session_factory() as db:
+        claim = await claim_processing_job(db, uuid.UUID(job_id), now=now)
+        await db.commit()
+    if claim is None or claim.kind != "local_ocr":
+        return
+    async with async_session_factory() as db:
+        document = await db.get(Document, claim.document_id)
+    if document is None:
+        return
+    try:
+        source = await asyncio.to_thread(
+            service.read_verified_document_content,
+            service.UPLOAD_DIR / document.storage_path,
+            document.sha256_hash,
+        )
+        image = await normalize_image(source, document.mime_type)
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            converted = await _convert_image_to_pdf(client, "document.jpg", image)
+            ocr_pdf = await _ocr_pdf(client, "document.pdf", converted)
+            text = await _pdf_to_text(client, ocr_pdf)
+        async with async_session_factory() as db:
+            # Recheck the local lease through the same CAS path before publishing text.
+            if await finish_processing_job(
+                db, claim, JobOutcome(completed=True), now=datetime.now(UTC)
+            ):
+                await service.save_extracted_text(
+                    db, claim.document_id, text, ocr_engine="stirling"
+                )
+            await db.commit()
+    except (OSError, httpx.HTTPError, ValueError, RuntimeError):
+        async with async_session_factory() as db:
+            await finish_processing_job(
+                db,
+                claim,
+                JobOutcome(error_code="local_ocr_failed", retryable=True),
+                now=datetime.now(UTC),
+            )
+            await db.commit()
+
+
 class WorkerSettings:
-    functions: ClassVar = [process_document, prepare_document_review]
+    functions: ClassVar = [process_document, prepare_document_review, process_document_job]
     redis_settings: ClassVar = REDIS_SETTINGS
     cron_jobs: ClassVar = [
         cron(dispatch_pending_documents, second={0, 30}, run_at_startup=True),
         cron(dispatch_pending_document_reviews, second={15, 45}, run_at_startup=True),
+        cron(dispatch_document_jobs, second={5, 35}, run_at_startup=True),
     ]
     keep_result = 0
     job_timeout = settings.DOCUMENT_JOB_TIMEOUT_SECONDS

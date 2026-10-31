@@ -11,6 +11,8 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
+from app.documents.job_models import DocumentVisionPolicy
 from app.documents.models import Document, DocumentText
 from app.documents.schemas import DocumentStatus
 from app.documents.upload_limits import enforce_storage_admission
@@ -129,6 +131,16 @@ async def store_document(
     )
     db.add(doc)
     await db.flush()
+    # Routing is immutable for a newly stored original.  Duplicates returned above
+    # deliberately retain their historic method and never create fresh work.
+    if mime_type.startswith("image/") and settings.DOCUMENT_VISION_ENABLED:
+        policy = await db.get(DocumentVisionPolicy, 1)
+        if policy is None or not policy.enabled:
+            return doc, False
+        from app.documents.job_service import create_vision_intent
+
+        doc.processing_method = "vision"
+        await create_vision_intent(db, user_id, doc.id, key=f"upload-vision:{doc.id}")
     return doc, False
 
 
@@ -214,6 +226,18 @@ async def delete_document(db: AsyncSession, user_id: uuid.UUID, document_id: uui
     )
     if linked:
         raise ValueError("document_linked_to_financial_document")
+    from app.documents.job_models import DocumentProcessingJob
+
+    active_job = await db.scalar(
+        select(func.count())
+        .select_from(DocumentProcessingJob)
+        .where(
+            DocumentProcessingJob.document_id == document_id,
+            DocumentProcessingJob.state.in_(("pending", "processing")),
+        )
+    )
+    if active_job:
+        raise ValueError("document_processing_active")
     await db.delete(doc)
     await db.flush()
     return True

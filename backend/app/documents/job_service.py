@@ -46,6 +46,7 @@ class JobOutcome:
     schema_version: str | None = None
     error_code: str | None = None
     retryable: bool = False
+    completed: bool = False
 
 
 async def _admission_lock(db: AsyncSession) -> None:
@@ -142,6 +143,14 @@ async def create_local_ocr_intent(
     ).scalar_one_or_none()
     if existing is not None:
         return existing
+    active = await db.scalar(
+        select(DocumentProcessingJob.id).where(
+            DocumentProcessingJob.document_id == document_id,
+            DocumentProcessingJob.state.in_(("pending", "processing")),
+        )
+    )
+    if active is not None:
+        raise ValueError("processing_active")
     job = DocumentProcessingJob(
         user_id=user_id,
         document_id=document_id,
@@ -445,6 +454,10 @@ async def finish_processing_job(
             outcome.error_code,
         )
         job.state, job.error_code = "succeeded", outcome.error_code
+        document.status = "done"
+        return True
+    if claim.kind == "local_ocr" and outcome.completed:
+        job.state, job.error_code = "succeeded", None
         document.status = "done"
         return True
     max_attempts = (

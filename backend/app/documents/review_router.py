@@ -9,7 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.documents.review_schemas import ReviewResponse
-from app.documents.review_service import get_review, prepare_review, request_ocr_retry
+from app.documents.review_service import (
+    get_review,
+    prepare_review,
+    prepare_vision_review,
+    request_ocr_retry,
+)
 from app.finance.bills_schemas import MutationContext
 from app.identity.models import User
 from app.identity.router import get_current_user
@@ -48,14 +53,52 @@ async def prepare_document_review(
         )
     except LookupError:
         return JSONResponse(content={"detail": "Document not found"}, status_code=404)
-    except ValueError:
-        return JSONResponse(content={"detail": "Idempotency key conflict"}, status_code=409)
+    except ValueError as error:
+        detail = (
+            "use_vision_action" if str(error) == "use_vision_action" else "Idempotency key conflict"
+        )
+        return JSONResponse(content={"detail": detail}, status_code=409)
     await db.commit()
     await db.refresh(revision)
     if revision.status == "pending":
         from app.worker import enqueue_prepare_document_review
 
         await enqueue_prepare_document_review(str(revision.id))
+    review = await get_review(db, current_user.id, document_id)
+    assert review is not None
+    return review
+
+
+@router.post("/{document_id}/vision/prepare", response_model=ReviewResponse, status_code=202)
+async def prepare_document_vision(
+    document_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+):
+    try:
+        revision, job_id, is_new = await prepare_vision_review(
+            db,
+            current_user.id,
+            document_id,
+            context=MutationContext(idempotency_key=idempotency_key),
+        )
+    except LookupError:
+        return JSONResponse(content={"detail": "Document not found"}, status_code=404)
+    except ValueError as error:
+        detail = str(error)
+        return JSONResponse(
+            content={"detail": detail},
+            status_code=422 if detail == "vision_requires_image" else 409,
+        )
+    await db.commit()
+    if is_new:
+        from app.worker import enqueue_process_document_job
+
+        try:
+            await enqueue_process_document_job(str(job_id))
+        except (OSError, TimeoutError, RedisError):
+            logger.warning("Vision review %s awaits queue recovery", revision.id)
     review = await get_review(db, current_user.id, document_id)
     assert review is not None
     return review
@@ -81,10 +124,14 @@ async def retry_document_ocr(
         return JSONResponse(content={"detail": "Idempotency key conflict"}, status_code=409)
     await db.commit()
     if result.is_new:
-        from app.worker import enqueue_process_document
+        from app.worker import enqueue_process_document, enqueue_process_document_job
 
         try:
-            await enqueue_process_document(str(result.document.id))
+            if result.document.processing_method == "vision":
+                job_id = result.response_json["job_id"]
+                await enqueue_process_document_job(str(job_id))
+            else:
+                await enqueue_process_document(str(result.document.id))
         except (OSError, TimeoutError, RedisError):
             # The committed pending document is recovered by the periodic dispatcher.
             logger.warning("Document %s awaits retry OCR queue recovery", result.document.id)
