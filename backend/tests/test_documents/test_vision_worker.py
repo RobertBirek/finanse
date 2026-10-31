@@ -84,9 +84,18 @@ async def test_network_runs_after_claim_commit(test_database, tmp_path, monkeypa
         async with sessions() as db:
             assert (
                 await db.execute(
-                    select(DocumentProcessingJob).where(DocumentProcessingJob.id == job.id)
+                    select(DocumentProcessingJob)
+                    .where(DocumentProcessingJob.id == job.id)
+                    .with_for_update(nowait=True)
                 )
             ).scalar_one().state == "processing"
+            assert (
+                await db.execute(
+                    select(Document)
+                    .where(Document.id == job.document_id)
+                    .with_for_update(nowait=True)
+                )
+            ).scalar_one().id == job.document_id
         return VisionExtraction(
             suggestion=ReviewSuggestion(
                 document_type="receipt",

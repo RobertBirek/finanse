@@ -7,16 +7,22 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import app.main  # noqa: F401 - register complete metadata for integration schema lifecycle
 from app.documents.job_models import (
+    DocumentProcessingJob,
     DocumentVisionPolicy,
     DocumentVisionUsage,
 )
 from app.documents.job_service import (
+    JobOutcome,
     claim_processing_job,
     create_vision_intent,
+    finish_processing_job,
+    recover_processing_jobs,
     reserve_vision_call,
 )
 from app.documents.models import Document, DocumentExtractionRevision
+from app.documents.processing_policy import set_vision_policy
 from app.documents.vision_config import VisionConfig
+from app.finance.models import FinancialDocument, FinancialDocumentSource, Posting
 
 
 def _config() -> VisionConfig:
@@ -164,3 +170,276 @@ async def test_usage_failure_prevents_http(test_database, monkeypatch):
     )
     async with sessions() as db:
         assert await reserve_vision_call(db, claim, now=now, config=_config()) is False
+
+
+def _vision_runtime(monkeypatch) -> None:
+    from app.documents import job_service
+
+    monkeypatch.setattr(job_service.settings, "DOCUMENT_VISION_ENABLED", True)
+    monkeypatch.setattr(job_service, "get_vision_config", lambda _settings: _config())
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_timeout_after_remote_acceptance_is_bounded(test_database, monkeypatch):
+    """Each uncertain send consumes once; the bounded retry cannot create a third call."""
+    _vision_runtime(monkeypatch)
+    from app.documents import job_service
+
+    monkeypatch.setattr(job_service.settings, "DOCUMENT_VISION_MAX_ATTEMPTS", 2)
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    start = datetime(2026, 10, 31, 23, 58, tzinfo=UTC)
+    async with sessions() as db:
+        _, _, _, job_id = await _vision_job(db)
+    async with sessions() as db:
+        first = await claim_processing_job(db, job_id, now=start)
+        assert first is not None
+        assert await reserve_vision_call(db, first, now=start, config=_config())
+        assert not await reserve_vision_call(db, first, now=start, config=_config())
+        assert await finish_processing_job(
+            db, first, JobOutcome(error_code="provider_timeout", retryable=True), now=start
+        )
+        await db.commit()
+    async with sessions() as db:
+        second = await claim_processing_job(db, job_id, now=start.replace(minute=59))
+        assert second is not None
+        assert await reserve_vision_call(db, second, now=start.replace(minute=59), config=_config())
+        assert await finish_processing_job(
+            db,
+            second,
+            JobOutcome(error_code="provider_timeout", retryable=True),
+            now=start.replace(minute=59),
+        )
+        await db.commit()
+    async with sessions() as db:
+        job = await db.get(DocumentProcessingJob, job_id)
+        usage = (await db.execute(select(DocumentVisionUsage))).scalar_one()
+        assert (job.state, job.attempt_count, usage.reserved_calls) == ("failed", 2, 2)
+        assert await claim_processing_job(db, job_id, now=start.replace(hour=1, day=1)) is None
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_old_lease_result_cannot_replace_new_revision(test_database, monkeypatch):
+    """A late provider result is superseded rather than replacing a human's newer revision."""
+    _vision_runtime(monkeypatch)
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    now = datetime(2026, 10, 31, tzinfo=UTC)
+    async with sessions() as db:
+        user_id, document_id, _, job_id = await _vision_job(db)
+    async with sessions() as db:
+        claim = await claim_processing_job(db, job_id, now=now)
+        assert claim is not None
+        await db.commit()
+    async with sessions() as db:
+        db.add(
+            DocumentExtractionRevision(
+                user_id=user_id,
+                document_id=document_id,
+                revision=3,
+                status="ready",
+                data={
+                    "document_type": "receipt",
+                    "fields": {},
+                    "provenance": {},
+                    "parser_version": "human",
+                },
+                field_provenance={},
+                input_method="image",
+            )
+        )
+        await db.commit()
+    async with sessions() as db:
+        assert not await finish_processing_job(db, claim, JobOutcome(), now=now)
+        await db.commit()
+    async with sessions() as db:
+        job = await db.get(DocumentProcessingJob, job_id)
+        newest = (
+            (
+                await db.execute(
+                    select(DocumentExtractionRevision)
+                    .where(DocumentExtractionRevision.document_id == document_id)
+                    .order_by(DocumentExtractionRevision.revision.desc())
+                )
+            )
+            .scalars()
+            .first()
+        )
+        assert (job.state, newest.revision, newest.data["parser_version"]) == (
+            "superseded",
+            3,
+            "human",
+        )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_approval_during_network_leaves_financial_document_and_postings_unchanged(
+    test_database, monkeypatch
+):
+    """Publishing a vision review never alters an approved financial document or postings."""
+    _vision_runtime(monkeypatch)
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    now = datetime(2026, 10, 31, tzinfo=UTC)
+    async with sessions() as db:
+        user_id, document_id, _, job_id = await _vision_job(db)
+        financial = FinancialDocument(
+            user_id=user_id,
+            kind="receipt",
+            supplier_name="Human",
+            description="approved",
+            total_minor=100,
+            currency="PLN",
+            review="approved",
+        )
+        db.add(financial)
+        await db.flush()
+        db.add(
+            FinancialDocumentSource(
+                user_id=user_id, financial_document_id=financial.id, document_id=document_id
+            )
+        )
+        await db.commit()
+    async with sessions() as db:
+        claim = await claim_processing_job(db, job_id, now=now)
+        assert claim is not None
+        await db.commit()
+    async with sessions() as db:
+        before = (await db.execute(select(FinancialDocument))).scalar_one()
+        before_snapshot = (
+            before.id,
+            before.review,
+            before.supplier_name,
+            before.total_minor,
+            before.version,
+            (await db.execute(select(Posting))).scalars().all(),
+        )
+        assert await finish_processing_job(
+            db, claim, JobOutcome(error_code="invalid_model_output"), now=now
+        )
+        await db.commit()
+    async with sessions() as db:
+        after = (await db.execute(select(FinancialDocument))).scalar_one()
+        assert (
+            after.id,
+            after.review,
+            after.supplier_name,
+            after.total_minor,
+            after.version,
+            (await db.execute(select(Posting))).scalars().all(),
+        ) == before_snapshot
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_recovery_expiry_attempt_cap_is_terminal(test_database, monkeypatch):
+    """Repeated expiry reaches a terminal job instead of endlessly requeueing it."""
+    _vision_runtime(monkeypatch)
+    from app.documents import job_service
+
+    monkeypatch.setattr(job_service.settings, "DOCUMENT_VISION_MAX_ATTEMPTS", 2)
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    now = datetime(2026, 10, 31, tzinfo=UTC)
+    async with sessions() as db:
+        _, _, _, job_id = await _vision_job(db)
+        first = await claim_processing_job(db, job_id, now=now)
+        assert first is not None
+        await db.commit()
+    async with sessions() as db:
+        assert await recover_processing_jobs(db, now=now.replace(minute=3), limit=10) == [job_id]
+        await db.commit()
+    async with sessions() as db:
+        second = await claim_processing_job(db, job_id, now=now.replace(minute=3))
+        assert second is not None
+        await db.commit()
+    async with sessions() as db:
+        assert await recover_processing_jobs(db, now=now.replace(minute=6), limit=10) == []
+        await db.commit()
+    async with sessions() as db:
+        job = await db.get(DocumentProcessingJob, job_id)
+        assert (job.state, job.attempt_count, job.error_code) == ("failed", 2, "attempts_exhausted")
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_policy_off_on_and_fingerprint_change_reject_old_lease(test_database, monkeypatch):
+    """Neither re-enable nor a changed endpoint revives a pre-change lease."""
+    _vision_runtime(monkeypatch)
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    now = datetime(2026, 10, 31, tzinfo=UTC)
+    async with sessions() as db:
+        _, _, _, job_id = await _vision_job(db)
+        claim = await claim_processing_job(db, job_id, now=now)
+        assert claim is not None
+        await set_vision_policy(db, enabled=False, performed_by="test")
+        await set_vision_policy(db, enabled=True, performed_by="test", config=_config())
+        await db.commit()
+    async with sessions() as db:
+        assert not await reserve_vision_call(db, claim, now=now, config=_config())
+        assert not await finish_processing_job(db, claim, JobOutcome(), now=now)
+        await db.commit()
+    changed = VisionConfig("test", "https://other.example.test/v1", "model", "secret", "p1", "s1")
+    async with sessions() as db:
+        renewed = await create_vision_intent(
+            db, claim.user_id, claim.document_id, key="vision:new-epoch"
+        )
+        renewed_claim = await claim_processing_job(db, renewed.id, now=now)
+        assert renewed_claim is not None
+        assert not await reserve_vision_call(db, renewed_claim, now=now, config=changed)
+        await db.commit()
+    async with sessions() as db:
+        policy = await db.get(DocumentVisionPolicy, 1)
+        renewed = await db.get(DocumentProcessingJob, renewed.id)
+        assert policy is not None
+        assert policy.epoch > claim.policy_epoch
+        assert policy.enabled
+        assert policy.configuration_fingerprint == _config().configuration_fingerprint
+        assert policy.configuration_fingerprint != changed.configuration_fingerprint
+        assert (renewed.state, renewed.error_code) == ("paused", "vision_configuration_changed")
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_usage_uses_utc_date_boundary(test_database, monkeypatch):
+    """Calls either side of midnight are counted in separate UTC usage rows."""
+    _vision_runtime(monkeypatch)
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    async with sessions() as db:
+        user_id, _, _, first_id = await _vision_job(db)
+        document = Document(
+            user_id=user_id,
+            filename="second.jpg",
+            original_name="second.jpg",
+            mime_type="image/jpeg",
+            sha256_hash="z" * 64,
+            size_bytes=1,
+            storage_path="zz/second.jpg",
+            processing_method="vision",
+        )
+        db.add(document)
+        await db.flush()
+        second = await create_vision_intent(db, user_id, document.id, key="vision:midnight")
+        await db.commit()
+    before = datetime(2026, 10, 31, 23, 59, tzinfo=UTC)
+    after = datetime(2026, 11, 1, 0, 0, tzinfo=UTC)
+    async with sessions() as db:
+        first = await claim_processing_job(db, first_id, now=before)
+        assert first is not None and await reserve_vision_call(
+            db, first, now=before, config=_config()
+        )
+        await db.commit()
+    async with sessions() as db:
+        second_claim = await claim_processing_job(db, second.id, now=after)
+        assert second_claim is not None and await reserve_vision_call(
+            db, second_claim, now=after, config=_config()
+        )
+        await db.commit()
+    async with sessions() as db:
+        assert [
+            (row.usage_date.isoformat(), row.reserved_calls)
+            for row in (
+                await db.execute(
+                    select(DocumentVisionUsage).order_by(DocumentVisionUsage.usage_date)
+                )
+            ).scalars()
+        ] == [("2026-10-31", 1), ("2026-11-01", 1)]
