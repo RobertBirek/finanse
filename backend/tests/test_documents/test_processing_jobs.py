@@ -349,6 +349,10 @@ async def test_recovery_expiry_attempt_cap_is_terminal(test_database, monkeypatc
         assert await recover_processing_jobs(db, now=now.replace(minute=3), limit=10) == [job_id]
         await db.commit()
     async with sessions() as db:
+        job = await db.get(DocumentProcessingJob, job_id)
+        revision = await db.get(DocumentExtractionRevision, job.revision_id)
+        assert (job.state, revision.status) == ("pending", "pending")
+    async with sessions() as db:
         second = await claim_processing_job(db, job_id, now=now.replace(minute=3))
         assert second is not None
         await db.commit()
@@ -357,7 +361,36 @@ async def test_recovery_expiry_attempt_cap_is_terminal(test_database, monkeypatc
         await db.commit()
     async with sessions() as db:
         job = await db.get(DocumentProcessingJob, job_id)
+        revision = await db.get(DocumentExtractionRevision, job.revision_id)
         assert (job.state, job.attempt_count, job.error_code) == ("failed", 2, "attempts_exhausted")
+        assert (revision.status, revision.error_code) == ("incomplete", "attempts_exhausted")
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_expired_unreclaimed_lease_cannot_publish(test_database, monkeypatch):
+    """A response after its lease deadline cannot publish before recovery has run."""
+    _vision_runtime(monkeypatch)
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    claimed_at = datetime(2026, 10, 31, tzinfo=UTC)
+    async with sessions() as first:
+        _, _, _, job_id = await _vision_job(first)
+        claim = await claim_processing_job(first, job_id, now=claimed_at)
+        assert claim is not None
+        await first.commit()
+    async with sessions() as second:
+        assert not await finish_processing_job(
+            second, claim, JobOutcome(error_code="late_result"), now=claimed_at.replace(minute=3)
+        )
+        await second.commit()
+    async with sessions() as db:
+        job = await db.get(DocumentProcessingJob, job_id)
+        revision = await db.get(DocumentExtractionRevision, job.revision_id)
+        assert (job.state, revision.status, revision.error_code) == (
+            "processing",
+            "processing",
+            None,
+        )
 
 
 @pytest.mark.integration

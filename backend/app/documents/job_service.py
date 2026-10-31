@@ -355,6 +355,7 @@ async def reserve_vision_call(
 async def finish_processing_job(
     db: AsyncSession, claim: JobClaim, outcome: JobOutcome, *, now: datetime | None = None
 ) -> bool:
+    now = now or datetime.now(UTC)
     await _admission_lock(db)
     policy = await _locked_policy(db)
     document = (
@@ -383,6 +384,8 @@ async def finish_processing_job(
         or not document
         or job.state != "processing"
         or job.lease_token != claim.lease_token
+        or job.lease_expires_at is None
+        or job.lease_expires_at <= now
         or job.policy_epoch != claim.policy_epoch
         or (
             claim.kind == "vision"
@@ -392,9 +395,18 @@ async def finish_processing_job(
         return False
     if claim.kind == "vision":
         current_config = get_vision_config(settings)
+        if current_config is None:
+            job.state, job.error_code, job.lease_token, job.lease_expires_at = (
+                "failed",
+                "configuration_missing",
+                None,
+                None,
+            )
+            if revision is not None:
+                revision.status, revision.error_code = "incomplete", "configuration_missing"
+            return False
         if (
             not settings.DOCUMENT_VISION_ENABLED
-            or current_config is None
             or policy is None
             or policy.configuration_fingerprint != current_config.configuration_fingerprint
         ):
@@ -448,7 +460,7 @@ async def finish_processing_job(
         )[job.attempt_count - 1]
         job.state, job.next_attempt_at, job.error_code = (
             "pending",
-            (now or datetime.now(UTC)) + timedelta(seconds=delay),
+            now + timedelta(seconds=delay),
             outcome.error_code,
         )
         job.lease_token, job.lease_expires_at = None, None
@@ -464,24 +476,58 @@ async def finish_processing_job(
 async def recover_processing_jobs(
     db: AsyncSession, *, now: datetime, limit: int
 ) -> list[uuid.UUID]:
-    jobs = (
+    job_ids = list(
         (
             await db.execute(
-                select(DocumentProcessingJob)
+                select(DocumentProcessingJob.id)
                 .where(
                     DocumentProcessingJob.state == "processing",
                     DocumentProcessingJob.lease_expires_at <= now,
                 )
                 .order_by(DocumentProcessingJob.lease_expires_at)
                 .limit(limit)
-                .with_for_update(skip_locked=True)
             )
-        )
-        .scalars()
-        .all()
+        ).scalars()
     )
     ids: list[uuid.UUID] = []
-    for job in jobs:
+    for job_id in job_ids:
+        await _admission_lock(db)
+        await _locked_policy(db)
+        candidate = await db.get(DocumentProcessingJob, job_id)
+        if candidate is None:
+            continue
+        document = (
+            await db.execute(
+                select(Document).where(Document.id == candidate.document_id).with_for_update()
+            )
+        ).scalar_one_or_none()
+        if document is None:
+            continue
+        job = (
+            await db.execute(
+                select(DocumentProcessingJob)
+                .where(DocumentProcessingJob.id == job_id)
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+        if (
+            job is None
+            or job.state != "processing"
+            or job.lease_expires_at is None
+            or job.lease_expires_at > now
+        ):
+            continue
+        revision = (
+            None
+            if job.revision_id is None
+            else (
+                await db.execute(
+                    select(DocumentExtractionRevision)
+                    .where(DocumentExtractionRevision.id == job.revision_id)
+                    .with_for_update()
+                )
+            ).scalar_one_or_none()
+        )
         max_attempts = (
             settings.DOCUMENT_VISION_MAX_ATTEMPTS
             if job.kind == "vision"
@@ -489,8 +535,12 @@ async def recover_processing_jobs(
         )
         if job.attempt_count >= max_attempts:
             job.state, job.error_code = "failed", "attempts_exhausted"
+            if revision is not None:
+                revision.status, revision.error_code = "incomplete", "attempts_exhausted"
         else:
             job.state, job.lease_token, job.lease_expires_at = "pending", None, None
             job.next_attempt_at = now
+            if revision is not None:
+                revision.status, revision.error_code = "pending", None
             ids.append(job.id)
     return ids

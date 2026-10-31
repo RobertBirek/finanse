@@ -135,3 +135,51 @@ async def test_env_stop_pauses_pending_and_rejects_inflight_publication(test_dat
     monkeypatch.setattr(vision_worker, "extract_image_review", AsyncMock())
     await vision_worker.process_document_job({}, str(uuid.uuid4()))
     vision_worker.extract_image_review.assert_not_awaited()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_missing_config_persists_configuration_missing_without_http(
+    test_database, monkeypatch
+):
+    """An absent configured identity is durable configuration_missing, never an HTTP attempt."""
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    monkeypatch.setattr(vision_worker, "async_session_factory", sessions)
+    monkeypatch.setattr(vision_worker.settings, "DOCUMENT_VISION_ENABLED", True)
+    monkeypatch.setattr(vision_worker, "get_vision_config", lambda _settings: None)
+    monkeypatch.setattr(job_service, "get_vision_config", lambda _settings: None)
+    provider = AsyncMock()
+    monkeypatch.setattr(vision_worker, "extract_image_review", provider)
+    async with sessions() as db:
+        user_id = uuid.uuid4()
+        document = Document(
+            user_id=user_id,
+            filename="receipt.jpg",
+            original_name="receipt.jpg",
+            mime_type="image/jpeg",
+            sha256_hash="c" * 64,
+            size_bytes=1,
+            storage_path="cc/receipt.jpg",
+            processing_method="vision",
+        )
+        db.add_all(
+            (
+                document,
+                DocumentVisionPolicy(
+                    id=1,
+                    enabled=True,
+                    epoch=1,
+                    configuration_fingerprint=_config().configuration_fingerprint,
+                ),
+            )
+        )
+        await db.flush()
+        job = await create_vision_intent(db, user_id, document.id, key="vision:missing-config")
+        await db.commit()
+    await vision_worker.process_document_job({}, str(job.id))
+    provider.assert_not_awaited()
+    async with sessions() as db:
+        job = await db.get(DocumentProcessingJob, job.id)
+        revision = await db.get(DocumentExtractionRevision, job.revision_id)
+        assert (job.state, job.error_code) == ("failed", "configuration_missing")
+        assert (revision.status, revision.error_code) == ("incomplete", "configuration_missing")
