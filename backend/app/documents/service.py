@@ -12,9 +12,9 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.documents.job_models import DocumentVisionPolicy
+from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
 from app.documents.models import Document, DocumentText
-from app.documents.schemas import DocumentStatus
+from app.documents.schemas import DocumentResponse, DocumentStatus
 from app.documents.upload_limits import enforce_storage_admission
 from app.documents.validation import (
     UnsupportedDocumentFormatError,
@@ -205,6 +205,36 @@ async def get_document(
     return result.scalar_one_or_none()
 
 
+async def document_responses(
+    db: AsyncSession, user_id: uuid.UUID, documents: list[Document]
+) -> list[DocumentResponse]:
+    """Map a page with one owner-scoped status query, never loading document content."""
+    if not documents:
+        return []
+    from app.documents.processing_queries import get_review_summaries
+
+    summaries = await get_review_summaries(db, user_id, [document.id for document in documents])
+    text_ids = set(
+        (
+            await db.execute(
+                select(DocumentText.document_id).where(
+                    DocumentText.document_id.in_([d.id for d in documents])
+                )
+            )
+        ).scalars()
+    )
+    return [
+        DocumentResponse.model_validate(document).model_copy(
+            update={
+                "review": summaries.get(document.id),
+                "has_extracted_text": document.id in text_ids,
+                "local_ocr_state": None,
+            }
+        )
+        for document in documents
+    ]
+
+
 async def get_document_text(db: AsyncSession, document_id: uuid.UUID) -> DocumentText | None:
     result = await db.execute(select(DocumentText).where(DocumentText.document_id == document_id))
     return result.scalar_one_or_none()
@@ -226,7 +256,6 @@ async def delete_document(db: AsyncSession, user_id: uuid.UUID, document_id: uui
     )
     if linked:
         raise ValueError("document_linked_to_financial_document")
-    from app.documents.job_models import DocumentProcessingJob
 
     active_job = await db.scalar(
         select(func.count())

@@ -6,12 +6,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import JSONResponse, Response
 from redis.exceptions import RedisError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
 from app.documents import service
 from app.documents.images import ImageNormalizationError, normalize_image
+from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
 from app.documents.schemas import (
     DocumentResponse,
     DocumentStatus,
@@ -21,6 +23,7 @@ from app.documents.schemas import (
 )
 from app.documents.upload_limits import DocumentStorageFullError, StorageQuotaExceededError
 from app.documents.validation import DocumentValidationUnavailableError
+from app.documents.vision_config import get_vision_config
 from app.identity.models import User
 from app.identity.router import get_current_user
 from app.security.rate_limit import limit_upload
@@ -47,11 +50,27 @@ def _private_headers() -> dict[str, str]:
 @router.get("/upload-capabilities", response_model=DocumentUploadCapabilities)
 async def upload_capabilities(
     current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     del current_user
+    config = get_vision_config(settings)
+    policy = await db.get(DocumentVisionPolicy, 1)
+    automatic = bool(
+        settings.DOCUMENT_VISION_ENABLED
+        and config
+        and policy
+        and policy.enabled
+        and policy.configuration_fingerprint == config.configuration_fingerprint
+    )
+    provider_label = config.provider if automatic and config is not None else None
     return DocumentUploadCapabilities(
         max_file_bytes=settings.DOCUMENT_MAX_FILE_BYTES,
         accepted_mime_types=sorted(mime for mime in ALLOWED_MIME_TYPES if mime),
+        automatic_image_vision=automatic,
+        vision_provider_label=provider_label,
+        vision_notice="Image reading is unavailable until enabled by an operator."
+        if not automatic
+        else None,
     )
 
 
@@ -109,16 +128,27 @@ async def upload_document(
     await db.commit()
     await db.refresh(doc)
     if doc.status == DocumentStatus.PENDING:
-        from app.worker import enqueue_process_document
+        from app.worker import enqueue_process_document, enqueue_process_document_job
 
         try:
-            await enqueue_process_document(str(doc.id))
+            if doc.processing_method == "vision":
+                job_id = await db.scalar(
+                    select(DocumentProcessingJob.id).where(
+                        DocumentProcessingJob.document_id == doc.id,
+                        DocumentProcessingJob.kind == "vision",
+                    )
+                )
+                if job_id is not None:
+                    await enqueue_process_document_job(str(job_id))
+            else:
+                await enqueue_process_document(str(doc.id))
         except (OSError, TimeoutError, RedisError):
             # The periodic dispatcher recovers committed pending rows after outages.
             logger.warning("Document %s awaits queue recovery", doc.id)
 
     return DocumentUploadResponse(
-        document=DocumentResponse.model_validate(doc), is_duplicate=is_duplicate
+        document=(await service.document_responses(db, current_user.id, [doc]))[0],
+        is_duplicate=is_duplicate,
     )
 
 
@@ -183,7 +213,7 @@ async def list_documents(
     docs = await service.get_documents(
         db, current_user.id, limit=limit, offset=offset, status=status
     )
-    return [DocumentResponse.model_validate(d) for d in docs]
+    return await service.document_responses(db, current_user.id, docs)
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
@@ -195,7 +225,7 @@ async def get_document(
     doc = await service.get_document(db, current_user.id, document_id)
     if doc is None:
         return JSONResponse(content={"detail": "Document not found"}, status_code=404)
-    return DocumentResponse.model_validate(doc)
+    return (await service.document_responses(db, current_user.id, [doc]))[0]
 
 
 @router.get("/{document_id}/text", response_model=DocumentTextResponse)

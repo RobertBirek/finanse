@@ -64,6 +64,10 @@ class DocumentResponse(BaseModel):
     last_error_code: str | None = None
     created_at: dt.datetime
     updated_at: dt.datetime
+    processing_method: Literal["legacy_ocr", "vision"] = "legacy_ocr"
+    review: "ReviewSummary | None" = None
+    has_extracted_text: bool = False
+    local_ocr_state: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -87,3 +91,18 @@ class DocumentUploadResponse(BaseModel):
 class DocumentUploadCapabilities(BaseModel):
     max_file_bytes: int
     accepted_mime_types: list[str]
+    automatic_image_vision: bool = False
+    vision_provider_label: str | None = None
+    vision_notice: str | None = None
+
+
+class ReviewSummary(BaseModel):
+    revision_id: uuid.UUID
+    revision: int
+    input_method: Literal["text", "image"] = "text"
+    status: Literal["pending", "processing", "ready", "incomplete", "error"]
+    error_code: str | None = None
+    warnings: tuple[
+        Literal["unreadable", "missing_required_fields", "unsupported_document"], ...
+    ] = ()
+    job_state: str | None = None
