@@ -16,7 +16,15 @@
 - First run: backend lint PASS; mypy failed on nullable config provider. Fixed.
 - Fresh full run: backend lint/types/tests PASS; frontend lint/types/tests PASS. Logs/results: `.superpowers/sdd/2026-10-31-automatic-document-vision/task-6-gate/`.
 
-## Self-review and known gap
+## Supplemental mandatory regression matrix
+- New upload: `test_new_vision_upload_enqueues_existing_durable_job_after_commit` asserts the exact existing durable job ID is sent to `process_document_job`, and legacy enqueue is not called.
+- Duplicate after flag change: `test_duplicate_image_after_flag_change_creates_no_new_vision_intent` asserts no job/revision is created for the historic content.
+- Redis recovery: `test_vision_upload_redis_failure_keeps_durable_job_for_dispatch` asserts committed pending job and exact dispatcher entry/id.
+- CLI: `test_cli_dry_run_and_epoch_mismatch_do_not_mutate` invokes the real entry function with the controlled 127.0.0.1:55432 `finanse_test` target and checks zero mutation; `test_disable_pauses_old_work_and_enable_never_resumes_it` checks epoch bump, review incompleteness and no old-job resume.
+- Status: 50-document owner-scoped mapper tests assert summary state, text existence and no storage/raw data exposure.
+- Full post-supplement gate: `PY .../gate.py --name task-6-gate-final3` → backend lint/types/tests PASS; frontend lint/types/tests PASS. Artifacts: `task-6-gate-final3/`.
+
+## Self-review
 - Checked no raw OCR/revision data, storage path, provider endpoint, or key reaches the new responses.
 - The required direct-queue routing is implemented after commit and preserves the existing durable-job recovery path.
-- **Concern:** regression coverage for the three requested enqueue cases (exact entry/job id, duplicate no paid intent, Redis failure recovery) and CLI transition cases is not yet present. This task is therefore reported `DONE_WITH_CONCERNS`, not as full Task-6 acceptance.
+- The full-gate worker loop failure was traced to its test using a stale module session factory; binding it to the fixture engine makes the safe test target explicit.

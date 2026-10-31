@@ -130,6 +130,8 @@ async def test_network_runs_after_claim_commit(test_database, tmp_path, monkeypa
 @pytest.mark.asyncio
 async def test_env_stop_pauses_pending_and_rejects_inflight_publication(test_database, monkeypatch):
     """The infrastructure stop is a fail-closed boundary, not an auto-enable switch."""
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    monkeypatch.setattr(vision_worker, "async_session_factory", sessions)
     # Full publication race is exercised through the service CAS; this worker must not call HTTP.
     monkeypatch.setattr(vision_worker.settings, "DOCUMENT_VISION_ENABLED", False)
     monkeypatch.setattr(vision_worker, "extract_image_review", AsyncMock())
