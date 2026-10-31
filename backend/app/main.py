@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import database
 from app.config import settings
 from app.database import engine
 from app.documents.upload_limits import DocumentUploadBodyLimitMiddleware
@@ -12,6 +13,11 @@ from app.security.rate_limit import close_redis_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    if not settings.DOCUMENT_VISION_ENABLED:
+        from app.documents.processing_policy import set_vision_policy
+
+        async with database.async_session_factory() as db, db.begin():
+            await set_vision_policy(db, enabled=False, performed_by="system")
     yield
     await close_redis_client()
     await engine.dispose()
@@ -40,6 +46,7 @@ async def health_check():
 
 from app.advisor.router import router as advisor_router
 from app.audit import models as _audit_models  # noqa: F401 - register audit_events metadata
+from app.documents import job_models as _document_job_models  # noqa: F401 - register job metadata
 from app.documents import models as _document_models  # noqa: F401 - register document metadata
 from app.documents.review_router import router as document_review_router
 from app.documents.router import router as documents_router

@@ -50,6 +50,20 @@ class Settings(BaseSettings):
     DOCUMENT_OCR_TEXT_MAX_BYTES: PositiveInt = 2 * 1024 * 1024
     DOCUMENT_MAX_ATTEMPTS: PositiveInt = 3
     DOCUMENT_RETRY_DELAYS_SECONDS: tuple[PositiveInt, ...] = (30, 120)
+    DOCUMENT_VISION_ENABLED: bool = False
+    DOCUMENT_VISION_PROVIDER: str = ""
+    DOCUMENT_VISION_BASE_URL: str = ""
+    DOCUMENT_VISION_MODEL: str = ""
+    DOCUMENT_VISION_API_KEY: str = ""
+    DOCUMENT_VISION_MAX_EDGE: PositiveInt = 2048
+    DOCUMENT_VISION_MAX_BYTES: PositiveInt = 4 * 1024 * 1024
+    DOCUMENT_VISION_MAX_OUTPUT_TOKENS: PositiveInt = 1600
+    DOCUMENT_VISION_TIMEOUT_SECONDS: PositiveFloat = 60
+    DOCUMENT_VISION_CONCURRENCY: PositiveInt = 2
+    DOCUMENT_VISION_MAX_ATTEMPTS: PositiveInt = 2
+    DOCUMENT_VISION_RETRY_DELAYS_SECONDS: tuple[PositiveInt, ...] = (30,)
+    DOCUMENT_VISION_DAILY_CALL_LIMIT_PER_USER: PositiveInt = 50
+    DOCUMENT_VISION_LEASE_SECONDS: PositiveInt = 120
     BILL_PAYMENT_CANDIDATE_DATE_WINDOW_DAYS: PositiveInt = 30
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
@@ -160,6 +174,29 @@ class Settings(BaseSettings):
             raise ValueError("Upload body limit must exceed file limit for multipart overhead")
         if self.DOCUMENT_STALE_PROCESSING_SECONDS <= self.DOCUMENT_JOB_TIMEOUT_SECONDS:
             raise ValueError("Document recovery timeout must exceed worker job timeout")
+        if len(self.DOCUMENT_VISION_RETRY_DELAYS_SECONDS) != self.DOCUMENT_VISION_MAX_ATTEMPTS - 1:
+            raise ValueError("Vision retry delay count must equal attempts minus one")
+        if self.DOCUMENT_VISION_MAX_BYTES > self.DOCUMENT_IMAGE_OUTPUT_MAX_BYTES:
+            raise ValueError("Vision image limit cannot exceed image output limit")
+        if self.DOCUMENT_VISION_LEASE_SECONDS <= (
+            self.DOCUMENT_VISION_TIMEOUT_SECONDS + self.DOCUMENT_PARSER_TIMEOUT_SECONDS
+        ):
+            raise ValueError("Vision lease must exceed provider and parser timeouts")
+        if self.DOCUMENT_JOB_TIMEOUT_SECONDS <= self.DOCUMENT_VISION_LEASE_SECONDS:
+            raise ValueError("Document job timeout must exceed vision lease")
+        if self.DOCUMENT_VISION_BASE_URL:
+            parsed_vision_url = urlsplit(self.DOCUMENT_VISION_BASE_URL)
+            if (
+                parsed_vision_url.scheme != "https"
+                or not parsed_vision_url.hostname
+                or parsed_vision_url.username is not None
+                or parsed_vision_url.password is not None
+                or parsed_vision_url.query
+                or parsed_vision_url.fragment
+            ):
+                raise ValueError(
+                    "DOCUMENT_VISION_BASE_URL must be an HTTPS URL without credentials"
+                )
         raw_origins = self.TRUSTED_ORIGINS
         source_name = "TRUSTED_ORIGINS"
         if raw_origins is None:

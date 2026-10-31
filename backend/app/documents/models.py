@@ -22,7 +22,12 @@ from app.database import Base
 
 class Document(Base):
     __tablename__ = "documents"
-    __table_args__ = (Index("ix_documents_status_next_attempt_at", "status", "next_attempt_at"),)
+    __table_args__ = (
+        CheckConstraint(
+            "processing_method IN ('legacy_ocr', 'vision')", name="ck_document_processing_method"
+        ),
+        Index("ix_documents_status_next_attempt_at", "status", "next_attempt_at"),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     filename: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -37,6 +42,9 @@ class Document(Base):
     )
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    processing_method: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="legacy_ocr", default="legacy_ocr"
+    )
 
     text: Mapped["DocumentText | None"] = relationship(
         "DocumentText", back_populates="document", uselist=False, cascade="all, delete-orphan"
@@ -70,6 +78,9 @@ class DocumentExtractionRevision(Base):
             "status IN ('pending', 'processing', 'ready', 'incomplete', 'error')",
             name="ck_document_extraction_revision_status",
         ),
+        CheckConstraint(
+            "input_method IN ('text', 'image')", name="ck_document_extraction_revision_input_method"
+        ),
         Index("ix_document_extraction_revisions_user_status", "user_id", "status"),
     )
 
@@ -86,3 +97,15 @@ class DocumentExtractionRevision(Base):
     field_provenance: Mapped[dict[str, str]] = mapped_column(JSON, nullable=False)
     parser_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    input_method: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="text", default="text"
+    )
+    warnings: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, server_default="[]", default=list
+    )
+    source_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    derivative_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    provider: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    schema_version: Mapped[str | None] = mapped_column(String(100), nullable=True)

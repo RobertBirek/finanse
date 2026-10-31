@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 import app.advisor.models
 import app.audit.models
 import app.documents.models
+import app.documents.job_models
 import app.finance.models
 import app.identity.models
 import app.inbox.models
