@@ -36,7 +36,13 @@ def _payload(**overrides: object) -> dict[str, object]:
     return {"document_type": "receipt", "fields": fields, "warnings": [], **overrides}
 
 
-def _response(payload: object, *, status_code: int = 200) -> httpx.Response:
+def _response(
+    payload: object,
+    *,
+    status_code: int = 200,
+    finish_reason: str = "stop",
+    refusal: str | None = None,
+) -> httpx.Response:
     content = json.dumps(
         {
             "id": "test",
@@ -46,8 +52,12 @@ def _response(payload: object, *, status_code: int = 200) -> httpx.Response:
             "choices": [
                 {
                     "index": 0,
-                    "finish_reason": "stop",
-                    "message": {"role": "assistant", "content": json.dumps(payload)},
+                    "finish_reason": finish_reason,
+                    "message": {
+                        "role": "assistant",
+                        "content": json.dumps(payload),
+                        "refusal": refusal,
+                    },
                 }
             ],
         }
@@ -156,6 +166,33 @@ async def test_rate_limit_is_retryable_without_sdk_retry(monkeypatch: pytest.Mon
     with pytest.raises(vision_client.VisionProviderError) as raised:
         await vision_client.extract_image_review(b"jpeg", config=_config())
     assert (raised.value.code, raised.value.retryable, calls) == ("provider_unavailable", True, 1)
+
+
+@pytest.mark.parametrize(
+    ("refusal", "finish_reason"),
+    [("I cannot inspect this image", "stop"), (None, "content_filter")],
+)
+async def test_refusal_or_nonstop_terminal_response_never_yields_extraction(
+    monkeypatch: pytest.MonkeyPatch, refusal: str | None, finish_reason: str
+):
+    """Ignoring a structured refusal could turn rejected content into a ready review."""
+    from app.documents import vision_client
+
+    calls = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return _response(_payload(), refusal=refusal, finish_reason=finish_reason)
+
+    monkeypatch.setattr(
+        vision_client,
+        "_create_http_client",
+        lambda **kwargs: httpx.AsyncClient(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    with pytest.raises(vision_client.VisionProviderError) as raised:
+        await vision_client.extract_image_review(b"jpeg", config=_config())
+    assert (raised.value.code, raised.value.retryable, calls) == ("invalid_model_output", False, 1)
 
 
 @pytest.mark.parametrize(

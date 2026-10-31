@@ -140,8 +140,11 @@ async def extract_image_review(jpeg: bytes, *, config: VisionConfig) -> VisionEx
     finally:
         await client.close()
 
-    content = response.choices[0].message.content if response.choices else None
-    if not content or response.choices[0].finish_reason == "length":
+    choice = response.choices[0] if response.choices else None
+    if choice is None or choice.finish_reason != "stop" or choice.message.refusal:
+        raise VisionProviderError("invalid_model_output", retryable=False)
+    content = choice.message.content
+    if not content:
         raise VisionProviderError("invalid_model_output", retryable=False)
     try:
         payload = VisionPayload.model_validate_json(content)
