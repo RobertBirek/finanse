@@ -192,3 +192,15 @@ def limit_upload(current_user_dependency: Callable[..., Any]) -> Callable[..., A
         lambda user, request: f"{user.id}|{get_client_ip(request)}",
         current_user_dependency,
     )
+
+
+def limit_document_processing_action(
+    current_user_dependency: Callable[..., Any],
+) -> Callable[..., Awaitable[None]]:
+    return _authenticated_limit(
+        "document-processing-action",
+        lambda: settings.DOCUMENT_PROCESSING_ACTION_RATE_LIMIT,
+        lambda: settings.DOCUMENT_PROCESSING_ACTION_RATE_LIMIT_WINDOW_SECONDS,
+        lambda user, _request: str(user.id),
+        current_user_dependency,
+    )

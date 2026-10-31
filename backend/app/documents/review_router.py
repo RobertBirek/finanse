@@ -18,9 +18,11 @@ from app.documents.review_service import (
 from app.finance.bills_schemas import MutationContext
 from app.identity.models import User
 from app.identity.router import get_current_user
+from app.security.rate_limit import limit_document_processing_action
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+processing_action_rate_limit = limit_document_processing_action(get_current_user)
 
 
 @router.get("/{document_id}/review", response_model=ReviewResponse)
@@ -75,6 +77,7 @@ async def prepare_document_vision(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+    _limit: Annotated[None, Depends(processing_action_rate_limit)],
 ):
     try:
         revision, job_id, is_new = await prepare_vision_review(
@@ -110,6 +113,7 @@ async def retry_document_ocr(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+    _limit: Annotated[None, Depends(processing_action_rate_limit)],
 ):
     try:
         result = await request_ocr_retry(

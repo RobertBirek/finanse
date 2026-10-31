@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     BILL_PAYMENT_CANDIDATE_DATE_WINDOW_DAYS: PositiveInt = 30
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
+    DOCUMENT_PROCESSING_ACTION_RATE_LIMIT: PositiveInt = 10
+    DOCUMENT_PROCESSING_ACTION_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     OPENAI_API_KEY: str = ""
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://api.deepseek.com"
