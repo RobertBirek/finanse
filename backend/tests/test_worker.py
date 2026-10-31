@@ -56,7 +56,9 @@ async def test_worker_file_uploads_read_files_off_event_loop(
     path = tmp_path / "receipt.pdf"
     path.write_bytes(b"pdf bytes")
     read_bytes = AsyncMock(return_value=b"pdf bytes")
-    monkeypatch.setattr(worker, "asyncio", SimpleNamespace(to_thread=read_bytes), raising=False)
+    from app.documents import ocr_pipeline
+
+    monkeypatch.setattr(ocr_pipeline, "asyncio", SimpleNamespace(to_thread=read_bytes))
 
     requests = []
 

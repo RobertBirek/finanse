@@ -2,7 +2,6 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import ClassVar
 
 import httpx
@@ -17,7 +16,15 @@ from app.database import async_session_factory
 from app.documents import service
 from app.documents.images import normalize_image
 from app.documents.models import Document
-from app.documents.ocr_client import OCRResponseTooLargeError, post_bounded
+from app.documents.ocr_client import OCRResponseTooLargeError
+from app.documents.ocr_pipeline import (
+    STIRLING_IMG_TO_PDF_URL,  # noqa: F401
+    STIRLING_OCR_URL,  # noqa: F401
+    STIRLING_PDF_TO_TEXT_URL,  # noqa: F401
+    _convert_image_to_pdf,
+    _ocr_pdf,
+    _pdf_to_text,
+)
 from app.documents.retry import is_retryable_ocr_error, retry_delay_seconds
 from app.documents.review_service import pending_review_ids, process_review_revision
 from app.documents.schemas import DocumentStatus
@@ -25,9 +32,6 @@ from app.documents.schemas import DocumentStatus
 logger = logging.getLogger(__name__)
 
 REDIS_SETTINGS = RedisSettings.from_dsn(settings.REDIS_URL)
-STIRLING_OCR_URL = f"{settings.STIRLING_PDF_URL}/api/v1/misc/ocr-pdf"
-STIRLING_IMG_TO_PDF_URL = f"{settings.STIRLING_PDF_URL}/api/v1/convert/img/pdf"
-STIRLING_PDF_TO_TEXT_URL = f"{settings.STIRLING_PDF_URL}/api/v1/convert/pdf/text"
 
 
 async def enqueue_process_document(document_id: str) -> None:
@@ -101,49 +105,6 @@ async def dispatch_pending_document_reviews(ctx) -> None:
         )
 
 
-async def _convert_image_to_pdf(
-    client: httpx.AsyncClient, file_path: str, image_content: bytes | None = None
-) -> bytes:
-    path = Path(file_path)
-    content = (
-        image_content if image_content is not None else await asyncio.to_thread(path.read_bytes)
-    )
-    files = {"fileInput": (path.name, content)}
-    # Keep text glyphs undistorted; choose landscape A4 for wide images.
-    data = {"fitOption": "maintainAspectRatio", "autoRotate": "true"}
-    return await post_bounded(
-        client, STIRLING_IMG_TO_PDF_URL, files, settings.DOCUMENT_OCR_MAX_BYTES, data
-    )
-
-
-async def _ocr_pdf(
-    client: httpx.AsyncClient, file_path: str, pdf_content: bytes | None = None
-) -> bytes:
-    """Use converted PDF bytes for images without changing their original files."""
-    path = Path(file_path)
-    content = pdf_content if pdf_content is not None else await asyncio.to_thread(path.read_bytes)
-    files = {"fileInput": (path.name, content)}
-    data = {"languages": "pol,eng", "ocrType": "skip-text"}
-    return await post_bounded(
-        client, STIRLING_OCR_URL, files, settings.DOCUMENT_OCR_MAX_BYTES, data
-    )
-
-
-async def _pdf_to_text(client: httpx.AsyncClient, pdf_content: bytes) -> str:
-    files = {"fileInput": ("output.pdf", pdf_content, "application/pdf")}
-    content = await post_bounded(
-        client,
-        STIRLING_PDF_TO_TEXT_URL,
-        files,
-        settings.DOCUMENT_OCR_TEXT_MAX_BYTES,
-        {"outputFormat": "txt"},
-    )
-    text = content.decode("utf-8", errors="replace")
-    if len(text.encode("utf-8")) > settings.DOCUMENT_OCR_TEXT_MAX_BYTES:
-        raise OCRResponseTooLargeError("OCR text exceeds limit")
-    return text
-
-
 async def _process_content(db: AsyncSession, doc: Document) -> None:
     document_path = service.UPLOAD_DIR / doc.storage_path
     file_path = str(document_path)
@@ -153,11 +114,8 @@ async def _process_content(db: AsyncSession, doc: Document) -> None:
     async with httpx.AsyncClient(timeout=120.0) as client:
         converted = None
         if doc.mime_type.startswith("image/"):
-            image_content = original_content
-            image_path = file_path
-            if doc.mime_type == "image/heif":
-                image_content = await normalize_image(original_content, doc.mime_type)
-                image_path = "document.jpg"
+            image_content = await normalize_image(original_content, doc.mime_type)
+            image_path = "document.jpg"
             converted = await _convert_image_to_pdf(client, image_path, image_content)
         ocr_pdf = await _ocr_pdf(
             client, file_path, converted if converted is not None else original_content

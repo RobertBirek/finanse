@@ -8,7 +8,14 @@ from io import BytesIO
 
 
 def normalize_image(
-    content: bytes, mime: str, *, thumbnail: bool, max_pixels: int, max_edge: int, quality: int
+    content: bytes,
+    mime: str,
+    *,
+    thumbnail: bool,
+    resize: bool,
+    max_pixels: int,
+    max_edge: int,
+    quality: int,
 ) -> bytes:
     from PIL import Image, ImageOps
 
@@ -28,7 +35,7 @@ def normalize_image(
         if image.width * image.height > max_pixels:
             raise ValueError("Image exceeds pixel limit")
         image = ImageOps.exif_transpose(image)
-        if thumbnail:
+        if thumbnail or resize:
             image.thumbnail((max_edge, max_edge))
         if image.mode in {"RGBA", "LA"} or (image.mode == "P" and "transparency" in image.info):
             background = Image.new("RGB", image.size, "white")
@@ -54,6 +61,7 @@ def main() -> None:
         content,
         limits["mime"],
         thumbnail=limits["thumbnail"],
+        resize=limits["resize"],
         max_pixels=limits["pixels"],
         max_edge=limits["edge"],
         quality=limits["quality"],
