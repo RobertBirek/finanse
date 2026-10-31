@@ -89,6 +89,7 @@ class DocumentVisionPolicy(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)  # type: ignore[assignment]
     enabled: Mapped[bool] = mapped_column(nullable=False, server_default="false", default=False)
     epoch: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1", default=1)
+    configuration_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     changed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )

@@ -50,8 +50,93 @@ async def test_legacy_rows_remain_text_and_never_create_jobs(test_database) -> N
             ),
             {"user_id": user_id, "document_id": document_id},
         )
+        legacy = {
+            "document": dict(
+                connection.execute(
+                    sa.text(
+                        """SELECT id, user_id, filename, original_name, mime_type, sha256_hash,
+                                  size_bytes, storage_path, status, attempt_count, next_attempt_at,
+                                  last_error_code, created_at, updated_at
+                           FROM documents WHERE id = :document_id"""
+                    ),
+                    {"document_id": document_id},
+                )
+                .mappings()
+                .one()
+            ),
+            "text": dict(
+                connection.execute(
+                    sa.text(
+                        """SELECT id, document_id, extracted_text, ocr_engine, extracted_at,
+                                  created_at, updated_at
+                           FROM document_texts WHERE document_id = :document_id"""
+                    ),
+                    {"document_id": document_id},
+                )
+                .mappings()
+                .one()
+            ),
+            "revision": dict(
+                connection.execute(
+                    sa.text(
+                        """SELECT id, user_id, document_id, revision, status, data,
+                                  field_provenance, parser_version, error_code, created_at, updated_at
+                           FROM document_extraction_revisions WHERE document_id = :document_id"""
+                    ),
+                    {"document_id": document_id},
+                )
+                .mappings()
+                .one()
+            ),
+        }
         with Operations.context(MigrationContext.configure(connection)):
             module.upgrade()
+        assert (
+            dict(
+                connection.execute(
+                    sa.text(
+                        """SELECT id, user_id, filename, original_name, mime_type, sha256_hash,
+                              size_bytes, storage_path, status, attempt_count, next_attempt_at,
+                              last_error_code, created_at, updated_at
+                       FROM documents WHERE id = :document_id"""
+                    ),
+                    {"document_id": document_id},
+                )
+                .mappings()
+                .one()
+            )
+            == legacy["document"]
+        )
+        assert (
+            dict(
+                connection.execute(
+                    sa.text(
+                        """SELECT id, document_id, extracted_text, ocr_engine, extracted_at,
+                              created_at, updated_at
+                       FROM document_texts WHERE document_id = :document_id"""
+                    ),
+                    {"document_id": document_id},
+                )
+                .mappings()
+                .one()
+            )
+            == legacy["text"]
+        )
+        assert (
+            dict(
+                connection.execute(
+                    sa.text(
+                        """SELECT id, user_id, document_id, revision, status, data,
+                              field_provenance, parser_version, error_code, created_at, updated_at
+                       FROM document_extraction_revisions WHERE document_id = :document_id"""
+                    ),
+                    {"document_id": document_id},
+                )
+                .mappings()
+                .one()
+            )
+            == legacy["revision"]
+        )
         row = connection.execute(
             sa.text(
                 """SELECT d.processing_method, d.sha256_hash, r.input_method, r.source_sha256,

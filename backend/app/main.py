@@ -18,6 +18,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         async with database.async_session_factory() as db, db.begin():
             await set_vision_policy(db, enabled=False, performed_by="system")
+    else:
+        from app.documents.processing_policy import reconcile_vision_policy_configuration
+        from app.documents.vision_config import get_vision_config
+
+        async with database.async_session_factory() as db, db.begin():
+            await reconcile_vision_policy_configuration(db, config=get_vision_config(settings))
     yield
     await close_redis_client()
     await engine.dispose()

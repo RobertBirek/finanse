@@ -25,6 +25,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("enabled", sa.Boolean(), server_default="false", nullable=False),
         sa.Column("epoch", sa.Integer(), server_default="1", nullable=False),
+        sa.Column("configuration_fingerprint", sa.String(length=64), nullable=True),
         sa.Column(
             "changed_at",
             sa.DateTime(timezone=True),
