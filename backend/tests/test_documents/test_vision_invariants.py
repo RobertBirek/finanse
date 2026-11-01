@@ -7,6 +7,7 @@ and review service) is real.
 
 from __future__ import annotations
 
+import copy
 import json
 
 import httpx
@@ -16,9 +17,17 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from test_security.test_rate_limit import TRUSTED_ORIGIN
 
 import app.main  # noqa: F401 - registers all models for isolated schema creation
-from app.documents import job_service, service, vision_client, vision_worker
+from app import worker
+from app.documents import (
+    extractor,
+    job_service,
+    review_service,
+    service,
+    vision_client,
+    vision_worker,
+)
 from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
-from app.documents.models import DocumentExtractionRevision
+from app.documents.models import Document, DocumentExtractionRevision, DocumentText
 from app.documents.vision_config import VisionConfig
 from app.finance.bills import approve_bill, prepare_bill
 from app.finance.bills_schemas import BillApprove, MutationContext
@@ -100,6 +109,13 @@ async def test_new_vision_upload_ready_then_human_review_never_changes_ledger_or
     """Removing the no-auto-write boundary would change the full-record snapshot."""
     sessions = async_sessionmaker(test_database, expire_on_commit=False)
     config = _config()
+    provider_calls = 0
+
+    def provider(request: httpx.Request) -> httpx.Response:
+        nonlocal provider_calls
+        provider_calls += 1
+        return _provider_response(request)
+
     monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
     monkeypatch.setattr(vision_worker, "UPLOAD_DIR", tmp_path)
     monkeypatch.setattr(vision_worker, "async_session_factory", sessions)
@@ -109,7 +125,7 @@ async def test_new_vision_upload_ready_then_human_review_never_changes_ledger_or
     monkeypatch.setattr(
         vision_client,
         "_create_http_client",
-        lambda **_: httpx.AsyncClient(transport=httpx.MockTransport(_provider_response)),
+        lambda **_: httpx.AsyncClient(transport=httpx.MockTransport(provider)),
     )
 
     user = User(email="vision-acceptance@example.invalid", password_hash="hash", display_name="QA")
@@ -191,6 +207,7 @@ async def test_new_vision_upload_ready_then_human_review_never_changes_ledger_or
         "ready",
         "12.34",
     )
+    assert provider_calls == 1
     assert await _records(db_session) == before
 
     # Human approval persists a document record but must not create a ledger entry.
@@ -212,6 +229,81 @@ async def test_new_vision_upload_ready_then_human_review_never_changes_ledger_or
         context=MutationContext(idempotency_key="human-approve"),
     )
     await db_session.commit()
+    assert await _records(db_session) == before
+
+    retry_revision, retry_job_id, is_new = await review_service.prepare_vision_review(
+        db_session,
+        user_id,
+        document_id,
+        context=MutationContext(idempotency_key="successful-vision-retry"),
+    )
+    retry_revision_id = retry_revision.id
+    await db_session.commit()
+    assert is_new and retry_revision.status == "pending"
+    assert await _records(db_session) == before
+
+    await vision_worker.process_document_job({}, str(retry_job_id))
+    await db_session.rollback()
+    retry_job = await db_session.get(DocumentProcessingJob, retry_job_id)
+    retry_revision = await db_session.get(DocumentExtractionRevision, retry_revision_id)
+    assert retry_job is not None and retry_revision is not None
+    assert (retry_job.state, retry_revision.status, retry_revision.revision, provider_calls) == (
+        "succeeded",
+        "ready",
+        2,
+        2,
+    )
+    assert await _records(db_session) == before
+    latest_vision = (retry_revision.id, copy.deepcopy(retry_revision.data), retry_revision.status)
+    original_sha256 = (await db_session.get(Document, document_id)).sha256_hash
+
+    local_ocr = await review_service.request_ocr_retry(
+        db_session,
+        user_id,
+        document_id,
+        context=MutationContext(idempotency_key="successful-local-ocr"),
+    )
+    await db_session.commit()
+    local_job_id = local_ocr.response_json["job_id"]
+    assert local_ocr.is_new and isinstance(local_job_id, str)
+    assert await _records(db_session) == before
+
+    text_llm_calls = 0
+
+    async def unexpected_text_llm(_: str):
+        nonlocal text_llm_calls
+        text_llm_calls += 1
+        raise AssertionError("local OCR must not prepare a text review")
+
+    async def convert_image_to_pdf(*_args: object) -> bytes:
+        return b"synthetic-pdf"
+
+    async def ocr_pdf(*_args: object) -> bytes:
+        return b"synthetic-ocr-pdf"
+
+    async def pdf_to_text(*_args: object) -> str:
+        return "Synthetic local OCR"
+
+    monkeypatch.setattr(worker, "async_session_factory", sessions)
+    monkeypatch.setattr(worker, "_convert_image_to_pdf", convert_image_to_pdf)
+    monkeypatch.setattr(worker, "_ocr_pdf", ocr_pdf)
+    monkeypatch.setattr(worker, "_pdf_to_text", pdf_to_text)
+    monkeypatch.setattr(extractor, "extract_review_data", unexpected_text_llm)
+    await worker.process_document_job({}, local_job_id)
+    await db_session.rollback()
+    local_job = await db_session.get(DocumentProcessingJob, local_job_id)
+    document = await db_session.get(Document, document_id)
+    current_revision = await db_session.get(DocumentExtractionRevision, latest_vision[0])
+    text = (await db_session.execute(select(DocumentText))).scalar_one()
+    assert local_job is not None and document is not None and current_revision is not None
+    assert (local_job.kind, local_job.state, text.extracted_text) == (
+        "local_ocr",
+        "succeeded",
+        "Synthetic local OCR",
+    )
+    assert document.processing_method == "vision" and document.sha256_hash == original_sha256
+    assert (current_revision.id, current_revision.data, current_revision.status) == latest_vision
+    assert provider_calls == 2 and text_llm_calls == 0
     assert await _records(db_session) == before
 
 

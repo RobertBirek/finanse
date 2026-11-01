@@ -14,6 +14,16 @@ vision, ręcznego review oraz zbudowanego frontendowego dist z lokalnym fake API
   uploadem, wykonaniem vision i ręcznym approval; named test starego obrazu
   sprawdza GET list/detail/review/original/preview i duplikat bez jobu/revizji/
   wywołania providera, a jawny POST vision jako jedyny tworzy job i call.
+- Fix round 2 rozszerza tę samą niepustą macierz o ukończone operacje: po
+  `prepare_vision_review(...successful-vision-retry)` snapshot legacy rows,
+  wyliczonych balances i inbox jest identyczny zarówno po utworzeniu intentu,
+  jak i po publikacji workera (revision 2 `ready`, drugi i ostatni provider
+  call). Po `request_ocr_retry(...successful-local-ocr)` realny wrapper
+  `worker.process_document_job` kończy job `local_ocr`, zapisuje `DocumentText`
+  przez upsert, ale zachowuje SHA oryginału, metodę `vision`, ostatnią image
+  revision/data/status i ten sam snapshot księgi/inbox/balances. Mockowane są
+  tylko granice Stirling; text LLM i provider vision po local OCR mają zero
+  dodatkowych wywołań.
 - Frontend: `document-vision.spec.ts` uruchamia oba projekty Playwright na
   zbudowanym dist i stateful fake API: syntetyczny JPEG przechodzi przez
   `setInputFiles` i multipart POST do pending→ready; binarne private
@@ -24,6 +34,8 @@ vision, ręcznego review oraz zbudowanego frontendowego dist z lokalnym fake API
 - Gate `task-8-completion-gate`, przez `finanse-refactor-testdb` na loopback
   `55432`: backend **1008 PASS, 8 deselected, 10 warnings**; frontend
   **302 PASS**.
+- Gate `task-8-fix2-gate` na tym samym izolowanym `55432`: backend **1008 PASS,
+  8 deselected, 10 warnings**; frontend **302 PASS**.
   Ostrzeżenia są deprecations passlib/FastAPI, bez nowych failures.
 - `npm run build`: PASS. Pełne Playwright Chrome (`/usr/bin/google-chrome`):
   **93 PASS, 1 expected desktop skip** w obu projektach; artefakty
