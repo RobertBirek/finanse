@@ -7,8 +7,10 @@ import sys
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.config import Settings
 from app.documents.job_models import DocumentVisionPolicy
 from app.documents.processing_policy import set_vision_policy
+from app.documents.vision_config import get_vision_config
 
 
 def _target_url() -> str:
@@ -31,7 +33,18 @@ async def run(enable: bool, expected_epoch: int, apply: bool) -> int:
             if not apply:
                 print(f"dry_run enabled={enable} epoch={actual}")
                 return 0
-            await set_vision_policy(db, enabled=enable, performed_by="operator-cli")
+            config = get_vision_config(Settings()) if enable else None
+            try:
+                await set_vision_policy(
+                    db,
+                    enabled=enable,
+                    performed_by="operator-cli",
+                    config=config,
+                )
+            except ValueError as error:
+                await db.rollback()
+                print(str(error))
+                return 2
             await db.commit()
             print("applied")
             return 0

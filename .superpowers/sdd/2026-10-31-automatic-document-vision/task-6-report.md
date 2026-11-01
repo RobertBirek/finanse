@@ -28,3 +28,25 @@
 - Checked no raw OCR/revision data, storage path, provider endpoint, or key reaches the new responses.
 - The required direct-queue routing is implemented after commit and preserves the existing durable-job recovery path.
 - The full-gate worker loop failure was traced to its test using a stale module session factory; binding it to the fixture engine makes the safe test target explicit.
+
+## Fix 1 — review coverage and CLI operator boundary
+- Added a real SQLAlchemy engine `before_cursor_execute` counter around only
+  `document_responses(...)` for 50 documents; it asserts the mapper performs at most four
+  statements, cleans up the listener in `finally`, and verifies the highest competing
+  revision is selected.
+- Replaced the direct service-only policy transition coverage with real
+  `document_vision_policy.run(..., apply=True)` calls. Tests load the controlled test DB
+  environment through `gate.environment()` via `importlib`, then use `Settings()` and
+  `get_vision_config()` to verify the runtime fingerprint. Missing configuration returns
+  `configuration_missing`/2 with no policy or audit mutation; enable, disable, and a fresh
+  re-enable advance epochs and leave old pending/processing leased work paused/incomplete.
+- RED evidence: the new CLI test initially failed because `run()` let
+  `ValueError("configuration_missing")` escape instead of returning its controlled refusal.
+  GREEN: `PY -m pytest tests/test_documents/test_vision_status.py tests/test_documents/test_vision_policy.py -v`
+  (with `gate.environment()`) → **5 passed** (one existing Passlib deprecation warning).
+- Completion gates `task-6-fix1-completion-gate` and fresh final
+  `task-6-fix1-completion-gate-final`: backend lint PASS; backend types PASS;
+  backend tests **FAIL** after 1003 passed/8 deselected because unrelated existing test
+  `tests/test_finance/test_bill_payments.py::test_candidate_conflict_uses_matched_occurrence_forecast_effects`
+  expected recurring conflicts but received none. Frontend steps were not run by the gate
+  after that backend failure. No change was made outside Task 6 to mask or repair it.

@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import event
 
 from app.documents import service
 from app.documents.job_models import DocumentProcessingJob
@@ -47,15 +48,38 @@ async def test_document_mapper_uses_batched_latest_review_and_text_existence(
             )
         )
     await service.save_extracted_text(db_session, documents[0].id, "text")
+    db_session.add(
+        DocumentExtractionRevision(
+            user_id=user.id,
+            document_id=documents[0].id,
+            revision=2,
+            status="ready",
+            data={"document_type": "other", "fields": {}, "provenance": {}, "parser_version": None},
+            field_provenance={},
+            input_method="image",
+        )
+    )
     await db_session.flush()
 
     loaded = await service.get_documents(db_session, user.id)
-    responses = await service.document_responses(db_session, user.id, loaded)
+    statements: list[str] = []
+    engine = db_session.bind.sync_engine
+
+    def count_sql(*args):
+        statements.append(args[2])
+
+    event.listen(engine, "before_cursor_execute", count_sql)
+    try:
+        responses = await service.document_responses(db_session, user.id, loaded)
+    finally:
+        event.remove(engine, "before_cursor_execute", count_sql)
 
     assert len(responses) == 50
     assert responses[0].has_extracted_text is True
     assert all("storage_path" not in item.model_dump() for item in responses)
-    assert all(item.review is not None and item.review.status == "incomplete" for item in responses)
+    assert all(item.review is not None for item in responses)
+    assert len(statements) <= 4
+    assert next(item for item in responses if item.id == documents[0].id).review.revision == 2
 
 
 @pytest.mark.integration
