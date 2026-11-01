@@ -125,6 +125,33 @@ describe("DocumentReview", () => {
     };
   });
 
+  it("keeps the manual form available for a ready other review", () => {
+    const current = apiState.review!;
+    apiState.review = {
+      ...current,
+      document_type: "other",
+      status: "ready",
+    };
+    renderReview();
+    expect(screen.getByLabelText("Sprzedawca")).toBeInTheDocument();
+    apiState.review = current;
+  });
+
+  it("keeps a genuine unsupported review out of the manual register form", () => {
+    const current = apiState.review!;
+    apiState.review = {
+      ...current,
+      document_type: "unsupported",
+      status: "ready",
+    };
+    renderReview();
+    expect(screen.queryByLabelText("Sprzedawca")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/nie jest fakturą\/paragonem/i),
+    ).toBeInTheDocument();
+    apiState.review = current;
+  });
+
   it("leaves a missing currency unselected and blocks preparation", () => {
     const current = apiState.review!;
     apiState.review = {

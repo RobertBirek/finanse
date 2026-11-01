@@ -187,6 +187,32 @@ describe("document recovery UI", () => {
     expect(mocks.text).toHaveBeenLastCalledWith(doc.id, true);
     expect(screen.getByText("Treść")).toBeInTheDocument();
   });
+  it.each([
+    ["pending", null, "Odczyt w kolejce"],
+    ["incomplete", null, "Uzupełnij ręcznie"],
+    ["error", "provider_unavailable", "AI niedostępne"],
+  ] as const)(
+    "does not call a done vision review %s ready or request missing OCR text",
+    (status, error_code, expectedLabel) => {
+      const visionDocument = {
+        ...doc,
+        has_extracted_text: false,
+        review: {
+          revision_id: "review-1",
+          revision: 1,
+          input_method: "image" as const,
+          status,
+          error_code,
+          warnings: [],
+          job_state: status === "error" ? "failed" : "processing",
+        },
+      };
+      render(<DocumentViewer document={visionDocument} onClose={vi.fn()} />);
+      expect(screen.getByText(expectedLabel)).toBeInTheDocument();
+      expect(screen.queryByText("Gotowe")).not.toBeInTheDocument();
+      expect(mocks.text).toHaveBeenLastCalledWith(doc.id, false);
+    },
+  );
   it("explains a blank OCR result", () => {
     mocks.text.mockReturnValue(query({ extracted_text: "  \n" }));
     render(<DocumentViewer document={doc} onClose={vi.fn()} />);

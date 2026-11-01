@@ -1,12 +1,12 @@
 import {
   useDocumentText,
   type DocumentData,
-  STATUS_LABELS,
   STATUS_COLORS,
   formatFileSize,
 } from "../api/documents";
 import { Dialog } from "./Dialog";
 import { QueryFeedback } from "./QueryFeedback";
+import { getDocumentStatus } from "./documents/documentStatus";
 
 type Props = {
   document: DocumentData;
@@ -16,6 +16,15 @@ type Props = {
 
 export function DocumentViewer({ document: doc, onClose, onReview }: Props) {
   const text = useDocumentText(doc.id, !!doc.has_extracted_text);
+  const status = getDocumentStatus(doc);
+  const color =
+    status.tone === "danger"
+      ? "error"
+      : status.tone === "success"
+        ? "done"
+        : status.tone === "warning"
+          ? "processing"
+          : "pending";
   return (
     <Dialog
       label={`Dokument: ${doc.original_name}`}
@@ -33,9 +42,9 @@ export function DocumentViewer({ document: doc, onClose, onReview }: Props) {
           </p>
         </div>
         <span
-          className={`px-2 py-1 rounded-full text-xs ${STATUS_COLORS[doc.status]}`}
+          className={`px-2 py-1 rounded-full text-xs ${STATUS_COLORS[color]}`}
         >
-          {STATUS_LABELS[doc.status]}
+          {status.label}
         </span>
         <div className="flex gap-2">
           {onReview && (

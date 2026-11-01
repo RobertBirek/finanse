@@ -90,8 +90,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
     (review.data?.document_type === "multiple" ||
       review.data?.document_type === "unsupported" ||
       review.data?.document_type === "statement" ||
-      review.data?.document_type === "loan_schedule" ||
-      review.data?.document_type === "other");
+      review.data?.document_type === "loan_schedule");
   const submit = () => {
     const total_minor = minor(form.total);
     if (
