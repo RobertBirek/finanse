@@ -24,6 +24,10 @@ vision, ręcznego review oraz zbudowanego frontendowego dist z lokalnym fake API
   revision/data/status i ten sam snapshot księgi/inbox/balances. Mockowane są
   tylko granice Stirling; text LLM i provider vision po local OCR mają zero
   dodatkowych wywołań.
+- Fix round 3 zapisuje przed `successful-vision-retry` rzeczywiste
+  `Document.sha256_hash`, `processing_method` i SHA-256 bajtów wskazanego pliku
+  oryginału. Po publikacji retry worker test porównuje wszystkie trzy wartości
+  z tym snapshotem, zanim rozpocznie local OCR.
 - Frontend: `document-vision.spec.ts` uruchamia oba projekty Playwright na
   zbudowanym dist i stateful fake API: syntetyczny JPEG przechodzi przez
   `setInputFiles` i multipart POST do pending→ready; binarne private
@@ -35,6 +39,8 @@ vision, ręcznego review oraz zbudowanego frontendowego dist z lokalnym fake API
   `55432`: backend **1008 PASS, 8 deselected, 10 warnings**; frontend
   **302 PASS**.
 - Gate `task-8-fix2-gate` na tym samym izolowanym `55432`: backend **1008 PASS,
+  8 deselected, 10 warnings**; frontend **302 PASS**.
+- Gate `task-8-fix3-gate` na tym samym izolowanym `55432`: backend **1008 PASS,
   8 deselected, 10 warnings**; frontend **302 PASS**.
   Ostrzeżenia są deprecations passlib/FastAPI, bez nowych failures.
 - `npm run build`: PASS. Pełne Playwright Chrome (`/usr/bin/google-chrome`):

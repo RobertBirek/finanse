@@ -8,6 +8,7 @@ and review service) is real.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 
 import httpx
@@ -231,6 +232,13 @@ async def test_new_vision_upload_ready_then_human_review_never_changes_ledger_or
     await db_session.commit()
     assert await _records(db_session) == before
 
+    pre_retry_document = await db_session.get(Document, document_id)
+    assert pre_retry_document is not None
+    original_sha256, processing_method, original_file_sha256 = (
+        pre_retry_document.sha256_hash,
+        pre_retry_document.processing_method,
+        hashlib.sha256((tmp_path / pre_retry_document.storage_path).read_bytes()).hexdigest(),
+    )
     retry_revision, retry_job_id, is_new = await review_service.prepare_vision_review(
         db_session,
         user_id,
@@ -254,8 +262,14 @@ async def test_new_vision_upload_ready_then_human_review_never_changes_ledger_or
         2,
     )
     assert await _records(db_session) == before
+    retried_document = await db_session.get(Document, document_id)
+    assert retried_document is not None
+    assert (
+        retried_document.sha256_hash,
+        retried_document.processing_method,
+        hashlib.sha256((tmp_path / retried_document.storage_path).read_bytes()).hexdigest(),
+    ) == (original_sha256, processing_method, original_file_sha256)
     latest_vision = (retry_revision.id, copy.deepcopy(retry_revision.data), retry_revision.status)
-    original_sha256 = (await db_session.get(Document, document_id)).sha256_hash
 
     local_ocr = await review_service.request_ocr_retry(
         db_session,
