@@ -33,6 +33,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
+      role="dialog"
       aria-label={label}
       aria-modal="true"
       aria-busy={busy || undefined}

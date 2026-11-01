@@ -178,7 +178,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
             <a
               href={originalUrl}
               download="dokument"
-              className="mt-2 inline-block text-sm text-advisor-400 hover:underline"
+              className="mt-2 inline-block text-sm text-advisor-700 hover:underline"
             >
               Pobierz autoryzowany oryginał
             </a>
@@ -212,6 +212,11 @@ export function DocumentReview({ documentId, onClose }: Props) {
           {retryOcr.error ? (
             <p role="alert" className="mb-3 text-sm text-red-300">
               Nie udało się ponowić OCR. Możesz poprawić pola ręcznie.
+            </p>
+          ) : null}
+          {prepareVision.error ? (
+            <p role="alert" className="mb-3 text-sm text-red-300">
+              Nie udało się ponowić AI. Możesz poprawić pola ręcznie.
             </p>
           ) : null}
           {prepareBill.error || approve.error || attach.error ? (
