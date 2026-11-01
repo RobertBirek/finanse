@@ -1,3 +1,4 @@
+import sys
 import uuid
 from datetime import date, timedelta
 
@@ -275,8 +276,15 @@ async def test_candidates_hide_cross_owner_and_prioritize_legacy_target(db_sessi
     assert hidden not in {item.posting_id for item in page.items}
 
 
-async def test_candidate_conflict_uses_matched_occurrence_forecast_effects(db_session) -> None:
+async def test_candidate_conflict_uses_matched_occurrence_forecast_effects(
+    db_session, monkeypatch
+) -> None:
+    from app.finance import bill_payments
     from app.finance.bill_payments import allocate_payment, get_payment_candidates
+
+    scenario_today = date(2026, 10, 28)
+    monkeypatch.setattr(sys.modules[__name__], "_local_today", lambda: scenario_today)
+    monkeypatch.setattr(bill_payments, "_local_today", lambda: scenario_today)
 
     owner = await create_owner(db_session)
     bill = await setup_bill(db_session, owner)
