@@ -15,7 +15,7 @@ type Props = {
 };
 
 export function DocumentViewer({ document: doc, onClose, onReview }: Props) {
-  const text = useDocumentText(doc.id, doc.status === "done");
+  const text = useDocumentText(doc.id, !!doc.has_extracted_text);
   return (
     <Dialog
       label={`Dokument: ${doc.original_name}`}
@@ -57,6 +57,10 @@ export function DocumentViewer({ document: doc, onClose, onReview }: Props) {
           <p role="alert" className="py-8 text-red-300">
             Nie udało się odczytać dokumentu. Oryginał pozostaje zachowany.
             Możesz ponownie przesłać ten sam plik, aby ponowić odczyt.
+          </p>
+        ) : !doc.has_extracted_text ? (
+          <p className="py-8 text-gray-400">
+            Tekst OCR nie jest dostępny dla tego dokumentu.
           </p>
         ) : (
           <QueryFeedback

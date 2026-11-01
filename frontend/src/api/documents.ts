@@ -15,7 +15,23 @@ export interface DocumentData {
   last_error_code: string | null;
   created_at: string;
   updated_at: string;
+  processing_method: "legacy_ocr" | "vision";
+  review: ReviewSummary | null;
+  has_extracted_text: boolean;
+  local_ocr_state: string | null;
 }
+
+export type ReviewSummary = {
+  revision_id: string;
+  revision: number;
+  input_method: "text" | "image";
+  status: "pending" | "processing" | "ready" | "incomplete" | "error";
+  error_code: string | null;
+  warnings: (
+    "unreadable" | "missing_required_fields" | "unsupported_document"
+  )[];
+  job_state: string | null;
+};
 
 export type DocumentReview = {
   id: string;
@@ -45,10 +61,17 @@ export type DocumentReview = {
   };
   provenance: Record<string, string>;
   parser_version: string | null;
+  input_method: "text" | "image";
+  warnings: (
+    "unreadable" | "missing_required_fields" | "unsupported_document"
+  )[];
 };
 export type DocumentUploadCapabilities = {
   max_file_bytes: number;
   accepted_mime_types: string[];
+  automatic_image_vision: boolean;
+  vision_provider_label: string | null;
+  vision_notice: string | null;
 };
 const mutationHeaders = () => ({ "Idempotency-Key": crypto.randomUUID() });
 
@@ -76,7 +99,13 @@ export function useDocuments(params?: { status?: string }) {
     refetchInterval: (query) => {
       const docs = query.state.data;
       if (
-        docs?.some((d) => d.status === "processing" || d.status === "pending")
+        docs?.some(
+          (document) =>
+            document.status === "processing" ||
+            document.status === "pending" ||
+            document.review?.status === "processing" ||
+            document.review?.status === "pending",
+        )
       ) {
         return 3000;
       }
@@ -137,6 +166,10 @@ export function useDocumentReview(id: string | null) {
     retry: false,
     queryFn: async () =>
       (await api.get<DocumentReview>(`/documents/${id}/review`)).data,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "pending" || status === "processing" ? 3000 : false;
+    },
   });
 }
 
@@ -157,21 +190,58 @@ export function usePrepareDocumentReview() {
           { params: { refresh }, headers: mutationHeaders() },
         )
       ).data,
-    onSuccess: (review) =>
+    onSuccess: (review) => {
       queryClient.setQueryData(
         ["documents", review.document_id, "review"],
         review,
-      ),
+      );
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+    },
+  });
+}
+
+export function usePrepareDocumentVision() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      documentId,
+      intentKey,
+    }: {
+      documentId: string;
+      intentKey: string;
+    }) =>
+      (
+        await api.post<DocumentReview>(
+          `/documents/${documentId}/vision/prepare`,
+          undefined,
+          {
+            headers: { "Idempotency-Key": intentKey },
+          },
+        )
+      ).data,
+    onSuccess: (review) => {
+      queryClient.setQueryData(
+        ["documents", review.document_id, "review"],
+        review,
+      );
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+    },
   });
 }
 
 export function useRetryDocumentOcr() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ documentId }: { documentId: string }) =>
+    mutationFn: async ({
+      documentId,
+      intentKey,
+    }: {
+      documentId: string;
+      intentKey: string;
+    }) =>
       (
         await api.post(`/documents/${documentId}/retry-ocr`, undefined, {
-          headers: mutationHeaders(),
+          headers: { "Idempotency-Key": intentKey },
         })
       ).data,
     onSuccess: (_result, { documentId }) => {

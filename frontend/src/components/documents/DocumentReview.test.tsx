@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { DocumentReview as DocumentReviewData } from "../../api/documents";
 import { DocumentReview } from "./DocumentReview";
 
 const apiState = vi.hoisted(() => ({
@@ -18,11 +19,12 @@ const apiState = vi.hoisted(() => ({
       currency: "PLN",
     },
     provenance: { supplier_name: "ocr", total: "ocr" },
-  } as unknown,
+  } as unknown as DocumentReviewData | undefined,
   prepare: vi.fn((_input, options) =>
     options?.onSuccess?.({ id: "draft-1", version: 4 }),
   ),
   retryOcr: vi.fn(),
+  prepareVision: vi.fn(),
   attach: vi.fn(),
   approve: vi.fn(),
   approveError: null as unknown,
@@ -50,6 +52,11 @@ vi.mock("../../api/documents", () => ({
     mutate: apiState.retryOcr,
     isPending: false,
     error: apiState.retryOcrError,
+  }),
+  usePrepareDocumentVision: () => ({
+    mutate: apiState.prepareVision,
+    isPending: false,
+    error: null,
   }),
   useDocumentPreview: () => ({ data: undefined, isLoading: false }),
   useDocumentOriginal: () => ({ data: undefined, isLoading: false }),
@@ -101,6 +108,38 @@ describe("DocumentReview", () => {
     expect(screen.getByText(/zewnętrzny dostawca/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Sprzedawca")).toHaveValue("Sklep");
     expect(screen.getByLabelText("Kwota")).toHaveValue("12.34");
+  });
+
+  it("keeps the manual form available for a failed other placeholder", () => {
+    const current = apiState.review!;
+    apiState.review = {
+      ...current,
+      document_type: "other",
+      status: "error",
+    };
+    renderReview();
+    expect(screen.getByLabelText("Sprzedawca")).toBeInTheDocument();
+    apiState.review = {
+      ...current,
+      document_type: "invoice",
+    };
+  });
+
+  it("leaves a missing currency unselected and blocks preparation", () => {
+    const current = apiState.review!;
+    apiState.review = {
+      ...current,
+      fields: { ...current.fields, currency: null },
+    };
+    renderReview();
+    expect(screen.getByLabelText("Waluta")).toHaveValue("");
+    expect(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    ).toBeDisabled();
+    apiState.review = {
+      ...current,
+      fields: { ...current.fields, currency: "PLN" },
+    };
   });
 
   it("approve_has_no_payment_copy", () => {
@@ -168,12 +207,16 @@ describe("DocumentReview", () => {
     );
   });
 
-  it("shows a distinct OCR retry action after an OCR error", () => {
+  it("offers separate AI and local OCR retries after an AI error", () => {
     renderReview();
-    fireEvent.click(screen.getByRole("button", { name: "Ponów OCR" }));
-    expect(apiState.retryOcr).toHaveBeenCalledWith({
-      documentId: "document-1",
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Ponów AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ponów lokalny OCR" }));
+    expect(apiState.prepareVision).toHaveBeenCalledWith(
+      expect.objectContaining({ documentId: "document-1" }),
+    );
+    expect(apiState.retryOcr).toHaveBeenCalledWith(
+      expect.objectContaining({ documentId: "document-1" }),
+    );
   });
 
   it("shows separate prepare and OCR retry failures", () => {
@@ -210,7 +253,7 @@ describe("DocumentReview", () => {
         currency: "PLN",
       },
       provenance: { supplier_name: "ocr", total: "ocr" },
-    };
+    } as unknown as DocumentReviewData;
   });
 
   it("keeps manual fields visible and tells the reviewer to refresh after a 409 approval conflict", async () => {

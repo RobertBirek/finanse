@@ -44,6 +44,60 @@ describe("document retry and admission feedback", () => {
     expect(camera.accept).toContain(".heic");
     expect(camera.accept).toContain(".heif");
   });
+  it("uses owner review summary in the list and does not request OCR text for vision without text", async () => {
+    const get = vi.spyOn(api, "get").mockImplementation((url) => {
+      if (url === "/documents")
+        return Promise.resolve({
+          data: [
+            {
+              id: "one",
+              original_name: "photo.jpg",
+              status: "done",
+              size_bytes: 200,
+              created_at: "2026-10-22T10:00:00Z",
+              review: {
+                revision_id: "review-1",
+                revision: 1,
+                input_method: "image",
+                status: "ready",
+                error_code: null,
+                warnings: [],
+                job_state: "succeeded",
+              },
+            },
+          ],
+        } as never);
+      if (url === "/documents/upload-capabilities")
+        return Promise.resolve({
+          data: { automatic_image_vision: false },
+        } as never);
+      return Promise.resolve({ data: new Blob() } as never);
+    });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <Documents />
+      </QueryClientProvider>,
+    );
+
+    const open = await screen.findByRole("button", {
+      name: "Otwórz dokument: photo.jpg",
+    });
+    expect(screen.getByText("Propozycja do sprawdzenia")).toBeInTheDocument();
+    fireEvent.click(open);
+
+    expect(get.mock.calls.map(([url]) => url)).not.toContain(
+      "/documents/one/review",
+    );
+    expect(get.mock.calls.map(([url]) => url)).not.toContain(
+      "/documents/one/text",
+    );
+  });
   it("multi_upload_shows_per_file_success_failure", async () => {
     vi.spyOn(api, "post")
       .mockRejectedValueOnce({ isAxiosError: true, response: { status: 503 } })

@@ -9,6 +9,7 @@ import {
 import { DocumentViewer } from "./DocumentViewer";
 import { DocumentReview } from "./documents/DocumentReview";
 import { QueryFeedback } from "./QueryFeedback";
+import { getDocumentStatus } from "./documents/documentStatus";
 
 export function DocumentList() {
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
@@ -102,9 +103,9 @@ export function DocumentList() {
                   )}
                 </button>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[doc.status]}`}
+                  className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[getDocumentStatus(doc).tone === "danger" ? "error" : getDocumentStatus(doc).tone === "success" ? "done" : getDocumentStatus(doc).tone === "warning" ? "processing" : "pending"]}`}
                 >
-                  {STATUS_LABELS[doc.status]}
+                  {getDocumentStatus(doc).label}
                 </span>
                 <button
                   type="button"

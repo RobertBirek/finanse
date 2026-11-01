@@ -117,6 +117,14 @@ export function DocumentUpload() {
 
   return (
     <div className="mb-6">
+      {capabilities.data?.automatic_image_vision ? (
+        <p role="status" className="mb-3 text-sm text-gray-300">
+          Zdjęcia są automatycznie wysyłane do{" "}
+          {capabilities.data.vision_provider_label ?? "dostawcy"} do odczytu AI.
+          Dane wymagają sprawdzenia. Informacje widoczne na zdjęciu są
+          przekazywane dostawcy.
+        </p>
+      ) : null}
       <button
         type="button"
         aria-label="Wybierz dokument do przesłania"

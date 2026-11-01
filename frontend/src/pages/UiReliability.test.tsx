@@ -70,6 +70,7 @@ const doc = {
   size_bytes: 100,
   created_at: "2026-10-20T12:00:00Z",
   mime_type: "application/pdf",
+  has_extracted_text: true,
 } as DocumentData;
 const query = (data: unknown) => ({
   data,
@@ -176,7 +177,7 @@ describe("document recovery UI", () => {
   it("enables text fetching only when the live document becomes done", () => {
     const { rerender } = render(
       <DocumentViewer
-        document={{ ...doc, status: "processing" }}
+        document={{ ...doc, status: "processing", has_extracted_text: false }}
         onClose={vi.fn()}
       />,
     );

@@ -14,43 +14,15 @@ import {
   useDocumentPreview,
   useDocumentReview,
   usePrepareDocumentReview,
+  usePrepareDocumentVision,
   useRetryDocumentOcr,
 } from "../../api/documents";
 import { useAccounts, useCategories } from "../../api/finance";
 import { Dialog } from "../Dialog";
 import type { AxiosError } from "axios";
+import { useReviewForm, type ReviewForm } from "./useReviewForm";
 
 type Props = { documentId: string; onClose: () => void };
-type Form = {
-  kind: "invoice" | "receipt";
-  supplier_name: string;
-  description: string;
-  total: string;
-  currency: "PLN" | "EUR" | "USD";
-  issue_date: string;
-  sale_date: string;
-  due_date: string;
-  number: string;
-  supplier_tax_id: string;
-  payee_iban: string;
-  category_id: string;
-  payment_account_id: string;
-};
-const empty: Form = {
-  kind: "invoice",
-  supplier_name: "",
-  description: "",
-  total: "",
-  currency: "PLN",
-  issue_date: "",
-  sale_date: "",
-  due_date: "",
-  number: "",
-  supplier_tax_id: "",
-  payee_iban: "",
-  category_id: "",
-  payment_account_id: "",
-};
 const minor = (raw: string) =>
   /^\d+(\.\d{1,2})?$/.test(raw) ? Math.round(Number(raw) * 100) : null;
 const mutationError = (error: unknown) =>
@@ -63,6 +35,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
   const preview = useDocumentPreview(documentId);
   const original = useDocumentOriginal(documentId);
   const prepare = usePrepareDocumentReview();
+  const prepareVision = usePrepareDocumentVision();
   const retryOcr = useRetryDocumentOcr();
   const prepareBill = usePrepareBill();
   const approve = useApproveBill();
@@ -82,7 +55,10 @@ export function DocumentReview({ documentId, onClose }: Props) {
   const currentDraft = useBill(draftBill?.id ?? null, false);
   const categories = useCategories();
   const accounts = useAccounts();
-  const [form, setForm] = useState<Form>(empty);
+  const { form, update, applyNewSuggestions } = useReviewForm(
+    documentId,
+    review.data,
+  );
   const [conflict, setConflict] = useState<"draft" | "attach" | null>(null);
   const [refreshedConflict, setRefreshedConflict] = useState<
     "draft" | "attach" | null
@@ -107,39 +83,22 @@ export function DocumentReview({ documentId, onClose }: Props) {
     },
     [originalUrl],
   );
-  useEffect(() => {
-    const fields = review.data?.fields;
-    if (!fields) return;
-    setForm({
-      kind: review.data?.document_type === "receipt" ? "receipt" : "invoice",
-      supplier_name: fields.supplier_name ?? "",
-      description: fields.description ?? "",
-      total: fields.total ?? "",
-      currency: fields.currency ?? "PLN",
-      issue_date: fields.issue_date ?? "",
-      sale_date: fields.sale_date ?? "",
-      due_date: fields.due_date ?? "",
-      number: fields.number ?? "",
-      supplier_tax_id: fields.supplier_tax_id ?? "",
-      payee_iban: fields.payee_iban ?? "",
-      category_id: "",
-      payment_account_id: "",
-    });
-  }, [review.data]);
   const unsupported =
-    review.data?.document_type === "multiple" ||
-    review.data?.document_type === "unsupported" ||
-    review.data?.document_type === "statement" ||
-    review.data?.document_type === "loan_schedule" ||
-    review.data?.document_type === "other";
-  const update = (key: keyof Form, value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+    review.data?.status !== "error" &&
+    review.data?.status !== "pending" &&
+    review.data?.status !== "processing" &&
+    (review.data?.document_type === "multiple" ||
+      review.data?.document_type === "unsupported" ||
+      review.data?.document_type === "statement" ||
+      review.data?.document_type === "loan_schedule" ||
+      review.data?.document_type === "other");
   const submit = () => {
     const total_minor = minor(form.total);
     if (
       total_minor === null ||
       !form.supplier_name.trim() ||
-      !form.description.trim()
+      !form.description.trim() ||
+      !form.currency
     )
       return;
     prepareBill.mutate(
@@ -153,7 +112,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
   const approveDraft = (separate: boolean) => {
     if (!draftBill || conflict) return;
     const total_minor = minor(form.total);
-    if (total_minor === null) return;
+    if (total_minor === null || !form.currency) return;
     const data: BillApprove = {
       version: draftBill.version,
       kind: form.kind,
@@ -201,6 +160,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
       busy={
         prepare.isPending ||
         retryOcr.isPending ||
+        prepareVision.isPending ||
         prepareBill.isPending ||
         approve.isPending ||
         attach.isPending
@@ -339,9 +299,26 @@ export function DocumentReview({ documentId, onClose }: Props) {
                   <button
                     type="button"
                     className="btn-secondary ml-2"
-                    onClick={() => retryOcr.mutate({ documentId })}
+                    onClick={() =>
+                      prepareVision.mutate({
+                        documentId,
+                        intentKey: crypto.randomUUID(),
+                      })
+                    }
                   >
-                    Ponów OCR
+                    Ponów AI
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary ml-2"
+                    onClick={() =>
+                      retryOcr.mutate({
+                        documentId,
+                        intentKey: crypto.randomUUID(),
+                      })
+                    }
+                  >
+                    Ponów lokalny OCR
                   </button>
                 </p>
               )}
@@ -362,6 +339,15 @@ export function DocumentReview({ documentId, onClose }: Props) {
                   accounts={accounts.data ?? []}
                 />
               )}
+              {review.data.revision > 1 && !unsupported ? (
+                <button
+                  type="button"
+                  className="btn-secondary mt-2"
+                  onClick={applyNewSuggestions}
+                >
+                  Zastosuj nowe sugestie
+                </button>
+              ) : null}
               {draftBill && (
                 <DuplicateChoices
                   candidates={duplicates.data ?? []}
@@ -420,8 +406,8 @@ function ReviewForm({
   categories,
   accounts,
 }: {
-  form: Form;
-  update: (key: keyof Form, value: string) => void;
+  form: ReviewForm;
+  update: (key: keyof ReviewForm, value: string) => void;
   provenance: Record<string, string>;
   onSubmit: () => void;
   pending: boolean;
@@ -518,6 +504,7 @@ function ReviewForm({
           onChange={(e) => update("currency", e.target.value)}
           className="input mt-1 w-full"
         >
+          <option value="">Wybierz walutę</option>
           <option>PLN</option>
           <option>EUR</option>
           <option>USD</option>
@@ -553,7 +540,11 @@ function ReviewForm({
       <p className="text-xs text-gray-400">
         Kategoria i konto płatności są opcjonalne i wybierzesz je w rejestrze.
       </p>
-      <button type="submit" disabled={pending} className="btn-primary">
+      <button
+        type="submit"
+        disabled={pending || !form.currency}
+        className="btn-primary"
+      >
         Zatwierdź do rejestru
       </button>
     </form>
