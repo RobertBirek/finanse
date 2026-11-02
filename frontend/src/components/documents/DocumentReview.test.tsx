@@ -103,6 +103,50 @@ function renderReview() {
 }
 
 describe("DocumentReview", () => {
+  it("allows an explicit retry of the legacy exhausted review without replaying it on mount", () => {
+    const previous = apiState.review;
+    apiState.prepareVision.mockClear();
+    apiState.review = {
+      ...previous!,
+      status: "incomplete",
+      error_code: "attempts_exhausted",
+    };
+    try {
+      renderReview();
+      expect(apiState.prepareVision).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("Sprzedawca")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Ponów AI" }));
+      expect(apiState.prepareVision).toHaveBeenCalledTimes(1);
+    } finally {
+      apiState.review = previous;
+    }
+  });
+  it.each(["incomplete", "error"] as const)(
+    "explains invalid model output without automatically retrying (%s)",
+    (status) => {
+      const previous = apiState.review;
+      apiState.prepareVision.mockClear();
+      apiState.review = {
+        ...previous!,
+        status,
+        error_code: "invalid_model_output",
+      };
+      try {
+        renderReview();
+        expect(
+          screen.getByText(
+            "AI zwróciło niepoprawne dane. Możesz uzupełnić pola ręcznie.",
+          ),
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText("Sprzedawca")).toBeInTheDocument();
+        expect(apiState.prepareVision).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole("button", { name: "Ponów AI" }));
+        expect(apiState.prepareVision).toHaveBeenCalledTimes(1);
+      } finally {
+        apiState.review = previous;
+      }
+    },
+  );
   it("review_shows_llm_error_and_manual_fields", () => {
     renderReview();
     expect(screen.getByText(/zewnętrzny dostawca/i)).toBeInTheDocument();

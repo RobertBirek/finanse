@@ -12,9 +12,7 @@ const unavailableErrors = new Set([
   "provider_response_too_large",
   "provider_timeout",
   "provider_unavailable",
-  "invalid_model_output",
   "processing_failed",
-  "attempts_exhausted",
 ]);
 
 export function getDocumentStatus(
@@ -28,6 +26,10 @@ export function getDocumentStatus(
       return { label: "Odczytywanie", tone: "warning" };
     if (review.status === "ready")
       return { label: "Propozycja do sprawdzenia", tone: "success" };
+    if (review.error_code === "invalid_model_output")
+      return { label: "Nieprawidłowy wynik AI", tone: "warning" };
+    if (review.error_code === "attempts_exhausted")
+      return { label: "Odczyt AI przerwany", tone: "warning" };
     if (limitErrors.has(review.error_code ?? ""))
       return { label: "Limit odczytów AI", tone: "danger" };
     if (unavailableErrors.has(review.error_code ?? ""))

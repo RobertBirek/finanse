@@ -83,6 +83,12 @@ export function DocumentReview({ documentId, onClose }: Props) {
     },
     [originalUrl],
   );
+  const invalidModelOutput =
+    (review.data?.status === "error" || review.data?.status === "incomplete") &&
+    review.data.error_code === "invalid_model_output";
+  const interruptedModelRead =
+    review.data?.status === "incomplete" &&
+    review.data.error_code === "attempts_exhausted";
   const unsupported =
     review.data?.status !== "error" &&
     review.data?.status !== "pending" &&
@@ -296,10 +302,13 @@ export function DocumentReview({ documentId, onClose }: Props) {
                 OCR i zewnętrzny dostawca językowy mogą się pomylić. Porównaj
                 dane z oryginałem i popraw je ręcznie.
               </p>
-              {review.data.status === "error" && (
+              {(review.data.status === "error" ||
+                invalidModelOutput ||
+                interruptedModelRead) && (
                 <p role="alert" className="mt-3 text-sm text-red-300">
-                  Nie udało się uzyskać propozycji od zewnętrznego dostawcy.
-                  Możesz uzupełnić pola ręcznie.
+                  {invalidModelOutput
+                    ? "AI zwróciło niepoprawne dane. Możesz uzupełnić pola ręcznie."
+                    : "Nie udało się uzyskać propozycji od zewnętrznego dostawcy. Możesz uzupełnić pola ręcznie."}
                   <button
                     type="button"
                     className="btn-secondary ml-2"

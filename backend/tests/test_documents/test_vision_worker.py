@@ -1,6 +1,7 @@
 import uuid
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -187,3 +188,79 @@ async def test_missing_config_persists_configuration_missing_without_http(
         assert (job.state, job.error_code) == ("failed", "configuration_missing")
         assert (revision.status, revision.error_code) == ("incomplete", "configuration_missing")
         assert document.status == "done"
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_invalid_model_date_finishes_once_without_lease_retry_or_input_log(
+    test_database, tmp_path, monkeypatch, caplog
+):
+    from app.documents import vision_client
+    from test_documents.test_vision_client import _payload, _response
+
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    monkeypatch.setattr(vision_worker, "UPLOAD_DIR", tmp_path)
+    monkeypatch.setattr(vision_worker, "async_session_factory", sessions)
+    monkeypatch.setattr(vision_worker, "get_vision_config", lambda _: _config())
+    monkeypatch.setattr(job_service, "get_vision_config", lambda _: _config())
+    monkeypatch.setattr(vision_worker.settings, "DOCUMENT_VISION_ENABLED", True)
+    calls = 0
+    payload = _payload(fields={**_payload()["fields"], "sale_date": "2026-02-30"})
+
+    async def handler(_request):
+        nonlocal calls
+        calls += 1
+        return _response(payload)
+
+    monkeypatch.setattr(
+        vision_client,
+        "_create_http_client",
+        lambda **kwargs: httpx.AsyncClient(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    jpeg = valid_jpeg_bytes()
+    stored = tmp_path / "synthetic.jpg"
+    stored.write_bytes(jpeg)
+    async with sessions() as db:
+        document = Document(
+            user_id=uuid.uuid4(),
+            filename="synthetic.jpg",
+            original_name="synthetic.jpg",
+            mime_type="image/jpeg",
+            sha256_hash=service.compute_sha256(jpeg),
+            size_bytes=len(jpeg),
+            storage_path=stored.name,
+            processing_method="vision",
+        )
+        db.add_all(
+            [
+                document,
+                DocumentVisionPolicy(
+                    id=1,
+                    enabled=True,
+                    epoch=1,
+                    configuration_fingerprint=_config().configuration_fingerprint,
+                ),
+            ]
+        )
+        await db.flush()
+        job = await create_vision_intent(
+            db, document.user_id, document.id, key="vision:synthetic-date"
+        )
+        job_id, revision_id, document_id = job.id, job.revision_id, document.id
+        await db.commit()
+    await vision_worker.process_document_job({}, str(job_id))
+    await vision_worker.process_document_job({}, str(job_id))
+    async with sessions() as db:
+        job = await db.get(DocumentProcessingJob, job_id)
+        revision = await db.get(DocumentExtractionRevision, revision_id)
+        document = await db.get(Document, document_id)
+        assert (job.state, job.error_code, job.attempt_count) == (
+            "failed",
+            "invalid_model_output",
+            1,
+        )
+        assert (revision.status, revision.error_code) == ("incomplete", "invalid_model_output")
+        assert document.status == "done"
+    assert calls == 1 and stored.read_bytes() == jpeg
+    assert "2026-02-30" not in caplog.text and "Example Shop" not in caplog.text
+    assert all(record.exc_info is None for record in caplog.records)

@@ -3,6 +3,7 @@
 import base64
 import gzip
 import json
+import traceback
 
 import httpx
 import pytest
@@ -121,6 +122,69 @@ async def test_vision_reads_image_without_ocr_text_and_uses_strict_schema(
     field_schema = schema["$defs"]["VisionFields"]
     assert set(field_schema["required"]) == set(_payload()["fields"])
     assert field_schema["additionalProperties"] is False
+    for name in ("issue_date", "sale_date", "due_date"):
+        alternatives = field_schema["properties"][name]["anyOf"]
+        assert {"type": "null"} in alternatives
+        assert next(item for item in alternatives if item["type"] == "string")["pattern"] == (
+            r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        )
+    assert "YYYY-MM-DD" in body["input"][0]["content"]
+    assert "null" in body["input"][0]["content"]
+
+
+@pytest.mark.parametrize("field", ["issue_date", "sale_date", "due_date"])
+@pytest.mark.parametrize(
+    "value", ["synthetic-private-date-marker", "2026-02-30", "2026-11-02T00:00:00"]
+)
+async def test_invalid_date_output_is_safe_nonretryable_and_never_logs_inputs(
+    monkeypatch, caplog, field, value
+):
+    from app.documents import vision_client
+
+    calls = 0
+    payload = _payload(fields={**_payload()["fields"], field: value})
+
+    async def handler(_request):
+        nonlocal calls
+        calls += 1
+        return _response(payload)
+
+    monkeypatch.setattr(
+        vision_client,
+        "_create_http_client",
+        lambda **kwargs: httpx.AsyncClient(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    image = b"synthetic-image-marker"
+    with pytest.raises(vision_client.VisionProviderError) as raised:
+        await vision_client.extract_image_review(image, config=_config())
+    assert (raised.value.code, raised.value.retryable, calls) == ("invalid_model_output", False, 1)
+    rendered = "".join(traceback.format_exception(raised.value))
+    for marker in (value, "synthetic-image-marker", "marker-secret", "Example Shop"):
+        assert marker not in caplog.text and marker not in rendered
+    assert all(record.exc_info is None for record in caplog.records)
+
+
+@pytest.mark.parametrize("value", [None, "2024-02-29", "2026-11-02"])
+async def test_nullable_or_valid_iso_dates_are_preserved_without_defaulting(monkeypatch, value):
+    from app.documents import vision_client
+
+    fields = {
+        **_payload()["fields"],
+        **dict.fromkeys(("issue_date", "sale_date", "due_date"), value),
+    }
+    monkeypatch.setattr(
+        vision_client,
+        "_create_http_client",
+        lambda **kwargs: httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _: _response(_payload(fields=fields))), **kwargs
+        ),
+    )
+    result = await vision_client.extract_image_review(b"synthetic", config=_config())
+    assert result.ready
+    assert all(
+        getattr(result.suggestion.fields, name) == value
+        for name in ("issue_date", "sale_date", "due_date")
+    )
 
 
 @pytest.mark.parametrize(

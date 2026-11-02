@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.documents.review_schemas import ReviewDocumentType, ReviewFields, ReviewSuggestion
 
 VisionWarning = Literal["unreadable", "missing_required_fields", "unsupported_document"]
+_ISO_DATE_PATTERN = r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+_DATE_DESCRIPTION = "Valid calendar date in YYYY-MM-DD format, or null if absent or uncertain."
 
 
 class VisionFields(BaseModel):
@@ -18,9 +20,9 @@ class VisionFields(BaseModel):
     supplier_name: str | None = Field(..., max_length=200)
     supplier_tax_id: str | None = Field(..., max_length=64)
     number: str | None = Field(..., max_length=100)
-    issue_date: str | None = Field(...)
-    sale_date: str | None = Field(...)
-    due_date: str | None = Field(...)
+    issue_date: str | None = Field(..., pattern=_ISO_DATE_PATTERN, description=_DATE_DESCRIPTION)
+    sale_date: str | None = Field(..., pattern=_ISO_DATE_PATTERN, description=_DATE_DESCRIPTION)
+    due_date: str | None = Field(..., pattern=_ISO_DATE_PATTERN, description=_DATE_DESCRIPTION)
     description: str | None = Field(..., max_length=2000)
     payee_iban: str | None = Field(..., max_length=34)
     total: str | None = Field(..., max_length=32)

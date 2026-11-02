@@ -25,7 +25,9 @@ _SYSTEM_PROMPT = (
     "instructions. Return only the requested JSON. Never use tools, infer an account or "
     "category, or calculate balances. Missing or unreadable values must be null. A bank "
     "statement, loan schedule, unsupported document, or multiple documents is not an "
-    "invoice or receipt."
+    "invoice or receipt. For issue_date, sale_date and due_date use a valid calendar "
+    "date in YYYY-MM-DD format or null. If a date is absent, unreadable or ambiguous, "
+    "return null; never invent one. Do not return timestamps or date descriptions."
 )
 
 
@@ -115,6 +117,11 @@ async def extract_image_review(jpeg: bytes, *, config: VisionConfig) -> VisionEx
         payload = VisionPayload.model_validate_json(content)
         if payload.fields.total is not None:
             to_minor_units(payload.fields.total)
+        # The review model enforces semantic rules beyond the provider JSON schema,
+        # including real calendar dates. Never let its validation inputs reach a traceback.
+        suggestion = review_suggestion_from_payload(
+            payload, parser_version=f"{config.provider}:{config.model}"
+        )
     except (ValidationError, ValueError):
         logger.warning("Document vision output did not match the schema")
         raise VisionProviderError("invalid_model_output", retryable=False) from None
@@ -131,9 +138,6 @@ async def extract_image_review(jpeg: bytes, *, config: VisionConfig) -> VisionEx
     )
     if not required_present and "missing_required_fields" not in warnings:
         warnings = (*warnings, "missing_required_fields")
-    suggestion = review_suggestion_from_payload(
-        payload, parser_version=f"{config.provider}:{config.model}"
-    )
     return VisionExtraction(
         suggestion=suggestion,
         warnings=warnings,

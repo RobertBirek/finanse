@@ -191,6 +191,8 @@ describe("document recovery UI", () => {
     ["pending", null, "Odczyt w kolejce"],
     ["incomplete", null, "Uzupełnij ręcznie"],
     ["error", "provider_unavailable", "AI niedostępne"],
+    ["incomplete", "invalid_model_output", "Nieprawidłowy wynik AI"],
+    ["incomplete", "attempts_exhausted", "Odczyt AI przerwany"],
   ] as const)(
     "does not call a done vision review %s ready or request missing OCR text",
     (status, error_code, expectedLabel) => {
