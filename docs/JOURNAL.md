@@ -2,10 +2,10 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
-## 2026-11-02 — Pełny strumień d9a5797 i pakiet odebrane, czekają na zgodę
+## 2026-11-02 — ZAKOŃCZONE: pełny strumień d9a5797 na produkcji
 
 - User„tak” na asyncprefixbug+PonówAI. Plan complete-image-stream2026-11-02,
-  dowody/ledger /tmp/opencode/image-stream-fix-20261102/. Base8b1d194/prod5d5b82f.
+  dowody/ledger /tmp/opencode/image-stream-fix-20261102/. Base8b1d194/prod d9a5797.
 - TDD3backend/2UIRED;focused61backend33frontend/lint/typesGREEN. RealOSprocesspipes,
   dużyJPEG/delayedchunks/overlapstdinstdout, exactbound/overflow/truncated/exitbad,
   timeout/cancelPIDreap+slotrelease. NowaUIbranch tylko incompleteimage/knownwarnings.
@@ -17,7 +17,7 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   teststrength odroczony w raporcie. Backendbezblockers. Brakdrugiegosourcereview.
 - Scopedopsreview **ses_e62487ed8ffeYgcEfY2EFcTd5i** warunkowoApproved po dokładnym
   porównaniu rzeczywistegofullchildstdout zamiastinprocessconvert. SyntheticPROGRAM
-  mountedcandidatePASS610370B; nie jest proofemapply, exactimagesmokepending.
+  mountedcandidatePASS610370B; potem actualimmutableimage610370B trueasync==child PASS.
 - KOŃCOWY full6gate **sh_19dba3088001yRB0vhnZrHGkJ3**1080backend/335frontend/
   lint/typesPASS; build/E2E **sh_19dba310c001eUh5RhvJSm6Ve3**93PASS+1skip.
   Testowaneźródła/blobyfrontendu/dist zgodne z proofami. Sourcecommit4plików
@@ -26,11 +26,17 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   sameconfiguration/runtime/schema/policy. Exactimage trueasyncstream610370B==fullchild/
   decode/hostilepipesPASS, date8cases i4HTTP400PASS. PrywatnyexactworkerimageJPEGprobe
   trueasync644947B==fullchild/decode1536×2048/noAI/OCR/DB/originalunchangedPASS.
-  ASKexactd9a5797approval zadane, brak odpowiedzi. Nieapply/nieponawiaćprepare/gate;
-  produkcja5d5b82f. Nie tworzyć exact-revision-approval.json bez odpowiedzi użytkownika.
+  ASKexactd9a5797approval: userodpowiedział„tak”. Zgoda zapisana, świeżepreapply
+  baseline/configHMAC/activeimages/dataIDs/queuesPASS. Apply **sh_19ddbc0f6001QguOHEHaNPZPt7**
+  zakończonyPASS, verified.jsonodczytany schema/policyunchanged. Browser+finalize
+  **sh_19ddc3249001CpOZmUc6sJm7DX** zakończonyPASS10próbek/browser375/1440;
+  finalmetadata2026-11-02T20:08:59Z. ŚwieżeHTTPS200 i działająceimageIDs/OCIrevision
+  zgodneactive-release d9a5797 PASS. Nie powtarzaćdeployu/gate/prepare.
+  Teraz można poprosić usera o1jawnePonówAI przy istniejącymdokumencie, bez reuploadu.
+  Bez autoAI/deletion/migracji/policychange, bez nowego merge/push na main.
 - Backup8f621fb2/installedrestore samefreshsnapshot success0,16offlineguardPASS.
   Releasewrapper staryreviwedbase zcountedpreviousSHA5d,configHMAConly, trueasync
-  syntheticstreamsmoke+date+400regression przedapply i exactSHAapproval wymagane.
+  syntheticstreamsmoke+date+400regression oraz exactSHAapproval spełnione przedapply.
 - Bez zmiany2048px/quality90/policy/model/schema/auth, bez prywatnychpikseli wLLM,
   bezOCR/providerrequests/autoreplay. Kasowanie/historia jest osobnymzadaniem;
   nie implementować cichej archiwizacji lub kaskadowego kasowania zależności bez projektu.

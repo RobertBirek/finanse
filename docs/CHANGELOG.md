@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Unreleased] — 2026-11-02 — Pełna pochodna JPEG i jawne ponowienie nieczytelnego obrazu
+## [d9a5797] — 2026-11-02 — Pełna pochodna JPEG i jawne PonówAI na produkcji
 
 ### Fixed
 - Przygotowano naprawę odbioru stdout konwertera: czytanie doEOF zlimit+1,
@@ -13,7 +13,10 @@ Wszystkie istotne zmiany w projekcie.
   kandydata zwraca pełne644947B/1536×2048, zgodnechild/decodePASS, zeroAI/OCR/DB.
   ImportantUI zreview poprawiony4RED→GREEN,38frontend/lint/typesPASS. Końcowy1080backend/
   335frontend/lint/types/build/93E2E+1skipPASS. Kod d9a5797 i dokładny pakiet/trueasync
-  stream/date/400smokePASS; czeka na zgodęexactSHA, produkcja bez nowego wdrożenia.
+   stream/date/400smokePASS; po zgodzie exactSHA wdrożone. Browser375/1440,
+   HTTPS/assets/auth/10próbek obserwacji i atomoweactive-release20:08:59Z PASS.
+- Dane/originals/schema/policy bez zmian, rollback5d5b82f zachowany. Bez AIretry,
+  migracji lub kasowania; dalszy odczyt wyłącznie jawną decyzją użytkownika.
   Raport complete-image-stream2026-11-02.
 
 ## [Diagnosed] — 2026-11-02 — Ucinanie pochodnej przed AI w odczycie stdout

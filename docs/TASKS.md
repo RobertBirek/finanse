@@ -8,18 +8,21 @@ Backlog zadań ze statusami.
   pełny JPEG644947B vs65536Bprefix, missingEOI/OSError, hashprefixZGODNY zrewizjąAI.
   Rozdzielczość2048 sama nie jest wskazaną przyczyną; małe testy i wcześniejszy
   subprocess-onlysmoke nie ćwiczyły aplikacyjnej granicy odczytu strumienia.
-- [~] Po zgodzie: naprawić boundedread-doEOF stdout konwertera, zachować limit+1/
+- [x] Po zgodzie: naprawić boundedread-doEOF stdout konwertera, zachować limit+1/
   timeout/reap; regresje dużego syntetycznegoJPEG i chunkedpipe, realasyncAPIprobe
   bezAI/DB. Bez zmiany2048px/quality90 i bez automatycznego retry dokumentu.
   Userzatwierdził fullstream+PonówAI. Focused61backend33frontend/lint/typesPASS,
   trueasynccandidate/fullJPEG644947BdecodePASS, noAI/OCR. UIImportantreview4RED→GREEN,
   38frontendPASS; opswarunkowoApproved, finalny1080backend/335frontend/lint/types/
   build/93E2E+1skipPASS. Kod d9a5797 i dokładny pakiet/trueasyncstream/date/400smokePASS.
-  ASKexactSHA zadane, brakodpowiedzi. Nieapply.
-  Bez nowegodeployu; usuwanie/history lifecycle poza tą poprawką.
-- [~] Po retry5d5b82f: job succeeded/1, wynik incomplete/unreadable+missing_required_fields,
+  Exactd9a5797 zatwierdzony przez user„tak”; runtimewdrożony, browser375/1440,
+  10próbek/HTTPS/finalmetadata20:08:59Z PASS; usuwanie/history lifecycle poza tą poprawką.
+- [x] Po retry5d5b82f: job succeeded/1, wynik incomplete/unreadable+missing_required_fields,
   errornull; UI nie daje PonówAI dla tego stanu. Po zgodzie uzupełnić jawnyretry i powód,
-  bez automatycznegoAI/reuploadu lub fałszywej obietnicy odczytu.
+  bez automatycznegoAI/reuploadu lub fałszywej obietnicy odczytu. Zaimplementowane d9a5797.
+- [ ] Potwierdzić wynik1jawnegoPonówAI po d9a5797 (pełnyobraz), bez reuploadu.
+- [ ] ReviewMinor: wzmocnić test overlapstdin/stdout wymuszeniem wyjścia większego
+  od typowej pojemnościOSpipe; istniejące dużeJPEG/chunk/pidreap regresjePASS.
 - [ ] Zdiagnozowany DELETE500/ForeignKeyViolation po dodaniu trwałychjobów/rewizji:
   zaprojektować bezpieczny lifecycle usunięcia/archiwizacji zhistorią i blokadą źródeł
   finansowych/activejob; nie kasować zależności/audytu ręcznie w produkcji.
@@ -36,8 +39,8 @@ Backlog zadań ze statusami.
   source5d5b82f zapisany. Dokładny pakiet/8syntheticdatecases/4HTTPcodesPASS;
   userpotwierdził exactSHA5d5b82f. Runtimewdrożony, browser375/1440/10próbek/
   active-release18:34:03Z PASS; żadnego automatycznego odczytu starej faktury.
-- [ ] Po wydaniu5d5b82f użytkownik jawnie uruchamia PonówAI przy istniejącym dokumencie;
-  potwierdzić wynik bez reuploadu lub ponowienia w imieniu użytkownika.
+- [x] Po wydaniu5d5b82f użytkownik jawnie uruchomił PonówAI: model zwrócił incomplete/
+  unreadable, co doprowadziło do diagnozy uciętej pochodnej; naprawione d9a5797.
 - [x] Odtworzyć błąd na nowym JPEG udostępnionym przez użytkownika:3809248B,
   PillowMPO/2frames/4032x3024,primaryload+verifyPASS, dokładny produkcyjny parser
   odrzuca fmtMPO/n_frames2. Dowód offline bez AI/DB i zmiany oryginału.
@@ -158,6 +161,15 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   do `main`, bez merge/deploy. Przed push świeże949backend/279frontend/lint/types/build PASS.
 - [x] Osobna zgoda na deploy/migrację produkcji02.11; lokalny main FF84c9c27 i spójne
   wydanie z aktywnym OpenAI. Bez przygotowania starych PDF/backfillu lub importów.
+
+- [x] Nowe wyciągi28.10: inwentaryzacja46 plików, odczyt zakresów Velo/ING/Citi/
+  Revolut, kontrola sald i nakładania źródeł, raport bez zmian produkcji.
+- [x] Uzupełnione źródła Velo: sierpniowy rachunek i poprzednia karta do17.09.
+  Q7: dokumenty pokazują rozdział wypłaty na Velo/ING; wrześniowa rata/nadpłata
+  potwierdzone. Istniejące wpłaty i wrześniowe odsetki w snapshot — nie dublować.
+- [ ] Nadal uzyskać historię RACHUNKU Velo01–28.10 (minimum01–06.10 dla spornych
+  operacji, przez15.10 dla Q7); uzgodnić mapowania, podział rat i wypłatę kredytu.
+  Powtórzenia wydruku karty rozstrzygać osobno; NO IMPORT / NO AUTO CORRECTIONS.
 
 - [x] Osobna korekta waluty istniejącego konta po prośbie o EUR: potwierdzone kwoty
   źródłowe i zatwierdzona wycena PLN wg NBP; konto i obie strony6 operacji poprawione.

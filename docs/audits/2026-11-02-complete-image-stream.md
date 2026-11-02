@@ -59,7 +59,7 @@ nie aplikacyjnego asyncAPI. Małe syntetyczne JPEG nie ujawniały tej granicy.
 
 ## Stan
 
-**Dokładny pakiet d9a5797 odebrany; oczekiwanie na zgodę exactSHA. Produkcja5d5b82f.**
+**Wydanie d9a5797 zakończone; oczekuje1jawnego PonówAI użytkownika.**
 Dokładny SHA `d9a5797a8de03f8868124e179d71a799c9c031ac` zawiera4pliki kodu/testów.
 Końcowy1080backend/335frontend/Ruff/mypy/ESLint/tscPASS,8deselected/10znanychostrzeżeń.
 Source manifest potwierdza niezmienione testowane bajty; build/93E2E+1skipPASS.
@@ -69,13 +69,23 @@ trueasyncsyntheticstream610370B==pełnychild/decode/chunks/overflow/timeout/reap
 8syntheticdatecases i4HTTP400regressionPASS. Wszystko networknone/noAI/DB.
 Osobny exactworkerimageprobe udostępnionegoJPEG: trueasync644947B==fullchild,
 decode1536×2048/metadatastripped/originalunchangedPASS, bezAI/OCR/DB.
-Pytanie o zgodę exactd9a5797 zadane, brakodpowiedzi; powiadomienie o prepare niezgoda.
+Na jawne pytanie „wdrożyć d9a5797?” użytkownik odpowiedział „tak”. Zapisano zgodę.
+Świeży preapplyPASS: exactcandidate/proofs/activeimages/configHMAC/data/schema/policy/
+originals/serviceIDs niezmienione, kolejki opróżnione. Zatwierdzony apply uruchomiony;
+nie powtarzać go; końcowa kontrola/obserwacja również zakończona.
+Apply zakończonePASS: dokładne spójneobrazy/HTTPS/assets/auth, dane/schema/policy/
+originals/data-serviceIDs niezmienione poza4własnymi audytami401. Bez migracji/policyop.
+Końcowy browser375/1440 bez błędów/overflow/mutacji i5minobserwacja10próbekPASS.
+Active-release atomowo2026-11-02T20:08:59Z; świeże HTTPS200 i dokładne żywe imageIDs/
+OCIrevision zgodne zmetadanymiPASS. Stare dane/originals/policy/schema zachowane poza
+dokładnie policzonymi własnymi audytami401 smoke/przeglądarki. Rollback5d5b82f zachowany.
+Można poprosić o1jawnePonówAI, bez reuploadu lub wykonywania wywołania za użytkownika.
 Faktyczne bloby źródeł frontendu i aktualny dist zgodne z dowodem build/E2E;
 dist niezmieniony między build i E2E, nie powtarzać tej bramki.
 Plan: docs/superpowers/plans/2026-11-02-complete-image-stream.md.
 Prywatne dowody: /tmp/opencode/image-stream-fix-20261102/; oryginał poza tym katalogiem
 i poza repo. Pakiet i smoke PRAWDZIWEGO asyncAPI w gotowymobrazie zakończonePASS;
-pozostaje zgodaexactSHA przed jakimkolwiekapply.
+zgodaexactSHA uzyskana przedapply. Bez nowego merge/push na main w tej zgodzie.
 Bez migracji, konfiguracjiAI/policychange, ponownej wysyłki faktury lub kasowania danych.
 
 ## Decyzja wykonawcza

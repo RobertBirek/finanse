@@ -35,6 +35,6 @@
 **Files:** Private task-owned evidence /tmp/opencode/image-stream-fix-20261102; docs/audits/2026-11-02-complete-image-stream.md and CHANGELOG/TASKS/JOURNAL.
 **Interfaces:** Consume exact gated Task1 SHA. Existing immutable package mechanism, active5d5b82f rollback; config and policy unchanged.
 - [x] Fresh backup/installed isolated restore; immutable candidate images and exactappsource/UI/dist binding; whole-renderHMAC only, preserve original/data/service identity.
-- [ ] Exactimage trueasync seededlargeJPEG normalization+bounded chunk/timeout smoke and inherited synthetic safe400/datecontract regressions, networknone/noDB/noAI. Procedure review and explicit exactSHA approval beforeapply.
-- [ ] Approved appservices-only deployment and readonlyHTTPS/assets/auth/browser/observation, atomicmetadata; no migrations/privateAIretry/deletion/backfill.
-- [ ] Close docs/ledger and scoped commits, askoneuserexplicitretry after release; deletion remains separate pending safe lifecycle decision.
+- [x] Exactimage trueasync seededlargeJPEG normalization+bounded chunk/timeout smoke and inherited synthetic safe400/datecontract regressions, networknone/noDB/noAI. Procedure review and explicit exactSHA approval beforeapply.
+- [x] Approved appservices-only deployment and readonlyHTTPS/assets/auth/browser/observation, atomicmetadata; no migrations/privateAIretry/deletion/backfill.
+- [x] Close docs/ledger and scoped commits, askoneuserexplicitretry after release; deletion remains separate pending safe lifecycle decision.
