@@ -2,6 +2,56 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-02 — Poprawka dat vision5d5b82f odebrana, pakiet w przygotowaniu
+
+- User„tak” na ISO|null i bezpieczne błędy po udanym uploadzie. Plan
+  docs/superpowers/plans/2026-11-02-vision-date-validation.md, ledger/dowody
+  /tmp/opencode/vision-date-fix-20261102/. Produkcja45c8c2d, jeszcze bez nowego deployu.
+- TDD11backend/5frontendRED→36backend47frontendGREEN, lint/typesPASS; source review
+  ses_e629a50a9ffe0pRTtWZa6IUJyI PASS bez findings. Adapter/client/worker i UI bez
+  provider/DB wywołań produkcyjnych lub replay prywatnej faktury.
+- Dodatkowy kontrolerfix: stara incomplete/attempts_exhausted potrzebuje jawnego
+  przycisku PonówAI, nie automatycznego wznowienia.4regresjeRED→GREEN,51frontendPASS.
+  Pierwszygate przerwany SIGINT tylko własnego pytest,244PASS/KeyboardInterrupt,
+  zachowanygate-interrupted (nie regresja). Pierwszy93E2E+1skip PASS zachowanyinitial-.
+- KOŃCOWY pełnygate **sh_19d6bbee7001PBTeK01zFMuf2N** zakończony1070backend/
+  325frontend/lint/typesPASS; build/E2E **sh_19d6bbf0e0015wUOBgxEvvlW49**93PASS+1skip.
+  Manifest testowanychźródeł/blobyfrontendu/distPASS. NIE powtarzać gate.
+  Sourcecommit5d5b82ff34ac838a18229332cc27e3efa80553bf,9plików.
+- Preparepakietu **sh_19d823974001wMMTBZburT9cP3** PASS200backendfileseachimage,
+  sameconfiguration/runtime/schema/policy. Exactimage date-smoke8syntheticMockcasesPASS
+  i diagnostic-smoke4HTTPcodesPASS, noAI/DB/privatefile/network. Pytanie o zgodę
+  exact5d5b82f zadane, BRAKodpowiedzi. Nieapply/nieponawiaćprepare/gate. Produkcja45c8c2d.
+- Backup8d9d72db/installedrestore success0,16offlineguardPASS; scopedoperationsreview
+  ses_e6296b4b5ffeDoO6JnJEvMa6IB warunkowoApproved. Po gate commit/exactpackage/smoke,
+  potem ASK exactSHAapproval przedapply. Nigdy autoretry starego failedjob/dokumentu.
+- Wersje/policykonfiguracji bez zmian (doprecyzowanie dotychczasowego ISO kontraktu),
+  bez migracji/modelchange/AIcalls/backfillu. Ryzyko drobnej granularności wersji
+  odnotowane; dokładneSHA/obrazy przypinane metadanymi. Velo/Q7dirty zachować.
+
+## 2026-11-02 — „AI niedostępne”: odtworzony błąd walidacji daty, nie uploadu
+
+- User zgłasza AI niedostępne po wydaniu45c8c2d. Read-only zagregowany odczyt po
+  finalizacji:1nowy image/jpeg/done i1failedvisionjob/attempts_exhausted/2próby.
+  Upload zatem przeszedł; UI mapuje wiele błędów, także attempts_exhausted, naAI niedostępne.
+- Bezpieczna analiza logów od finalizacji, nie tylko ostatnich45min (błąd był wcześniej):
+  14:53:59 i14:56:13UTC, worker→vision_client:134→vision_schemas:71,
+  PydanticValidationError/ReviewFields/tylko sale_date/value_error. Nie wypisano wartości,
+  responsemodelu, faktury, nazw/ID lub surowych tracebacków. Dwa wpisy jednego wyjątku
+  w każdym logu nie oznaczają czterech prób. HTTP/provider-unavailable niepotwierdzone.
+- Przyczyna: VisionFields przyjmuje dowolny str w datach, ReviewFields wymaga ISO;
+  review_suggestion_from_payload jest poza try/catchValidationError wvision_client.
+  Poprawna technicznie odpowiedź AI z niepoprawnądatą sprzedaży wywołuje nieobsłużony
+  wyjątek; wygasa lease i recovery po2próbach ustawia attempts_exhausted.
+- Syntetyczna reprodukcja lokalna (sale_date=synthetic-invalid-date) przyjmowana przez
+  VisionPayload i odrzucana przez ReviewFields dokładnie tak samo, bezAI/DB/network.
+- Problem prywatności: nieobsłużony ValidationError w standardowym tracebacku może
+  ujawnić inputy pola w istniejącym logu. Nie pobierać/eksportować ich; poprawka ma
+  zamknąć także tę granicę, bez rawexc/response logów i bez osłabiania walidacji dat.
+- Propozycja do zgody: kontrakt dat ISO albo null, cała konwersja objęta bezpieczną
+  walidacją i właściwy komunikat błędnych danych zamiast braku dostępnościAI.
+  Brak nowej implementacji/deployu/policychange lub ponownej wysyłki dokumentu doAI.
+
 ## 2026-11-02 — ZAKOŃCZONE: Apple gain-map JPEG45c8c2d na main i produkcji
 
 - User „tak” na wąską poprawkę + testy/review/wdrożenie. Plan

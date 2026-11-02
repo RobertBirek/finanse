@@ -4,6 +4,18 @@ Backlog zadań ze statusami.
 
 ## Migracja AI do OpenAI i wydanie produkcyjne (2026-11-02)
 
+- [x] Diagnoza „AI niedostępne” po uploadzie: JPEG zapisany; odpowiedź dociera do
+  ReviewFields, sale_date/value_error wywołuje nieobsłużony ValidationError poza
+  bezpieczną granicą vision_client, recovery kończy attempts_exhausted po2próbach.
+  Logi czytane tylko jako kody/pola/klasy, lokalna syntetyczna reprodukcja bezAI.
+- [~] Po zgodzie: kontrakt datISO/null i bezpieczna obsługa całej konwersji odpowiedzi,
+  bez rawValidationError/inputs wlogu oraz mylącego komunikatu braku dostępnościAI;
+  testy syntetyczne regresji bez ponownej wysyłki prywatnej faktury doAI.
+  Zatwierdzone; focused36backend51frontend/lint/typesPASS, niezależnyreviewPASS,
+  16guardów+backup8d9d72db/restorePASS. Domknięty jawnyretry historycznej failedrewizji,
+  bez replaynawejściu. Końcowy1070backend/325frontend/lint/types/build/93E2E+1skipPASS,
+  source5d5b82f zapisany. Dokładny pakiet/8syntheticdatecases/4HTTPcodesPASS;
+  pytanie o zgodę exactSHA zadane, brakodpowiedzi. Produkcja bez nowej poprawki.
 - [x] Odtworzyć błąd na nowym JPEG udostępnionym przez użytkownika:3809248B,
   PillowMPO/2frames/4032x3024,primaryload+verifyPASS, dokładny produkcyjny parser
   odrzuca fmtMPO/n_frames2. Dowód offline bez AI/DB i zmiany oryginału.
@@ -17,7 +29,8 @@ Backlog zadań ze statusami.
   exactSHA zatwierdzone poleceniem „scal na main i wdróż”; hostmain FF8c2fa67,
   źródła identyczne zgate/świeże21testów/lint/typesPASS. Runtime45c8c2d wdrożony,
   browser375/1440 i10próbek obserwacji/metadanePASS; bez migracji/policychange.
-- [ ] Potwierdzić jedną rzeczywistą próbę uploadu z iPhone po wydaniu45c8c2d.
+- [x] Potwierdzić jedną rzeczywistą próbę uploadu z iPhone po wydaniu45c8c2d:
+  JPEG zapisany/done; późniejszy odczyt AI ma osobny błąd daty opisany wyżej.
 - [ ] ReviewMinor: uzupełnić bezpośrednie syntetyczne regresje brakujących/powtórzonych
   pól MPF; obecne testy obejmują korupcję zakresów/offsetów/typów/dependencies/EOI.
 - [x] Zdiagnozować400 przy uploadzie faktury z biblioteki iPhone: błąd przedAI,

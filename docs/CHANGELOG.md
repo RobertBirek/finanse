@@ -2,6 +2,27 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-02 — Bezpieczna walidacja dat wyniku AI
+
+### Fixed
+- Po zgodzie użytkownika doprecyzowano nullableISO kontrakt dat i objęto konwersję
+  ReviewFields bezpieczną granicą błędów, bez inputów/tracebacków i lease-exhaustion.
+- UI odróżnia błędny wynik AI od braku dostępności dostawcy; dla starego przerwanego
+  odczytu dostępne wyłącznie jawne PonówAI lub ręczna edycja, bez automatycznego retry.
+- Focused36backend/51frontend i lint/types PASS; source review bez findings,16guardów,
+  backup8d9d72db/restore PASS. Kod5d5b82f: pełny1070backend/325frontend/lint/types
+  i końcowybuild/93E2E+1skipPASS. Dokładny pakiet/syntheticdate/HTTPsmokePASS,
+  oczekiwanie na zgodę exactSHA; bez nowego deployu.
+  Raport: `docs/audits/2026-11-02-vision-date-validation.md`.
+
+## [Diagnosed] — 2026-11-02 — Mylące „AI niedostępne” po udanym uploadzie
+
+- JPEG zapisany poprawnie; odpowiedź AI dochodzi do konwersji pól, ale data sprzedaży
+  odrzucona przez walidatorISO powoduje nieobsłużony ValidationError, a następnie
+  wyczerpanie2prób/lease. UI pokazuje ogólny komunikat AI niedostępne.
+- Odtworzono lokalnie na syntetycznych danych; diagnoza bez ponownego AI, zmiany
+  danych dokumentu lub osłabiania walidacji. Poprawka kontraktu/granicy błędów do zgody.
+
 ## [45c8c2d] — 2026-11-02 — JPEG/MPO z mapą HDR iPhone na produkcji
 
 ### Fixed
