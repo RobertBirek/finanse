@@ -9,12 +9,18 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 - [x] Diagnoza dwóch zdjęć telefonu w podglądzie: upload poprawny, zapisany OCR
   nieczytelny przy tekście bokiem; review incomplete/llm_unavailable. Bezpośredni
   odczyt obrazów porównany po zgodzie, bez zapisów dokumentów lub płatności.
-- [~] Uzgodnić odczyt obrazów przez model wizyjny, normalizację orientacji JPEG przed
+- [x] Uzgodnić i zaimplementować odczyt obrazów przez model wizyjny, normalizację JPEG przed
   OCR i rozdzielenie statusu zadania od jakości/gotowości review. Użytkownik wybrał
   automatyczne wysyłanie nowych zdjęć. Projekt automatic-document-vision2026-10-30
-  po builder check zatwierdzony w całości; szczegółowy plan8 zadań gotowy31.10,
-  czeka na odbiór i potwierdzenie wykonania. Vision zamiast równoległego OCR,
-  fallback lokalny tylko jawny. Brak implementacji i aktywacji AI w preview.
+  po builder check zatwierdzony w całości; plan8 zadań i realizacja podagentami
+  zatwierdzone31.10. Task1–8 i końcowe poprawki odebrane02.11; epoch CAS, terminalne
+  statusy/polling i wszystkie findings zamknięte. Gate1017backend/308frontend PASS.
+  Vision zamiast równoległego OCR, fallback lokalny tylko jawny. Kod nie jest
+  wdrożony i AI pozostaje wyłączone w preview; kod gotowy lokalnie, bez push/merge/deploy.
+- [ ] Osobno zatwierdzić i przygotować aktywację vision w preview: konkretny provider/
+  model, własny klucz, retencja/koszt/limity oraz bezpieczny egress; syntetyczny live
+  test adaptera i rzeczywiste Android/iPhone dopiero potem. Nie wysyłać ponownie
+  prywatnych dwóch zdjęć bez osobnej zgody. Nie zmieniać przy tym produkcji.
 
 - [x] Zaprojektować wspólny obieg dokumentów finansowych przed rozszerzeniem Q7:
   użytkownik wybrał wyłącznie upload w aplikacji (bez Google/integracji), także zdjęcia

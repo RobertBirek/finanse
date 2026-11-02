@@ -2,6 +2,37 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-02 — Automatyczny odczyt zdjęć ukończony lokalnie
+
+### Added
+- Automatyczny vision dla nowych JPEG/PNG/HEIF po aktywacji osobnej konfiguracji,
+  strict schema i ręczne zatwierdzenie bez automatycznych płatności.
+- Trwałe zadania/rewizje, limit wywołań, lease/recovery i atomowy policy epoch CAS;
+  brak niejawnego odczytu starych zdjęć/GET/duplikatów. Lokalne OCR jako jawna alternatywa.
+
+### Fixed
+- EXIF i prywatna pochodna bez GPS, zachowanie oryginału, ręcznej edycji i pustej
+  waluty; czytelne błędy terminalne oraz polling tylko aktywnych zadań.
+- Osiem etapów i końcowe review odebrane. Gate1017backend/308frontend, lint/types/
+  build PASS; pełne93E2E+1celowy skip ponownie na końcowym kodzie. Migracja i rzeczywisty
+  dump/restore29tabel na syntetykach PASS. Raport document-vision-verification2026-10-31.
+- Brak push/merge/deploy/migracji runtime lub aktywacji AI w preview/produkcji;
+  zgodność konkretnego dostawcy i testy prawdziwych telefonów pozostają osobnym gate.
+
+## [Unreleased] — 2026-10-31 — Odczyt zdjęć: pierwsze trzy etapy
+
+### Added
+- Modele trwałych zadań, polityki/epoki i limitów oraz addytywna migracja92eef8e8086c.
+- Oddzielna konfiguracja vision i kontrolowany adapter obrazu ze ścisłym schematem,
+  bez narzędzi agenta, redirectów i niejawnych ponowień SDK.
+
+### Fixed
+- Orientacja EXIF także dla JPEG/PNG przed OCR, bez zmiany oryginału/metadanychGPS.
+- Zmiana celu/modelu unieważnia starą epokę; odmowa modelu nie staje się gotowym
+  odczytem nawet przy równoczesnym content. Task1–3 po niezależnym review.
+- Ostatni pełny gate978backend/279frontend i lint/types PASS. Task4–8 w toku;
+  bez aktywacji AI, migracji preview/produkcji lub deklaracji pełnej gotowości funkcji.
+
 ## [Planned] — 2026-10-31 — Plan automatycznego odczytu zdjęć
 
 - Użytkownik zatwierdził pełny projekt vision; przygotowano8 zadań TDD z dokładnymi

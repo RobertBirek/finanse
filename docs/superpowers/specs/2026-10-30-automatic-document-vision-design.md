@@ -1,7 +1,8 @@
 # Automatyczny odczyt zdjęć dokumentów przez model wizyjny
 
-Status: projekt zatwierdzony przez użytkownika; szczegółowy plan przygotowany.
-Nie wykonano implementacji ani wdrożenia/aktywacji AI.
+Status: projekt i plan zatwierdzone; implementacja oraz review ukończone lokalnie
+2026-11-02. Nie wykonano wdrożenia ani aktywacji AI. Raport:
+`docs/audits/2026-10-31-document-vision-verification.md`.
 
 Checklist projektu:
 - [x] Uwzględnić diagnozę dwóch zdjęć oraz obecne modele/API/formularz.

@@ -2,6 +2,91 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-02 — Vision ukończone lokalnie i odebrane, bez aktywacji
+
+- Task1–8 oraz końcowe findings zamknięte. Główna poprawka e815ba7: expected_epoch
+  atomowo pod blokadą, wszystkie terminalne joby kończą dokument, polling tylko dla
+  aktywnej pracy, parsowany cel CLI zgodny z Settings. Doprecyzowanie85e086c:
+  cztery rzeczywiste kody dostawcy pokazują AI niedostępne; revision_missing też done.
+- Finalreview WithFixes oraz scoped i residualrereview przeczytane, ostatni Approved.
+  Gate1017backend/308frontend, lint/types/build PASS; koordynator ponownie wykonał
+  pełne93E2E+1expectedskip na końcowym kodzie. Migracja7f8→92 i realny dump/restore
+  29syntetycznychtabel PASS.
+- Raport docs/audits/2026-10-31-document-vision-verification.md zawiera zakres,
+  ograniczenia i komplet rozstrzygnięć wraz z kosztem pomyłki. Dowody przed usunięciem
+  wyłącznie własnego SDDscratch zachowane w prywatnym /tmp/opencode/
+  document-vision-20261102-evidence-85e086c/. Worktree i gałąź pozostają do dalszej decyzji.
+- Nie uruchamiać ponownie wykonania planu ani nie re-dispatchować ukończonych etapów.
+  Następny krok to osobna zgoda na provider/model/retencję/koszt/klucz/egress preview,
+  potem syntetyczny liveadapter i prawdziwe telefony. Obecny preview i produkcja bez zmian.
+- Nie wykonano push/merge/deploy, migracji runtime, importu lub ponownych wysyłek prywatnych
+  zdjęć. Zastane Velo/Q7 zachowane i nie dodawane do commitów tej funkcji.
+
+## 2026-11-01 — Task8 odebrany, jedna końcowa poprawka integracyjna
+
+- Task7 462837f+fd5a619 po review; Task8 f5fa8b6+6ebf02c+5bc3476 po3 rundach
+  scopedreview. Domknięto realne upload/original/429/focus/dialogAxe i oldimageGET/
+  duplicate/explicitPOST; niepusta księga/inbox/salda nie zmieniają się przy udanym
+  vision/retry/localOCR/approval. DBsha/metoda/fileSHA porównane przed/po retry.
+- Ostatni gate1008backend/302frontend PASS; frontendbuild i93E2E+1expectedskip PASS.
+  Niezależny verifier wykonał realny pg_dump/restore przed i po migracji7f8→92:
+  29tabel legacy pełne kolumny/wiersze i hash oryginału identyczne,0sumledger,
+  policyfalse/0jobs;3własne disposableDB usunięte. Bez danych rzeczywistych.
+- Końcowy review c0b3348..6ebf02c znalazł2Important: expected_epoch w CLI poza
+  blokadą oraz terminalne błędy vision pozostawiające document.pending i polling.
+  Jedna zbiorcza poprawka realizowana przez ses_e679185abffeQIoMpu9oq3EYj3,
+  BASE5bc3476; raport final-fix-report.md. Nie uruchamiać drugiego wykonawcy/gate.
+- Po niej dokładnie jeden scopedre-review, weryfikacja końcowa i dokumentacja.
+  Realprovider/model/egress i urządzenia Android/iPhone nadal NOTRUN/NOTCERTIFIED;
+  podgląd/produkcja/main niewdrożone, bez push/merge i prywatnych zdjęć.
+
+## 2026-11-01 — Task6 odebrany, Task7 interfejs w realizacji
+
+- SQLcounter<=4 i rzeczywiste CLIapply/configrefusal poprawione c5753d1; review potwierdził
+  zamknięcie2Important i Minor competingrevision. Pełny gate ujawnił datowany test
+  finansów zależny od aktualnego miesiąca: scenariusz28.10 przy zegarze01.11.
+- Naprawa842ead7 stabilizuje wyłącznie zegar tego testu i usuwa omyłkowe śledzenie
+  scratchreportu, bez zmian finansowej logiki. RED odtworzony, pełny gate1004backend/
+  279frontend i lint/types PASS. Oddzielny scopedreview naprawy też Approved.
+- Task6 zakończony, Task7 wykonuje ses_e691ac188ffeFdryHXL3bf0hnH: statusy/notice,
+  osobne retryAI/localOCR i niedestrukcyjna edycja. Task8/invariants/E2E/finalreview
+  pozostają do wykonania. Ukończonych zadań nie ponawiać; ledger aktualny.
+- Realny model, podgląd i produkcja niezmienione, bez wysyłek prywatnych zdjęć.
+
+## 2026-11-01 — Wznowienie vision po limicie wykonawcy
+
+- Użytkownik polecił dokończyć zatwierdzony plan. Task1–5 są odebrane; nie powtarzać.
+  Task6 ma implementację1ec1a66+74640f9 i otwarty fixround1 po review: realny licznik
+  SQL<=4 oraz rzeczywiste przejścia CLIapply, nie wyłącznie wywołania serwisu.
+- Poprzedni wykonawca przerwany usage_limit. HEAD74640f9, brak aktywnego pytest/gate;
+  pozostawiony test_vision_status.py został zachowany. Nowy wykonawca kontynuuje
+  częściowy fix; raport/ledger w .superpowers/sdd/2026-10-31-automatic-document-vision/.
+- Pozostają review Task6, interfejs Task7, invariants/E2E Task8 i końcowy review.
+  Bez aktywacji rzeczywistego modelu, dostępu do prywatnych zdjęć lub zmiany runtime.
+
+## 2026-10-31 — Implementacja vision: Task1–3 odebrane, Task4 w toku
+
+- Użytkownik zatwierdził plan i podagentów z niezależnym review każdego etapu.
+  Bazowy pełny gate949backend/279frontend i lint/types PASS,10znanych warningów.
+- Dokumentacja projektu/diagnozy selektywnie zapisana w c0b3348; zastane Velo/Q7
+  pozostają dirty/unstaged. Worktree nadal feat/financial-document-workflow.
+- Task1 a53480a+65c9256: modele/config/migracja92eef8e8086c, polityka/epoch i fingerprint
+  celu/modelu. Review znalazł3Important, wszystkie poprawione i ponownie odebrane.
+  Doprecyzowanie: zmiana tożsamości konfiguracji wyłącza politykę, pauzuje starą kolejkę
+  i wymaga jawnego enable, zamiast dziedziczyć zgodę starego endpointu.
+- Task2 2b26a2a: normalizacja EXIF wszystkich obrazów, brak metadanych/GPS w pochodnej,
+  współdzielone ocr_pipeline; target25/parserDocker1 i pełny gate PASS, review bez uwag.
+- Task3 ee6c8f2+65359e2: bounded multimodal adapter, strictnullableJSONschema,
+  Decimal i backendprovenance, brak redirect/envproxy/SDKretry. Importantrefusal z
+  niepustym content zamknięty testami i scopedreview; ostatni pełnygate978backend/
+  279frontend PASS,10znanychwarningów. Realny provider nie był wywoływany.
+- Task4 trwałe joby/lease/CAS/budget realizuje ses_e6e418914ffe5BeOe4gyclJX4N.
+  Odzyskiwanie: .superpowers/sdd/2026-10-31-automatic-document-vision/progress.md .
+  Nie ponawiać Task1–3; kontynuować raport/review Task4. Nie uruchamiać drugiego pytest
+  na tej samej finanse_test:55432 w czasie wykonawcy. Helpergate bez sekretów w logach.
+- Brak push/merge/deploy, zmian runtime preview/produkcji lub ponownej analizy prywatnych
+  zdjęć. Task5–8 i finalreview pozostają do wykonania.
+
 ## 2026-10-31 — Zatwierdzony projekt vision, plan implementacji ukończony
 
 - Użytkownik zaakceptował pełny projekt automatycznego odczytu zdjęć; następnie
