@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import app.main  # noqa: F401 - register complete metadata for integration schema lifecycle
@@ -171,6 +171,64 @@ async def test_usage_failure_prevents_http(test_database, monkeypatch):
     )
     async with sessions() as db:
         assert await reserve_vision_call(db, claim, now=now, config=_config()) is False
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_missing_vision_revision_terminalizes_its_document(db_session):
+    document = Document(
+        user_id=uuid.uuid4(),
+        filename="malformed.jpg",
+        original_name="malformed.jpg",
+        mime_type="image/jpeg",
+        sha256_hash="f" * 64,
+        size_bytes=1,
+        storage_path="ff/malformed.jpg",
+        processing_method="vision",
+    )
+    db_session.add_all(
+        (
+            document,
+            DocumentVisionPolicy(id=1, enabled=True, epoch=1),
+        )
+    )
+    await db_session.flush()
+    revision = DocumentExtractionRevision(
+        user_id=document.user_id,
+        document_id=document.id,
+        revision=1,
+        status="pending",
+        data={"document_type": "other", "fields": {}, "provenance": {}, "parser_version": None},
+        field_provenance={},
+        input_method="image",
+    )
+    db_session.add(revision)
+    await db_session.flush()
+    job = DocumentProcessingJob(
+        user_id=document.user_id,
+        document_id=document.id,
+        revision_id=revision.id,
+        kind="vision",
+        intent_key="malformed-revision",
+        request_hash="malformed",
+        state="pending",
+    )
+    db_session.add(job)
+    await db_session.flush()
+    # A corrupt legacy row is not creatable through the FK; simulate it only inside this rollback.
+    await db_session.execute(text("SET LOCAL session_replication_role = replica"))
+    await db_session.execute(
+        update(DocumentProcessingJob)
+        .where(DocumentProcessingJob.id == job.id)
+        .values(revision_id=uuid.uuid4())
+    )
+    await db_session.execute(text("SET LOCAL session_replication_role = origin"))
+
+    assert (
+        await claim_processing_job(db_session, job.id, now=datetime(2026, 11, 2, tzinfo=UTC))
+        is None
+    )
+    assert (job.state, job.error_code, document.status) == ("failed", "revision_missing", "done")
 
 
 @pytest.mark.integration

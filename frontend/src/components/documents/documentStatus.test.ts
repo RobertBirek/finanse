@@ -52,4 +52,26 @@ describe("getDocumentStatus", () => {
       }),
     ).toMatchObject({ label: "AI niedostępne", tone: "danger" });
   });
+
+  it.each([
+    "provider_unavailable",
+    "provider_auth_failed",
+    "provider_timeout",
+    "provider_response_too_large",
+  ])("labels terminal %s provider errors as unavailable", (error_code) => {
+    expect(
+      getDocumentStatus({
+        status: "done",
+        review: {
+          revision_id: "revision-1",
+          revision: 1,
+          input_method: "image",
+          status: "incomplete",
+          error_code,
+          warnings: [],
+          job_state: "failed",
+        },
+      }),
+    ).toMatchObject({ label: "AI niedostępne", tone: "danger" });
+  });
 });

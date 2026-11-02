@@ -212,6 +212,8 @@ async def claim_processing_job(
         ).scalar_one_or_none()
         if revision is None:
             job.state, job.error_code = "failed", "revision_missing"
+            if job.kind == "vision":
+                _terminalize_vision_document(document)
             return None
     if job.kind == "vision":
         if policy is None or not policy.enabled:
