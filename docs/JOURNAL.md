@@ -2,6 +2,117 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-02 — ZAKOŃCZONE: produkcja84c9c27, OpenAI aktywne, nie ponawiać apply
+
+- Całe AI aplikacji na OpenAI po zgodzie użytkownika: GPT6.1Sol doradca/narzędzia,
+  GPT6.1Terra tekst i obrazy. Responses/storefalse, osobna konfiguracja vision i
+  jawny epoch1→2. Policyenabledtrue; bez automatycznych płatności/backfillu/importów.
+- All6gate1031backend/308frontend, lint/types/build/93E2E+1skip i independently
+  rereviewApproved. Realny syntetyczny live na dokładnychobrazachPASS, produkcyjny
+  egressGETmodel200. SDK2.54.0 w nowym prawdziwym runtime, obrazhashe zgodne.
+- Backupprzed a82d4237/restore, sieciowoizolowana kopia c2→92/23legacytables/0ledger
+  i rollbackpolicycyclePASS. Backup po e037d2e8/restore92PASS. DataIDs/original9hashes
+  oraz starewiersze niezmienne w okniewdrożenia; późniejsze logowanie użytkownika normalne.
+- Pierwszy rollback nadgorliwego guardaudytu wyjaśniony4własnymi401; kontrolowany
+  resumePASS. Guard pozostał ścisły/countperphase. Zapis metadanych poprawiony o3
+  numerycznebudżety błędnie redagowane jakTOKEN; runtimeconfig niezmieniany.
+- Ostatni browser375/1440PASS, 5min10/10PASS, zero restartów/błędów; atomoweactive-release
+  2026-11-02T11:05:32Z. Pakiet/rollback /opt/finanse/webapp/releases/84c9c27/.
+  Tymczasoweenvplikizsekretami usunięte; backupi/stareobrazy zachowane.
+- Hostmain FF84c9c27 dla migracji zainstalowanego restoredrill; brakpush. Aktualna
+  dokumentacja na gałęzi sesji. Worktree i branch zachować; zastane Velo/Q7 niekomitowane.
+- Raport publiczny docs/audits/2026-11-02-openai-production-release.md, prywatne
+  dowody /tmp/opencode/openai-production-20261102/ (implementation-evidence/).
+  Nie restartować planu ani wdrożenia; następne są uwagi z realnego telefonu.
+- Followup: standaloneCLI ma rejestrować usersmetadata; obecny operatorrunner
+  jawnie importuje app.main przed CLI.run, bezlifespan, zarówno przyenablejakrollback.
+  Prawdziwe Android/iPhone nadal bez certyfikacji. Preview nadal bez AI.
+
+## 2026-11-02 — OpenAI: zatwierdzony dobór modeli, implementacja i przygotowanie wydania
+
+- Użytkownik odpowiedział „tak” na Sol dla doradcy i Terra dla dokumentów oraz
+  dostosowanie API/testy/backup/wydanie. Potwierdzono jedynie obecność dodanego
+  OPENAI_API_KEY w /docker/finanse/.env; oba GET /v1/models/{model} zwracają200.
+- Plan docs/superpowers/plans/2026-11-02-openai-migration.md, spec pod tą samą datą.
+  Task1 implementer ses_e64989b3cffemrf40LuYtogJdA pracuje nad źródłami/testami i SDK2.54.0;
+  nie uruchamiać drugiego implementera/suite na tej samej bazie. Dowody i ledger:
+  .superpowers/sdd/2026-11-02-openai-migration/. Nie odtwarzać ukończonego planu vision.
+- Backup a82d4237 oraz zainstalowany restore drill zakończone success/0. Baseline
+  odczytowy: schema c2,23 legacy tables,0 naruszeń księgi,0 aktywnych dokumentów,
+  hashe9 plików oryginałów. Pełny frontend build i93E2E+1celowy skip PASS.
+- Koordynator przygotowuje prywatne helpery i procedurę nowego runtime/pakietu oraz
+  rehearsal na network-none kopii. /tmp/opencode/openai-production-20261102/0700.
+  Wyłącznie render/build/rehearsal przed odbiorem; żadnego apply/policy enable jeszcze.
+- Dotychczasowe potwierdzenie braku klucza dotyczy stanu sprzed zatwierdzenia modeli;
+  obecnie klucz jest obecny. Nie wypisano ani nie dodano do repo żadnego sekretu.
+- Rzeczywisty syntetyczny /responses defaultSDK Sol/Terra completed/OK. Wywołanie
+  przez nowy klient aplikacji wykryło C1: decodedaiter_bytes i pozostawiony gzip header
+  powodują drugą dekompresję. Reprodukcja offline DecodingError; independentreview
+  task-1-review.md BLOCKED, C1 oraz3 brakujące regresje wire/mixedunsafeoutput.
+  Ten sam implementer otrzymał jedną zbiorczą poprawkę; nie wdrażać czerwonego kandydata.
+- Operacyjny scopedreview warunkowo zaakceptowany po redakcji renderowanego Compose
+  i ograniczeniu logów; rollbackdisable ma być realnie sprawdzony na kopii epok1→2→3.
+  Runtime dependencies9b59d2b6f862 zbudowane i nonrootSDK2.54.0 PASS, bez zmian aplikacji
+  produkcyjnych. Zakończenie gate/review oraz liveadapter i migracja na kopii nadal wymagane.
+- Task1 zakończony84c9c27:1031backend/308frontend i all6gatePASS, scopedreviewApproved.
+  Dokładne obrazy199backendfiles każdy zgodne zarchiwumGit; live na gotowym obrazie
+  Solsynthetictool1 + Terrafinancialtext/review/imagePASS. Installowanyrestore poFFmain
+  do84c9c27 success/0 (nowyhead92), bez push. Hostcheckout jest źródłem migracji drill,
+  nie kodem zamontowanym do aplikacji. Produkcyjnyruntime nadal9db.
+- Rehearsal c2→92 i startup nonrootPASS; dodatkowy cykl CLI na kopii ujawnił brak
+  users w metadanych przy standaloneimport. Operatorrunner (aktywacja i rollback)
+  rejestruje teraz modele przez importapp.main bez wywołania lifespan. Rerun pełnej
+  kopii i cyklu1→2→3 trwa; nie zmieniono zweryfikowanego źródłaaplikacji.
+- Pierwszy apply: schema92 wykonane i aplikacje przełączone, następnie nadmiernie
+  restrykcyjny guard zauważył4prawidłowe audit security/session_rejected od własnych
+ 4testów401 i wykonał rollback do9db. Potwierdzono starewiersze/originals/dataIDs
+  niezmienne, policyfalseepoch1; nie cofano addytywnej migracji.
+- Guard poprawiony wyłącznie o dokładnie policzone dopisane audyty odrzucenia sesji,
+  nie o dowolne zmiany. Starewiersze nadalhashowane.9testów helperPASS, scopedreview
+  exactphasecount Approved. Jednorazowy resume z odrębnymbaseline i kontroląstarych
+  obrazów uruchomiony, bez ponawiania migracji. Dowody pierwszej próby zachowane.
+
+## 2026-11-02 — Rozszerzenie zakresu: całe AI aplikacji na OpenAI
+
+- Na pytanie o wdrożenie kodu z wyłączonym vision użytkownik odpowiedział:
+  „przenieś cały AI na modele od openAI”. Nie wybrał wariantu wyłączonego AI.
+  Zgoda obejmuje kierunek migracji całego AI aplikacji, nie innych projektów VPS.
+- Inwentaryzacja wywołań: doradca i jego narzędzia (advisor/service.py), ekstrakcja
+  tekstu/OCR (documents/extractor.py) oraz vision (documents/vision_client.py).
+  Obecnie wszystkie korzystają z Chat Completions; tekst dzieli LLM_MODEL/BASE_URL/KEY,
+  vision ma celowo osobną konfigurację i politykę. Lokalne OCR nie jest modelem LLM.
+- Odczyt wyłącznie nazw i obecności ustawień /docker/finanse/.env i live backend:
+  brak OPENAI_API_KEY oraz klucza vision, jest klucz tekstowego DeepSeek. Bez odczytu
+  do wyniku jakiejkolwiek wartości klucza i bez szukania po innych projektach.
+- Oficjalna dokumentacja OpenAI sprawdzona02.11: GPT6.1Sol/Terra obsługują obraz
+  i schema, ale tool calling wymaga Responses API. GPT4.1/mini mają status Deprecated;
+  nie wybierać ich tylko po to, by ominąć dostosowanie klienta. Samo podmienienie
+  LLM_MODEL na nowy model nie jest zweryfikowaną migracją narzędzi doradcy.
+- Propozycja do akceptacji: Sol dla doradcy, Terra dla ekstrakcji tekstu i obrazów;
+  model/config bez hardkodowania, store=false, brak fallbacku do DeepSeek, bez zmiany
+  polityk narzędzi/ręcznego zatwierdzania i bez ponownego odczytu starych dokumentów.
+  Potrzebny klucz projektu OpenAI poza czatem; nie używać uprawnień/kluczy OpenCode.
+- Retencja API: domyślnie brak treningu, możliwe logi abuse do30dni; store=false
+  nie oznacza ZDR. ZDR wymaga uprawnienia/konfiguracji po stronie konta OpenAI.
+- Nadal nie zmieniono kodu, runtime/env, schematu, modeli ani danych produkcyjnych.
+  Przed wdrożeniem potrzebny uzgodniony dobór modeli, testy zgodności i nowy gate,
+  backup/restore oraz rehearsal zgodnie z /deploy. Nie restartować starego planu vision.
+
+## 2026-11-02 — Zgoda na produkcję zamiast pilotażu, preflight tylko odczytowy
+
+- Użytkownik polecił wdrożyć od razu na produkcję zamiast pilotażu. Kandydat wydania
+  bb831ce (kod85e086c), spójne backend/worker/frontend i addytywne migracje c2→7f8→92.
+  Przed apply wymagane: świeży backup/restore, rehearsal na kopii, gate i rollback.
+- Odczyt active-release.json oraz etykiet potwierdza9db255b, schema metadata c2,
+  wersjonowany Compose base+prod+activeoverride. Nie wykonano merge/push/build/apply,
+  migracji, restartów lub backupu danych w tym preflight.
+- Sprawdzono wyłącznie obecność/niepoufne nazwy konfiguracji w kontenerze:
+  dotychczasowy tekstowy LLM deepseek-v4-pro ma klucz, ale vision nie ma osobnego
+  modelu/provider/endpoint/key ani aktywnej flagi. Żadnego sekretu nie wypisano.
+- Przed wykonaniem ustalić, czy wydać kod z wyłączonym vision, czy najpierw dostarczyć
+  osobną konfigurację vision. Nie kopiować automatycznie klucza tekstowego dostawcy.
+  Samo wdrożenie kodu nie oznacza aktywnego odczytu obrazów. Zastane Velo/Q7 zachowane.
+
 ## 2026-11-02 — Vision ukończone lokalnie i odebrane, bez aktywacji
 
 - Task1–8 oraz końcowe findings zamknięte. Główna poprawka e815ba7: expected_epoch

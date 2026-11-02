@@ -2,6 +2,27 @@
 
 Backlog zadań ze statusami.
 
+## Migracja AI do OpenAI i wydanie produkcyjne (2026-11-02)
+
+- [x] Użytkownik wybiera produkcję zamiast pilotażu oraz całe AI aplikacji na OpenAI.
+- [x] Inwentaryzacja: doradca/tool calling, tekst/OCR i vision. Produkcyjna konfiguracja
+  początkowo nie zawierała klucza OpenAI; sprawdzano obecność, bez wypisywania sekretów.
+- [x] Użytkownik zatwierdził Sol dla doradcy i Terra dla ekstrakcji; klucz projektu
+  OpenAI dodany poza czatem. Oba modele dostępne dla klucza (GET model200, bez generacji).
+  Osobne ustawienia vision pozostają wymagane.
+- [x] Dostosować klientów do wybranych modeli, w tym Responses dla narzędzi GPT6;
+  zachować policy/audit/ręczny review, brak DeepSeek fallbacku i brak backfillu.
+- [x] Odebrać84c9c27:1031backend/308frontend/lint/types/build/93E2E+1skip PASS;
+  scopedreviewApproved, live syntetyczny Soltool i Terra tekst/review/image na obrazie PASS.
+- [x] Regresje/mock transport oraz mały test syntetyczny rzeczywistego API, pełny gate,
+  świeży backup/restore, rehearsal migracji i spójne wydanie backend/worker/frontend.
+  Kod84c9c27 wdrożony, vision włączone (epoch2); browser/10próbek obserwacji/metadata
+  i dodatkowybackup e037d2e8 zrestore PASS. Wydanie zakończone; nie ponawiać apply.
+- [ ] Follow-up CLI: rejestracja wszystkich modeli SQLAlchemy przy bezpośrednim
+  standalone uruchomieniu scripts.document_vision_policy. Wydanie używa jawnego
+  operator bootstrap importapp.main przed CLI.run, również w trwałym rollbacku;
+  odrębne uruchomienie bez rejestracji users ujawnia NoReferencedTableError audytu.
+
 Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
 
 ## Waluty i zobowiązania (2026-10-27)
@@ -15,12 +36,14 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   po builder check zatwierdzony w całości; plan8 zadań i realizacja podagentami
   zatwierdzone31.10. Task1–8 i końcowe poprawki odebrane02.11; epoch CAS, terminalne
   statusy/polling i wszystkie findings zamknięte. Gate1017backend/308frontend PASS.
-  Vision zamiast równoległego OCR, fallback lokalny tylko jawny. Kod nie jest
-  wdrożony i AI pozostaje wyłączone w preview; kod gotowy lokalnie, bez push/merge/deploy.
-- [ ] Osobno zatwierdzić i przygotować aktywację vision w preview: konkretny provider/
-  model, własny klucz, retencja/koszt/limity oraz bezpieczny egress; syntetyczny live
-  test adaptera i rzeczywiste Android/iPhone dopiero potem. Nie wysyłać ponownie
-  prywatnych dwóch zdjęć bez osobnej zgody. Nie zmieniać przy tym produkcji.
+  Vision zamiast równoległego OCR, fallback lokalny tylko jawny. Następnie wdrożone
+  na produkcję w84c9c27 po zgodzie użytkownika; preview bez zmian (AI nadal wyłączone).
+- [-] Aktywacja vision w preview zastąpiona decyzją użytkownika o bezpośredniej
+  produkcji i OpenAI. Prawdziwe Android/iPhone nadal do sprawdzenia; nie wysyłać
+  ponownie dawnych prywatnych zdjęć bez osobnej zgody.
+- [x] Zmiana decyzji02.11: bezpośrednia produkcja z całym AI OpenAI; dobór modeli,
+  nowy runtime, backup/restore, rehearsal i jawna polityka włączona po odbiorze.
+  Finalny kod84c9c27, bez push; obserwacja i atomowa aktualizacja metadanych PASS.
 
 - [x] Zaprojektować wspólny obieg dokumentów finansowych przed rozszerzeniem Q7:
   użytkownik wybrał wyłącznie upload w aplikacji (bez Google/integracji), także zdjęcia
@@ -62,7 +85,8 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   PASS. Login przekazany poza repo. To nie zastępuje testu powyżej na prawdziwym telefonie.
 - [x] Po osobnej zgodzie: push gałęzi i draft PR [#5](https://github.com/RobertBirek/finanse/pull/5)
   do `main`, bez merge/deploy. Przed push świeże949backend/279frontend/lint/types/build PASS.
-- [ ] Osobna zgoda na merge/deploy/migrację produkcji lub przygotowanie starych PDF.
+- [x] Osobna zgoda na deploy/migrację produkcji02.11; lokalny main FF84c9c27 i spójne
+  wydanie z aktywnym OpenAI. Bez przygotowania starych PDF/backfillu lub importów.
 
 - [x] Osobna korekta waluty istniejącego konta po prośbie o EUR: potwierdzone kwoty
   źródłowe i zatwierdzona wycena PLN wg NBP; konto i obie strony6 operacji poprawione.

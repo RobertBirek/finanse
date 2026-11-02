@@ -2,6 +2,38 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [84c9c27] — 2026-11-02 — Dokumenty i całe AI na OpenAI, produkcja
+
+### Added
+- Doradca/tool calling GPT6.1Sol, ekstrakcja tekstu i nowych zdjęć GPT6.1Terra,
+  Responses/store=false, jawna polityka visionepoch2, bez fallbacku DeepSeek.
+- Wydany wcześniej odebrany obieg faktur/paragonów i wizualny odczyt JPEG/PNG/HEIF;
+  oryginały prywatne, propozycje nadal do ręcznego zatwierdzenia.
+
+### Fixed
+- Obsługa skompresowanych odpowiedzi OpenAI, stateless replay narzędzi i reasoning,
+  bez wykonania mutacji przy odmowie/incomplete; testy CLI niezależne od scratch.
+- Gate1031backend/308frontend, lint/types/build/93E2E+1skip, live syntetyczne API,
+  backup a82d4237/restore, rehearsal c2→92 i finalne obrazy PASS. Po wydaniu backup
+  e037d2e8/restore, HTTPS/assets/auth/browser oraz10próbek obserwacji PASS.
+- Dane historyczne/originals/usługi danych zachowane; końcowy active-release zapisany
+  atomowo, rollback zachowany. Pierwszy automatyczny rollback wynikał wyłącznie
+  z nieuwzględnionych własnych audytów401; kontrolowanyresume odebrany. Bez importów.
+- Raport `docs/audits/2026-11-02-openai-production-release.md`. Lokalny main
+  zaktualizowany dla restore drill, bez push; preview i inne aplikacje bez zmian.
+
+## [Deployment requested] — 2026-11-02 — Produkcja zamiast pilotażu
+
+- Użytkownik zatwierdził kierunek bezpośredniego wydania; kandydatbb831ce.
+  Preflight bez zmian runtime: produkcja9db255b nie ma konfiguracji vision.
+  Następnie rozszerzył zakres na całe AI aplikacji na OpenAI. Inwentaryzacja trzech
+  klientów zakończona; brak klucza OpenAI w konfiguracji produkcyjnej. Nowe modele
+  wymagają weryfikacji parametrów i Responses dla narzędzi; samą podmianę nazwy
+  modelu odrzucono jako niewystarczającą. Brak deployu lub migracji na tym etapie.
+- Dobór Sol/Terra zatwierdzony, klucz OpenAI dodany poza czatem; dostęp do obu modeli
+  potwierdzony bez generacji. Migracja klientów w toku; backupa82d4237/restore i
+  frontendbuild/93E2E+1skip PASS. Produkcyjne aplikacje i polityka jeszcze bez zmian.
+
 ## [Unreleased] — 2026-11-02 — Automatyczny odczyt zdjęć ukończony lokalnie
 
 ### Added

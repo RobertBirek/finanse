@@ -1,8 +1,9 @@
 # Automatyczny odczyt zdjęć dokumentów przez model wizyjny
 
-Status: projekt i plan zatwierdzone; implementacja oraz review ukończone lokalnie
-2026-11-02. Nie wykonano wdrożenia ani aktywacji AI. Raport:
-`docs/audits/2026-10-31-document-vision-verification.md`.
+Status: implementacja i review ukończone; po osobnej zgodzie wdrożone na produkcję
+2026-11-02 w84c9c27 z OpenAI/Terra i aktywną polityką. Raport lokalnej akceptacji:
+`docs/audits/2026-10-31-document-vision-verification.md`; odbiór produkcji:
+`docs/audits/2026-11-02-openai-production-release.md`. Preview bez zmian.
 
 Checklist projektu:
 - [x] Uwzględnić diagnozę dwóch zdjęć oraz obecne modele/API/formularz.
