@@ -2,6 +2,31 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [9369b5d] — 2026-11-02 — Diagnostyka uploadu z iPhone na produkcji
+
+### Fixed
+- Bezpieczne kody odrzucenia400 i polskie komunikaty zamiast jednego ogólnego błędu.
+  Log zawiera wyłącznie kod, kategorie MIME i liczbę bajtów, bez treści dokumentów.
+- Wdrożone spójne obrazy9369b5d;1036backend/316frontend/93E2E+1celowy skip,
+  lint/types/build, niezależny review, backup c3935c47/restore i smoke PASS.
+- Produkcyjna przeglądarka375/1440 i10próbek obserwacji PASS; schemat, polityka vision,
+  oryginały i stare dane bez zmian. Bez migracji lub wywołania AI w diagnozie.
+- To diagnostyka, nie potwierdzona naprawa Safari. Potrzebna jedna próba użytkownika.
+  Raport: `docs/audits/2026-11-02-upload-rejection-diagnostics.md`.
+
+### Kontekst diagnozy
+
+- Zgłoszony błąd przesyłania; logi wskazują400 przedAI. Syntetyczny JPEG12MP przechodzi
+  rzeczywisty parser. Przyczyna konkretnego odrzucenia w trakcie ustalania, bez zmian
+  kodu, runtime lub oryginałów; brak twierdzenia o naprawie.
+- Oryginał HEIF udostępniony do lokalnego testu także przechodzi walidację w dokładnym
+  runtime (UID10001/networknone), bez wysyłki doAI lub zapisu doaplikacji. Do rozstrzygnięcia
+  pozostaje typ/zawartość faktycznie przesyłana przez Safari; wymagana dokładniejsza
+  bezpieczna diagnostyka400, a nie podnoszenie limitów.
+- Po zgodzie użytkownika wdrażana mała diagnostyka kodów400/logów bez treści dokumentu
+  i przetłumaczonych komunikatówUI; nie zmienia warunków akceptacji pliku. Backup
+  c3935c47/restore PASS; wydanie zakończone, brak twierdzenia o naprawie uploadu.
+
 ## [84c9c27] — 2026-11-02 — Dokumenty i całe AI na OpenAI, produkcja
 
 ### Added

@@ -2,6 +2,90 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-02 — ZAKOŃCZONE: diagnostyka uploadu9369b5d na produkcji
+
+- Diagnostyka wdrożona i sfinalizowana 2026-11-02T12:34:58Z; nie powtarzać apply.
+  Kody400 i polskie komunikaty, log tylko code/MIMEbucket/bytes. Bez osłabienia
+  walidacji, migracji lub zmian polityki vision. Diagnoza bez wywołania AI.
+- Pełny gate1036backend/316frontend/lint/types/build,93E2E+1celowy skip PASS.
+  Niezależny review źródeł bez Critical/Important. Procedura odebrana po związaniu
+  candidateSHA z gate/review i blobami źródła/dist, niezmiennymi podczas E2E;
+  utrwalono tylko HMAC całego renderu Compose, bez sekretów.
+- Backup c3935c47/restore PASS; dokładne obrazy9369b5d i offlineHTTP4kody PASS.
+  Produkcyjne HTTPS/assets/auth, browser375/1440 i10próbek obserwacji PASS.
+  Stare dane/originals/schema/policy bez zmian poza dokładnie policzonymi własnymi
+  audytami401. Rollback do dokładnych obrazów84c9c27 zachowany, bez operacji policy.
+- Hostmain FF9369b5d bez push; raport i plan na gałęzi sesji. Zastane Velo/Q7
+  pozostają niekomitowane. Dowody: /tmp/opencode/iphone-upload-fix-20261102/.
+- Dalej: jedna próba z biblioteki iPhone po odświeżeniu strony i nowy komunikat.
+  Nie twierdzić, że Safari naprawione; nie uruchamiać ponownie wydania lub AI probe.
+
+### Historia przygotowania diagnostyki (zakończona)
+
+- Użytkownik polecił „wdróż poprawkę” po propozycji jawnego bezpiecznego powodu400.
+  Zakres to diagnostyka, nie rozstrzygnięta naprawa konwersji Safari. Plan
+  docs/superpowers/plans/2026-11-02-upload-rejection-diagnostics.md: kody400,
+  zamknięte mapowanie komunikatówUI oraz log wyłączniecode/MIMEbucket/bytes.
+  Bez zmian walidacji, MIMEallowlist, limitów, schematu, AI lub polityki.
+- Jedyny implementer ses_e63ed7f00ffeDKCF4do1O3JZsu wykonuje TDD/fullgate/build/E2E
+  i commitźródeł. Nie uruchamiać równolegle DBsuite lub drugiego implementera.
+  Dowody /tmp/opencode/iphone-upload-fix-20261102/, gate.py izoluje finanse_test55432.
+- Backup c3935c47 oraz installedrestore success/0. Startrestore najpierw zablokowany
+  poprawnym limitem systemd3starty/3h (kilka wcześniejszych successfuldrill). Po odczycie
+  limitu i potwierdzeniu pustego parentdir wyczyszczono wyłącznie failedcounter tej
+  jednostki i wykonano restore; nie zmieniono unit/config/runtimeaplikacji.
+- Private release.py przygotowuje exactSHA z niezmienionego runtime84, zachowuje
+  pełny Compose/hardening/environment. Bez migracji i bezdisable/enablepolicy. Guardy
+  danych/policy/audytu6offlinePASS. Operationsreview ses_e63e9daa6ffeHU2wCTGl7iw0KS w toku.
+  Nie wykonano jeszcze build/przełączenia nowego pakietu.
+- Implementer zatrzymany limitemużycia bezkomitu; koordynator przejął istniejącą zmianę
+  (nie powtarzał implementacji). OdczytanyRED/GREEN, uzupełniony test rozróżnienia
+  malformedparser→validation_failed zamiastunsupported:RED→GREEN,59focusedPASS.
+  All6gate sh_19c1eb5be001xYRE1EgVWeg8C7 i build/E2Eprovenance sh_19c1ee978001e5NRdNjxBlH9lG.
+- Independentsourcereview PASS bezCritical/Important. Operacyjny review wskazał binding
+  źródła/UI doSHA i kompletność redakcji; wdrożenie czeka na scopedreview oraz gate.
+  Privateprocedure sprawdza candidateHEAD/gate/review/blobyfrontendu/distbytes, utrwala
+  wyłącznieHMACcałegorenderu, sprawdza dokładne84obrazy i wykonuje odczytowyrollbackproof.
+
+## 2026-11-02 — Zgłoszenie uploadu z biblioteki iPhone, diagnoza bez zmian produkcji
+
+- Użytkownik zgłasza „Nie udało się przesłać dokumentu” po wyborze faktury z biblioteki.
+  W logach backend/frontend znaleziono3POST /api/documents/upload400 (11:06:58,
+  11:07:06,11:11:11UTC), list/capabilities200. Brak podstaw do obwiniania AI:400
+  powstaje przed jego wywołaniem. Nie ustalono jeszcze konkretnej przyczyny walidacji.
+- Odczyt kodu: UI uogólnia błędy400; backend400 dla MIME/niepoprawnej zawartości,
+  parser/mismatch/ograniczeń, bez szczegółowego powodu w accesslog. Nie logować
+  dokumentu ani zwiększać limitów bez reprodukcji. Poproszono o format i rozmiar.
+- Read-only syntetyczny probe rzeczywistego backendu: JPEG64x64 i4032x3024 (12MP)
+  przechodzą istniejący ograniczony parser. Nie dotykałDB/uploads ani dostawcyAI.
+- Prywatne logi/bezpieczne streszczenia poza repo /tmp/opencode/iphone-upload-20261102/.
+  Nie powtórzono uploadu, nie odczytano treści faktury i nie zmieniono kodu/runtime.
+- Użytkownik doprecyzował HEIF3024x4032/12MP/3,7MB (aparat26mmf1,6): mieści się
+  w limitach20MiB/25MP. Nie zwiększać limitów jako pozornej naprawy. Syntetyczny
+  HEIC64x64 i4032x3024 przechodzi parser. Prosty biały obraz nie reprezentuje jednak
+  złożonego HEIF z aparatu; trwa osobny probe szumowegoHEIF3024x4032 w jednorazowym
+  kontenerze networknone/1GiB/1CPU, bezcredentials/DB/plikówużytkownika i bezdotykania
+  produkcyjnego procesu. Shellsh_19bfe00a2001jFtMFJEe6PggS2 — oczekiwać powiadomienia.
+- Probe złożonego HEIF zakończony:3024x4032/3615103B, parserPASS1,71s. Kontener
+  jednorazowy usunięty automatycznie. To wyklucza prostą awarię całego HEIF i sam
+  rozmiar, nie dowodzi poprawności konkretnego iPhoneHDR/aux/MIME. Bez oryginału
+  lub dokładnej odpowiedzi400 nie można rozstrzygnąć zawartośćvsMIME. Nie ma naprawy
+  ani zgody na powtórne wysyłanie faktury doAPIodczytuAI; kolejnym krokiem lokalny
+  test oryginalnego pliku udostępnionego przez użytkownika albo uzgodniona diagnostyka.
+- Użytkownik udostępnił oryginał przez Drive do lokalnej diagnostyki. Pobrano3675697B
+  do prywatnego /tmp/opencode/iphone-upload-20261102/, mode0600, poza repo i uploads.
+  Oryginał niezmieniony: HEIFbrandsheic/mif1/miaf,1primaryimage3024x4032RGB. Ten sam
+  runtime w networknone (takżeUID10001) akceptuje całyplik pod image/heif,image/heic
+  iapplication/octet-stream. Nie wykonanoOCR, providerAPI, DB/store lub odczytu EXIF/GPS.
+- Efektywne limity produkcyjne zgodne z testem20MiB/25MP/512MiB/10CPU/15wall.
+  Długość body400 z3uploadów67B zgadza się z kontrolowanym rejection zawartości/MIME,
+  nie z parserem multipart(43/48B), plikiem pustym lub413. Nadal nie znamy MIME ani
+  bajtów rzeczywiście przesłanych przez Safari. Przekształcenie biblioteki/MIME-mismatch
+  to hipoteza, nie potwierdzony rootcause; nie osłabiać walidacji na tej podstawie.
+- Następny mały krok do zatwierdzenia: jawny bezpieczny kod powodu400 i logwyłącznie
+  kategorii parser/MIMEmismatch znormalizowanegoMIME beznazw/treści. Po jednej próbie
+  użytkownika da rozstrzygnięcie. Nie zmieniono kodu lub produkcyjnej konfiguracji.
+
 ## 2026-11-02 — ZAKOŃCZONE: produkcja84c9c27, OpenAI aktywne, nie ponawiać apply
 
 - Całe AI aplikacji na OpenAI po zgodzie użytkownika: GPT6.1Sol doradca/narzędzia,

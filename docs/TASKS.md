@@ -4,6 +4,21 @@ Backlog zadań ze statusami.
 
 ## Migracja AI do OpenAI i wydanie produkcyjne (2026-11-02)
 
+- [~] Zdiagnozować400 przy uploadzie faktury z biblioteki iPhone: błąd przedAI,
+  genericUIerror; JPEG12MP na rzeczywistym parserze syntetyczniePASS. Ustalić format/
+  wielkość i odtworzyć przyczynę przed poprawką; bez ponawiania prywatnej faktury doAI.
+  Użytkownik: HEIF3024x4032/3,7MB — limity nieprzekroczone; białyHEIC12MP takżePASS,
+  bardziej złożony syntetyczny HEIF3024x4032/3,6MB w izolowanym runtimePASS1,71s.
+  Nadal potrzeba dokładnego powodu400; nie twierdzić, że konkretny upload został naprawiony.
+  Oryginał udostępniony i zbadany lokalnie:3675697B/HEIF/3024x4032, decode i bounded
+  validation takżeUID10001 PASS; zeroAI/DB/storage. Potrzebny bezpieczny powód400
+  rzeczywistego żądania Safari, bo MIME/ewentualna konwersja w drodze nie są wlogach.
+  Diagnostyka400 wdrożona w9369b5d po TDD/fullgate/review/backup/restore.
+  Pozostaje jedna próba użytkownika i odczyt nowego komunikatu; nie ponawiać apply.
+- [x] Wdrożyć diagnostykę400:1036backend/316frontend/93E2E+1skip, lint/types/build,
+  dokładne obrazy i źródło UI, HTTPS/assets/auth/browser375/1440 oraz10próbek PASS.
+  Bez migracji, zmiany walidacji/polityki vision lub wywołania AI w diagnozie.
+
 - [x] Użytkownik wybiera produkcję zamiast pilotażu oraz całe AI aplikacji na OpenAI.
 - [x] Inwentaryzacja: doradca/tool calling, tekst/OCR i vision. Produkcyjna konfiguracja
   początkowo nie zawierała klucza OpenAI; sprawdzano obecność, bez wypisywania sekretów.
