@@ -2,6 +2,47 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-02 — Ścisły kontrakt kwoty w odczycie obrazu
+
+### Fixed
+- Po zatwierdzeniu zakresu przygotowano lokalnie wzorzec dodatniej, kanonicznej kwoty
+  w nullable `VisionFields.total` oraz zgodną instrukcję dla modelu: cyfry ASCII,
+  kropka dziesiętna, maksymalnie dwa miejsca, bez separatorów grupowania, waluty,
+  znaków lub exponent. Nieznana/niejednoznaczna kwota pozostaje `null`.
+- Bez normalizowania błędnej odpowiedzi, obliczania sum lub zaokrąglania. Dotychczasowa
+  dokładna konwersja na grosze, limit kwoty, ręczne zatwierdzanie i bezpieczne błędy
+  pozostają niezmienione.
+- Test-first: brak reguły wykazany 27 błędami nowych testów; po poprawce 94 testy
+  adaptera/kontraktu PASS. Pierwszy pełny gate: 1146 backend, 335 frontend, lint/types
+  PASS. Po review doprecyzowano opcjonalną kropkę dla kwot całkowitych oraz `null`
+  dla niejednoznacznych separatorów: 2 RED → 95 focused PASS. Końcowy gate PASS:
+  1147 backend (8 proxy deselected, 10 warnings), 335 frontend, lint/types obu;
+  dokładny manifest testowanych źródeł bez zmian. Scoped review rozliczony.
+- Brak wywołań AI/OCR, zmian dokumentów/produkcji i wdrożenia. Lokalna poprawka nie
+  potwierdza prawidłowego odczytu faktury; wydanie i wersje prompt/schema wymagają
+  osobnego procesu z kontrolą policy fingerprint.
+
+## [Diagnosed] — 2026-11-02 — Jedna zatwierdzona próba: odrzucona kwota AI
+
+### Changed
+- Po osobnej zgodzie wykonano dokładnie jedno diagnostyczne wywołanie AI dla
+  istniejącego dokumentu. Wynik: etap `amount`, pole `total`, typ `invalid_amount`.
+  JSON przeszedł walidację; odmowa nastąpiła przy konwersji kwoty na grosze.
+- Nie zachowano wartości ani odpowiedzi modelu. Nie ustalono konkretnego wariantu
+  błędnej kwoty i nie przypisano tego wyniku retrospektywnie wcześniejszym próbom.
+- Jednorazowy, audytowany odczyt: limit użycia +1, trwały znacznik wykonania +1,
+  audyt rezerwacji i zakończenia +1 każdy. Brak nowych zadań/rewizji, ponowień,
+  zmian pól dokumentu, walidacji, konfiguracji lub wdrożenia. Oryginał zweryfikowany.
+
+## [Investigating] — 2026-11-02 — Odrzucona odpowiedź AI po naprawie pełnego obrazu
+
+- Dwie jawne próbyvision zakończone invalid_model_output/1attempt; log wskazuje bramkę
+  payload/kwota/review, ale nie konkretne pole. Brak podstaw do następnej poprawki dat
+  lub kwot bez dokładniejszego dowodu. Późniejszy lokalnyOCR zakończony technicznie.
+- Diagnoza tylko read-only/bezpieczne kody, bez wartości faktury i kolejnych AIcalls.
+  Do ustalenia zgodny kontrakt i jedna uzgodniona diagnostyczna próba, bez wyłączania
+  walidacji, automatycznych ponowień lub obchodzenia policy/quota/audit.
+
 ## [d9a5797] — 2026-11-02 — Pełna pochodna JPEG i jawne PonówAI na produkcji
 
 ### Fixed
@@ -268,6 +309,40 @@ Wszystkie istotne zmiany w projekcie.
 - Po wyborze wariantu z niezależnymi przeglądami rozpoczęto implementację w lokalnej
   gałęzi, od bezpiecznej obsługi zdjęć. Bez wdrożenia lub zmian dokumentów użytkownika.
 
+## [Reviewed] — 2026-10-28 — Dodatkowe wyciągi bankowe, bez importu
+
+### Added
+- Inwentaryzacja46 plików z folderu użytkownika, kontrola SHA i prywatny pakiet.
+  Odczyt nowych dokumentów Velo/ING/Citi/Revolut, sald, okresów i nakładania źródeł.
+- Dowody rozdzielonej wypłaty Q7 oraz wrześniowej raty/nadpłaty; porównanie z dawnym
+  snapshotem wskazuje istniejące wpłaty i odsetki, bez ponownego księgowania.
+
+### Changed
+- Częściowo uzupełniono blokady Velo: sierpień rachunku i cykl karty do17.09 są już
+  dostępne. Październik rachunku nadal brakujący; NO IMPORT / NO AUTO CORRECTIONS.
+- Powtórzenia plików/CSV i niejednoznaczne powtórzenia wewnątrz wydruku karty opisane
+  osobno, bez globalnej deduplikacji. Raport: `docs/audits/2026-10-28-additional-statements-review.md`.
+
+## [Reviewed] — 2026-10-28 — Q7: dwie nadpłaty i początkowy kredyt
+
+### Added
+- Uzgodnienie offline deklarowanej kwoty początkowej, dwóch rat i dwóch nadpłat
+  z oboma PDF. Wszystkie trzy punkty kontrolne kapitału zgodne co do grosza.
+- Jawne oznaczenie interpretacji dat OCR i wyliczonego, niepotwierdzonego bankowo
+  podziału pierwszej raty. Bez księgowania, importu lub korekty produkcji.
+
+## [Reviewed] — 2026-10-28 — Porównanie dwóch harmonogramów Q7
+
+### Added
+- Odczytowe porównanie wcześniejszego i późniejszego PDF z folderu użytkownika:
+  zgodna umowa/rachunek, po59 rat, identyczne terminy, mniejszy kapitał i raty.
+- Niezależna kontrola118 wierszy, sum i mostów kapitału do zera; późniejszy plik
+  identyczny z poprzednio zweryfikowanym źródłem. Prywatne dowody poza Git.
+
+### Changed
+- Rozróżniono efekt nadpłaty widoczny w planie od dowodu wykonania przelewu.
+  Bez importu planów/płatności, korekt księgi lub zmian produkcji.
+
 ## [Reviewed] — 2026-10-28 — Podgląd harmonogramu Q7 bez zapisu
 
 - Po zgodzie użytkownika przygotowano komplet59 rat z oryginalnego PDF, z kontrolą
@@ -276,6 +351,8 @@ Wszystkie istotne zmiany w projekcie.
   oraz różnicę planu i księgi odpowiadającą jej odsetkom. Bez automatycznej korekty.
 - Nie zapisano umowy/rat/linków ani prognozy; księga i audyt identyczne przed/po.
   Pełny podgląd, CSV i propozycja importu tylko w prywatnym pakiecie poza Git.
+- Zgoda na zapis została uzależniona od obsługi nadpłaty i zmian harmonogramu;
+  zapis wstrzymany do doprecyzowania danych i projektu wersjonowania/spłat kapitału.
 
 ## [Corrected] — 2026-10-28 — Potwierdzona waluta EUR i wycena NBP
 

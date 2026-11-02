@@ -27,7 +27,15 @@ _SYSTEM_PROMPT = (
     "statement, loan schedule, unsupported document, or multiple documents is not an "
     "invoice or receipt. For issue_date, sale_date and due_date use a valid calendar "
     "date in YYYY-MM-DD format or null. If a date is absent, unreadable or ambiguous, "
-    "return null; never invent one. Do not return timestamps or date descriptions."
+    "return null; never invent one. Do not return timestamps or date descriptions. "
+    "For total, transcribe only the printed total as a positive canonical decimal string, "
+    "e.g. 1 or 1234.56: ASCII digits with an optional decimal point followed by one or "
+    "two fractional digits, without grouping separators, currency text, signs or "
+    "exponent notation. Change "
+    "only the formatting of an unambiguous printed amount; do not calculate or round. "
+    "For ambiguous separators, return null; never guess their meaning. "
+    "If the total is absent, unreadable, ambiguous or cannot be represented in this "
+    "format, return null rather than guessing."
 )
 
 

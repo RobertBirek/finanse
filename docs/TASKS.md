@@ -4,6 +4,23 @@ Backlog zadań ze statusami.
 
 ## Migracja AI do OpenAI i wydanie produkcyjne (2026-11-02)
 
+- [x] Po osobnej zgodzie na jedną dodatkową próbę AI: diagnostyka wskazała etap
+  `amount`, pole `total`, typ `invalid_amount`; dokładnie 1 żądanie, bez ponowienia.
+  Bez wartości faktury/odpowiedzi w raporcie. Oryginał, metadane dokumentu, rewizje
+  i zadania bez zmian; usage +1, jednorazowy receipt +1, audit rezerwacji/zakończenia.
+- [x] Użytkownik zatwierdził lokalną poprawkę kontraktu kwoty model → adapter → review:
+  wzorzec dodatniej kanonicznej kwoty i instrukcja, bez zmiany walidacji finansowej,
+  zgadywania lub zaokrąglania. RED27 → GREEN94; pierwszy pełny gate1146backend/
+  335frontend/lint/types PASS. Scoped review zamknięty: opcjonalna kropka i `null`
+  dla niejednoznacznych separatorów, 2RED → 95focusedPASS; końcowy gate1147backend/
+  335frontend/lint/types PASS, dokładny manifest źródeł niezmieniony.
+  Bez AI/OCR/deployu; konkretna postać błędnej wartości
+  z diagnozy nieznana. Plan: `docs/superpowers/plans/2026-11-02-vision-amount-contract.md`.
+- [ ] Osobno zatwierdzić i odebrać wydanie kontraktu kwoty; ustalić metadane wersji
+  prompt/schema i zgodność policy fingerprint. Nie deployować lub ponawiać AI w ramach
+  zakończonej implementacji lokalnej. Produkcja pozostaje d9a5797.
+- [x] Późniejsza jawna próba lokalnegoOCR succeeded/1; odnotowany wyłącznie status,
+  bez czytania tekstu/faktury lub twierdzenia o poprawności odczytu.
 - [x] Lokalnyqualityprobe bezAI: potwierdzone ucięcie przez async images.normalize_image:
   pełny JPEG644947B vs65536Bprefix, missingEOI/OSError, hashprefixZGODNY zrewizjąAI.
   Rozdzielczość2048 sama nie jest wskazaną przyczyną; małe testy i wcześniejszy
@@ -20,7 +37,8 @@ Backlog zadań ze statusami.
 - [x] Po retry5d5b82f: job succeeded/1, wynik incomplete/unreadable+missing_required_fields,
   errornull; UI nie daje PonówAI dla tego stanu. Po zgodzie uzupełnić jawnyretry i powód,
   bez automatycznegoAI/reuploadu lub fałszywej obietnicy odczytu. Zaimplementowane d9a5797.
-- [ ] Potwierdzić wynik1jawnegoPonówAI po d9a5797 (pełnyobraz), bez reuploadu.
+- [x] Potwierdzić wynik jawnego PonówAI po d9a5797: `invalid_model_output`, a nie
+  poprawny odczyt. Osobna zatwierdzona diagnostyka wskazała `total/invalid_amount`.
 - [ ] ReviewMinor: wzmocnić test overlapstdin/stdout wymuszeniem wyjścia większego
   od typowej pojemnościOSpipe; istniejące dużeJPEG/chunk/pidreap regresjePASS.
 - [ ] Zdiagnozowany DELETE500/ForeignKeyViolation po dodaniu trwałychjobów/rewizji:
@@ -196,8 +214,18 @@ Statusy: `[ ]` pending, `[~]` in progress, `[x]` done, `[-]` cancelled
   uzgodnienie historycznych transferów i niedublowana integracja z prognozą.
 - [x] Podgląd59 rat Q7 z oryginalnego PDF, walidacja arytmetyki i kandydat pierwszej
   płatności; źródła i właścicielska księga/audyt bez zmian (wyłącznie READ ONLY).
+- [x] Porównanie obu PDF Q7 z folderu użytkownika: kontrola118 wierszy, zgodności
+  umowy/rachunku i terminów. Spadek kapitału zgodny z nadpłatą, obniżona rata bez
+  skrócenia okresu; sam plan nie dowodzi daty i kwoty rzeczywistego przelewu.
+- [x] Po uzupełnieniu przez użytkownika: odtworzono ciąg kapitału od kwoty początkowej
+  przez ratę wrześniową, dwie nadpłaty i ratę październikową; oba PDF zgodne.
+  Podział wrześniowej raty jest wyliczony, daty z OCR interpretowane — nie bankowe
+  potwierdzenie rozksięgowania. Nadal trzeba odszukać istniejące operacje bez duplikacji.
 - [ ] Po osobnej zgodzie: zapisać umowę,59 rat i jawny link pierwszej płatności;
   bez duplikowania przelewu, korekty starych odsetek lub automatycznego cashflow.
+  Zgoda użytkownika jest warunkowa: uwzględnić zmiany harmonogramu i nadpłatę.
+  Oba dokumenty już porównane; przed zapisem zaprojektować wersje harmonogramu
+  oraz odrębną spłatę kapitału. Potwierdzić rzeczywisty transfer nadpłaty bez duplikacji.
 - [ ] Rozszerzenie na kartę Velo i Allegro Pay (również oprocentowane raty).
 - [ ] Pożyczki rodzinne: umowy i spłaty, bez zamiany na darowiznę automatycznie.
 - [ ] Goodie: oczekujący/zatwierdzony/wypłacony, brak podwójnego przychodu;

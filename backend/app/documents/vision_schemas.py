@@ -10,6 +10,14 @@ from app.documents.review_schemas import ReviewDocumentType, ReviewFields, Revie
 VisionWarning = Literal["unreadable", "missing_required_fields", "unsupported_document"]
 _ISO_DATE_PATTERN = r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
 _DATE_DESCRIPTION = "Valid calendar date in YYYY-MM-DD format, or null if absent or uncertain."
+_TOTAL_PATTERN = r"^(?:[1-9][0-9]*(?:\.[0-9]{1,2})?|0\.(?:[1-9][0-9]?|0[1-9]))$"
+_TOTAL_DESCRIPTION = (
+    "Positive canonical decimal string, e.g. 1 or 1234.56, using ASCII digits with an "
+    "optional decimal point followed by one or two fractional digits; no grouping, "
+    "currency text, signs or exponent. Transcribe the printed total without calculation "
+    "or rounding; return null for ambiguous separators or if the total is absent, "
+    "unreadable, ambiguous or not representable in this format."
+)
 
 
 class VisionFields(BaseModel):
@@ -25,7 +33,9 @@ class VisionFields(BaseModel):
     due_date: str | None = Field(..., pattern=_ISO_DATE_PATTERN, description=_DATE_DESCRIPTION)
     description: str | None = Field(..., max_length=2000)
     payee_iban: str | None = Field(..., max_length=34)
-    total: str | None = Field(..., max_length=32)
+    total: str | None = Field(
+        ..., max_length=32, pattern=_TOTAL_PATTERN, description=_TOTAL_DESCRIPTION
+    )
     currency: Literal["PLN", "EUR", "USD"] | None = Field(...)
 
 

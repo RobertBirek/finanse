@@ -2,6 +2,105 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-02 — ZAKOŃCZONA lokalna poprawka kontraktu kwoty
+
+- Użytkownik zatwierdził trzy punkty: ścisły format typu `1234.56` w schemacie
+  i instrukcji AI, zachowanie walidacji dodatniej/dokładnej/ograniczonej kwoty oraz
+  testy syntetyczne. Zgoda dotyczy implementacji lokalnej, bez AI/OCR/deployu.
+- Plan `docs/superpowers/plans/2026-11-02-vision-amount-contract.md`; inline na
+  istniejącym linked worktree, BASE578b047. Produkcja pozostaje d9a5797.
+- Zmieniono wyłącznie kontrakt `VisionFields.total` i developer prompt adaptera.
+  Wzorzec ASCII dopuszcza dodatnie kwoty całkowite i 1–2 miejsca, w tym 0.01/0.1/0.10;
+  zero, znaki, grupowanie, przecinek, exponent i nadmiar miejsc odpadają. `null`
+  pozostaje niekompletnym review; bez naprawiania wartości AI, liczenia lub rounding.
+- `to_minor_units` i `ReviewFields` niezmienione; dotychczasowy limit sprawdzany
+  semantycznie. SDK retry, błędy, zadania, quota, ręczny review bez zmian.
+- Baseline28PASS; właściwy RED27fail/39pass (brak wzorca i walidacji w schemacie),
+  GREEN94PASS z dotychczasowymi testami adaptera. Nowy plik testów obejmuje outbound
+  schema/prompt, null, formaty, najmniejszą kwotę i dokładny górny limit/cent ponad,
+  JSON numbers/bool, brak ponowień i wycieku wejść w logach/tracebacku.
+- Pierwsza próba baseline w repo `.venv` nie zebrała testów: stary SDK bez
+  openai.types.responses. Zastosowano istniejący isolated financial-document-venv,
+  bez zmiany zależności. Pierwszy test redakcji poprawiono, by jego własny literal
+  obrazu nie trafiał do tracebacku źródła testu — nie był to wyciek aplikacji.
+- `make test-db-up` nie wystartowało: 55432 zajmuje ustalony finanse-refactor-testdb.
+  Usunięto wyłącznie nieuruchomiony kontener/sieć utworzone przez tę próbę. Pełny
+  gate korzysta z istniejącego, sprawdzanego helpera poprzednich wydań: finanse_test
+  wyłącznie localhost55432, provider keys wyczyszczone, brak równoległych pytest.
+- Pierwszy pełny sześciostopniowy gate PASS: 1146 backend (8 deselected proxy,
+  10 warnings), 335 frontend, lint/types obu. Dokładny manifest źródeł zachowany
+  w pre-review-source-proof.json. Scoped reviewer ses_e61dbe8ddffe8GJTF296522lEH:
+  doprecyzować opcjonalną kropkę (przyjęte) i zakazać formatowania nawet jednoznacznej
+  drukowanej kwoty lokalnej (nie przyjęte: zakaz dotyczy naprawiania odpowiedzi AI
+  przez backend, a nie zwykłej transkrypcji polskiej faktury). Kontrakt modelu nadal
+  odrzuca przecinek; instrukcja jawnie wymaga null dla niejednoznacznych separatorów.
+  Ryzyko błędnej interpretacji obrazu nadal ogranicza ręczne zatwierdzenie, nie sam wzorzec.
+- Poprawki po review: dwa outbound testy RED → GREEN95focused, lint PASS. Końcowy
+  sześciostopniowy gate **sh_19e3e7b2f0015oswfqduN32RQX** PASS: 1147 backend
+  (8 proxy deselected, 10 warnings), 335 frontend, lint/types obu. Wyniki after-review/
+  i dokładny gate-source-proof.json odczytane, wszystkie hashe źródeł nadal zgodne.
+  Bez drugiego review; brak deferred minors. Dowody i review-summary.md:
+  /tmp/opencode/vision-amount-contract-20261102/.
+- Lokalny commit obejmuje wyłącznie dwa pliki adaptera/schematu, nowy test, plan
+  i własne wpisy CHANGELOG/TASKS/JOURNAL (w tym zapis poprzedniej diagnostyki).
+  Unrelated Velo/Q7 pozostają poza commitem. Bez push, merge na main lub deployu.
+- Nie ponawiać prywatnej faktury. Nie twierdzić, że schemat dowodzi odczytu konkretnej
+  wartości; diagnoza zachowała jedynie amount/total/invalid_amount. Przed przyszłym
+  wydaniem: osobny odbiór prompt/schema wersji i policy fingerprint, bez replay jobów.
+
+## 2026-11-02 — ZAKOŃCZONA jedna zatwierdzona diagnostyka: total/invalid_amount
+
+- Użytkownik odpowiedział „tak” na jedną dodatkową wysyłkę istniejącego dokumentu
+  do AI i raport wyłącznie etap/pole/typ, bez zachowania wartości faktury.
+- Dokładnie 1 żądanie: `stage=amount`, `field=total`, `type=invalid_amount`,
+  `code=invalid_model_output`, `accepted=false`. VisionPayload JSON przeszedł;
+  błąd pochodzi z `to_minor_units`, przed konwersją do ReviewFields. Nie ustalono
+  konkretnej postaci kwoty; brak podstaw do twierdzenia o przecinku/zerze/exponent.
+  Wynik dotyczy tej próby, nie dowodzi przyczyny dwóch wcześniejszych odpowiedzi.
+- Izolowana instrumentacja istniejącego adaptera na produkcyjnym d9a5797, bez zmian
+  plików aplikacji, obrazów, konfiguracji, schematu lub policy. Normalizacja przez
+  rzeczywiste async API, oryginał powiązany z udostępnionym JPEG przez skrót w pamięci.
+- Zastosowano admission/policy locks, aktywnego właściciela i zablokowany dokument,
+  ponowną kontrolę aktualnej rewizji/sha/MIME/braku aktywnych zadań. Przed HTTP:
+  atomowy limit użycia, trwały jednorazowy FinanceCommandReceipt i audyt. Transport
+  dopuszczał maks. 1 POST /v1/responses, SDK bez retry, lokalny znacznik blokuje replay.
+- Świadomy wyjątek operacyjny: to diagnostyka w audycie/usage, NIE nowy worker job
+  ani rewizja ekstrakcji. Utworzenie zadania mogłoby uruchomić recovery/ponowienie
+  lub zastąpić bieżący review. Modelowe wartości odrzucono, brak zapisu odpowiedzi.
+- Offline: 11 syntetycznych testów redakcji/etapów/jednego żądania/prywatnego wyjątku
+  PASS. Scoped review ses_e620d30ecffe2W7BH2wCrjexPJ PASS po zamknięciu TOCTOU,
+  completion audit dla nieoczekiwanych błędów i wyłączeniu logowania również na import.
+  Dokładne hashe skryptów oraz produkcyjne OCI/imageIDs sprawdzone przed wykonaniem.
+- Read-only przed/po: oryginał poprawny, metadane dokumentu/revizji/jobów bez zmian;
+  usage_delta=1, receipt_delta=1, reservation_audit_delta=1, completion_audit_delta=1.
+  Dowody: /tmp/opencode/vision-once-20261102/{result,post-verification,operations-proof}.json,
+  operations-review.md, offline-tests.log. NIE uruchamiać run_once.py ponownie.
+- Nie wdrożono poprawki i nie twierdzić, że dokument został odczytany. Następny krok:
+  uzgodnić kontrakt kwoty i jego testy, bez wyłączenia walidacji lub kolejnej próby AI.
+  Usuwanie dokumentów pozostaje oddzielnym zadaniem; unrelated Velo/Q7 zachowane.
+
+## 2026-11-02 — Po pełnym obrazie: invalid_model_output, dokładne pole nieznane
+
+- Userpodaje „AI zwróciło niepoprawne dane”. Read-only po20:08:59Z:
+  dwa visionjoby failed/invalid_model_output/1attempt każdy, revisionsincomplete;
+  logger20:11:16 i20:11:58UTC: tylko stałe „output did not match the schema”.
+  Brak uncaughtValidationError/providererror w bezpiecznymwyciągu. Jeden późniejszy
+  local_ocrjob succeeded/1; nie czytano treści OCR i nie utożsamiać go zvisionready.
+- Currentvision_client:117–127 ma jedną granicę dla VisionPayloadJSON/Pydantic,
+  to_minor_units i ReviewFields semantyki. Log nie rozróżnia etapu/pola, a błędny
+  response nie jest utrwalany, więc nie można retrospektywnie wskazać przyczyny
+  konkretnej odmowy. To NIE dowód kolejnego błędu daty lub przecinka w kwocie.
+- Wschemacie total jeststringmax32, ale semantyka wymaga kanonicznejkwoty dodatniej
+  <=2miejsca i bez exponent; ISOregex nie gwarantuje realnejdaty. Są to możliwe klasy,
+  nie ustalonyrootcause aktualnejpróby. Nie proponować kolejnej zmiany walidacji w ciemno.
+- Dotychczasowe kolejne release'y wykazały luki granic/pipeline; teraz potrzebny
+  całościowy odbiór kontraktu model→adapter→review, z diagnostyką zamkniętych nazwpól/
+  typów i etapów, bez wartości/input/response/exceptions. Nie wyłączać walidacji.
+- Nie wykonano nowegoAI/OCR, uploadu, DBwrites lub zmian runtime. Przed ewentualną
+  jedną kontrolowaną próbą AI z rzeczywistym dokumentem wymagać osobnej zgody,
+  zachować domenoweauth/policy/quota/usage/audit/jobflow; nie odtwarzać starychjobów
+  ani nie wysyłać prywatnegoJPEG z arbitralnegoskryptu obchodzącego serwisy.
+
 ## 2026-11-02 — ZAKOŃCZONE: pełny strumień d9a5797 na produkcji
 
 - User„tak” na asyncprefixbug+PonówAI. Plan complete-image-stream2026-11-02,
@@ -1269,6 +1368,106 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   PDF wymagają czegoś więcej niż SHA. To projekt, nie wdrożenie lub zgoda na księgowanie.
 - Bez zmian produktu/DB/deployu. Następny krok: uzgodnić priorytet faktury→płatności
   wobec dalszego Q7 i przygotować wspólny projekt, zamiast osobnych importerów.
+
+## 2026-10-28 — Nowe wyciągi: częściowe odblokowanie dowodów Velo i Q7
+
+- Użytkownik ponownie udostępnił folder po dodaniu wyciągów. Pobrano46 widocznych
+  plików (42 PDF/4 CSV;44 unikalne SHA) do nowego prywatnego katalogu, bez nadpisania
+  poprzednich oryginałów. Ekstrakcja lokalna pypdf, bez zewnętrznej usługi OCR.
+- VeloKonto07.07–30.09:154 pozycje, każdy most salda i sumy WN/MA PASS. Daty/kwoty/
+  salda wszystkich pozycji odtworzone także przez Ghostscript. Pierwszy parser
+  podsumowania zakładał etykietę przed każdą liczbą; PDF ma trzy etykiety i trzy liczby
+  osobno. Poprawiono wyłącznie prywatny odczyt, wszystkie jawne kontrole PASS.
+- Karta Velo18.05–17.10: nagłówki mają poprawny ciąg;4/5 surowych sum zgodne.
+  Cykl do17.09 ma5 powtórzonych pełnych wierszy w sekcjach dwóch kart; render obu
+  stron potwierdza obecność w samym wydruku. Jednokrotne liczenie daje nagłówek,
+  ale to hipoteza, NIE reguła importu. Inne cykle wymagają zachowania powtórzeń.
+- Równoległe przeglądy: ING26 podsumowań/ciągi sald PASS (nie suma każdej pozycji),
+  Citi235 pozycji/4 mosty PASS, Revolut128 nowych wierszy; stare5/5 to identyczny
+  multiset pełnych10 pól w nowszych CSV. Wyniki i skrypty sprawdzone przez głównego
+  agenta; hash46 oryginałów zgodny po analizie. Kwoty/ID wyłącznie poza Git.
+- Zestawienie Velo i ING wskazuje DOKŁADNIE ten sam pełny źródłowy rachunek kredytu,
+  a suma obu wpływów odpowiada podanej kwocie początkowej Q7. To nie prowizja z samej
+  różnicy! W zachowanym snapshot27.10 wypłata była w całości do Velo, a wpływ ING
+  pochodził z Gotówki; nie korygowano źródeł/odbiorców ani nie dodano przychodu.
+- Wrzesień potwierdza ratę i pierwszą nadpłatę z jawnym numerem umowy. Techniczny
+  rachunek nadpłaty inny niż rachunek uruchomienia. W snapshot są już wszystkie4
+  wpłaty i koszt odsetek wrześniowych; nie importować ani nie księgować ich ponownie.
+- Porównanie do snapshot27.10 NIE jest świeżym odczytem produkcji. Rozbieżności
+  lipiec/sierpień i nowy zakup na poprzedniej karcie opisano prywatnie; nadal brak
+  październikowego RACHUNKU, bankowego podziału rat i zatwierdzonego mapowania.
+  Nie mieszać karty do17.10 z rachunkiem. NO IMPORT / NO AUTO CORRECTIONS utrzymany.
+- Bez połączeń do DB, zmian kodu, testów produktu, uploadu do aplikacji, deployu lub
+  migracji. Źródła/skrypty/raporty0700/0600: `/tmp/opencode/statements-review-20261028/`,
+  trwała kopia z manifestem `/opt/finanse/webapp/maintenance/statements-review-20261028/`.
+  Raport: `docs/audits/2026-10-28-additional-statements-review.md`.
+- Następnie: historia rachunku01–28.10 (minimum01–06.10 i przez15.10 dla Q7), osobny
+  projekt wersji planów/nadpłat oraz uzgodnienie wypłaty bez dublowania istniejących
+  wpłat/odsetek. Jakiekolwiek korekty historii wymagają świeżego stanu i osobnej zgody.
+
+## 2026-10-28 — Q7: użytkownik podał wpłaty i kwotę początkową
+
+- Użytkownik wkleił cztery operacje: dwie raty i dwie częściowe spłaty oraz podał
+  pierwotną kwotę kredytu. Daty OCR odczytano jako15.09,24.09,05.10,15.10.2026;
+  to interpretacja tekstu i kontekstu, nie niezależne potwierdzenie dat bankowych.
+- Offline w całkowitych groszach uzgodniono kapitał początkowy z oboma planami
+  i saldem planowanym po racie15.10. Wszystkie trzy mosty PASS co do grosza.
+  Warunki: kwota początkowa oznacza kapitał, nadpłaty pomniejszają w całości kapitał,
+  brak nieujawnionych ruchów/kapitalizacji między tymi zdarzeniami.
+- Podział wrześniowej raty wynika wstecz z mostu kapitału; pozostałość to odsetki
+  tylko przy braku opłat/innych składników. Nie traktować wyliczenia jako bankowego
+  potwierdzenia rozksięgowania i nie korygować automatycznie historii.
+- Plan24.09 jest już PO pierwszej nadpłacie; plan05.10 PO drugiej. Wrześniowa
+  rata nie występuje w żadnym z tych dwóch zestawów59 rat; zachować ją odrębnie.
+- Prywatne kwoty/założenia i skrypt: `/tmp/opencode/q7-payment-bridge-20261028/`;
+  trwały pakiet0700/0600 i manifest w
+  `/opt/finanse/webapp/maintenance/q7-payment-bridge-20261028/`.
+- Bez odczytu/mutacji PostgreSQL. Brak dopasowania nowych wpłat do transakcji księgi,
+  importów, nowych linków lub zapisu harmonogramów. Kolejny krok: odszukać istniejące
+  operacje i przygotować wersjonowanie planu/odrębne nadpłaty do zatwierdzenia.
+
+## 2026-10-28 — Q7: wcześniejszy PDF i porównanie wersji planu
+
+- Na prośbę użytkownika odczytano folder Drive i pobrano tylko dwa harmonogramy.
+  Wcześniejszy obowiązuje od24.09 (pismo25.09), późniejszy od05.10 (pismo06.10).
+  Umowa i rachunek spłaty zgodne. Późniejszy PDF ma ten sam SHA co zachowany wcześniej.
+- Każdy dokument zawiera59 rat; numery i wszystkie terminy identyczne. Kapitał
+  objęty planem zmniejszył się, rata jest niższa, data końca nie uległa zmianie.
+  Wniosek: efekt zgodny z nadpłatą obniżającą ratę, a nie skróceniem okresu.
+- Kwoty przeliczono Decimal→grosze. Kontrola każdego składnika/sumy/mostu kapitału
+  do zera PASS; niezależny tokenizer z ponownej ekstrakcji pypdf potwierdził118 wierszy.
+  Początkowo niezależny filtr złapał zdanie „Na [data] odsetki…”; sprawdzanie numeru
+  raty usunęło przyczynę. Nie zgadywano ani nie korygowano żadnych danych źródłowych.
+- Nie uznawać różnicy kapitałów automatycznie za potwierdzony przelew ani daty
+  obowiązywania planu za datę nadpłaty. Poprzedni snapshot24.10 zawiera hashe
+  transakcji, nie pełne postingi, więc nie pozwala odnaleźć transferu nadpłaty.
+  Różnica odsetek jest planowana/warunkowa, nie gwarantowaną oszczędnością.
+- Starszą wersję zachować historycznie (do04.10), późniejszą od05.10; nie sumować
+  obu zestawów jako118 należnych rat. Nadpłata jest odrębną rzeczywistą spłatą
+  kapitału, nie przyszłą ratą/kosztem. Nie zakładać braku dalszych zmian po05.10.
+- Prywatny komplet źródeł, SHA, porównanie wszystkich wierszy i kontrola:
+  `/tmp/opencode/q7-comparison-20261028/`; trwała kopia0700/0600 wraz z manifestem
+  `/opt/finanse/webapp/maintenance/q7-comparison-20261028/`. Kwoty/ID poza Git.
+- Bez połączeń do PostgreSQL, importu, mutacji aplikacji, migracji lub deployu.
+  Następnie potwierdzić datę/transfer nadpłaty i zaprojektować wersjonowanie przed
+  zapisem planu; warunkowa zgoda użytkownika nie rozszerza się na korekty historii.
+
+## 2026-10-28 — Q7: warunkowa zgoda, nadpłata i zmiany harmonogramu
+
+- Użytkownik zaakceptował propozycję zapisu, ale uzależnił ją od uwzględnienia zmiany
+  harmonogramu i swojej nadpłaty. Nie traktować tego jako bezwarunkowej zgody na import
+  starego PDF jako aktualnego planu. Konto/umowa/raty/link nadal niezapisane.
+- Aktualny pierwszy slice nie obsługuje wersji harmonogramów ani nadpłat (jeden
+  transfer do jednej raty, bez przekroczenia jej kwoty). Nie obchodzić tego poprzez
+  zawyżenie raty, dopisanie fałszywej raty lub oznaczenie nadpłaty jako kosztu.
+- Trzeba ustalić, czy nadpłata jest już wykonana, jej datę/kwotę i dostępność nowego
+  harmonogramu. Starszy PDF jest planem obowiązującym od wskazanej w nim daty,
+  nie dowodem aktualnego kapitału po nieudokumentowanej nadpłacie.
+- Kierunek dalszego projektu: wersje planu z datą obowiązywania, zachowane dawne
+  terminy i linki realnych płatności, nadpłata jako osobna spłata kapitału, ewentualne
+  opłaty osobno. Symulacja skrócenia okresu/niższej raty nie zastępuje planu bankowego.
+- Różnicy starej księgi odpowiadającej odsetkom nie nazywać nadpłatą. Brak nowych
+  operacji na PostgreSQL, importów lub zmian aplikacji przy tej zmianie zakresu.
 
 ## 2026-10-28 — Podgląd harmonogramu Q7, bez zapisu aplikacyjnego
 
