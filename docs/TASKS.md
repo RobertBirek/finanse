@@ -16,9 +16,16 @@ Backlog zadań ze statusami.
   335frontend/lint/types PASS, dokładny manifest źródeł niezmieniony.
   Bez AI/OCR/deployu; konkretna postać błędnej wartości
   z diagnozy nieznana. Plan: `docs/superpowers/plans/2026-11-02-vision-amount-contract.md`.
-- [ ] Osobno zatwierdzić i odebrać wydanie kontraktu kwoty; ustalić metadane wersji
-  prompt/schema i zgodność policy fingerprint. Nie deployować lub ponawiać AI w ramach
-  zakończonej implementacji lokalnej. Produkcja pozostaje d9a5797.
+- [x] Przygotowanie wydania d7a2432 zatwierdzone osobno, bez deployu/AI: źródła i gate
+  sprawdzone, świeży build/E2E93PASS+1skip oraz backup9832d2c6/installed restore PASS.
+  Pakiet zbudowany/digest-pinned,202backendfilesEachImage zgodneGit; exact image
+  smoke21casesEachBackendWorker PASS/networknone/zeroAI/DB. Render bazowy zgodny,
+  nowe etykiety prompt/schema i CAS policy wyłącznie nieaktywna propozycja. Stan
+  produkcji bez zmian; operations review PASS. Raport:
+  `docs/audits/2026-11-02-vision-amount-release.md`.
+- [ ] Osobno zatwierdzić wdrożenie dokładnych obrazów/SHA, zmianę etykiet konfiguracji
+  i audytowaną zmianę policy z CAS oraz rollbackiem kontraktu. Bez automatycznego AI
+  lub replay starych zadań. Produkcja pozostaje d9a5797.
 - [x] Późniejsza jawna próba lokalnegoOCR succeeded/1; odnotowany wyłącznie status,
   bez czytania tekstu/faktury lub twierdzenia o poprawności odczytu.
 - [x] Lokalnyqualityprobe bezAI: potwierdzone ucięcie przez async images.normalize_image:

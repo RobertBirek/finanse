@@ -2,6 +2,22 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Prepared] — 2026-11-02 — Pakiet kontraktu kwoty, bez wdrożenia
+
+### Changed
+- Osobna zgoda użytkownika dotyczy wyłącznie przygotowania `d7a2432`, backup/restore
+  oraz kontroli wersji i polityki AI. Produkcja pozostaje d9a5797, bez AI/OCR.
+- Końcowy gate i tożsamość źródeł ponownie sprawdzone; świeży build/E2E93PASS+1skip.
+  Backup9832d2c6 i installed restore tego samego snapshotu success/0; bez ponawiania usług.
+- Nieaktywny pakiet d7a2432 zbudowany i digest-pinned; 202 pliki backendu w obu
+  obrazach zgodne ze źródłami. Po 21 syntetycznych przypadków na dokładnym backend/
+  worker PASS, networknone/zeroAI/zeroDB. Bazowy render nie zmienia konfiguracji.
+- Oddzielny overlay proponuje promptvision-openai-responses-2/schema vision-2;
+  zmienia wyłącznie dwie etykiety backend/worker, wymaga osobnej zgody na config/CAS
+  policy przy przyszłym wydaniu. Read-only stan danych/originals/containers/policy
+  niezmieniony. Operations review PASS do przedstawienia zgody, nie do samoczynnego apply.
+- Raport: `docs/audits/2026-11-02-vision-amount-release.md`. Bez wdrożenia lub AI.
+
 ## [Unreleased] — 2026-11-02 — Ścisły kontrakt kwoty w odczycie obrazu
 
 ### Fixed

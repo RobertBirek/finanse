@@ -2,6 +2,46 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-02 — ZAKOŃCZONE: przygotowanie d7a2432, nie wdrożenie
+
+- User „tak” na przygotowanie pakietu/backup/restore/kontrolę wersji polityki;
+  jawnie bez wdrażania lub AI. Kandydat d7a2432c69a203068d3f1298190b1118f6e0073b,
+  produkcja d9a5797a8de03f8868124e179d71a799c9c031ac. Nie tworzyć zgody apply.
+- Istniejący final6gate1147backend/335frontend/lint/types i każdy sourceSHA zgodne;
+  nie powtarzać kolejnych 25min testów na tych samych źródłach. Świeży frontendbuild/
+  E2E93PASS+1expectedskip z source/dist provenance.
+- Installed backup9832d2c6 i restore tego samego snapshotu success0. Helper dowodu
+  początkowo nie rozpoznał uppercase Snapshot w restorelog; dowód odtworzono z już
+  zakończonych prywatnych journalów, parser poprawiony, usług nie ponawiano/resetowano.
+- Read-only preflight: aktywne obrazy zgodne z active-release, brak aktywnych document
+  jobs; policy enabled/epoch2 i fingerprint zgodny z settings. Obecne metadane:
+  prompt vision-openai-responses-1, schema vision-1. Ich zmiana wymaga osobnego overlay
+  i kontrolowanego CAS disable → rollout → enable; nie robić tego podczas prepare.
+- Prepare-only wrapper używa poprzednio odebranego immutable release helpera z
+  counted replacement poprzedniego SHA i własnym ROOT. 10offlineguardów+syntax PASS;
+  nie posiada CLI apply/finalize. Budowa **sh_19e5ecdab001Ybr7cTBMrtXqF9** PASS:
+  pakiet /opt/finanse/webapp/releases/d7a2432,202backendfilesEachImage zgodneGit,
+  OCIrevision i immutable digests. Bazowy render sameconfig/schema/policy.
+- Dowody /tmp/opencode/vision-amount-release-20261102/; raport
+  docs/audits/2026-11-02-vision-amount-release.md. Exact backend i worker smoke:
+  po21syntheticcases(7valid13invalid1null) PASS, netnone/nonroot/zeroAI/DB. Oba obrazy
+  ten sam digest18aaf98a33235875415164ee109f753ad08dfb847a7ed47b6ef93ebe1358f195.
+- Oddzielny compose.vision-contract.yaml proponuje vision-openai-responses-2/vision-2
+  backend+worker only. Renderdiff ograniczony do tych dwóch etykiet; HMAC bez rawconfig.
+  Proposed fingerprint różny od obecnego, obliczony bezAI/DBwrites. prepared.json
+  jawnie base_immutable_images_only/future_policy_change_required/deploy_authorizedfalse.
+- Read-only final_check PASS: active-release/app+dataIDs/settings/schema/allrows/originals/
+  policy+audits bez zmian. Nie uruchomiono HTTP smoke/authaudit na produkcji.
+- Operations review ses_e619ea852ffepxqm1yhCDfEndA PASS do przedstawienia zgody:
+  Critical/Important brak. Minor odroczony: odziedziczony napis diagnostic w logu;
+  checklist raportu zaktualizowany. Nie oceniano wykonania rolloutu, dostawcyAI lub
+  poprawności historycznej faktury — brak tych działań, nie twierdzić, że zweryfikowane.
+- Następny krok: poprosić o osobną zgodę na exactd7a2432 + dwie etykiety config oraz
+  audytowane CASdisable2→3, coherentrollout, CASenable3→4 (wyłącznie jeśli brakdrift).
+  Rollback: policyoff/CAS, oldimages+oldlabels, CASenableoldfingerprint przy nowym epoch;
+  nigdy reset epoch, DBrestore do produkcji lub replay. Przed apply odświeżyć preflight
+  i backup wg procedury. Nie zmieniać polityki ani active-release w ramach przygotowania.
+
 ## 2026-11-02 — ZAKOŃCZONA lokalna poprawka kontraktu kwoty
 
 - Użytkownik zatwierdził trzy punkty: ścisły format typu `1234.56` w schemacie
