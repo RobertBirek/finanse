@@ -2,11 +2,11 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
-## 2026-11-02 — Poprawka dat vision5d5b82f odebrana, pakiet w przygotowaniu
+## 2026-11-02 — ZAKOŃCZONE: walidacja dat vision5d5b82f na produkcji
 
 - User„tak” na ISO|null i bezpieczne błędy po udanym uploadzie. Plan
   docs/superpowers/plans/2026-11-02-vision-date-validation.md, ledger/dowody
-  /tmp/opencode/vision-date-fix-20261102/. Produkcja45c8c2d, jeszcze bez nowego deployu.
+  /tmp/opencode/vision-date-fix-20261102/. Produkcja5d5b82f, wydanie zakończone.
 - TDD11backend/5frontendRED→36backend47frontendGREEN, lint/typesPASS; source review
   ses_e629a50a9ffe0pRTtWZa6IUJyI PASS bez findings. Adapter/client/worker i UI bez
   provider/DB wywołań produkcyjnych lub replay prywatnej faktury.
@@ -21,10 +21,17 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Preparepakietu **sh_19d823974001wMMTBZburT9cP3** PASS200backendfileseachimage,
   sameconfiguration/runtime/schema/policy. Exactimage date-smoke8syntheticMockcasesPASS
   i diagnostic-smoke4HTTPcodesPASS, noAI/DB/privatefile/network. Pytanie o zgodę
-  exact5d5b82f zadane, BRAKodpowiedzi. Nieapply/nieponawiaćprepare/gate. Produkcja45c8c2d.
+  exact5d5b82f: użytkownik odpowiedział „potwierdzam”. Zgoda zapisana, świeże preapply
+  baseline/configHMAC/activeimages/dataIDs/queuesPASS. Apply **sh_19d84c02100136XEOMUmhTeRMA**
+  PASS, verified.json schema/policyunchanged. Browser+5minfinalize
+  **sh_19d852f12001gudSNmwkg0DMJa** PASS10próbek/browser375/1440. Metadaneatomowo
+  sfinalizowane2026-11-02T18:34:03Z; świeżeHTTPS200/żyweimageIDs+OCIrevision zgodne
+  zactive-releasePASS. Można poprosić usera o jawnePonówAI przy istniejącymdokumencie.
+  Nie ponawiaćdeployu/gate; starej faktury nie odczytanoAI ponownie. Main nadal1865d90;
+  ta zgoda dotyczy deployu dokładnegoSHA, bez nowego merge/push.
 - Backup8d9d72db/installedrestore success0,16offlineguardPASS; scopedoperationsreview
-  ses_e6296b4b5ffeDoO6JnJEvMa6IB warunkowoApproved. Po gate commit/exactpackage/smoke,
-  potem ASK exactSHAapproval przedapply. Nigdy autoretry starego failedjob/dokumentu.
+  ses_e6296b4b5ffeDoO6JnJEvMa6IB warunkowoApproved; warunki proofów/exactSHAapproval
+  zostały spełnione przedapply. Nigdy autoretry starego failedjob/dokumentu.
 - Wersje/policykonfiguracji bez zmian (doprecyzowanie dotychczasowego ISO kontraktu),
   bez migracji/modelchange/AIcalls/backfillu. Ryzyko drobnej granularności wersji
   odnotowane; dokładneSHA/obrazy przypinane metadanymi. Velo/Q7dirty zachować.

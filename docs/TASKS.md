@@ -8,14 +8,17 @@ Backlog zadań ze statusami.
   ReviewFields, sale_date/value_error wywołuje nieobsłużony ValidationError poza
   bezpieczną granicą vision_client, recovery kończy attempts_exhausted po2próbach.
   Logi czytane tylko jako kody/pola/klasy, lokalna syntetyczna reprodukcja bezAI.
-- [~] Po zgodzie: kontrakt datISO/null i bezpieczna obsługa całej konwersji odpowiedzi,
+- [x] Po zgodzie: kontrakt datISO/null i bezpieczna obsługa całej konwersji odpowiedzi,
   bez rawValidationError/inputs wlogu oraz mylącego komunikatu braku dostępnościAI;
   testy syntetyczne regresji bez ponownej wysyłki prywatnej faktury doAI.
   Zatwierdzone; focused36backend51frontend/lint/typesPASS, niezależnyreviewPASS,
   16guardów+backup8d9d72db/restorePASS. Domknięty jawnyretry historycznej failedrewizji,
   bez replaynawejściu. Końcowy1070backend/325frontend/lint/types/build/93E2E+1skipPASS,
   source5d5b82f zapisany. Dokładny pakiet/8syntheticdatecases/4HTTPcodesPASS;
-  pytanie o zgodę exactSHA zadane, brakodpowiedzi. Produkcja bez nowej poprawki.
+  userpotwierdził exactSHA5d5b82f. Runtimewdrożony, browser375/1440/10próbek/
+  active-release18:34:03Z PASS; żadnego automatycznego odczytu starej faktury.
+- [ ] Po wydaniu5d5b82f użytkownik jawnie uruchamia PonówAI przy istniejącym dokumencie;
+  potwierdzić wynik bez reuploadu lub ponowienia w imieniu użytkownika.
 - [x] Odtworzyć błąd na nowym JPEG udostępnionym przez użytkownika:3809248B,
   PillowMPO/2frames/4032x3024,primaryload+verifyPASS, dokładny produkcyjny parser
   odrzuca fmtMPO/n_frames2. Dowód offline bez AI/DB i zmiany oryginału.

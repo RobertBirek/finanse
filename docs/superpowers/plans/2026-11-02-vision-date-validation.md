@@ -34,7 +34,7 @@
 ### Task 2: Exact safe release
 **Files:** Task-owned private scripts/evidence under /tmp/opencode/vision-date-fix-20261102; docs/audits/2026-11-02-vision-date-validation.md and CHANGELOG/TASKS/JOURNAL.
 **Interfaces:** Consume exact gated Task1 SHA; reuse reviewed immutable release procedure with exact previous app45c8c2d as rollback, same config/runtime/schema/policy.
-- [ ] Fresh encrypted backup + installed isolated restore; build immutable matching app images, compare complete Compose configuration in memory (persist whole-render HMAC only), verify source/image/UI identities.
-- [ ] Exact-image network-none synthetic date contract/error/success smoke and legacy400 regression, no provider/DB/private-file use; operation procedure review and explicit exact-SHA approval before apply.
-- [ ] Apply app services only, verify HTTPS/assets/auth/read-only browser and data/policy/original/service identities; observe and finalize atomically, preserve rollback.
-- [ ] Update docs/ledger and commit; request one explicit UI `Ponów AI` only after release and user consent, never automate it or reupload/backfill the failed document.
+- [x] Fresh encrypted backup + installed isolated restore; build immutable matching app images, compare complete Compose configuration in memory (persist whole-render HMAC only), verify source/image/UI identities.
+- [x] Exact-image network-none synthetic date contract/error/success smoke and legacy400 regression, no provider/DB/private-file use; operation procedure review and explicit exact-SHA approval before apply.
+- [x] Apply app services only, verify HTTPS/assets/auth/read-only browser and data/policy/original/service identities; observe and finalize atomically, preserve rollback.
+- [x] Update docs/ledger and commit; request one explicit UI `Ponów AI` only after release and user consent, never automate it or reupload/backfill the failed document.

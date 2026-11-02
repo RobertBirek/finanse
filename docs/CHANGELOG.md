@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Unreleased] — 2026-11-02 — Bezpieczna walidacja dat wyniku AI
+## [5d5b82f] — 2026-11-02 — Bezpieczna walidacja dat wyniku AI na produkcji
 
 ### Fixed
 - Po zgodzie użytkownika doprecyzowano nullableISO kontrakt dat i objęto konwersję
@@ -12,7 +12,10 @@ Wszystkie istotne zmiany w projekcie.
 - Focused36backend/51frontend i lint/types PASS; source review bez findings,16guardów,
   backup8d9d72db/restore PASS. Kod5d5b82f: pełny1070backend/325frontend/lint/types
   i końcowybuild/93E2E+1skipPASS. Dokładny pakiet/syntheticdate/HTTPsmokePASS,
-  oczekiwanie na zgodę exactSHA; bez nowego deployu.
+  po zgodzie exactSHA wdrożone. HTTPS/assets/auth/browser375/1440 i10próbek
+  obserwacjiPASS; active-release sfinalizowany2026-11-02T18:34:03Z.
+- Bez migracji/policychange/automatycznego replay dokumentu. Oryginały i dane zachowane,
+  rollback45c8c2d dostępny. Dalszy odczyt wyłącznie jawnym PonówAI użytkownika.
   Raport: `docs/audits/2026-11-02-vision-date-validation.md`.
 
 ## [Diagnosed] — 2026-11-02 — Mylące „AI niedostępne” po udanym uploadzie

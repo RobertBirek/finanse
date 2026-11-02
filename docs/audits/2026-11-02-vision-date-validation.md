@@ -49,13 +49,13 @@ Odtworzenie syntetyczne potwierdziło tę samą granicę bez AI/DB lub prywatneg
   Pierwsze93E2E+1skip PASS zachowane; po zmianie UI uruchomiono świeżybuild/E2E i
   nowy pełny gate z manifestami niezmienionych źródeł/dist. Nie uruchamiać ich ponownie.
 - 16offlineguardów procedury wydania PASS, scoped operationsreview warunkowoApproved;
-  przedapply nadal wymagane prawdziwe proofy exactimage i zgoda exactSHA.
+  wymagane proofy exactimage i zgoda exactSHA następnie spełnione przedapply.
 - Świeży backup **8d9d72db** oraz zainstalowany restore tego samego snapshotu success/0,
   bez resetu failedcounter lub zmiany jednostek systemd.
 
 ## Stan
 
-**Pełny gate i dokładny pakiet5d5b82f PASS; oczekiwanie na zgodę exactSHA. Produkcja45c8c2d.**
+**Wydanie5d5b82f zakończone; można wykonać jawne PonówAI użytkownika.**
 Dokładny kod: `5d5b82ff34ac838a18229332cc27e3efa80553bf`,9plików źródeł/testów.
 Pełny1070backend/325frontend/Ruff/mypy/ESLint/tscPASS,8deselected/10znanychostrzeżeń.
 Końcowybuild/93E2E+1celowyskipPASS. Nie zmieniono testowanych źródeł (manifestPASS).
@@ -64,13 +64,25 @@ Cała konfiguracja/hardening/sieci/wolumeny niezmienione poza obrazami aplikacji
 ExactbackendimageID/OCIrevision5d5b82f:8syntetycznychMockTransportprzypadków datPASS,
 bez sieci/DB/AI/prywatnegopliku; terminalbezpiecznebłędy i nullable/leapdates potwierdzone.
 Osobny syntheticHTTP4kodów400PASS. Pakiet nie wywołuje ponownie starego dokumentu.
-Pytanie o zgodę na dokładny5d5b82f zadane; powiadomienie o prepare nie jest zgodą.
+Na pytanie o zgodę na dokładny5d5b82f użytkownik odpowiedział „potwierdzam”.
+Świeża kontrola preapplyPASS: aktywne obrazy/metadane, HMAC całej konfiguracji,
+wszystkie dane/schema/policy/originals i identyfikatory usług niezmienione względem
+baseline; kolejki opróżnione. Zapisano zgodę exactSHA i uruchomiono apply tylko aplikacji.
+Nie ponawiać apply; zakończono odczytową kontrolę po wdrożeniu.
+Apply zakończone: dokładne spójneobrazy/HTTPS/assets/auth i invariantsdanych/policy/
+schema/original/data-serviceIDsPASS poza4własnymi audytami401. Bez migracji lub policyop.
+Końcowy browserread-only375/1440 i5minobserwacja10próbekPASS, bez błędów/mutacji.
+Metadaneatomowo2026-11-02T18:34:03Z; świeżeHTTPS200 i dokładneimageIDs/OCIrevision
+działających usług zgodne zactive-releasePASS. Dane/schema/policy/oryginały zachowane;
+audyt zawiera wyłącznie dokładnie policzone własne odrzucenia401 smoke/przeglądarki.
+Rollback45c8c2d zachowany. Brak automatycznego odczytu dokumentu przezAI.
 Zweryfikowano aktualne bloby źródeł frontendu i hashe dist względem prawdziwego
 dowodu build/E2E; dist bez zmian pomiędzy build i E2E. Nie powtarzać tej bramki.
 Plan: `docs/superpowers/plans/2026-11-02-vision-date-validation.md`.
 Prywatne, wyłącznie syntetyczne dowody: `/tmp/opencode/vision-date-fix-20261102/`.
-Następnie pakiet exactSHA/backend+worker+frontend, synthetic network-none
-adapter smoke bez DB/provider/privatefile i legacy400smoke, exactSHAapproval przedapply.
+Wszystkie bramki exactSHA/backend+worker+frontend, synthetic network-none adapter
+smoke i legacy400smoke oraz exactSHAapproval zamknięte przedapply. Lokalny main
+pozostaje1865d90, bez nowej zgody na merge/push; źródło5d5b82f w gałęzi sesji.
 Bez migracji, policychange, backfillu, automatycznego retry lub importów.
 
 ## Decyzje
