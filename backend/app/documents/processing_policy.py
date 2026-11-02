@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit.service import log_event
 from app.config import settings
 from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
-from app.documents.models import DocumentExtractionRevision
+from app.documents.models import Document, DocumentExtractionRevision
 from app.documents.vision_config import VisionConfig, get_vision_config
 
 
@@ -23,8 +23,12 @@ async def set_vision_policy(
     enabled: bool,
     performed_by: str,
     config: VisionConfig | None = None,
+    expected_epoch: int | None = None,
 ) -> PolicySnapshot:
     policy = await db.get(DocumentVisionPolicy, 1, with_for_update=True)
+    actual_epoch = policy.epoch if policy is not None else 1
+    if expected_epoch is not None and actual_epoch != expected_epoch:
+        raise ValueError("expected_epoch_mismatch")
     if policy is None:
         policy = DocumentVisionPolicy(id=1, enabled=False, epoch=1)
         db.add(policy)
@@ -124,6 +128,13 @@ def _snapshot(policy: DocumentVisionPolicy) -> PolicySnapshot:
 
 
 async def _pause_vision_work(db: AsyncSession, *, error_code: str) -> None:
+    active_vision_documents = select(DocumentProcessingJob.document_id).where(
+        DocumentProcessingJob.kind == "vision",
+        DocumentProcessingJob.state.in_(("pending", "processing")),
+    )
+    await db.execute(
+        update(Document).where(Document.id.in_(active_vision_documents)).values(status="done")
+    )
     await db.execute(
         update(DocumentProcessingJob)
         .where(

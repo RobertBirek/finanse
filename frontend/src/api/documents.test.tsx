@@ -52,6 +52,30 @@ describe("document query polling", () => {
     vi.useRealTimers();
   });
 
+  it("does not poll a terminal vision review just because the historic document status is pending", async () => {
+    vi.useFakeTimers();
+    const get = vi.spyOn(api, "get").mockResolvedValue({
+      data: [
+        {
+          id: "document-1",
+          status: "pending",
+          processing_method: "vision",
+          local_ocr_state: null,
+          review: {
+            status: "incomplete",
+            error_code: "vision_daily_limit",
+            job_state: "failed",
+          },
+        },
+      ],
+    });
+    renderHook(() => useDocuments(), { wrapper });
+
+    await act(async () => vi.advanceTimersByTimeAsync(9_000));
+    expect(get).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
   it("does not poll a review after its request fails", async () => {
     vi.useFakeTimers();
     const get = vi.spyOn(api, "get").mockRejectedValue(new Error("offline"));

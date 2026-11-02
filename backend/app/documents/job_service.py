@@ -49,6 +49,11 @@ class JobOutcome:
     completed: bool = False
 
 
+def _terminalize_vision_document(document: Document) -> None:
+    """A finished vision path requires human review, not more technical polling."""
+    document.status = "done"
+
+
 async def _admission_lock(db: AsyncSession) -> None:
     await db.execute(text("SELECT pg_advisory_xact_lock(hashtext('document-vision-admission'))"))
 
@@ -218,6 +223,8 @@ async def claim_processing_job(
             )
             if revision is not None:
                 revision.status, revision.error_code = "incomplete", "vision_disabled"
+            if job.kind == "vision":
+                _terminalize_vision_document(document)
             return None
         if job.state == "processing" and job.lease_expires_at and job.lease_expires_at > now:
             return None
@@ -241,6 +248,8 @@ async def claim_processing_job(
         job.state, job.error_code = "failed", "attempts_exhausted"
         if revision is not None:
             revision.status, revision.error_code = "incomplete", "attempts_exhausted"
+        if job.kind == "vision":
+            _terminalize_vision_document(document)
         return None
     token = uuid.uuid4()
     job.attempt_count += 1
@@ -326,6 +335,7 @@ async def reserve_vision_call(
     if not valid:
         if (
             job
+            and document
             and revision
             and (not settings.DOCUMENT_VISION_ENABLED or not policy or not policy.enabled)
         ):
@@ -336,16 +346,19 @@ async def reserve_vision_call(
                 None,
             )
             revision.status, revision.error_code = "incomplete", "vision_disabled"
+            _terminalize_vision_document(document)
         elif (
             job
+            and document
             and revision
             and policy
             and policy.configuration_fingerprint != config.configuration_fingerprint
         ):
             job.state, job.error_code = "paused", "vision_configuration_changed"
             revision.status, revision.error_code = "incomplete", "vision_configuration_changed"
+            _terminalize_vision_document(document)
         return False
-    assert job is not None and revision is not None
+    assert job is not None and document is not None and revision is not None
     if job.call_reserved_token == claim.lease_token:
         return False
     try:
@@ -356,6 +369,7 @@ async def reserve_vision_call(
     if not reserved:
         job.state, job.error_code = "failed", "vision_daily_limit"
         revision.status, revision.error_code = "incomplete", "vision_daily_limit"
+        _terminalize_vision_document(document)
         return False
     job.call_reserved_token = claim.lease_token
     return True
@@ -413,6 +427,7 @@ async def finish_processing_job(
             )
             if revision is not None:
                 revision.status, revision.error_code = "incomplete", "configuration_missing"
+            _terminalize_vision_document(document)
             return False
         if (
             not settings.DOCUMENT_VISION_ENABLED
@@ -422,6 +437,7 @@ async def finish_processing_job(
             job.state, job.error_code = "paused", "vision_configuration_changed"
             if revision is not None:
                 revision.status, revision.error_code = "incomplete", "vision_configuration_changed"
+            _terminalize_vision_document(document)
             return False
     if revision is not None:
         latest = (
@@ -483,6 +499,8 @@ async def finish_processing_job(
         job.state, job.error_code = "failed", outcome.error_code or "processing_failed"
         if revision is not None:
             revision.status, revision.error_code = "incomplete", job.error_code
+        if claim.kind == "vision":
+            _terminalize_vision_document(document)
     return True
 
 
@@ -550,6 +568,8 @@ async def recover_processing_jobs(
             job.state, job.error_code = "failed", "attempts_exhausted"
             if revision is not None:
                 revision.status, revision.error_code = "incomplete", "attempts_exhausted"
+            if job.kind == "vision":
+                _terminalize_vision_document(document)
         else:
             job.state, job.lease_token, job.lease_expires_at = "pending", None, None
             job.next_attempt_at = now

@@ -183,5 +183,7 @@ async def test_missing_config_persists_configuration_missing_without_http(
     async with sessions() as db:
         job = await db.get(DocumentProcessingJob, job.id)
         revision = await db.get(DocumentExtractionRevision, job.revision_id)
+        document = await db.get(Document, job.document_id)
         assert (job.state, job.error_code) == ("failed", "configuration_missing")
         assert (revision.status, revision.error_code) == ("incomplete", "configuration_missing")
+        assert document.status == "done"

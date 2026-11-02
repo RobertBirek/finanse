@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import app.main  # noqa: F401 - register complete metadata for integration schema lifecycle
+from app.documents import service
 from app.documents.job_models import (
     DocumentProcessingJob,
     DocumentVisionPolicy,
@@ -172,6 +173,42 @@ async def test_usage_failure_prevents_http(test_database, monkeypatch):
         assert await reserve_vision_call(db, claim, now=now, config=_config()) is False
 
 
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_daily_limit_terminalizes_document_and_exposes_safe_summary(
+    test_database, monkeypatch
+):
+    _vision_runtime(monkeypatch)
+    from app.documents import job_service
+
+    monkeypatch.setattr(job_service.settings, "DOCUMENT_VISION_DAILY_CALL_LIMIT_PER_USER", 1)
+    sessions = async_sessionmaker(test_database, expire_on_commit=False)
+    now = datetime(2026, 10, 31, tzinfo=UTC)
+    async with sessions() as db:
+        user_id, document_id, _, job_id = await _vision_job(db)
+        db.add(DocumentVisionUsage(user_id=user_id, usage_date=now.date(), reserved_calls=1))
+        await db.commit()
+    async with sessions() as db:
+        claim = await claim_processing_job(db, job_id, now=now)
+        assert claim is not None
+        revision_id = claim.revision_id
+        assert revision_id is not None
+        assert not await reserve_vision_call(db, claim, now=now, config=_config())
+        await db.commit()
+    async with sessions() as db:
+        document = await db.get(Document, document_id)
+        revision = await db.get(DocumentExtractionRevision, revision_id)
+        job = await db.get(DocumentProcessingJob, job_id)
+        summary = (await service.document_responses(db, user_id, [document]))[0].review
+        assert document is not None and document.status == "done"
+        assert (job.state, job.error_code) == ("failed", "vision_daily_limit")
+        assert (revision.status, revision.error_code) == ("incomplete", "vision_daily_limit")
+        assert summary is not None and (summary.status, summary.error_code) == (
+            "incomplete",
+            "vision_daily_limit",
+        )
+
+
 def _vision_runtime(monkeypatch) -> None:
     from app.documents import job_service
 
@@ -213,8 +250,10 @@ async def test_timeout_after_remote_acceptance_is_bounded(test_database, monkeyp
         await db.commit()
     async with sessions() as db:
         job = await db.get(DocumentProcessingJob, job_id)
+        document = await db.get(Document, job.document_id)
         usage = (await db.execute(select(DocumentVisionUsage))).scalar_one()
         assert (job.state, job.attempt_count, usage.reserved_calls) == ("failed", 2, 2)
+        assert document.status == "done"
         assert await claim_processing_job(db, job_id, now=start.replace(hour=1, day=1)) is None
 
 
@@ -320,6 +359,7 @@ async def test_approval_during_network_leaves_financial_document_and_postings_un
         await db.commit()
     async with sessions() as db:
         after = (await db.execute(select(FinancialDocument))).scalar_one()
+        document = await db.get(Document, document_id)
         assert (
             after.id,
             after.review,
@@ -328,6 +368,7 @@ async def test_approval_during_network_leaves_financial_document_and_postings_un
             after.version,
             (await db.execute(select(Posting))).scalars().all(),
         ) == before_snapshot
+        assert document is not None and document.status == "done"
 
 
 @pytest.mark.integration
@@ -362,8 +403,10 @@ async def test_recovery_expiry_attempt_cap_is_terminal(test_database, monkeypatc
     async with sessions() as db:
         job = await db.get(DocumentProcessingJob, job_id)
         revision = await db.get(DocumentExtractionRevision, job.revision_id)
+        document = await db.get(Document, job.document_id)
         assert (job.state, job.attempt_count, job.error_code) == ("failed", 2, "attempts_exhausted")
         assert (revision.status, revision.error_code) == ("incomplete", "attempts_exhausted")
+        assert document.status == "done"
 
 
 @pytest.mark.integration

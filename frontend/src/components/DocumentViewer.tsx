@@ -58,7 +58,10 @@ export function DocumentViewer({ document: doc, onClose, onReview }: Props) {
         </div>
       </div>
       <div className="p-4">
-        {doc.status === "pending" || doc.status === "processing" ? (
+        {status.label === "Odczyt w kolejce" ||
+        status.label === "Odczytywanie" ||
+        (!doc.review &&
+          (doc.status === "pending" || doc.status === "processing")) ? (
           <p role="status" className="py-8 text-center text-gray-300">
             Dokument jest przetwarzany…
           </p>

@@ -70,59 +70,72 @@ export function DocumentList() {
           </div>
         ) : (
           <ul className="space-y-2">
-            {documents.map((doc) => (
-              <li
-                key={doc.id}
-                className="flex items-center gap-2 p-3 bg-gray-900 rounded-lg"
-              >
-                <button
-                  type="button"
-                  aria-label={`Otwórz dokument: ${doc.original_name}`}
-                  onClick={() => setViewingId(doc.id)}
-                  className="min-w-0 flex-1 rounded-lg p-2 text-left hover:bg-gray-800"
+            {documents.map((doc) => {
+              const reviewStatus = getDocumentStatus(doc);
+              const statusColor =
+                reviewStatus.tone === "danger"
+                  ? "error"
+                  : reviewStatus.tone === "success"
+                    ? "done"
+                    : reviewStatus.tone === "warning"
+                      ? "processing"
+                      : "pending";
+              return (
+                <li
+                  key={doc.id}
+                  className="flex items-center gap-2 p-3 bg-gray-900 rounded-lg"
                 >
-                  <span className="block truncate text-sm font-medium text-gray-200">
-                    {doc.original_name}
-                  </span>
-                  <span className="block text-xs text-gray-400">
-                    {formatFileSize(doc.size_bytes)} ·{" "}
-                    {new Date(doc.created_at).toLocaleDateString("pl-PL")}
-                  </span>
-                  {doc.status === "pending" && doc.next_attempt_at && (
-                    <span className="block text-xs text-yellow-300">
-                      Ponowna próba od{" "}
-                      {new Date(doc.next_attempt_at).toLocaleString("pl-PL")}{" "}
-                      (wykonano prób: {doc.attempt_count}).
+                  <button
+                    type="button"
+                    aria-label={`Otwórz dokument: ${doc.original_name}`}
+                    onClick={() => setViewingId(doc.id)}
+                    className="min-w-0 flex-1 rounded-lg p-2 text-left hover:bg-gray-800"
+                  >
+                    <span className="block truncate text-sm font-medium text-gray-200">
+                      {doc.original_name}
                     </span>
-                  )}
-                  {doc.status === "error" && (
-                    <span className="block text-xs text-red-300">
-                      Przetwarzanie zakończone błędem. Automatyczne próby
-                      zakończone.
+                    <span className="block text-xs text-gray-400">
+                      {formatFileSize(doc.size_bytes)} ·{" "}
+                      {new Date(doc.created_at).toLocaleDateString("pl-PL")}
                     </span>
-                  )}
-                </button>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[getDocumentStatus(doc).tone === "danger" ? "error" : getDocumentStatus(doc).tone === "success" ? "done" : getDocumentStatus(doc).tone === "warning" ? "processing" : "pending"]}`}
-                >
-                  {getDocumentStatus(doc).label}
-                </span>
-                <button
-                  type="button"
-                  aria-label={`Usuń dokument: ${doc.original_name}`}
-                  disabled={deleteDoc.isPending}
-                  onClick={() => {
-                    if (
-                      window.confirm(`Usunąć dokument „${doc.original_name}”?`)
-                    )
-                      deleteDoc.mutate(doc.id);
-                  }}
-                  className="min-h-11 px-2 text-sm text-red-300 rounded-lg hover:bg-gray-800 disabled:opacity-50"
-                >
-                  Usuń
-                </button>
-              </li>
-            ))}
+                    {doc.status === "pending" && doc.next_attempt_at && (
+                      <span className="block text-xs text-yellow-300">
+                        Ponowna próba od{" "}
+                        {new Date(doc.next_attempt_at).toLocaleString("pl-PL")}{" "}
+                        (wykonano prób: {doc.attempt_count}).
+                      </span>
+                    )}
+                    {doc.status === "error" && (
+                      <span className="block text-xs text-red-300">
+                        Przetwarzanie zakończone błędem. Automatyczne próby
+                        zakończone.
+                      </span>
+                    )}
+                  </button>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[statusColor]}`}
+                  >
+                    {reviewStatus.label}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Usuń dokument: ${doc.original_name}`}
+                    disabled={deleteDoc.isPending}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Usunąć dokument „${doc.original_name}”?`,
+                        )
+                      )
+                        deleteDoc.mutate(doc.id);
+                    }}
+                    className="min-h-11 px-2 text-sm text-red-300 rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                  >
+                    Usuń
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </QueryFeedback>

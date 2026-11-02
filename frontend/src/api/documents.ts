@@ -98,20 +98,32 @@ export function useDocuments(params?: { status?: string }) {
     },
     refetchInterval: (query) => {
       const docs = query.state.data;
-      if (
-        docs?.some(
-          (document) =>
-            document.status === "processing" ||
-            document.status === "pending" ||
-            document.review?.status === "processing" ||
-            document.review?.status === "pending",
-        )
-      ) {
+      if (docs?.some((document) => isDocumentWorkActive(document))) {
         return 3000;
       }
       return false;
     },
   });
+}
+
+export function isDocumentWorkActive(document: DocumentData): boolean {
+  if (
+    document.review?.status === "pending" ||
+    document.review?.status === "processing"
+  )
+    return true;
+  if (
+    document.review?.job_state === "pending" ||
+    document.review?.job_state === "processing"
+  )
+    return true;
+  if (
+    document.local_ocr_state === "pending" ||
+    document.local_ocr_state === "processing"
+  )
+    return true;
+  if (document.processing_method === "vision") return false;
+  return document.status === "pending" || document.status === "processing";
 }
 
 export function useDocumentText(id: string, enabled = true) {

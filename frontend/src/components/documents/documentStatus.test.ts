@@ -35,4 +35,21 @@ describe("getDocumentStatus", () => {
       }),
     ).toMatchObject({ label: "Limit odczytów AI" });
   });
+
+  it("surfaces a terminal provider error from an incomplete vision review", () => {
+    expect(
+      getDocumentStatus({
+        status: "done",
+        review: {
+          revision_id: "revision-1",
+          revision: 1,
+          input_method: "image",
+          status: "incomplete",
+          error_code: "configuration_missing",
+          warnings: [],
+          job_state: "failed",
+        },
+      }),
+    ).toMatchObject({ label: "AI niedostępne", tone: "danger" });
+  });
 });
