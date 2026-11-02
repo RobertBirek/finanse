@@ -1,6 +1,7 @@
 import asyncio
 import fcntl
 import hashlib
+import json
 import uuid
 from pathlib import Path
 
@@ -242,6 +243,81 @@ class TestAtomicStorage:
 
         assert response.status_code == 400
         assert not list(tmp_path.rglob("*"))
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_upload_mime_mismatch_returns_safe_code_and_redacted_diagnostic_log(
+        self, async_client, monkeypatch, caplog
+    ):
+        from types import SimpleNamespace
+
+        from app.identity.router import get_current_user
+        from app.main import app
+
+        user_id = uuid.uuid4()
+        app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=user_id)
+        caplog.set_level("WARNING", logger="app.documents.router")
+        try:
+            response = await async_client.post(
+                "/api/documents/upload",
+                files={"file": ("private-receipt.pdf", valid_png_bytes(), "application/pdf")},
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 400
+        assert response.json() == {
+            "detail": "File content does not match a supported document type.",
+            "code": "document_mime_mismatch",
+        }
+        assert caplog.messages == [
+            "Document upload rejected code=document_mime_mismatch declared_mime=application/pdf detected_mime=image/png bytes=69"
+        ]
+        assert "private-receipt.pdf" not in caplog.text
+        assert str(user_id) not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_upload_unknown_validation_code_uses_safe_default_without_exception_text(
+        self, monkeypatch, caplog
+    ):
+        import io
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+
+        from fastapi import UploadFile
+        from starlette.datastructures import Headers
+
+        from app.documents import router
+
+        monkeypatch.setattr(
+            service,
+            "store_document",
+            AsyncMock(
+                side_effect=service.UnsupportedDocumentFormatError(
+                    "private parser exception",
+                    code="unexpected_code",
+                    detected_mime="private/type",
+                )
+            ),
+        )
+        caplog.set_level("WARNING", logger="app.documents.router")
+
+        response = await router.upload_document(
+            UploadFile(
+                io.BytesIO(b"safe"),
+                filename="private-receipt.pdf",
+                headers=Headers({"content-type": "application/pdf"}),
+            ),
+            SimpleNamespace(id=uuid.uuid4()),
+            None,
+            None,
+        )
+
+        assert json.loads(response.body) == {
+            "detail": "File content does not match a supported document type.",
+            "code": "document_validation_failed",
+        }
+        assert "private" not in caplog.text
 
 
 class TestDocumentService:

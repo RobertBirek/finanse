@@ -22,6 +22,24 @@ type UploadItem = {
 
 function errorMessage(error: unknown) {
   const status = isAxiosError(error) ? error.response?.status : undefined;
+  const data = isAxiosError(error) ? error.response?.data : undefined;
+  const code =
+    data &&
+    typeof data === "object" &&
+    "code" in data &&
+    typeof data.code === "string"
+      ? data.code
+      : undefined;
+  if (status === 400) {
+    if (code === "document_mime_unsupported")
+      return "Nieobsługiwany typ pliku. Wybierz PDF, JPG, PNG, HEIC lub HEIF.";
+    if (code === "document_empty")
+      return "Wybrany plik jest pusty. Wybierz go ponownie.";
+    if (code === "document_validation_failed")
+      return "Nie udało się odczytać pliku. Spróbuj wybrać oryginał przez Pliki zamiast biblioteki Zdjęć.";
+    if (code === "document_mime_mismatch")
+      return "Typ przesłanego pliku nie zgadza się z jego zawartością. Spróbuj wybrać oryginał przez Pliki zamiast biblioteki Zdjęć.";
+  }
   if (status === 413)
     return "Przekroczono limit pliku lub miejsca na dokumenty.";
   if (status === 503 || status === 507)

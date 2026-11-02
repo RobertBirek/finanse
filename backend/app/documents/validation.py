@@ -12,6 +12,17 @@ from app.config import settings
 class UnsupportedDocumentFormatError(ValueError):
     """Invalid, excessive or unparseable document."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "document_validation_failed",
+        detected_mime: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.detected_mime = detected_mime
+
 
 class DocumentValidationUnavailableError(Exception):
     """Parser admission or process creation unavailable; safe to retry upload."""
@@ -114,7 +125,11 @@ async def validate_document_content(content: bytes, declared_mime: str) -> str:
             declared_mime not in {"", "application/octet-stream"}
             and mime != normalized_declared_mime
         ):
-            raise UnsupportedDocumentFormatError("Unsupported document format or MIME mismatch")
+            raise UnsupportedDocumentFormatError(
+                "Unsupported document format or MIME mismatch",
+                code="document_mime_mismatch",
+                detected_mime=mime,
+            )
         return mime
     finally:
         slots.release()

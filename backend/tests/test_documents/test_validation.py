@@ -11,6 +11,26 @@ from test_documents.fixtures import valid_jpeg_bytes, valid_pdf_bytes, valid_png
 
 
 @pytest.mark.asyncio
+async def test_undecodable_content_reports_validation_failure_not_unsupported_mime():
+    from app.documents.validation import UnsupportedDocumentFormatError, validate_document_content
+
+    with pytest.raises(UnsupportedDocumentFormatError) as result:
+        await validate_document_content(b"synthetic-invalid-heif", "image/heif")
+    assert result.value.code == "document_validation_failed"
+    assert result.value.detected_mime is None
+
+
+@pytest.mark.asyncio
+async def test_mismatched_content_keeps_detected_mime_for_safe_diagnostics():
+    from app.documents.validation import UnsupportedDocumentFormatError, validate_document_content
+
+    with pytest.raises(UnsupportedDocumentFormatError) as result:
+        await validate_document_content(valid_png_bytes(), "image/jpeg")
+    assert result.value.code == "document_mime_mismatch"
+    assert result.value.detected_mime == "image/png"
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "content,mime",
     [
@@ -72,6 +92,17 @@ async def test_invalid_or_excessive_documents_rejected(kind, monkeypatch):
         content, mime = output.getvalue(), "image/png"
     with pytest.raises(UnsupportedDocumentFormatError):
         await validate_document_content(content, mime)
+
+
+@pytest.mark.asyncio
+async def test_real_validator_marks_successful_mime_mismatch_for_diagnostics():
+    from app.documents.validation import UnsupportedDocumentFormatError, validate_document_content
+
+    with pytest.raises(UnsupportedDocumentFormatError) as raised:
+        await validate_document_content(valid_png_bytes(), "application/pdf")
+
+    assert raised.value.code == "document_mime_mismatch"
+    assert raised.value.detected_mime == "image/png"
 
 
 @pytest.mark.asyncio

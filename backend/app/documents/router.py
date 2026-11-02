@@ -40,11 +40,51 @@ ALLOWED_MIME_TYPES = {
     "image/heic",
     "image/heif",
 }
+_DIAGNOSTIC_MIME_ALIASES = {"image/heic": "image/heif"}
+_DIAGNOSTIC_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/heif"}
+_DIAGNOSTIC_REJECTION_CODES = {
+    "document_mime_unsupported",
+    "document_empty",
+    "document_validation_failed",
+    "document_mime_mismatch",
+}
 preview_rate_limit = limit_upload(get_current_user)
 
 
 def _private_headers() -> dict[str, str]:
     return {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}
+
+
+def _diagnostic_mime(mime: str | None) -> str:
+    if not mime:
+        return "unknown"
+    normalized = _DIAGNOSTIC_MIME_ALIASES.get(mime, mime)
+    if normalized in _DIAGNOSTIC_MIME_TYPES | {"application/octet-stream"}:
+        return normalized
+    return "other"
+
+
+def _document_rejection(
+    code: str,
+    declared_mime: str | None,
+    detected_mime: str | None,
+    content_bytes: int,
+) -> JSONResponse:
+    safe_code = code if code in _DIAGNOSTIC_REJECTION_CODES else "document_validation_failed"
+    logger.warning(
+        "Document upload rejected code=%s declared_mime=%s detected_mime=%s bytes=%s",
+        safe_code,
+        _diagnostic_mime(declared_mime),
+        _diagnostic_mime(detected_mime),
+        content_bytes,
+    )
+    return JSONResponse(
+        content={
+            "detail": "File content does not match a supported document type.",
+            "code": safe_code,
+        },
+        status_code=400,
+    )
 
 
 @router.get("/upload-capabilities", response_model=DocumentUploadCapabilities)
@@ -83,12 +123,7 @@ async def upload_document(
 ):
     declared_mime = file.content_type or ""
     if declared_mime not in ALLOWED_MIME_TYPES:
-        return JSONResponse(
-            content={
-                "detail": f"Unsupported file type: {declared_mime}. Allowed: PDF, JPG, PNG, HEIC."
-            },
-            status_code=400,
-        )
+        return _document_rejection("document_mime_unsupported", declared_mime, None, 0)
     content = bytearray()
     while chunk := await file.read(64 * 1024):
         content.extend(chunk)
@@ -97,7 +132,7 @@ async def upload_document(
                 content={"detail": "File exceeds configured size limit."}, status_code=413
             )
     if not content:
-        return JSONResponse(content={"detail": "File is empty"}, status_code=400)
+        return _document_rejection("document_empty", declared_mime, None, 0)
 
     try:
         doc, is_duplicate = await service.store_document(
@@ -111,10 +146,12 @@ async def upload_document(
         return JSONResponse(content={"detail": "Document storage quota exceeded"}, status_code=413)
     except DocumentStorageFullError:
         return JSONResponse(content={"detail": "Document storage unavailable"}, status_code=507)
-    except service.UnsupportedDocumentFormatError:
-        return JSONResponse(
-            content={"detail": "File content does not match a supported document type."},
-            status_code=400,
+    except service.UnsupportedDocumentFormatError as error:
+        return _document_rejection(
+            error.code,
+            declared_mime,
+            error.detected_mime,
+            len(content),
         )
     except (OSError, DocumentValidationUnavailableError):
         logger.warning("Document storage failed; original was not overwritten")
