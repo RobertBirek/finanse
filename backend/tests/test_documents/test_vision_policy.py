@@ -1,7 +1,5 @@
 import asyncio
-import importlib.util
 import uuid
-from pathlib import Path
 
 import pytest
 from sqlalchemy import func, select
@@ -17,23 +15,11 @@ from app.identity.models import User
 from scripts import document_vision_policy as cli
 
 
-def _gate_environment() -> dict[str, str]:
-    gate_path = (
-        Path(__file__).resolve().parents[3]
-        / ".superpowers/sdd/2026-10-31-automatic-document-vision/gate.py"
-    )
-    spec = importlib.util.spec_from_file_location("vision_gate", gate_path)
-    assert spec is not None and spec.loader is not None
-    gate = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gate)
-    return gate.environment()
-
-
-def _configure_cli_environment(monkeypatch, *, configured: bool) -> None:
-    environment = _gate_environment()
-    monkeypatch.setenv("DOCUMENT_VISION_POLICY_DATABASE_URL", environment["TEST_DATABASE_URL"])
-    monkeypatch.setenv("DATABASE_URL", environment["DATABASE_URL"])
-    monkeypatch.setenv("TEST_DATABASE_URL", environment["TEST_DATABASE_URL"])
+def _configure_cli_environment(monkeypatch, database_url: str, *, configured: bool) -> None:
+    """Point the CLI at the already-guarded database bound to this test session."""
+    monkeypatch.setenv("DOCUMENT_VISION_POLICY_DATABASE_URL", database_url)
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setenv("TEST_DATABASE_URL", database_url)
     for name, value in {
         "DOCUMENT_VISION_PROVIDER": "test-provider",
         "DOCUMENT_VISION_BASE_URL": "https://vision.example.test/v1",
@@ -50,7 +36,9 @@ def _configure_cli_environment(monkeypatch, *, configured: bool) -> None:
 
 @pytest.mark.integration
 async def test_cli_dry_run_and_epoch_mismatch_do_not_mutate(db_session, monkeypatch):
-    _configure_cli_environment(monkeypatch, configured=False)
+    _configure_cli_environment(
+        monkeypatch, db_session.bind.url.render_as_string(hide_password=False), configured=False
+    )
     db_session.add(DocumentVisionPolicy(id=1, enabled=False, epoch=4))
     await db_session.commit()
     assert await cli.run(False, 4, False) == 0
@@ -61,7 +49,9 @@ async def test_cli_dry_run_and_epoch_mismatch_do_not_mutate(db_session, monkeypa
 
 @pytest.mark.integration
 async def test_policy_expected_epoch_is_checked_under_transition_lock(db_session, monkeypatch):
-    _configure_cli_environment(monkeypatch, configured=True)
+    _configure_cli_environment(
+        monkeypatch, db_session.bind.url.render_as_string(hide_password=False), configured=True
+    )
     db_session.add(DocumentVisionPolicy(id=1, enabled=False, epoch=4))
     await db_session.commit()
 
@@ -95,7 +85,9 @@ async def test_competing_cli_apply_has_one_epoch_transition_and_one_stale_refusa
     db_session, monkeypatch
 ):
     """Both CLI sessions pass the old epoch barrier; only the locked winner may transition."""
-    _configure_cli_environment(monkeypatch, configured=True)
+    _configure_cli_environment(
+        monkeypatch, db_session.bind.url.render_as_string(hide_password=False), configured=True
+    )
     db_session.add(DocumentVisionPolicy(id=1, enabled=False, epoch=4))
     await db_session.commit()
     real_transition = cli.set_vision_policy
@@ -156,7 +148,9 @@ def test_cli_accepts_a_non_test_target_only_when_it_matches_its_configured_envir
 async def test_cli_apply_requires_loaded_config_and_never_resumes_paused_work(
     db_session, monkeypatch
 ):
-    _configure_cli_environment(monkeypatch, configured=False)
+    _configure_cli_environment(
+        monkeypatch, db_session.bind.url.render_as_string(hide_password=False), configured=False
+    )
 
     user = User(email="cli-policy@example.com", password_hash="hash", display_name="Policy")
     db_session.add(user)
@@ -219,7 +213,9 @@ async def test_cli_apply_requires_loaded_config_and_never_resumes_paused_work(
         "processing",
     )
 
-    _configure_cli_environment(monkeypatch, configured=True)
+    _configure_cli_environment(
+        monkeypatch, db_session.bind.url.render_as_string(hide_password=False), configured=True
+    )
     loaded_config = get_vision_config(Settings())
     assert loaded_config is not None
     assert await cli.run(True, 4, True) == 0

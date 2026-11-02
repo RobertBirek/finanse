@@ -1,9 +1,12 @@
+import json
 import uuid
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
+from openai import AsyncOpenAI
 
 from app.advisor import service as advisor_service
 
@@ -22,21 +25,36 @@ class FakeSession:
 
 
 def llm_response(*, content=None, tool_calls=None):
-    message = SimpleNamespace(content=content, tool_calls=tool_calls)
-    return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+    if tool_calls:
+        output = tool_calls
+    else:
+        output = [
+            SimpleNamespace(
+                type="message",
+                content=[SimpleNamespace(type="output_text", text=content)],
+            )
+        ]
+    return SimpleNamespace(status="completed", output=output)
 
 
 def tool_call(name, arguments, call_id="call-1"):
+    values = {
+        "type": "function_call",
+        "call_id": call_id,
+        "name": name,
+        "arguments": arguments,
+    }
     return SimpleNamespace(
-        id=call_id,
-        function=SimpleNamespace(name=name, arguments=arguments),
+        **values,
+        model_dump=lambda mode: values,
     )
 
 
 def setup_service(monkeypatch, responses, tool=None, history=None):
     conversation = SimpleNamespace(id=uuid.uuid4(), title="Nowa rozmowa")
     client = SimpleNamespace(
-        chat=SimpleNamespace(completions=SimpleNamespace(create=AsyncMock(side_effect=responses)))
+        responses=SimpleNamespace(create=AsyncMock(side_effect=responses)),
+        close=AsyncMock(),
     )
     monkeypatch.setattr(advisor_service, "_get_llm_client", lambda: client)
     monkeypatch.setattr(advisor_service, "get_openai_tools", list)
@@ -60,7 +78,7 @@ async def test_send_message_returns_plain_llm_response(monkeypatch):
     assert result.role == "assistant"
     assert result.content == "Zwykła odpowiedź"
     assert result.tool_calls is None
-    assert client.chat.completions.create.await_count == 1
+    assert client.responses.create.await_count == 1
     assert not [item for item in db.added if item.__class__.__name__ == "ToolExecution"]
 
 
@@ -84,12 +102,12 @@ async def test_level_zero_tool_call_is_followed_by_second_llm_response(monkeypat
 
     assert result.content == "Masz jedno konto."
     executor.assert_awaited_once_with(db, str(user_id))
-    assert client.chat.completions.create.await_count == 2
-    second_messages = client.chat.completions.create.await_args_list[1].kwargs["messages"]
-    assert second_messages[-1] == {
-        "role": "tool",
-        "tool_call_id": "call-1",
-        "content": '{"accounts": [{"name": "Konto główne"}]}',
+    assert client.responses.create.await_count == 2
+    second_input = client.responses.create.await_args_list[1].kwargs["input"]
+    assert second_input[-1] == {
+        "type": "function_call_output",
+        "call_id": "call-1",
+        "output": '{"accounts": [{"name": "Konto główne"}]}',
     }
     assistant_tool_message = next(
         item
@@ -143,7 +161,7 @@ async def test_tool_call_handles_invalid_json_and_unknown_tool(
     assert execution.status == expected_status
     assert execution.result == expected_result
     assert execution.arguments == {}
-    assert client.chat.completions.create.await_count == 2
+    assert client.responses.create.await_count == 2
     executor.assert_not_awaited()
 
 
@@ -167,7 +185,7 @@ async def test_tool_executor_error_is_returned_as_error_result(monkeypatch):
     assert result.content == "Nie udało się pobrać danych."
     assert execution.status == "error"
     assert execution.result == {"error": advisor_service.TOOL_ERROR}
-    assert client.chat.completions.create.await_count == 2
+    assert client.responses.create.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -184,7 +202,7 @@ async def test_level_two_tool_call_stays_pending_without_executor_call(monkeypat
     assert result.tool_executions[0].status == "pending_confirmation"
     assert result.tool_executions[0].result == {"title": "Zadanie", "tool": "create_task"}
     executor.assert_not_awaited()
-    client.chat.completions.create.assert_awaited_once()
+    client.responses.create.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -201,7 +219,7 @@ async def test_send_message_stops_after_max_tool_iterations(monkeypatch):
     result = await advisor_service.send_message(db, uuid.uuid4(), uuid.uuid4(), "Pokaż konta")
 
     assert result.content == "Przetworzyłem dane. Czy potrzebujesz dodatkowych informacji?"
-    assert client.chat.completions.create.await_count == advisor_service.MAX_TOOL_ITERATIONS
+    assert client.responses.create.await_count == advisor_service.MAX_TOOL_ITERATIONS
     assert executor.await_count == advisor_service.MAX_TOOL_ITERATIONS
     executions = [item for item in db.added if item.__class__.__name__ == "ToolExecution"]
     assert len(executions) == advisor_service.MAX_TOOL_ITERATIONS
@@ -214,17 +232,16 @@ async def test_second_user_turn_replays_prior_tool_result(monkeypatch):
     first_call = tool_call("get_accounts", "{}", "call-first")
     conversation = SimpleNamespace(id=uuid.uuid4(), title="Nowa rozmowa")
     client = SimpleNamespace(
-        chat=SimpleNamespace(
-            completions=SimpleNamespace(
-                create=AsyncMock(
-                    side_effect=[
-                        llm_response(tool_calls=[first_call]),
-                        llm_response(content="Masz jedno konto."),
-                        llm_response(content="To konto jest aktywne."),
-                    ]
-                )
+        responses=SimpleNamespace(
+            create=AsyncMock(
+                side_effect=[
+                    llm_response(tool_calls=[first_call]),
+                    llm_response(content="Masz jedno konto."),
+                    llm_response(content="To konto jest aktywne."),
+                ]
             )
-        )
+        ),
+        close=AsyncMock(),
     )
     history_calls = 0
 
@@ -251,17 +268,17 @@ async def test_second_user_turn_replays_prior_tool_result(monkeypatch):
 
     assert first_result.content == "Masz jedno konto."
     assert second_result.content == "To konto jest aktywne."
-    second_messages = client.chat.completions.create.await_args_list[2].kwargs["messages"]
+    second_messages = client.responses.create.await_args_list[2].kwargs["input"]
     assert {
-        "role": "tool",
-        "tool_call_id": "call-first",
-        "content": '{"accounts": [{"name": "Konto główne"}]}',
+        "type": "function_call_output",
+        "call_id": "call-first",
+        "output": '{"accounts": [{"name": "Konto główne"}]}',
     } in second_messages
     assert second_messages[-1] == {
         "role": "user",
         "content": "Czy to konto jest aktywne?",
     }
-    assert sum(message["role"] == "tool" for message in second_messages) == 1
+    assert sum(message.get("type") == "function_call_output" for message in second_messages) == 1
 
 
 @pytest.mark.asyncio
@@ -292,6 +309,143 @@ async def test_provider_error_does_not_leak_credentials(monkeypatch, caplog):
     result = await advisor_service.send_message(FakeSession(), uuid.uuid4(), uuid.uuid4(), "Test")
     assert result.content == advisor_service.ADVISOR_ERROR
     assert "SECRET_PROVIDER_CREDENTIAL" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_responses_tool_roundtrip_replays_reasoning_and_matching_output(monkeypatch):
+    """Dropping encrypted reasoning or changing a call id breaks stateless tool continuation."""
+    requests: list[dict] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(json.loads(request.content))
+        if len(requests) == 1:
+            return httpx.Response(
+                200,
+                json={
+                    "id": "response-one",
+                    "object": "response",
+                    "created_at": 0,
+                    "model": "sol-test",
+                    "status": "completed",
+                    "output": [
+                        {
+                            "id": "reasoning-one",
+                            "type": "reasoning",
+                            "summary": [],
+                            "encrypted_content": "opaque-reasoning",
+                        },
+                        {
+                            "id": "function-one",
+                            "type": "function_call",
+                            "call_id": "call-1",
+                            "name": "get_accounts",
+                            "arguments": "{}",
+                            "status": "completed",
+                        },
+                    ],
+                    "parallel_tool_calls": False,
+                    "tool_choice": "auto",
+                    "tools": [],
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "id": "response-two",
+                "object": "response",
+                "created_at": 0,
+                "model": "sol-test",
+                "status": "completed",
+                "output": [
+                    {
+                        "id": "message-two",
+                        "type": "message",
+                        "role": "assistant",
+                        "status": "completed",
+                        "content": [{"type": "output_text", "text": "Masz konto."}],
+                    }
+                ],
+                "parallel_tool_calls": False,
+                "tool_choice": "auto",
+                "tools": [],
+            },
+        )
+
+    client = AsyncOpenAI(
+        api_key="test-key",
+        base_url="https://api.openai.com/v1",
+        http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        max_retries=0,
+    )
+    executor = AsyncMock(return_value={"accounts": []})
+    tool = SimpleNamespace(name="get_accounts", autonomy_level=0, executor=executor)
+    conversation = SimpleNamespace(id=uuid.uuid4(), title="Nowa rozmowa")
+    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda: client)
+    monkeypatch.setattr(advisor_service, "get_openai_tools", list)
+    monkeypatch.setattr(advisor_service, "get_tool_by_name", lambda _name: tool)
+    monkeypatch.setattr(advisor_service, "get_conversation", AsyncMock(return_value=conversation))
+    monkeypatch.setattr(advisor_service, "get_conversation_messages", AsyncMock(return_value=[]))
+    monkeypatch.setattr(advisor_service.settings, "LLM_MODEL", "sol-test")
+    monkeypatch.setattr(advisor_service.settings, "LLM_MAX_OUTPUT_TOKENS", 4096)
+    monkeypatch.setattr(advisor_service.settings, "LLM_REASONING_EFFORT", "low")
+
+    result = await advisor_service.send_message(
+        FakeSession(), uuid.uuid4(), conversation.id, "Pokaż konta"
+    )
+
+    assert result.content == "Masz konto."
+    assert requests[0]["model"] == "sol-test"
+    assert requests[0]["reasoning"] == {"effort": "low"}
+    assert requests[0]["max_output_tokens"] == 4096
+    assert requests[0]["include"] == ["reasoning.encrypted_content"]
+    assert requests[0]["store"] is False
+    assert not {"messages", "temperature", "max_tokens", "response_format"} & requests[0].keys()
+    replayed_reasoning = next(
+        item for item in requests[1]["input"] if item.get("type") == "reasoning"
+    )
+    assert replayed_reasoning["id"] == "reasoning-one"
+    assert replayed_reasoning["encrypted_content"] == "opaque-reasoning"
+    assert replayed_reasoning["summary"] == []
+    assert any(
+        item.get("type") == "function_call" and item["call_id"] == "call-1"
+        for item in requests[1]["input"]
+    )
+    assert {
+        "type": "function_call_output",
+        "call_id": "call-1",
+        "output": '{"accounts": []}',
+    } in requests[1]["input"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "response",
+    [
+        SimpleNamespace(status="incomplete", output=[tool_call("get_accounts", "{}")]),
+        SimpleNamespace(
+            status="completed",
+            output=[
+                SimpleNamespace(
+                    type="message", content=[SimpleNamespace(type="refusal", refusal="no")]
+                ),
+                tool_call("get_accounts", "{}"),
+            ],
+        ),
+    ],
+)
+async def test_terminal_or_refused_tool_output_never_executes(monkeypatch, response):
+    """Executing a function from incomplete or refused output bypasses the model terminal guard."""
+    executor = AsyncMock()
+    tool = SimpleNamespace(name="get_accounts", autonomy_level=0, executor=executor)
+    _, client = setup_service(monkeypatch, [response], tool=tool)
+    db = FakeSession()
+
+    result = await advisor_service.send_message(db, uuid.uuid4(), uuid.uuid4(), "Pokaż konta")
+
+    assert result.content == advisor_service.ADVISOR_ERROR
+    executor.assert_not_awaited()
+    assert not [item for item in db.added if item.__class__.__name__ == "ToolExecution"]
+    client.close.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -347,7 +501,7 @@ def test_history_messages_adds_sanitized_result_when_execution_is_missing():
     messages = advisor_service._history_messages(history)
 
     assert messages[-1] == {
-        "role": "tool",
-        "tool_call_id": "call-missing",
-        "content": '{"error": "Nie udało się odtworzyć wyniku narzędzia"}',
+        "type": "function_call_output",
+        "call_id": "call-missing",
+        "output": '{"error": "Nie udało się odtworzyć wyniku narzędzia"}',
     }

@@ -1,11 +1,13 @@
 """The image adapter sends only a bounded, strict vision request."""
 
 import base64
+import gzip
 import json
 
 import httpx
 import pytest
 
+from app import openai_client
 from app.documents.vision_config import VisionConfig
 
 
@@ -46,20 +48,28 @@ def _response(
     content = json.dumps(
         {
             "id": "test",
-            "object": "chat.completion",
-            "created": 0,
+            "object": "response",
+            "created_at": 0,
             "model": "test-vision-model",
-            "choices": [
+            "status": "completed" if finish_reason == "stop" else "incomplete",
+            "output": [
                 {
-                    "index": 0,
-                    "finish_reason": finish_reason,
-                    "message": {
-                        "role": "assistant",
-                        "content": json.dumps(payload),
-                        "refusal": refusal,
-                    },
+                    "id": "msg-test",
+                    "type": "message",
+                    "role": "assistant",
+                    "status": "completed",
+                    "content": [
+                        {
+                            "type": "refusal" if refusal else "output_text",
+                            "refusal": refusal,
+                            "text": None if refusal else json.dumps(payload),
+                        }
+                    ],
                 }
             ],
+            "parallel_tool_calls": False,
+            "tool_choice": "auto",
+            "tools": [],
         }
     )
     return httpx.Response(
@@ -93,14 +103,19 @@ async def test_vision_reads_image_without_ocr_text_and_uses_strict_schema(
     assert len(requests) == 1
     body = json.loads(requests[0].content)
     assert body["model"] == "test-vision-model"
-    assert body["messages"][0]["role"] == "system"
-    assert body["messages"][1]["content"][0]["image_url"]["url"] == (
+    assert body["input"][0]["role"] == "developer"
+    assert body["input"][1]["content"][0]["type"] == "input_image"
+    assert body["input"][1]["content"][0]["image_url"] == (
         "data:image/jpeg;base64," + base64.b64encode(b"jpeg-bytes").decode("ascii")
     )
     assert "filename" not in json.dumps(body)
     assert "account_id" not in json.dumps(body)
     assert "tools" not in body
-    schema = body["response_format"]["json_schema"]["schema"]
+    assert body["store"] is False
+    assert body["max_output_tokens"] == vision_client.settings.DOCUMENT_VISION_MAX_OUTPUT_TOKENS
+    assert body["reasoning"] == {"effort": "none"}
+    assert not {"messages", "temperature", "max_tokens", "response_format"} & body.keys()
+    schema = body["text"]["format"]["schema"]
     assert schema["additionalProperties"] is False
     assert set(schema["required"]) == {"document_type", "fields", "warnings"}
     field_schema = schema["$defs"]["VisionFields"]
@@ -292,3 +307,35 @@ async def test_provider_redirect_and_secret_are_not_followed_or_logged(
     assert seen_follow_redirects == [False]
     assert "marker-secret" not in caplog.text
     assert "jpeg" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_vision_uses_shared_bounded_transport_for_gzip_responses(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The shared transport must not retain gzip framing after buffering decoded vision output."""
+    from app.documents import vision_client
+
+    response = _response(_payload())
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        encoded = gzip.compress(response.content)
+        return httpx.Response(
+            200,
+            content=encoded,
+            headers={
+                "content-type": "application/json",
+                "content-encoding": "gzip",
+                "content-length": str(len(encoded)),
+            },
+        )
+
+    monkeypatch.setattr(
+        openai_client.httpx,
+        "AsyncHTTPTransport",
+        lambda retries: httpx.MockTransport(handler),
+    )
+
+    extraction = await vision_client.extract_image_review(b"jpeg", config=_config())
+
+    assert extraction.ready is True

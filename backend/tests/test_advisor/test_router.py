@@ -341,8 +341,26 @@ class FakeAdvisorSession:
 
 
 def llm_response(tool_call=None, content="Odpowiedź"):
-    message = SimpleNamespace(content=content, tool_calls=[tool_call] if tool_call else None)
-    return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+    if tool_call:
+        values = {
+            "type": "function_call",
+            "call_id": tool_call.id,
+            "name": tool_call.function.name,
+            "arguments": tool_call.function.arguments,
+        }
+        return SimpleNamespace(
+            status="completed",
+            output=[SimpleNamespace(**values, model_dump=lambda mode: values)],
+        )
+    return SimpleNamespace(
+        status="completed",
+        output=[
+            SimpleNamespace(
+                type="message",
+                content=[SimpleNamespace(type="output_text", text=content)],
+            )
+        ],
+    )
 
 
 @pytest.mark.asyncio
@@ -354,9 +372,8 @@ async def test_send_message_returns_pending_without_relying_on_relationship(monk
         function=SimpleNamespace(name="create_task", arguments='{"title":"Test"}'),
     )
     client = SimpleNamespace(
-        chat=SimpleNamespace(
-            completions=SimpleNamespace(create=AsyncMock(return_value=llm_response(tool_call)))
-        )
+        responses=SimpleNamespace(create=AsyncMock(return_value=llm_response(tool_call))),
+        close=AsyncMock(),
     )
     tool = SimpleNamespace(autonomy_level=2, executor=AsyncMock())
     monkeypatch.setattr(advisor_service, "_get_llm_client", lambda: client)
@@ -371,5 +388,5 @@ async def test_send_message_returns_pending_without_relying_on_relationship(monk
 
     assert result.role == "assistant"
     assert result.tool_executions[0].status == "pending_confirmation"
-    client.chat.completions.create.assert_awaited_once()
+    client.responses.create.assert_awaited_once()
     tool.executor.assert_not_awaited()

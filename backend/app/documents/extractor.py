@@ -1,4 +1,4 @@
-"""Extract structured financial data from document text using OpenAI/DeepSeek."""
+"""Extract structured financial data from document text using OpenAI Responses."""
 
 import logging
 import uuid
@@ -13,6 +13,7 @@ from app.config import settings
 from app.documents.review_schemas import ReviewSuggestion
 from app.documents.schemas import DocumentFinancialData, DocumentNoFinancialData
 from app.inbox.models import InboxItem
+from app.openai_client import ResponseOutputError, create_openai_client, response_text
 
 logger = logging.getLogger(__name__)
 _extraction_adapter = TypeAdapter(DocumentFinancialData | DocumentNoFinancialData)
@@ -45,31 +46,45 @@ nigdy nie jest pojedynczym expense. Nie zgaduj brakujących danych."""
 
 
 def _get_client() -> AsyncOpenAI:
-    api_key = settings.LLM_API_KEY or settings.OPENAI_API_KEY
-    return AsyncOpenAI(api_key=api_key, base_url=settings.LLM_BASE_URL)
+    return create_openai_client(
+        api_key=settings.OPENAI_API_KEY,
+        base_url=settings.LLM_BASE_URL,
+        timeout=60,
+    )
+
+
+def _text_request(*, prompt: str, text: str) -> dict[str, Any]:
+    if not settings.DOCUMENT_TEXT_MODEL:
+        raise ValueError("Document text model is not configured")
+    return {
+        "model": settings.DOCUMENT_TEXT_MODEL,
+        "input": [
+            {"role": "developer", "content": prompt},
+            {"role": "user", "content": text},
+        ],
+        "text": {"format": {"type": "json_object"}},
+        "reasoning": {"effort": settings.DOCUMENT_TEXT_REASONING_EFFORT},
+        "max_output_tokens": settings.DOCUMENT_TEXT_MAX_OUTPUT_TOKENS,
+        "store": False,
+    }
 
 
 async def extract_financial_data(text: str) -> dict[str, Any]:
     """Return validated suggestion data, or no detection for malformed model output."""
     client = _get_client()
     try:
-        response = await client.chat.completions.create(
-            model=settings.LLM_MODEL,
-            messages=[
-                {"role": "system", "content": EXTRACTION_PROMPT},
-                {"role": "user", "content": text[:8000]},
-            ],
-            temperature=0.1,
-            max_tokens=500,
-            response_format={"type": "json_object"},
+        response = await client.responses.create(
+            **_text_request(prompt=EXTRACTION_PROMPT, text=text[:8000])
         )
     finally:
         await client.close()
 
-    if not response.choices or not response.choices[0].message.content:
+    try:
+        raw_output = response_text(response)
+    except ResponseOutputError:
         return {"detected": False}
     try:
-        result = _extraction_adapter.validate_json(response.choices[0].message.content)
+        result = _extraction_adapter.validate_json(raw_output)
     except ValidationError:
         # Never log document text, raw output or validation input values.
         logger.warning("Document financial extraction did not match the schema")
@@ -85,26 +100,21 @@ async def extract_review_data(text: str) -> ReviewSuggestion:
         raise ReviewExtractionError("input_too_large")
     client = _get_client()
     try:
-        response = await client.chat.completions.create(
-            model=settings.LLM_MODEL,
-            messages=[
-                {"role": "system", "content": REVIEW_EXTRACTION_PROMPT},
-                {"role": "user", "content": text[:12000]},
-            ],
-            temperature=0,
-            max_tokens=800,
-            response_format={"type": "json_object"},
+        response = await client.responses.create(
+            **_text_request(prompt=REVIEW_EXTRACTION_PROMPT, text=text[:12000])
         )
     except Exception as error:
         raise ReviewExtractionError("llm_unavailable") from error
     finally:
         await client.close()
-    if not response.choices or not response.choices[0].message.content:
+    try:
+        raw_output = response_text(response)
+    except ResponseOutputError:
         raise ReviewExtractionError("invalid_model_output")
     try:
-        suggestion = ReviewSuggestion.model_validate_json(response.choices[0].message.content)
+        suggestion = ReviewSuggestion.model_validate_json(raw_output)
         # Provider/model metadata is configuration, never an untrusted model claim or a secret.
-        suggestion.parser_version = f"{settings.LLM_PROVIDER}:{settings.LLM_MODEL}"
+        suggestion.parser_version = f"{settings.LLM_PROVIDER}:{settings.DOCUMENT_TEXT_MODEL}"
         return suggestion
     except ValidationError as error:
         logger.warning("Document review extraction did not match the schema")

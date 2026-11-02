@@ -4,7 +4,7 @@ import uuid
 from typing import Any, cast
 
 from openai import AsyncOpenAI, OpenAIError
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
+from openai.types.responses.response_create_params import ResponseCreateParamsNonStreaming
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.advisor.models import Conversation, Message, ToolExecution
 from app.advisor.tools.registry import get_openai_tools, get_tool_by_name
 from app.config import settings
+from app.openai_client import ResponseOutputError, create_openai_client, response_text
 
 SYSTEM_PROMPT = """Jesteś osobistym doradcą. Pomagasz użytkownikowi zarządzać czasem, pieniędzmi i projektami.
 
@@ -41,8 +42,13 @@ Zasady:
 
 
 def _get_llm_client() -> AsyncOpenAI:
-    api_key = settings.LLM_API_KEY or settings.OPENAI_API_KEY
-    return AsyncOpenAI(api_key=api_key, base_url=settings.LLM_BASE_URL)
+    if not settings.LLM_MODEL:
+        raise ValueError("Advisor model is not configured")
+    return create_openai_client(
+        api_key=settings.OPENAI_API_KEY,
+        base_url=settings.LLM_BASE_URL,
+        timeout=60,
+    )
 
 
 async def get_user_conversations(db: AsyncSession, user_id: uuid.UUID) -> list[Conversation]:
@@ -133,10 +139,19 @@ def _history_messages(history: list[Message]) -> list[dict[str, Any]]:
         if msg.role == "tool":
             continue
 
-        entry: dict[str, Any] = {"role": msg.role, "content": msg.content}
-        if msg.tool_calls:
-            entry["tool_calls"] = msg.tool_calls
-        messages.append(entry)
+        if msg.role == "assistant" and msg.tool_calls:
+            for tool_call in cast(list[dict[str, Any]], msg.tool_calls):
+                function = tool_call.get("function") or {}
+                messages.append(
+                    {
+                        "type": "function_call",
+                        "call_id": tool_call.get("id"),
+                        "name": function.get("name"),
+                        "arguments": function.get("arguments", "{}"),
+                    }
+                )
+        else:
+            messages.append({"role": msg.role, "content": msg.content})
 
         if msg.role != "assistant" or not msg.tool_calls:
             continue
@@ -174,9 +189,9 @@ def _history_messages(history: list[Message]) -> list[dict[str, Any]]:
             if execution is None:
                 messages.append(
                     {
-                        "role": "tool",
-                        "tool_call_id": call_id,
-                        "content": json.dumps(
+                        "type": "function_call_output",
+                        "call_id": call_id,
+                        "output": json.dumps(
                             {"error": "Nie udało się odtworzyć wyniku narzędzia"},
                             ensure_ascii=False,
                         ),
@@ -187,9 +202,9 @@ def _history_messages(history: list[Message]) -> list[dict[str, Any]]:
             used_execution_ids.add(execution.id)
             messages.append(
                 {
-                    "role": "tool",
-                    "tool_call_id": call_id,
-                    "content": _tool_result_content(execution),
+                    "type": "function_call_output",
+                    "call_id": call_id,
+                    "output": _tool_result_content(execution),
                 }
             )
 
@@ -217,135 +232,163 @@ async def send_message(
 
     history = await get_conversation_messages(db, user_id, conversation_id)
     messages: list[dict[str, Any]] = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "developer", "content": SYSTEM_PROMPT},
         *_history_messages(history),
     ]
 
-    client = _get_llm_client()
+    try:
+        client = _get_llm_client()
+    except ValueError:
+        client = None
     tools = get_openai_tools()
 
     pending_confirmation = False
-    for _iteration in range(MAX_TOOL_ITERATIONS):
-        try:
-            response = await client.chat.completions.create(
-                model=settings.LLM_MODEL,
-                messages=cast(list[ChatCompletionMessageParam], messages),
-                tools=cast(list[ChatCompletionToolParam], tools),
-                tool_choice="auto",
-                temperature=0.7,
-                max_tokens=1024,
-            )
-        except (OpenAIError, SQLAlchemyError, ValueError, RuntimeError) as error:
-            logger.warning("Advisor provider request failed (%s)", type(error).__name__)
+    try:
+        for _iteration in range(MAX_TOOL_ITERATIONS):
+            if client is None:
+                raise ValueError("Advisor client is not configured")
+            try:
+                request = cast(
+                    ResponseCreateParamsNonStreaming,
+                    {
+                        "model": settings.LLM_MODEL,
+                        "input": messages,
+                        "tools": tools,
+                        "tool_choice": "auto",
+                        "include": ["reasoning.encrypted_content"],
+                        "reasoning": {"effort": settings.LLM_REASONING_EFFORT},
+                        "max_output_tokens": settings.LLM_MAX_OUTPUT_TOKENS,
+                        "store": False,
+                    },
+                )
+                response = await client.responses.create(**request)
+            except (OpenAIError, SQLAlchemyError, ValueError, RuntimeError) as error:
+                logger.warning("Advisor provider request failed (%s)", type(error).__name__)
+                assistant_msg = Message(
+                    conversation_id=conversation_id,
+                    role="assistant",
+                    content=ADVISOR_ERROR,
+                )
+                db.add(assistant_msg)
+                await db.flush()
+                return assistant_msg
+
+            if response.status != "completed":
+                raise ResponseOutputError("response was not completed")
+            function_calls = [item for item in response.output if item.type == "function_call"]
+            if not function_calls:
+                answer = response_text(response)
+                assistant_msg = Message(
+                    conversation_id=conversation_id,
+                    role="assistant",
+                    content=answer,
+                )
+                db.add(assistant_msg)
+                await db.flush()
+                _update_conversation_title(conv, content, len(history))
+                return assistant_msg
+
+            if any(
+                item.type == "message" and any(part.type == "refusal" for part in item.content)
+                for item in response.output
+            ):
+                raise ResponseOutputError("response was refused")
+
+            raw_tool_calls = [
+                {
+                    "id": tc.call_id,
+                    "type": "function",
+                    "function": {"name": tc.name, "arguments": tc.arguments},
+                }
+                for tc in function_calls
+            ]
             assistant_msg = Message(
                 conversation_id=conversation_id,
                 role="assistant",
-                content=ADVISOR_ERROR,
+                content="",
+                tool_calls=raw_tool_calls,
+                tool_executions=[],
             )
             db.add(assistant_msg)
             await db.flush()
-            return assistant_msg
 
-        choice = response.choices[0]
-        llm_message = choice.message
+            for item in response.output:
+                dumped = item.model_dump(mode="json")
+                messages.append(dumped)
 
-        if not llm_message.tool_calls:
-            assistant_msg = Message(
-                conversation_id=conversation_id,
-                role="assistant",
-                content=llm_message.content or "",
-            )
-            db.add(assistant_msg)
+            for tc in function_calls:
+                tool_name = tc.name
+                tool = get_tool_by_name(tool_name)
+
+                invalid_arguments = False
+                try:
+                    arguments = _parse_tool_arguments(tc.arguments)
+                except (ValueError, TypeError):
+                    arguments = {}
+                    invalid_arguments = True
+
+                if invalid_arguments:
+                    result = {"error": INVALID_ARGUMENTS}
+                    status_val = "error"
+                elif tool is None:
+                    result = {"error": f"Unknown tool: {tool_name}"}
+                    status_val = "error"
+                elif tool.autonomy_level >= 2:
+                    result = {**arguments, "tool": tool_name}
+                    status_val = "pending_confirmation"
+                    pending_confirmation = True
+                else:
+                    result, status_val = await _execute_read_tool(db, tool, user_id, arguments)
+
+                tool_exec = ToolExecution(
+                    message_id=assistant_msg.id,
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    result=result,
+                    status=status_val,
+                    autonomy_level=tool.autonomy_level if tool else 0,
+                )
+                assistant_msg.tool_executions.append(tool_exec)
+                db.add(tool_exec)
+
+                messages.append(
+                    {
+                        "type": "function_call_output",
+                        "call_id": tc.call_id,
+                        "output": json.dumps(result, ensure_ascii=False, default=str)
+                        if status_val != "pending_confirmation"
+                        else "⏳ Oczekuje na zatwierdzenie przez użytkownika.",
+                    }
+                )
+
             await db.flush()
-            _update_conversation_title(conv, content, len(history))
-            return assistant_msg
 
-        raw_tool_calls = [
-            {
-                "id": tc.id,
-                "type": "function",
-                "function": {"name": tc.function.name, "arguments": tc.function.arguments},
-            }
-            for tc in llm_message.tool_calls
-        ]
+            if pending_confirmation:
+                _update_conversation_title(conv, content, len(history))
+                return assistant_msg
+
         assistant_msg = Message(
             conversation_id=conversation_id,
             role="assistant",
-            content=llm_message.content or "",
-            tool_calls=raw_tool_calls,
-            tool_executions=[],
+            content="Przetworzyłem dane. Czy potrzebujesz dodatkowych informacji?",
+        )
+        db.add(assistant_msg)
+        _update_conversation_title(conv, content, len(history))
+        await db.flush()
+        return assistant_msg
+    except ResponseOutputError:
+        logger.warning("Advisor provider response was not usable")
+        assistant_msg = Message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=ADVISOR_ERROR,
         )
         db.add(assistant_msg)
         await db.flush()
-
-        messages.append(
-            {
-                "role": "assistant",
-                "content": llm_message.content,
-                "tool_calls": raw_tool_calls,
-            }
-        )
-
-        for tc in llm_message.tool_calls:
-            tool_name = tc.function.name
-            tool = get_tool_by_name(tool_name)
-
-            invalid_arguments = False
-            try:
-                arguments = _parse_tool_arguments(tc.function.arguments)
-            except (ValueError, TypeError):
-                arguments = {}
-                invalid_arguments = True
-
-            if invalid_arguments:
-                result = {"error": INVALID_ARGUMENTS}
-                status_val = "error"
-            elif tool is None:
-                result = {"error": f"Unknown tool: {tool_name}"}
-                status_val = "error"
-            elif tool.autonomy_level >= 2:
-                result = {**arguments, "tool": tool_name}
-                status_val = "pending_confirmation"
-                pending_confirmation = True
-            else:
-                result, status_val = await _execute_read_tool(db, tool, user_id, arguments)
-
-            tool_exec = ToolExecution(
-                message_id=assistant_msg.id,
-                tool_name=tool_name,
-                arguments=arguments,
-                result=result,
-                status=status_val,
-                autonomy_level=tool.autonomy_level if tool else 0,
-            )
-            assistant_msg.tool_executions.append(tool_exec)
-            db.add(tool_exec)
-
-            messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tc.id,
-                    "content": json.dumps(result, ensure_ascii=False, default=str)
-                    if status_val != "pending_confirmation"
-                    else "⏳ Oczekuje na zatwierdzenie przez użytkownika.",
-                }
-            )
-
-        await db.flush()
-
-        if pending_confirmation:
-            _update_conversation_title(conv, content, len(history))
-            return assistant_msg
-
-    assistant_msg = Message(
-        conversation_id=conversation_id,
-        role="assistant",
-        content="Przetworzyłem dane. Czy potrzebujesz dodatkowych informacji?",
-    )
-    db.add(assistant_msg)
-    _update_conversation_title(conv, content, len(history))
-    await db.flush()
-    return assistant_msg
+        return assistant_msg
+    finally:
+        if client is not None:
+            await client.close()
 
 
 def _update_conversation_title(conv: Conversation, first_message: str, history_length: int):

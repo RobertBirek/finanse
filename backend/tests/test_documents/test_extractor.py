@@ -77,16 +77,23 @@ INVALID_FIELDS = [
 @pytest.fixture
 def provider(monkeypatch):
     client = SimpleNamespace(
-        chat=SimpleNamespace(completions=SimpleNamespace(create=AsyncMock())),
+        responses=SimpleNamespace(create=AsyncMock()),
         close=AsyncMock(),
     )
     monkeypatch.setattr(extractor, "_get_client", lambda: client)
+    monkeypatch.setattr(extractor.settings, "DOCUMENT_TEXT_MODEL", "test-terra")
     return client
 
 
 def output(provider, content):
-    provider.chat.completions.create.return_value = SimpleNamespace(
-        choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+    provider.responses.create.return_value = SimpleNamespace(
+        status="completed",
+        output=[
+            SimpleNamespace(
+                type="message",
+                content=[SimpleNamespace(type="output_text", text=content)],
+            )
+        ],
     )
 
 
@@ -137,13 +144,13 @@ async def test_negative_detection_is_supported(provider):
 
 
 async def test_empty_choices_do_not_raise(provider):
-    provider.chat.completions.create.return_value = SimpleNamespace(choices=[])
+    provider.responses.create.return_value = SimpleNamespace(status="completed", output=[])
     assert await extractor.extract_financial_data("OCR text") == {"detected": False}
     provider.close.assert_awaited_once()
 
 
 async def test_provider_exception_propagates_but_client_is_closed(provider):
-    provider.chat.completions.create.side_effect = RuntimeError("Provider unavailable")
+    provider.responses.create.side_effect = RuntimeError("Provider unavailable")
     with pytest.raises(RuntimeError, match="Provider unavailable"):
         await extractor.extract_financial_data("OCR text")
     provider.close.assert_awaited_once()
@@ -152,10 +159,11 @@ async def test_provider_exception_propagates_but_client_is_closed(provider):
 async def test_request_keeps_json_mode_and_limits_untrusted_text(provider):
     output(provider, '{"detected":false}')
     await extractor.extract_financial_data("x" * 9000)
-    kwargs = provider.chat.completions.create.await_args.kwargs
-    assert kwargs["response_format"] == {"type": "json_object"}
-    assert kwargs["messages"][1] == {"role": "user", "content": "x" * 8000}
-    assert kwargs["model"] == extractor.settings.LLM_MODEL
+    kwargs = provider.responses.create.await_args.kwargs
+    assert kwargs["text"] == {"format": {"type": "json_object"}}
+    assert kwargs["input"][1] == {"role": "user", "content": "x" * 8000}
+    assert kwargs["model"] == extractor.settings.DOCUMENT_TEXT_MODEL
+    assert kwargs["store"] is False
 
 
 async def test_rejected_payload_is_not_logged(provider, caplog):
@@ -176,7 +184,7 @@ async def test_review_extraction_returns_typed_suggestion_with_configured_provid
     assert suggestion.fields.total == "12.30"
     assert (
         suggestion.parser_version
-        == f"{extractor.settings.LLM_PROVIDER}:{extractor.settings.LLM_MODEL}"
+        == f"{extractor.settings.LLM_PROVIDER}:{extractor.settings.DOCUMENT_TEXT_MODEL}"
     )
 
 

@@ -32,7 +32,7 @@ def _activation_config():
 
 
 def test_vision_config_does_not_inherit_advisor_key() -> None:
-    settings = Settings(OPENAI_API_KEY="advisor-secret", LLM_API_KEY="advisor-secret")
+    settings = Settings(OPENAI_API_KEY="advisor-secret")
     assert get_vision_config(settings) is None
 
     config = get_vision_config(

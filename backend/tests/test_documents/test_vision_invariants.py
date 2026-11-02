@@ -93,12 +93,23 @@ def _provider_response(request: httpx.Request) -> httpx.Response:
     return httpx.Response(
         200,
         json={
-            "choices": [
+            "id": "response-test",
+            "object": "response",
+            "created_at": 0,
+            "model": "test-vision-model",
+            "status": "completed",
+            "output": [
                 {
-                    "finish_reason": "stop",
-                    "message": {"content": json.dumps(payload), "refusal": None},
+                    "id": "message-test",
+                    "type": "message",
+                    "role": "assistant",
+                    "status": "completed",
+                    "content": [{"type": "output_text", "text": json.dumps(payload)}],
                 }
-            ]
+            ],
+            "parallel_tool_calls": False,
+            "tool_choice": "auto",
+            "tools": [],
         },
     )
 

@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     DOCUMENT_VISION_MAX_EDGE: PositiveInt = 2048
     DOCUMENT_VISION_MAX_BYTES: PositiveInt = 4 * 1024 * 1024
     DOCUMENT_VISION_MAX_OUTPUT_TOKENS: PositiveInt = 1600
+    DOCUMENT_VISION_REASONING_EFFORT: str = "none"
     DOCUMENT_VISION_TIMEOUT_SECONDS: PositiveFloat = 60
     DOCUMENT_VISION_CONCURRENCY: PositiveInt = 2
     DOCUMENT_VISION_MAX_ATTEMPTS: PositiveInt = 2
@@ -72,10 +73,14 @@ class Settings(BaseSettings):
     DOCUMENT_PROCESSING_ACTION_RATE_LIMIT: PositiveInt = 10
     DOCUMENT_PROCESSING_ACTION_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     OPENAI_API_KEY: str = ""
-    LLM_API_KEY: str = ""
-    LLM_BASE_URL: str = "https://api.deepseek.com"
-    LLM_MODEL: str = "deepseek-v4-pro"
-    LLM_PROVIDER: str = "configured"
+    LLM_BASE_URL: str = "https://api.openai.com/v1"
+    LLM_MODEL: str = ""
+    LLM_PROVIDER: str = "openai"
+    LLM_MAX_OUTPUT_TOKENS: PositiveInt = 4096
+    LLM_REASONING_EFFORT: str = "low"
+    DOCUMENT_TEXT_MODEL: str = ""
+    DOCUMENT_TEXT_MAX_OUTPUT_TOKENS: PositiveInt = 2000
+    DOCUMENT_TEXT_REASONING_EFFORT: str = "none"
     CORS_ORIGINS: str = DEFAULT_CORS_ORIGINS
     TRUSTED_ORIGINS: str | None = None
     TRUSTED_PROXY_HOSTS: str = "frontend"
