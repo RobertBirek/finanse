@@ -97,6 +97,15 @@ export function DocumentReview({ documentId, onClose }: Props) {
       review.data?.document_type === "unsupported" ||
       review.data?.document_type === "statement" ||
       review.data?.document_type === "loan_schedule");
+  const incompleteImageRead =
+    review.data?.status === "incomplete" &&
+    review.data.input_method === "image" &&
+    !review.data.error_code &&
+    !unsupported &&
+    review.data.warnings.some(
+      (warning) =>
+        warning === "unreadable" || warning === "missing_required_fields",
+    );
   const submit = () => {
     const total_minor = minor(form.total);
     if (
@@ -304,11 +313,14 @@ export function DocumentReview({ documentId, onClose }: Props) {
               </p>
               {(review.data.status === "error" ||
                 invalidModelOutput ||
-                interruptedModelRead) && (
+                interruptedModelRead ||
+                incompleteImageRead) && (
                 <p role="alert" className="mt-3 text-sm text-red-300">
                   {invalidModelOutput
                     ? "AI zwróciło niepoprawne dane. Możesz uzupełnić pola ręcznie."
-                    : "Nie udało się uzyskać propozycji od zewnętrznego dostawcy. Możesz uzupełnić pola ręcznie."}
+                    : incompleteImageRead
+                      ? "AI nie odczytało wszystkich danych. Porównaj dokument z oryginałem, uzupełnij pola ręcznie lub jawnie ponów odczyt."
+                      : "Nie udało się uzyskać propozycji od zewnętrznego dostawcy. Możesz uzupełnić pola ręcznie."}
                   <button
                     type="button"
                     className="btn-secondary ml-2"

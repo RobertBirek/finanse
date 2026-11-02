@@ -103,6 +103,111 @@ function renderReview() {
 }
 
 describe("DocumentReview", () => {
+  it.each(["multiple", "unsupported", "statement", "loan_schedule"] as const)(
+    "does not add unreadable-image retry for unsupported %s",
+    (document_type) => {
+      const previous = apiState.review;
+      apiState.prepareVision.mockClear();
+      apiState.review = {
+        ...previous!,
+        document_type,
+        status: "incomplete",
+        error_code: null,
+        input_method: "image",
+        warnings: ["unreadable"],
+      };
+      try {
+        renderReview();
+        expect(
+          screen.queryByRole("button", { name: "Ponów AI" }),
+        ).not.toBeInTheDocument();
+        expect(apiState.prepareVision).not.toHaveBeenCalled();
+      } finally {
+        apiState.review = previous;
+      }
+    },
+  );
+  it("does not add unreadable-image retry for a text review", () => {
+    const previous = apiState.review;
+    apiState.review = {
+      ...previous!,
+      status: "incomplete",
+      error_code: null,
+      input_method: "text",
+      warnings: ["unreadable"],
+    };
+    try {
+      renderReview();
+      expect(
+        screen.queryByRole("button", { name: "Ponów AI" }),
+      ).not.toBeInTheDocument();
+    } finally {
+      apiState.review = previous;
+    }
+  });
+  it.each(["unreadable", "missing_required_fields"] as const)(
+    "offers one explicit retry for an incomplete image with %s",
+    (warning) => {
+      const previous = apiState.review;
+      apiState.prepareVision.mockClear();
+      apiState.review = {
+        ...previous!,
+        status: "incomplete",
+        error_code: null,
+        input_method: "image",
+        warnings: [warning],
+      };
+      try {
+        renderReview();
+        expect(
+          screen.getByText(
+            "AI nie odczytało wszystkich danych. Porównaj dokument z oryginałem, uzupełnij pola ręcznie lub jawnie ponów odczyt.",
+          ),
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText("Sprzedawca")).toHaveValue("Sklep");
+        fireEvent.change(screen.getByLabelText("Opis"), {
+          target: { value: "Ręcznie poprawiony opis" },
+        });
+        expect(apiState.prepareVision).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole("button", { name: "Ponów AI" }));
+        expect(apiState.prepareVision).toHaveBeenCalledTimes(1);
+        expect(apiState.prepareVision).toHaveBeenCalledWith(
+          expect.objectContaining({
+            documentId: "document-1",
+            intentKey: expect.any(String),
+          }),
+        );
+        expect(screen.getByLabelText("Opis")).toHaveValue(
+          "Ręcznie poprawiony opis",
+        );
+      } finally {
+        apiState.review = previous;
+      }
+    },
+  );
+  it.each(["pending", "processing", "ready"] as const)(
+    "does not offer warning-based retry during %s",
+    (status) => {
+      const previous = apiState.review;
+      apiState.prepareVision.mockClear();
+      apiState.review = {
+        ...previous!,
+        status,
+        error_code: null,
+        input_method: "image",
+        warnings: ["unreadable"],
+      };
+      try {
+        renderReview();
+        expect(
+          screen.queryByRole("button", { name: "Ponów AI" }),
+        ).not.toBeInTheDocument();
+        expect(apiState.prepareVision).not.toHaveBeenCalled();
+      } finally {
+        apiState.review = previous;
+      }
+    },
+  );
   it("allows an explicit retry of the legacy exhausted review without replaying it on mount", () => {
     const previous = apiState.review;
     apiState.prepareVision.mockClear();

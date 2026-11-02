@@ -60,25 +60,47 @@ async def normalize_image(
             limit=output_bytes + 1,
         )
         assert process.stdin is not None and process.stdout is not None
-        try:
-            async with asyncio.timeout(settings.DOCUMENT_PARSER_TIMEOUT_SECONDS):
+
+        async def write_input() -> None:
+            assert process.stdin is not None
+            try:
                 process.stdin.write(content)
                 await process.stdin.drain()
+            finally:
                 process.stdin.close()
-                output = await process.stdout.read(output_bytes + 1)
+
+        writer = asyncio.create_task(write_input())
+        try:
+            async with asyncio.timeout(settings.DOCUMENT_PARSER_TIMEOUT_SECONDS):
+                output = bytearray()
+                while chunk := await process.stdout.read(
+                    min(65536, output_bytes + 1 - len(output))
+                ):
+                    output.extend(chunk)
+                    if len(output) > output_bytes:
+                        raise ImageNormalizationError("Image conversion failed")
+                await writer
                 await process.wait()
-        except (TimeoutError, BrokenPipeError, ConnectionResetError) as error:
-            raise ImageNormalizationError("Image conversion failed") from error
+        except (TimeoutError, BrokenPipeError, ConnectionResetError):
+            raise ImageNormalizationError("Image conversion failed") from None
         if process.returncode != 0 or len(output) > output_bytes:
             raise ImageNormalizationError("Image conversion failed")
-        if not output.startswith(b"\xff\xd8"):
+        if not output.startswith(b"\xff\xd8") or not output.endswith(b"\xff\xd9"):
             raise ImageNormalizationError("Image conversion failed")
-        return output
+        return bytes(output)
     except OSError as error:
         raise ImageNormalizationError("Image conversion unavailable") from error
     finally:
         if "process" in locals() and process.returncode is None:
             process.kill()
+        if "writer" in locals():
+            writer.cancel()
+            await asyncio.gather(writer, return_exceptions=True)
         if "process" in locals():
+            # wait() alone can block on a paused stdout transport after an early
+            # rejection. The child is stopped; discard its remaining bounded pipe data.
+            if process.stdout is not None:
+                while await process.stdout.read(65536):
+                    pass
             await process.wait()
         slots.release()
