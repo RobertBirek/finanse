@@ -7,15 +7,20 @@ Backlog zadań ze statusami.
 - [x] Odtworzyć błąd na nowym JPEG udostępnionym przez użytkownika:3809248B,
   PillowMPO/2frames/4032x3024,primaryload+verifyPASS, dokładny produkcyjny parser
   odrzuca fmtMPO/n_frames2. Dowód offline bez AI/DB i zmiany oryginału.
-- [~] Po zgodzie: obsługa rozpoznanego wariantu JPEG/MPO iPhone z głównym obrazem
+- [x] Po zgodzie: obsługa rozpoznanego wariantu JPEG/MPO iPhone z głównym obrazem
   do pochodnych, zachowaniem oryginału i limitów; nie dopuszczać globalnie dowolnych
   multi-image. TDD na syntetykach, lokalna weryfikacja udostępnionego pliku, review,
   pełny gate i osobne bezpieczne wydanie. Userzatwierdził; rolaHDRgainmap potwierdzona.
   Kod/regresje lokalnie91PASS, dwa Importantreview zamknięte RED/GREEN, dostarczonyJPEG
   boundedparser/normalizerPASS. Pełny1057backend/316frontend/lint/typesPASS,
   kod45c8c2d zapisany; dokładny pakiet/privateJPEG i4kodysmokePASS. Pytanie o zgodę
-  exactSHA zadane, odpowiedź jeszcze nie nadeszła. Produkcja bez nowej poprawki.
-- [~] Zdiagnozować400 przy uploadzie faktury z biblioteki iPhone: błąd przedAI,
+  exactSHA zatwierdzone poleceniem „scal na main i wdróż”; hostmain FF8c2fa67,
+  źródła identyczne zgate/świeże21testów/lint/typesPASS. Runtime45c8c2d wdrożony,
+  browser375/1440 i10próbek obserwacji/metadanePASS; bez migracji/policychange.
+- [ ] Potwierdzić jedną rzeczywistą próbę uploadu z iPhone po wydaniu45c8c2d.
+- [ ] ReviewMinor: uzupełnić bezpośrednie syntetyczne regresje brakujących/powtórzonych
+  pól MPF; obecne testy obejmują korupcję zakresów/offsetów/typów/dependencies/EOI.
+- [x] Zdiagnozować400 przy uploadzie faktury z biblioteki iPhone: błąd przedAI,
   genericUIerror; JPEG12MP na rzeczywistym parserze syntetyczniePASS. Ustalić format/
   wielkość i odtworzyć przyczynę przed poprawką; bez ponawiania prywatnej faktury doAI.
   Użytkownik: HEIF3024x4032/3,7MB — limity nieprzekroczone; białyHEIC12MP takżePASS,

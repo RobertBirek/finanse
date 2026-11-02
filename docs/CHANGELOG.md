@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Unreleased] — 2026-11-02 — Rozpoznany wariant JPEG/MPO z mapą HDR iPhone
+## [45c8c2d] — 2026-11-02 — JPEG/MPO z mapą HDR iPhone na produkcji
 
 ### Fixed
 - Po zgodzie użytkownika przygotowano wąską obsługę AppleJPEG z głównym obrazem
@@ -10,10 +10,13 @@ Wszystkie istotne zmiany w projekcie.
 - Zachowane limity, oryginał i istniejąca normalizacja głównego obrazu. TDD i poprawki
   po niezależnym review:91focusedPASS, lint/typesPASS; udostępniony JPEG lokalniePASS,
   bez AI/DB. Build/93E2E+1skip i świeży backup b9b3a8d5/restore PASS.
-- Kandydat45c8c2d: pełny gate1057backend/316frontend/lint/typesPASS. Dokładne obrazy
-  i lokalny smoke JPEG/pochodnej oraz4kodówHTTP PASS; oczekiwanie na zgodę exactSHA,
-  produkcja nadal9369b5d; brak twierdzenia o skutecznym uploadzie
-  telefonu. Raport: `docs/audits/2026-11-02-iphone-gainmap-jpeg.md`.
+- Kod45c8c2d: pełny gate1057backend/316frontend/lint/typesPASS. Dokładne obrazy
+  i lokalny smoke JPEG/pochodnej oraz4kodówHTTP PASS. Po zgodzie użytkownika scalono
+  na lokalny main i wdrożono spójny pakiet bez migracji lub zmiany polityki AI.
+- Produkcyjne HTTPS/assets/auth, browser375/1440 i10próbek obserwacji PASS;
+  active-release sfinalizowany2026-11-02T14:00:26Z. Dane i oryginały zachowane,
+  rollback9369b5d dostępny. Pozostaje jedna rzeczywista próba telefonu.
+  Raport: `docs/audits/2026-11-02-iphone-gainmap-jpeg.md`.
 
 ## [9369b5d] — 2026-11-02 — Diagnostyka uploadu z iPhone na produkcji
 

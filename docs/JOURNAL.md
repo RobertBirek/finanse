@@ -2,11 +2,11 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
-## 2026-11-02 — Zatwierdzona poprawka Apple gain-map JPEG, gate w toku
+## 2026-11-02 — ZAKOŃCZONE: Apple gain-map JPEG45c8c2d na main i produkcji
 
 - User „tak” na wąską poprawkę + testy/review/wdrożenie. Plan
   docs/superpowers/plans/2026-11-02-iphone-gainmap-jpeg.md, inline na istniejącym
-  linkedworktree; produkcja nadal9369b5d. Nie odtwarzać poprzedniego deployu diagnostyki.
+  linkedworktree. Wdrożenie45c8c2d zakończone, nie powtarzać apply/prepare ani gate.
 - Rola drugiego obrazu potwierdzona bez treści/EXIF: AppleHDRgainmap/version65536.
   Implementacja tylko bounded validation_process.py, syntetyczny fixture i21regresji.
   Dwa Important przeglądu poprawione w jednej rundzie: realny EOI wewnątrz zakresów
@@ -21,9 +21,20 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   smoke do dokładnegoimageID/OCIrevision. Preparepakietu **sh_19c8161db001QrMwNKUr0Dalge**
   PASS,200backendfileseachimage zgodneGit, bez zmianconfig/runtime/schema/policy.
 - Exactimage45c8c2d/OCIrevisionpinned: privateJPEG/parser/normalizerPASS i4kodówHTTP
-  syntheticPASS, noAI/DB/uploadu prywatnego. Pytanie o exactSHAapproval45c8c2d zadane,
-  brak odpowiedzi — nie tworzyć exact-revision-approval.json bez odpowiedzi użytkownika.
-  NIE apply lub ponowny prepare; czekać na zgodę. Produkcja nadal9369b5d.
+  syntheticPASS, noAI/DB/uploadu prywatnego. Na pytanie o exactSHAapproval45c8c2d
+  userodpowiedział „scal na main i wdróż”. Zapisano zgodę; hostmain FF8c2fa67,
+  sourcebytes identyczne zgate, świeże21testów/ruff/mypyPASS. Bez push.
+- Preapplybaseline/configHMAC/active/dataIDs/queuesPASS. Zatwierdzonyapply
+  **sh_19c8a2b5a001ImZikBtL7kxdz6** zakończonyPASS, verified.json odczytany.
+  Browserread-only375/1440 i finalize5minobservation **sh_19c8aaa2e001QS4MiIe0e7HDKo**
+  zakończonePASS10próbek. Finalized.json/browserproof odczytane; świeżeHTTPS200 i
+  dokładne działająceimageIDs/OCIrevision zgodne zactive-release45c8c2d PASS.
+  Metadaneatomowo sfinalizowane2026-11-02T14:00:26Z; schema/policy niezmienione.
+- Hostmain zawiera source45c8c2d+docs, bez push. Rollback9369b5d zachowany;
+  unrelatedVelo/Q7dirty i host-managedworktree zachować. Odrębnyfollowup: dodatkowe
+  bezpośrednie regresje brakujących/powtórzonych pólMPF (reviewMinor, nie blocker).
+- Następnie jedna próba z iPhone po odświeżeniu strony. Nie twierdzić, że rzeczywiste
+  żądanie telefonu przeszło, dopóki użytkownik nie potwierdzi wyniku.
 - Dowody/ledger /tmp/opencode/iphone-jpeg-20261102/. Po gate: sourcecommit, proofy
   exactSHA i niezmienioneźródłoUI/dist, pakiet/obrazysmoke, exactrevision approval
   przed runtime (wymóg /deploy). Bez migracji, policychange, AIprobe/importów/backfillu.

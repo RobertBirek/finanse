@@ -36,9 +36,9 @@
 **Files:** Reuse ops/prepare_release.py and reviewed private release procedure in a new task-owned private directory; document docs/audits/2026-11-02-iphone-gainmap-jpeg.md.
 **Interfaces:** Consume exact Task1 SHA plus successful gate/review/structural/build proofs; prepare immutable backend/worker/frontend package with current production9369b5d as rollback.
 - [x] Fresh backup/restore, exact image/config/source/dist identity and candidate regression smoke without DB/AI.
-- [ ] Review procedure; require approval of exact SHA/scope per /deploy before runtime apply.
-- [ ] Apply only app services, no migration/policy operations; verify HTTPS/assets/auth/browser/data/policy/original invariants and observation, atomically finalize metadata.
-- [ ] Update CHANGELOG/TASKS/JOURNAL and audit; request one real upload only after completed deployment. Never claim phone success from offline parser tests.
+- [x] Review procedure; require approval of exact SHA/scope per /deploy before runtime apply.
+- [x] Apply only app services, no migration/policy operations; verify HTTPS/assets/auth/browser/data/policy/original invariants and observation, atomically finalize metadata.
+- [x] Update CHANGELOG/TASKS/JOURNAL and audit; request one real upload only after completed deployment. Never claim phone success from offline parser tests.
 
 ## Execution notes
 Already in linked worktree feat/financial-document-workflow; no new worktree needed.

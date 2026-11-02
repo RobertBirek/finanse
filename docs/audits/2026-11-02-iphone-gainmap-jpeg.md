@@ -52,11 +52,11 @@ zachowanie oryginału i użycie głównego obrazu w pochodnych. Nie dowolne MPO.
 - Scoped operacyjny przegląd zamknął Important dotyczący pochodzenia smoke obrazu:
   probe wymaga przypiętego backendimageID/reference oraz zgodnego OCIrevision,
   apply sprawdza exact_image i imageID proofu. RegresjaRED→GREEN, warunkowy odbiór
-  procedury; faktyczne dowody gotowego pakietu i zgoda exactSHA nadal wymagane.
+  procedury. Wymagane dowody gotowego pakietu i zgoda exactSHA następnie uzyskane.
 
 ## Stan wydania
 
-**Pełny gate i dokładny pakiet PASS; oczekiwanie na zgodę exactSHA.** Produkcja nadal9369b5d.
+**Wydanie45c8c2d zakończone; oczekuje jedynie na rzeczywistą próbę użytkownika.**
 Dokładny kandydat: `45c8c2d45311620320abd21a189706810c31069b`.
 Wynik1057backendPASS/8deselected/10znanychostrzeżeń,316frontendPASS i lint/typesPASS.
 Manifest potwierdza niezmienione bajty źródeł podczas całego gate i przed commitem.
@@ -65,12 +65,21 @@ hardening, sieci i wolumeny identyczne z aktywnym runtime poza obrazami.
 Gotowy przypięty obraz backendu z OCIrevision45c8c2d: prywatny JPEG boundedparser
 image/jpeg i pojedyncza pochodna3024×4032/noEXIF/XMP PASS, zeroAI/DB i niezmieniony
 oryginał. Oddzielny syntetyczny HTTPsmoke wszystkich4kodów400 PASS.
-Pytanie o zgodę na dokładną wersję45c8c2d zostało zadane; nie uznawać powiadomienia
-narzędzia lub wcześniejszego ogólnego „tak” za odpowiedź na to pytanie.
-Testy działają tylko na izolowanym finanse_test55432, z wyłączonymi kluczami AI.
-Nie zmieniać kodu podczas tego gate; manifest przypina faktycznie testowane bajty.
-Pozostaje zgoda na dokładny SHA zgodnie z /deploy przed jakimkolwiek runtime apply.
-Rollback pozostaje dokładną obecną wersją9369b5d, bez migracji lub operacji policy.
+Na pytanie o wdrożenie dokładnej wersji45c8c2d użytkownik odpowiedział „scal na main
+i wdróż”. Lokalny main FF8c2fa67 (kod45c8c2d+odebrana dokumentacja), bez push.
+Cały manifest źródeł zgodny z pełnym gate; na main ponownie21testów poprawki,
+Ruff/mypyPASS. Preapply: aktywna wersja, HMAC konfiguracji, dane/schema/policy,
+oryginały i identyfikatory usług bez zmian, kolejki bez aktywnych dokumentów.
+Testy działały tylko na izolowanym finanse_test55432, z wyłączonymi kluczami AI.
+Manifest przypina faktycznie testowane niezmienione bajty.
+ExactSHAapproval zapisane; zatwierdzone runtime apply zakończone, nie ponawiać go.
+Apply zakończonePASS: działające spójne obrazy i HTTPS/assets/auth, dane/originals/
+schema/policy/data-serviceIDs bez zmian poza dokładnie4własnymi audytami401.
+Nie wykonano migracji ani operacji policy. Read-onlybrowser375/1440 i końcowa
+obserwacja zostały zakończonePASS: oba viewporty bez błędów/mutacji/overflow,
+10próbekPASS, atomic active-release2026-11-02T14:00:26Z. Świeże HTTPS200 oraz
+działające imageIDs/OCIrevision zgodne z metadanymi PASS. Można poprosić o próbę.
+Rollback pozostaje dokładną poprzednią wersją9369b5d, bez migracji lub operacji policy.
 
 Prywatne dowody: `/tmp/opencode/iphone-jpeg-20261102/` (0700; plik wejściowy0600).
 
@@ -79,3 +88,9 @@ Prywatne dowody: `/tmp/opencode/iphone-jpeg-20261102/` (0700; plik wejściowy060
 Kontynuacja inline zatwierdzonej małej poprawki zamiast kolejnej rundy pytań o metodę.
 Niezależny przegląd i pełne bramki wydania zachowane; koszt nietrafienia preferencji:
 użytkownik mógłby woleć osobnych wykonawców per task. Nie obniża to bramek bezpieczeństwa.
+
+Scalenie na main było fast-forward i zachowało cały manifest testowanych źródeł.
+Nie powtarzano identycznego22-minutowego pełnego gate: na main ponownie21regresji,
+Ruff/mypy i pełna zgodność bajtów źródeł z1057/316gate. Koszt tej decyzji: pełny zestaw
+nie był ponownie uruchomiony w środowisku hostcheckout; regresje wyłącznie środowiskowe
+mogłyby wymagać osobnego odtworzenia. Gotowe obrazy i produkcja miały własne smoke.
