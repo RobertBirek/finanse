@@ -4,6 +4,17 @@ Backlog zadań ze statusami.
 
 ## Migracja AI do OpenAI i wydanie produkcyjne (2026-11-02)
 
+- [x] Odtworzyć błąd na nowym JPEG udostępnionym przez użytkownika:3809248B,
+  PillowMPO/2frames/4032x3024,primaryload+verifyPASS, dokładny produkcyjny parser
+  odrzuca fmtMPO/n_frames2. Dowód offline bez AI/DB i zmiany oryginału.
+- [~] Po zgodzie: obsługa rozpoznanego wariantu JPEG/MPO iPhone z głównym obrazem
+  do pochodnych, zachowaniem oryginału i limitów; nie dopuszczać globalnie dowolnych
+  multi-image. TDD na syntetykach, lokalna weryfikacja udostępnionego pliku, review,
+  pełny gate i osobne bezpieczne wydanie. Userzatwierdził; rolaHDRgainmap potwierdzona.
+  Kod/regresje lokalnie91PASS, dwa Importantreview zamknięte RED/GREEN, dostarczonyJPEG
+  boundedparser/normalizerPASS. Pełny1057backend/316frontend/lint/typesPASS,
+  kod45c8c2d zapisany; dokładny pakiet/privateJPEG i4kodysmokePASS. Pytanie o zgodę
+  exactSHA zadane, odpowiedź jeszcze nie nadeszła. Produkcja bez nowej poprawki.
 - [~] Zdiagnozować400 przy uploadzie faktury z biblioteki iPhone: błąd przedAI,
   genericUIerror; JPEG12MP na rzeczywistym parserze syntetyczniePASS. Ustalić format/
   wielkość i odtworzyć przyczynę przed poprawką; bez ponawiania prywatnej faktury doAI.
@@ -15,6 +26,11 @@ Backlog zadań ze statusami.
   rzeczywistego żądania Safari, bo MIME/ewentualna konwersja w drodze nie są wlogach.
   Diagnostyka400 wdrożona w9369b5d po TDD/fullgate/review/backup/restore.
   Pozostaje jedna próba użytkownika i odczyt nowego komunikatu; nie ponawiać apply.
+  Wynik próby: validation_failed; log dwóch odrzuceń pokazuje image/jpeg/3809248B,
+  detectedunknown, a nie sprawdzony lokalnie HEIF3675697B. Następnie porównać ścieżkę
+  wyboru oryginału przez Pliki; nie zakładać jeszcze uszkodzenia lub konkretnej konwersji.
+  Próba przez Pliki też failed:12:50:25UTC,ponownieJPEG/3809248B. Pozyskać dokładny
+  wybrany plik do lokalnej reprodukcji (bez AI/uploadu aplikacyjnego), nie ponawiać w ciemno.
 - [x] Wdrożyć diagnostykę400:1036backend/316frontend/93E2E+1skip, lint/types/build,
   dokładne obrazy i źródło UI, HTTPS/assets/auth/browser375/1440 oraz10próbek PASS.
   Bez migracji, zmiany walidacji/polityki vision lub wywołania AI w diagnozie.

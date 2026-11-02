@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-02 — Rozpoznany wariant JPEG/MPO z mapą HDR iPhone
+
+### Fixed
+- Po zgodzie użytkownika przygotowano wąską obsługę AppleJPEG z głównym obrazem
+  i pomocniczą mapą HDR, bez globalnego dopuszczenia dowolnych plików wieloobrazowych.
+- Zachowane limity, oryginał i istniejąca normalizacja głównego obrazu. TDD i poprawki
+  po niezależnym review:91focusedPASS, lint/typesPASS; udostępniony JPEG lokalniePASS,
+  bez AI/DB. Build/93E2E+1skip i świeży backup b9b3a8d5/restore PASS.
+- Kandydat45c8c2d: pełny gate1057backend/316frontend/lint/typesPASS. Dokładne obrazy
+  i lokalny smoke JPEG/pochodnej oraz4kodówHTTP PASS; oczekiwanie na zgodę exactSHA,
+  produkcja nadal9369b5d; brak twierdzenia o skutecznym uploadzie
+  telefonu. Raport: `docs/audits/2026-11-02-iphone-gainmap-jpeg.md`.
+
 ## [9369b5d] — 2026-11-02 — Diagnostyka uploadu z iPhone na produkcji
 
 ### Fixed
@@ -15,6 +28,18 @@ Wszystkie istotne zmiany w projekcie.
   Raport: `docs/audits/2026-11-02-upload-rejection-diagnostics.md`.
 
 ### Kontekst diagnozy
+
+- Dostarczony JPEG pozwolił odtworzyć błąd: biblioteka rozpoznaje MPO/2obrazy,
+  główny obraz decode/verifyPASS, a obecny walidator odrzuca taki format/liczbęobrazów.
+  Test dokładnegoobrazu produkcji z rzeczywistymi limitami, networknone/bezAI/DB.
+  Potwierdzona przyczyna dla dostarczonego pliku; poprawka jeszcze nie wdrożona.
+- Próba przez Pliki też odrzucona; log12:50:25UTC ma te same parametryJPEG/3809248B.
+  Obejście niepotwierdzone. Dalsza diagnoza wymaga dokładnego pliku z tej próby;
+  nie wdrożono kolejnej zmiany ani nie osłabiono walidacji.
+- Po wdrożeniu użytkownik potwierdził komunikat validation_failed. Dwie próby
+  12:45:26/12:45:59UTC: deklarowany image/jpeg,3809248B, detected=unknown.
+  To inna reprezentacja niż lokalnie sprawdzony HEIF3675697B. Przyczyna odrzucenia
+  przez parser nadal niepotwierdzona; bez zmian walidacji i bez wywołania AI.
 
 - Zgłoszony błąd przesyłania; logi wskazują400 przedAI. Syntetyczny JPEG12MP przechodzi
   rzeczywisty parser. Przyczyna konkretnego odrzucenia w trakcie ustalania, bez zmian

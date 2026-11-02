@@ -73,6 +73,24 @@ Oryginał wyłącznie w oddzielnym prywatnym katalogu diagnozy, nie w repo ani p
 
 ## Dalszy krok po wydaniu
 
+### Wynik diagnozy po próbach użytkownika
+
+Użytkownik potwierdził, że zapis do Plików faktycznie dał JPEG, i udostępnił tę wersję.
+Plik3809248B (zgodny rozmiarem z logami) ma sygnaturę JPEG i poprawne końcoweEOI.
+Pillow rozpoznaje **MPO,2obrazy,4032×3024**; główny obraz przechodzi load i verify.
+Dokładny produkcyjny parser9369b5d z identycznymi limitami zwraca mime=null/exit0.
+`validation_process.py:60–61` odrzuca formatMPO oraz n_frames!=1 — przyczyna
+odrzucenia tego pliku jest odtworzona, nie wynika z APIAI lub braku obsługiMIMEJPEG.
+Sama liczba obrazów nie potwierdza roli drugiego jakoHDRgainmap.
+
+Badanie lokalne: networknone,read-only,UID10001, bezAI/OCR/DB/uploadu i zmiany
+oryginału. Prywatny dowód: `/tmp/opencode/iphone-jpeg-20261102/structural-proof.json`.
+Kolejnym krokiem jest zatwierdzenie zakresu obsługi tego wariantu JPEG/MPO iPhone
+z zachowaniem oryginału, głównego obrazu w pochodnych i limitów bezpieczeństwa.
+Nie wdrożono jeszcze poprawki akceptacji ani nie dopuszczono dowolnych multi-image.
+
+### Pierwotny plan próby
+
 Poprosić o jedną próbę z biblioteki iPhone. Nowy komunikat i bezpiecznylog pozwolą
 rozróżnić niedopuszczony MIME, zawartość nierozpoznaną przezparser i MIMEmismatch.
 Nie twierdzić, że konkretna faktura jest już przyjmowana bez rzeczywistego wyniku.

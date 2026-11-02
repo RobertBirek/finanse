@@ -2,6 +2,69 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-02 — Zatwierdzona poprawka Apple gain-map JPEG, gate w toku
+
+- User „tak” na wąską poprawkę + testy/review/wdrożenie. Plan
+  docs/superpowers/plans/2026-11-02-iphone-gainmap-jpeg.md, inline na istniejącym
+  linkedworktree; produkcja nadal9369b5d. Nie odtwarzać poprzedniego deployu diagnostyki.
+- Rola drugiego obrazu potwierdzona bez treści/EXIF: AppleHDRgainmap/version65536.
+  Implementacja tylko bounded validation_process.py, syntetyczny fixture i21regresji.
+  Dwa Important przeglądu poprawione w jednej rundzie: realny EOI wewnątrz zakresów
+  i entityrefs XML,3RED→GREEN; focused91/lint/types PASS. Normalizer bez zmian.
+- Prywatny JPEG na kodzie kandydata parser+normalizerPASS, pochodna3024×4032,
+  jednoJPEG/noEXIF/XMP, niezmienionyoryginał, noAI/DB/network.
+- Full6gate **sh_19c6acd0f0017xKQKz4OF3aBhg** zakończony1057backend/316frontend/
+  lint/typesPASS, manifestniezmienionegoźródłaPASS. Nie powtarzać suite.
+  Świeży frontendbuild/93E2E+1skip PASS. Sourcecommit45c8c2d45311620320abd21a189706810c31069b.
+- Backup b9b3a8d5+installedrestore success/0,16offlineguardPASS. Scoped operations
+  review ses_e6393d2bdffe9stS571Rv0t0JN warunkowoApproved po RED/GREENbindingu
+  smoke do dokładnegoimageID/OCIrevision. Preparepakietu **sh_19c8161db001QrMwNKUr0Dalge**
+  PASS,200backendfileseachimage zgodneGit, bez zmianconfig/runtime/schema/policy.
+- Exactimage45c8c2d/OCIrevisionpinned: privateJPEG/parser/normalizerPASS i4kodówHTTP
+  syntheticPASS, noAI/DB/uploadu prywatnego. Pytanie o exactSHAapproval45c8c2d zadane,
+  brak odpowiedzi — nie tworzyć exact-revision-approval.json bez odpowiedzi użytkownika.
+  NIE apply lub ponowny prepare; czekać na zgodę. Produkcja nadal9369b5d.
+- Dowody/ledger /tmp/opencode/iphone-jpeg-20261102/. Po gate: sourcecommit, proofy
+  exactSHA i niezmienioneźródłoUI/dist, pakiet/obrazysmoke, exactrevision approval
+  przed runtime (wymóg /deploy). Bez migracji, policychange, AIprobe/importów/backfillu.
+
+## 2026-11-02 — Potwierdzona przyczyna odrzucenia JPEG z iPhone: MPO
+
+- Użytkownik potwierdził konwersję przy zapisie do Plików i udostępnił JPEG.
+  Pobrany wyłącznie do prywatnego /tmp/opencode/iphone-jpeg-20261102/ (0700/0600),
+  3809248B zgodne z liczbą bajtów odrzuconych prób; bez twierdzenia o identyczności
+  bajtów żądania, którego nie zachowano. SygnaturaJPEG i końcoweEOI poprawne.
+- Odtworzenie na dokładnym obrazie produkcyjnym9369b5d, UID10001, networknone,
+  read-only,1CPU/1GiB kontenera; parserpodproces ze wszystkimi rzeczywistymi limitami
+  produkcji (512MiB,10CPU,15wall,20MiB,25MP). Wynik parsera mime=null/exit0.
+- Pillow rozpoznaje formatMPO,2obrazy,4032x3024; podstawowy obraz load i verify PASS.
+  Walidator validation_process.py:60–61 jawnie odrzuca format poza PNG/JPEG oraz
+  n_frames!=1. To konkretna przyczyna odrzucenia tego artefaktu, nie problem AI,
+  pustyplik lub zły nagłówekMIME. Nie potwierdzono jeszcze roli drugiego obrazu
+  (np.HDR); samo2frames nie jest dowodem gainmap.
+- Nie zmieniono oryginału (kontrola skrótu tylko w pamięci), kodu aplikacji/runtime,
+  DB lub policy; nie wykonanoOCR/AI/uploadu. Dowód:structural-proof.json i probe.py
+  w katalogu prywatnym. Następnie zatwierdzenie małej poprawki obsługi rozpoznanego
+  wariantu iPhone, bez globalnego dopuszczenia dowolnych plików wieloobrazowych;
+  główny obraz do pochodnych, oryginał zachowany, pełne limity i testy regresji.
+
+## 2026-11-02 — Wynik próby iPhone po diagnostyce
+
+- Próba przez Pliki również odrzucona. Nowy bezpieczny log12:50:25UTC:
+  validation_failed/image/jpeg/3809248B/detectedunknown — takie same parametry jak
+  wcześniej, co nie dowodzi identyczności bajtów. Nie proponować kolejnych ślepych
+  ponowień. Do lokalnej reprodukcji potrzebny dokładnie plik wybrany teraz w Plikach,
+  udostępniony osobno; wcześniejszy sprawdzony HEIF nie zastępuje tego artefaktu.
+- Użytkownik podaje nowy komunikat odpowiadający document_validation_failed.
+  Odczyt wyłącznie zamkniętego wzorca bezpiecznych logów:12:45:26 i12:45:59UTC,
+  declared=image/jpeg, detected=unknown, bytes=3809248 w obu próbach.
+- Lokalnie sprawdzony oryginał był HEIF3675697B; nowe żądania mają inną reprezentację.
+  Brak podstaw do ogłoszenia konkretnej przyczyny lub samego MIMEmismatch.
+  Kod validation_failed obejmuje nierozpoznanie, ograniczenia i błędy parsera.
+- Nie pobrano treści nowego uploadu, nie wywołano AI/DB i nie zmieniono runtime/kodu.
+  Następnie próba wyboru oryginału przez Pliki; dla dokładnej reprodukcji odrzucenia
+  potrzebne byłyby faktycznie przesłane bajty, nie tylko wcześniejszy HEIF.
+
 ## 2026-11-02 — ZAKOŃCZONE: diagnostyka uploadu9369b5d na produkcji
 
 - Diagnostyka wdrożona i sfinalizowana 2026-11-02T12:34:58Z; nie powtarzać apply.
