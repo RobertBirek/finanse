@@ -2,6 +2,87 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-02 — Pełny strumień d9a5797 i pakiet odebrane, czekają na zgodę
+
+- User„tak” na asyncprefixbug+PonówAI. Plan complete-image-stream2026-11-02,
+  dowody/ledger /tmp/opencode/image-stream-fix-20261102/. Base8b1d194/prod5d5b82f.
+- TDD3backend/2UIRED;focused61backend33frontend/lint/typesGREEN. RealOSprocesspipes,
+  dużyJPEG/delayedchunks/overlapstdinstdout, exactbound/overflow/truncated/exitbad,
+  timeout/cancelPIDreap+slotrelease. NowaUIbranch tylko incompleteimage/knownwarnings.
+- Trueasyncprivateprobe na kodziekandydata+dokładnymruntime: full644947B==child,
+  decoded1536×2048, metadataempty/originalunchanged/noAI/OCR/DB. To naprawa realnej
+  granicy, wcześniejsze child-onlysmoke nie było wystarczającymtestem.
+- Source/security reviewer **ses_e6249faa0ffeuHOzVnq5NC78c8**:1ImportantUIunsupported
+  poprawiony4RED→GREEN, dodatkowytextnegative,38frontend/lint/typesPASS. Minoroverlap
+  teststrength odroczony w raporcie. Backendbezblockers. Brakdrugiegosourcereview.
+- Scopedopsreview **ses_e62487ed8ffeYgcEfY2EFcTd5i** warunkowoApproved po dokładnym
+  porównaniu rzeczywistegofullchildstdout zamiastinprocessconvert. SyntheticPROGRAM
+  mountedcandidatePASS610370B; nie jest proofemapply, exactimagesmokepending.
+- KOŃCOWY full6gate **sh_19dba3088001yRB0vhnZrHGkJ3**1080backend/335frontend/
+  lint/typesPASS; build/E2E **sh_19dba310c001eUh5RhvJSm6Ve3**93PASS+1skip.
+  Testowaneźródła/blobyfrontendu/dist zgodne z proofami. Sourcecommit4plików
+  d9a5797a8de03f8868124e179d71a799c9c031ac. Nie powtarzać suite.
+- Preparepakietu **sh_19dd482a6001To2Ml5UmDoULuU** PASS201backendfileseachimage,
+  sameconfiguration/runtime/schema/policy. Exactimage trueasyncstream610370B==fullchild/
+  decode/hostilepipesPASS, date8cases i4HTTP400PASS. PrywatnyexactworkerimageJPEGprobe
+  trueasync644947B==fullchild/decode1536×2048/noAI/OCR/DB/originalunchangedPASS.
+  ASKexactd9a5797approval zadane, brak odpowiedzi. Nieapply/nieponawiaćprepare/gate;
+  produkcja5d5b82f. Nie tworzyć exact-revision-approval.json bez odpowiedzi użytkownika.
+- Backup8f621fb2/installedrestore samefreshsnapshot success0,16offlineguardPASS.
+  Releasewrapper staryreviwedbase zcountedpreviousSHA5d,configHMAConly, trueasync
+  syntheticstreamsmoke+date+400regression przedapply i exactSHAapproval wymagane.
+- Bez zmiany2048px/quality90/policy/model/schema/auth, bez prywatnychpikseli wLLM,
+  bezOCR/providerrequests/autoreplay. Kasowanie/historia jest osobnymzadaniem;
+  nie implementować cichej archiwizacji lub kaskadowego kasowania zależności bez projektu.
+
+## 2026-11-02 — Potwierdzone ucięcie obrazu na granicy async subprocess przed AI
+
+- User pyta o zmniejszenie; wyjaśniono aktualne produkcyjne2048px/quality90/4MiB,
+  następnie „ok,działaj” na lokalny qualityprobe bezAI/OCR. Nie jest to zgoda na
+  zmianę konfiguracji/noweAI lub destrukcyjne operacje. Retry/delete nadal osobnoscope.
+- Kontener dokładnegoworkerimage5d5b82f, networknone/readonly/UID10001/1CPU/1GiB,
+  image_process ze wszystkimi rzeczywistymi limitami zprod. Cały JPEG2048ma644947B,
+  wymiary1536×2048, orientacja z3024×4032, jedenobraz/noEXIF/XMP, kontrast zachowany.
+  Wariant1600ma390479B,1200×1600;4032ma3227939B. Metryki nie dowodzą czytelności tekstu.
+- Pełna pochodna miała innyhash niż ukończona rewizja mimo zgodnego sourcehash.
+  Drugi probe wywołał PRAWDZIWE async images.normalize_image w identycznymruntime:
+ 65536B, dokładny prefix pełnego644947B, bezEOI, Image.loadOSError. Ten hashZGODNY
+  z ostatniąsucceeded rewizjąimage dla source. Odtworzona konkretna przyczyna: read(n)
+  czyta dostępny fragment, potem wait kończydziecko, aplikacja nie opróżnia stdout.
+- Wcześniejszy MPOsmoke sprawdzał subprocess.run(capture_output) i samimage_process,
+  nie async images.normalize_image. MałesyntheticJPEGtesty nie przekraczały bufora.
+  To ujawniona luka testów i realny błąd transportu pochodnej, nie wniosek o awariiAI
+  lub automatyczna zgoda na osłabianie walidacji/providerretry/większe limity.
+- Żadnych provider/AI/OCRcalls, uploadu, produkcyjnychmutacji/configchange/pixelsview
+  przez LLM. Hashy/identyfikatorów/treści nie wypisano; tylko safecomparisonbool.
+  Oryginał i pochodne prywatne niezmienione, piksele pochodnych tylko w pamięci.
+  Dowody /tmp/opencode/iphone-quality-20261102/quality-proof.json i async-proof.json.
+- Do zatwierdzenia: boundedread-doEOF zlimit+1/timeout i reapdziecka, dużysyntetyczny
+  JPEG oraz dzielonypipe RED/GREEN, prawdziwe asyncAPI exactimageprobe. Zostawić2048px
+  iquality90. Żadnego automatycznego ponowieniaAI faktury. Retry UI/delete do osobnegoplanu;
+  nie usuwać historii/audytu wprodukcyjnej bazie w celu obejścia problemu.
+
+## 2026-11-02 — Po retry: wynik nieczytelny, niedostępne retry i błąd usuwania
+
+- User: „Uzupełnij ręcznie”, nie może usunąć i ponowić. Read-only selekcja wyłącznie
+  statusów/enumów/obecności wymaganych pól po18:34:03Z:1job succeeded/1attempt,
+  reviewincomplete/errornull, warnings unreadable+missing_required_fields,
+  typeinvoice/documentdone. Brak supplier_name/total/currency; wartości nieodczytywane
+  do wyniku narzędzia. Nie jest to dowód poprawnego rozpoznania faktury ani awarii API.
+- Frontend DocumentReview pokazuje PonówAI dla statuserror/invalid_model_output/
+  attempts_exhausted, ale NIE dla incomplete/unreadable bez errorcode. Odtworzona
+  przyczyna braku retry w tym stanie. Reupload ten samplik zwraca duplikat, nie nowyodczyt.
+- DELETE po finalizacji5d5b82f zwrócił500 pięć razy18:44:57–18:56:11UTC; log ma
+  ForeignKeyViolationError. Serwis po sprawdzeniu brakufinancelink/activejob usuwa
+  dokument bez obsługi terminalnych jobów/rewizji zRESTRICTFK. Nie usuwać ich ręcznie,
+  nie kasować audytu i nie osłabiać ochrony źródeł finansowych. Pełny lifecycle wymaga
+  projektu/regresji przed poprawką; nie traktować zgłoszenia jako zgody na usunięcie danych.
+- Bez kolejnegoAI/OCR, zmian konfiguracji lub mutacji produkcyjnych. Propozycja do
+  zatwierdzenia: jawny retry dla nieczytelnego incomplete, bez kasowania/reuploadu,
+  czytelne przyczyny incomplete; osobno bezpieczne usuwanie/archiwizacja z zachowaniem
+  wymaganej historii i blokad finance/aktywnego przetwarzania. Nie twierdzić, że kolejne
+  retry rozwiąże nieczytelność; jakość/pochodna/wejścieAI nadal do diagnozy bez nowegocallu.
+
 ## 2026-11-02 — ZAKOŃCZONE: walidacja dat vision5d5b82f na produkcji
 
 - User„tak” na ISO|null i bezpieczne błędy po udanym uploadzie. Plan

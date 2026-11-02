@@ -2,6 +2,37 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-02 — Pełna pochodna JPEG i jawne ponowienie nieczytelnego obrazu
+
+### Fixed
+- Przygotowano naprawę odbioru stdout konwertera: czytanie doEOF zlimit+1,
+  równoległe stdin/stdout, timeout/kill/drain/reap i SOI/EOI zamiast uciętych64KiB.
+- Dla incomplete/image/unreadable lub brakującychpól przygotowano wyjaśnienie i jawne
+  PonówAI bez kasowania/reuploadu/autoretry. Usuwanie dokumentów poza tym zakresem.
+- TDD3backend/2UIRED→61backend/33frontendGREEN, lint/typesPASS; publiczne asyncAPI
+  kandydata zwraca pełne644947B/1536×2048, zgodnechild/decodePASS, zeroAI/OCR/DB.
+  ImportantUI zreview poprawiony4RED→GREEN,38frontend/lint/typesPASS. Końcowy1080backend/
+  335frontend/lint/types/build/93E2E+1skipPASS. Kod d9a5797 i dokładny pakiet/trueasync
+  stream/date/400smokePASS; czeka na zgodęexactSHA, produkcja bez nowego wdrożenia.
+  Raport complete-image-stream2026-11-02.
+
+## [Diagnosed] — 2026-11-02 — Ucinanie pochodnej przed AI w odczycie stdout
+
+- Lokalna analiza bezAI/OCR wykazała poprawny pełnyJPEG644947B/1536×2048, lecz
+  aplikacyjne normalize_image odbiera tylko65536B, nie kończyEOI i nie daje się
+  dekodować. Skrót tego fragmentu zgodny z pochodną zapisaną przy ostatnim odczycieAI.
+- Przyczyna: pojedyncze StreamReader.read(n) zwraca fragment, nie gwarantuje EOF;
+  aplikacja nie doczytuje stdout konwertera. Oryginał niezmieniony, zero nowegoAIcall.
+  Nie zmieniono limitów lub rozdzielczości; poprawka granicy procesu do zatwierdzenia.
+
+## [Diagnosed] — 2026-11-02 — Nieczytelny wynik AI i blokada ponowienia/usunięcia
+
+- Odczyt zakończył się technicznie, lecz model zgłosił unreadable/brak wymaganych pól.
+  UI ukrywa PonówAI dla incomplete bez errorcode, co blokuje jawne ponowienie.
+- Próby usuwania zwracają500/ForeignKeyViolation; lifecycle nowych trwałych zadań/
+  rewizji nie jest uwzględniony w usuwaniu dokumentu. Bez kasowania danych lub AIretry
+  w diagnozie; poprawki do zaprojektowania i zatwierdzenia.
+
 ## [5d5b82f] — 2026-11-02 — Bezpieczna walidacja dat wyniku AI na produkcji
 
 ### Fixed

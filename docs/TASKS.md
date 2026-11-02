@@ -4,6 +4,25 @@ Backlog zadań ze statusami.
 
 ## Migracja AI do OpenAI i wydanie produkcyjne (2026-11-02)
 
+- [x] Lokalnyqualityprobe bezAI: potwierdzone ucięcie przez async images.normalize_image:
+  pełny JPEG644947B vs65536Bprefix, missingEOI/OSError, hashprefixZGODNY zrewizjąAI.
+  Rozdzielczość2048 sama nie jest wskazaną przyczyną; małe testy i wcześniejszy
+  subprocess-onlysmoke nie ćwiczyły aplikacyjnej granicy odczytu strumienia.
+- [~] Po zgodzie: naprawić boundedread-doEOF stdout konwertera, zachować limit+1/
+  timeout/reap; regresje dużego syntetycznegoJPEG i chunkedpipe, realasyncAPIprobe
+  bezAI/DB. Bez zmiany2048px/quality90 i bez automatycznego retry dokumentu.
+  Userzatwierdził fullstream+PonówAI. Focused61backend33frontend/lint/typesPASS,
+  trueasynccandidate/fullJPEG644947BdecodePASS, noAI/OCR. UIImportantreview4RED→GREEN,
+  38frontendPASS; opswarunkowoApproved, finalny1080backend/335frontend/lint/types/
+  build/93E2E+1skipPASS. Kod d9a5797 i dokładny pakiet/trueasyncstream/date/400smokePASS.
+  ASKexactSHA zadane, brakodpowiedzi. Nieapply.
+  Bez nowegodeployu; usuwanie/history lifecycle poza tą poprawką.
+- [~] Po retry5d5b82f: job succeeded/1, wynik incomplete/unreadable+missing_required_fields,
+  errornull; UI nie daje PonówAI dla tego stanu. Po zgodzie uzupełnić jawnyretry i powód,
+  bez automatycznegoAI/reuploadu lub fałszywej obietnicy odczytu.
+- [ ] Zdiagnozowany DELETE500/ForeignKeyViolation po dodaniu trwałychjobów/rewizji:
+  zaprojektować bezpieczny lifecycle usunięcia/archiwizacji zhistorią i blokadą źródeł
+  finansowych/activejob; nie kasować zależności/audytu ręcznie w produkcji.
 - [x] Diagnoza „AI niedostępne” po uploadzie: JPEG zapisany; odpowiedź dociera do
   ReviewFields, sale_date/value_error wywołuje nieobsłużony ValidationError poza
   bezpieczną granicą vision_client, recovery kończy attempts_exhausted po2próbach.
