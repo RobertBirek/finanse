@@ -61,11 +61,21 @@ async def set_document_archived(
         await db.execute(
             select(Document)
             .where(Document.id == document_id, Document.user_id == user_id)
-            .with_for_update()
+            .with_for_update(skip_locked=archived)
             .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
     if document is None:
+        # A running legacy/text worker holds the document until its result commits.
+        # Refuse the archive now, rather than silently queueing it behind that work.
+        if (
+            archived
+            and await db.scalar(
+                select(Document.id).where(Document.id == document_id, Document.user_id == user_id)
+            )
+            is not None
+        ):
+            raise DocumentLifecycleError("document_processing_active")
         raise LookupError("document_not_found")
     if (document.archived_at is not None) == archived:
         return document

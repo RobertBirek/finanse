@@ -16,12 +16,13 @@ from app.finance.schemas import AccountCreate
 from tests.test_finance.test_loans import transfer
 
 
-def test_loan_migration_is_the_single_head() -> None:
+def test_loan_migration_remains_in_the_single_head_lineage() -> None:
     backend = Path(__file__).resolve().parents[2]
     config = Config(str(backend / "alembic.ini"))
     config.set_main_option("script_location", str(backend / "migrations"))
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["92eef8e8086c"]
+    assert scripts.get_heads() == ["2f4b2c2a527c"]
+    assert scripts.get_revision("2f4b2c2a527c").down_revision == "92eef8e8086c"
     assert scripts.get_revision("c2d7e9a4f801").down_revision == "b8e4c2f1a7d9"
 
 

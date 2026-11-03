@@ -51,7 +51,8 @@ async def test_archive_and_admission_serialize_on_document_row(db_session, winne
     task1 = asyncio.create_task(first())
     try:
         await asyncio.wait_for(second_started.wait(), 5)
-        assert not task2.done()
+        if winner == "archive":
+            assert not task2.done()
     finally:
         release.set()
     await asyncio.wait_for(asyncio.gather(task1, task2), 10)
