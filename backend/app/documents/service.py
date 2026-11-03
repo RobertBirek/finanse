@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
+from app.documents.job_models import DocumentVisionPolicy
 from app.documents.models import Document, DocumentText
 from app.documents.schemas import DocumentResponse, DocumentStatus
 from app.documents.upload_limits import enforce_storage_admission
@@ -187,8 +187,13 @@ async def get_documents(
     limit: int = 50,
     offset: int = 0,
     status: str | None = None,
+    *,
+    archived: bool = False,
 ) -> list[Document]:
     stmt = select(Document).where(Document.user_id == user_id).order_by(Document.created_at.desc())
+    stmt = stmt.where(
+        Document.archived_at.is_not(None) if archived else Document.archived_at.is_(None)
+    )
     if status:
         stmt = stmt.where(Document.status == status)
     stmt = stmt.limit(limit).offset(offset)
@@ -215,6 +220,7 @@ async def get_active_documents(
         select(Document)
         .where(
             Document.user_id == user_id,
+            Document.archived_at.is_(None),
             or_(
                 and_(
                     Document.processing_method == "legacy_ocr",
@@ -269,32 +275,11 @@ async def get_document_text(db: AsyncSession, document_id: uuid.UUID) -> Documen
 
 
 async def delete_document(db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID) -> bool:
-    doc = await get_document(db, user_id, document_id)
-    if doc is None:
+    """Compatibility adapter: legacy DELETE archives, never destroys evidence."""
+    from app.documents.lifecycle import set_document_archived
+
+    try:
+        await set_document_archived(db, user_id, document_id, archived=True)
+    except LookupError:
         return False
-    from app.finance.models import FinancialDocumentSource
-
-    linked = await db.scalar(
-        select(func.count())
-        .select_from(FinancialDocumentSource)
-        .where(
-            FinancialDocumentSource.document_id == document_id,
-            FinancialDocumentSource.user_id == user_id,
-        )
-    )
-    if linked:
-        raise ValueError("document_linked_to_financial_document")
-
-    active_job = await db.scalar(
-        select(func.count())
-        .select_from(DocumentProcessingJob)
-        .where(
-            DocumentProcessingJob.document_id == document_id,
-            DocumentProcessingJob.state.in_(("pending", "processing")),
-        )
-    )
-    if active_job:
-        raise ValueError("document_processing_active")
-    await db.delete(doc)
-    await db.flush()
     return True

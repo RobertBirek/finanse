@@ -100,14 +100,24 @@ async def test_two_sessions_prepare_same_source_one_bill(db_session) -> None:
     assert len(sources) == 1
 
 
-async def test_linked_original_delete_rejected(db_session) -> None:
+async def test_linked_original_legacy_delete_archives_and_preserves_source(db_session) -> None:
     user_id = await owner(db_session)
     document = await make_document(db_session, user_id, "retained.pdf")
     await prepare_bill(
         db_session, user_id, document.id, context=MutationContext(idempotency_key="prepare")
     )
-    with pytest.raises(ValueError, match="linked"):
-        await delete_document(db_session, user_id, document.id)
+    document.status = "done"
+    assert await delete_document(db_session, user_id, document.id)
+    assert document.archived_at is not None
+    assert await db_session.get(Document, document.id) is not None
+    assert (
+        await db_session.scalar(
+            select(FinancialDocumentSource.id).where(
+                FinancialDocumentSource.document_id == document.id
+            )
+        )
+        is not None
+    )
 
 
 async def test_source_move_audits_both_bill_records(db_session) -> None:

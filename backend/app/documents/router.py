@@ -14,6 +14,7 @@ from app.database import get_db
 from app.documents import service
 from app.documents.images import ImageNormalizationError, normalize_image
 from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
+from app.documents.lifecycle import DocumentLifecycleError, set_document_archived
 from app.documents.schemas import (
     DocumentResponse,
     DocumentStatus,
@@ -257,9 +258,10 @@ async def list_documents(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     status: Annotated[str | None, Query(pattern=r"^(pending|processing|done|error)$")] = None,
+    archived: bool = False,
 ):
     docs = await service.get_documents(
-        db, current_user.id, limit=limit, offset=offset, status=status
+        db, current_user.id, limit=limit, offset=offset, status=status, archived=archived
     )
     return await service.document_responses(db, current_user.id, docs)
 
@@ -299,11 +301,43 @@ async def delete_document(
 ):
     try:
         deleted = await service.delete_document(db, current_user.id, document_id)
-    except ValueError:
-        return JSONResponse(
-            content={"detail": "Document is linked to a financial document"}, status_code=409
-        )
+    except DocumentLifecycleError as error:
+        return JSONResponse(content={"detail": error.code, "code": error.code}, status_code=409)
 
     if not deleted:
         return JSONResponse(content={"detail": "Document not found"}, status_code=404)
-    return {"message": "Document deleted"}
+    return {"message": "Document archived"}
+
+
+async def _set_archive(
+    db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID, *, archived: bool
+) -> DocumentResponse | JSONResponse:
+    try:
+        document = await set_document_archived(db, user_id, document_id, archived=archived)
+    except LookupError:
+        return JSONResponse(
+            content={"detail": "Document not found", "code": "document_not_found"}, status_code=404
+        )
+    except DocumentLifecycleError as error:
+        return JSONResponse(content={"detail": error.code, "code": error.code}, status_code=409)
+    # The lifecycle flush expires server-generated updated_at; load it before DTO validation.
+    await db.refresh(document)
+    return (await service.document_responses(db, user_id, [document]))[0]
+
+
+@router.post("/{document_id}/archive", response_model=DocumentResponse)
+async def archive_document(
+    document_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> DocumentResponse | JSONResponse:
+    return await _set_archive(db, current_user.id, document_id, archived=True)
+
+
+@router.post("/{document_id}/restore", response_model=DocumentResponse)
+async def restore_document(
+    document_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> DocumentResponse | JSONResponse:
+    return await _set_archive(db, current_user.id, document_id, archived=False)

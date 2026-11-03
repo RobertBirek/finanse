@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import log_event
 from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
+from app.documents.lifecycle import require_document_unarchived
 from app.documents.models import Document, DocumentExtractionRevision, DocumentText
 from app.documents.review_schemas import ReviewResponse, ReviewSuggestion
 from app.documents.schemas import DocumentStatus
@@ -79,13 +80,11 @@ async def prepare_review(
             select(Document)
             .where(Document.id == document_id, Document.user_id == user_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
     if document is None:
         raise LookupError("document_not_found")
-    if document.processing_method == "vision":
-        raise ValueError("use_vision_action")
-
     receipt = (
         await db.execute(
             select(FinanceCommandReceipt).where(
@@ -103,6 +102,9 @@ async def prepare_review(
             raise RuntimeError("review_receipt_missing_revision")
         return revision
 
+    require_document_unarchived(document)
+    if document.processing_method == "vision":
+        raise ValueError("use_vision_action")
     latest = (
         await db.execute(
             select(DocumentExtractionRevision)
@@ -186,6 +188,17 @@ async def process_review_revision(
     db: AsyncSession, revision_id: uuid.UUID
 ) -> DocumentExtractionRevision | None:
     """Worker-only extraction with a row lock and no OCR or ledger side effects."""
+    candidate = await db.get(DocumentExtractionRevision, revision_id)
+    if candidate is None:
+        return None
+    document = await db.scalar(
+        select(Document)
+        .where(Document.id == candidate.document_id)
+        .with_for_update(skip_locked=True)
+        .execution_options(populate_existing=True)
+    )
+    if document is None or document.archived_at is not None:
+        return candidate
     revision = (
         await db.execute(
             select(DocumentExtractionRevision)
@@ -240,6 +253,7 @@ async def request_ocr_retry(
             select(Document)
             .where(Document.id == document_id, Document.user_id == user_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
     if document is None:
@@ -260,6 +274,7 @@ async def request_ocr_retry(
         if receipt.request_hash != request_hash:
             raise ValueError("idempotency_key_reused")
         return OCRRetryResult(document, receipt.response_json, is_new=False)
+    require_document_unarchived(document)
     if document.processing_method == "vision":
         from app.documents.job_service import create_local_ocr_intent
 
@@ -321,6 +336,7 @@ async def prepare_vision_review(
             select(Document)
             .where(Document.id == document_id, Document.user_id == user_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
     if document is None:
@@ -349,6 +365,7 @@ async def prepare_vision_review(
         )
         assert job is not None
         return revision, job.id, False
+    require_document_unarchived(document)
     active = await db.scalar(
         select(DocumentProcessingJob.id).where(
             DocumentProcessingJob.document_id == document_id,
@@ -386,8 +403,12 @@ async def pending_review_ids(db: AsyncSession) -> list[uuid.UUID]:
     return list(
         (
             await db.execute(
-                select(DocumentExtractionRevision.id).where(
-                    DocumentExtractionRevision.status == "pending"
+                select(DocumentExtractionRevision.id)
+                .join(Document, Document.id == DocumentExtractionRevision.document_id)
+                .where(
+                    DocumentExtractionRevision.status == "pending",
+                    Document.archived_at.is_(None),
+                    DocumentExtractionRevision.input_method == "text",
                 )
             )
         ).scalars()

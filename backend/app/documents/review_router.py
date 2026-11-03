@@ -8,6 +8,7 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.documents.lifecycle import DocumentLifecycleError
 from app.documents.review_schemas import ReviewResponse
 from app.documents.review_service import (
     get_review,
@@ -53,6 +54,8 @@ async def prepare_document_review(
             refresh=refresh,
             context=MutationContext(idempotency_key=idempotency_key),
         )
+    except DocumentLifecycleError as error:
+        return JSONResponse(content={"detail": error.code, "code": error.code}, status_code=409)
     except LookupError:
         return JSONResponse(content={"detail": "Document not found"}, status_code=404)
     except ValueError as error:
@@ -86,6 +89,8 @@ async def prepare_document_vision(
             document_id,
             context=MutationContext(idempotency_key=idempotency_key),
         )
+    except DocumentLifecycleError as error:
+        return JSONResponse(content={"detail": error.code, "code": error.code}, status_code=409)
     except LookupError:
         return JSONResponse(content={"detail": "Document not found"}, status_code=404)
     except ValueError as error:
@@ -122,6 +127,8 @@ async def retry_document_ocr(
             document_id,
             context=MutationContext(idempotency_key=idempotency_key),
         )
+    except DocumentLifecycleError as error:
+        return JSONResponse(content={"detail": error.code, "code": error.code}, status_code=409)
     except LookupError:
         return JSONResponse(content={"detail": "Document not found"}, status_code=404)
     except ValueError:

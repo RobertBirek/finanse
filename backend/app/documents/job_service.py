@@ -17,6 +17,7 @@ from app.documents.job_models import (
     DocumentVisionPolicy,
     DocumentVisionUsage,
 )
+from app.documents.lifecycle import require_document_unarchived
 from app.documents.models import Document, DocumentExtractionRevision
 from app.documents.review_schemas import ReviewSuggestion
 from app.documents.vision_config import VisionConfig, get_vision_config
@@ -74,6 +75,7 @@ async def create_vision_intent(
             select(Document)
             .where(Document.id == document_id, Document.user_id == user_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
     if document is None or not document.mime_type.startswith("image/"):
@@ -89,6 +91,7 @@ async def create_vision_intent(
     ).scalar_one_or_none()
     if existing is not None:
         return existing
+    require_document_unarchived(document)
     latest = (
         await db.execute(
             select(DocumentExtractionRevision)
@@ -133,6 +136,7 @@ async def create_local_ocr_intent(
             select(Document)
             .where(Document.id == document_id, Document.user_id == user_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
     if document is None:
@@ -148,6 +152,7 @@ async def create_local_ocr_intent(
     ).scalar_one_or_none()
     if existing is not None:
         return existing
+    require_document_unarchived(document)
     active = await db.scalar(
         select(DocumentProcessingJob.id).where(
             DocumentProcessingJob.document_id == document_id,
@@ -184,9 +189,10 @@ async def claim_processing_job(
             select(Document)
             .where(Document.id == candidate.document_id, Document.user_id == candidate.user_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
-    if document is None:
+    if document is None or document.archived_at is not None:
         return None
     job = (
         await db.execute(
@@ -534,7 +540,7 @@ async def recover_processing_jobs(
                 select(Document).where(Document.id == candidate.document_id).with_for_update()
             )
         ).scalar_one_or_none()
-        if document is None:
+        if document is None or document.archived_at is not None:
             continue
         job = (
             await db.execute(

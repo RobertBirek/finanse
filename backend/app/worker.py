@@ -71,6 +71,7 @@ async def dispatch_pending_documents(ctx) -> None:
                     select(Document)
                     .where(
                         Document.processing_method == "legacy_ocr",
+                        Document.archived_at.is_(None),
                         or_(
                             and_(
                                 Document.status == DocumentStatus.PENDING,
@@ -128,7 +129,9 @@ async def dispatch_document_jobs(ctx) -> None:
             (
                 await db.execute(
                     select(DocumentProcessingJob.id)
+                    .join(Document, Document.id == DocumentProcessingJob.document_id)
                     .where(
+                        Document.archived_at.is_(None),
                         DocumentProcessingJob.state == "pending",
                         (DocumentProcessingJob.next_attempt_at.is_(None))
                         | (DocumentProcessingJob.next_attempt_at <= now),
@@ -189,6 +192,8 @@ async def process_document(ctx, document_id: str) -> None:
             )
         ).scalar_one_or_none()
         if doc is None or doc.status not in {DocumentStatus.PENDING, DocumentStatus.PROCESSING}:
+            return
+        if getattr(doc, "archived_at", None) is not None:
             return
         if getattr(doc, "processing_method", "legacy_ocr") != "legacy_ocr":
             return

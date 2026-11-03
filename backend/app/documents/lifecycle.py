@@ -1,0 +1,87 @@
+"""Owner-scoped, reversible document visibility. Never delete source evidence."""
+
+import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.audit.service import log_event
+from app.documents.job_models import DocumentProcessingJob
+from app.documents.models import Document, DocumentExtractionRevision
+
+
+class DocumentLifecycleError(ValueError):
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def require_document_unarchived(document: Document) -> None:
+    if getattr(document, "archived_at", None) is not None:
+        raise DocumentLifecycleError("document_archived")
+
+
+async def _has_active_work(db: AsyncSession, document: Document) -> bool:
+    if document.processing_method == "legacy_ocr" and document.status in {"pending", "processing"}:
+        return True
+    active = await db.scalar(
+        select(DocumentProcessingJob.id)
+        .where(
+            DocumentProcessingJob.document_id == document.id,
+            DocumentProcessingJob.state.in_(("pending", "processing")),
+        )
+        .limit(1)
+    )
+    if active is not None:
+        return True
+    review = await db.scalar(
+        select(DocumentExtractionRevision.id)
+        .outerjoin(
+            DocumentProcessingJob,
+            DocumentProcessingJob.revision_id == DocumentExtractionRevision.id,
+        )
+        .where(
+            DocumentExtractionRevision.document_id == document.id,
+            DocumentExtractionRevision.status.in_(("pending", "processing")),
+            or_(
+                DocumentProcessingJob.id.is_(None),
+                DocumentProcessingJob.state.in_(("pending", "processing")),
+            ),
+        )
+        .limit(1)
+    )
+    return review is not None
+
+
+async def set_document_archived(
+    db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID, *, archived: bool
+) -> Document:
+    document = (
+        await db.execute(
+            select(Document)
+            .where(Document.id == document_id, Document.user_id == user_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if document is None:
+        raise LookupError("document_not_found")
+    if (document.archived_at is not None) == archived:
+        return document
+    if archived and await _has_active_work(db, document):
+        raise DocumentLifecycleError("document_processing_active")
+    old_state = {"archived_at": document.archived_at.isoformat() if document.archived_at else None}
+    document.archived_at = datetime.now(UTC) if archived else None
+    await log_event(
+        db,
+        user_id,
+        "document",
+        str(document_id),
+        "archived" if archived else "restored",
+        old_state=old_state,
+        new_state={
+            "archived_at": document.archived_at.isoformat() if document.archived_at else None
+        },
+    )
+    return document

@@ -59,6 +59,7 @@ class DocumentResponse(BaseModel):
     sha256_hash: str
     size_bytes: int
     status: str
+    archived_at: dt.datetime | None = None
     attempt_count: int = 0
     next_attempt_at: dt.datetime | None = None
     last_error_code: str | None = None
