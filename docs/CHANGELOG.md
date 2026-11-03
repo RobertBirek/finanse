@@ -12,6 +12,10 @@ Wszystkie istotne zmiany w projekcie.
   detail409 dla aktywnego jobu. To diagnoza, nie naprawa. Bez kasowania na produkcji,
   zmian kodu aplikacji, AI/OCR lub wdrożenia.
 - Raport: `docs/audits/2026-11-03-document-delete-diagnosis.md`.
+- Po prośbie „zaproponuj bezpieczny wariant” zapisano propozycję archiwizacji/przywracania
+  zamiast harddelete: zachowane oryginały/historia/finanse, blokada aktywnej pracy,
+  jawne archiwum i ochrona przed ponownym AI przy duplikacie. Spec/plan w docs/superpowers;
+  oczekuje zatwierdzenia pełnego zakresu. Bez implementacji, migracji i zmian produkcji.
 
 ## [69b6f3d] — 2026-11-03 — Znacznik pracy AI/OCR i globalny toast na produkcji
 

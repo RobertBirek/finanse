@@ -11,6 +11,12 @@ Backlog zadań ze statusami.
   AI/OCR, spójny lifecycle z legacyOCR/review. Nie usuwać źródeł zatwierdzonych finansów,
   historii/audytu/usage lub oryginałów przez automatyczny CASCADE. Jeszcze bez zgody
   na implementację/wdrożenie. Raport: `docs/audits/2026-11-03-document-delete-diagnosis.md`.
+- [~] Bezpieczny wariant zaproponowany na życzenie użytkownika: archiwizacja zamiast
+  harddelete (także źródeł approved finansów, ale bez ruszania finansów/linków/plików),
+  przywracanie, blokada aktywnej pracy, bez powtórnego AI/OCR. Spec i plan zapisane:
+  `docs/superpowers/plans/2026-11-03-document-archive.md`. Czekać na zatwierdzenie zakresu
+  przed kodem; jedna addytywna migracja tylko lokalnie po zgodzie. Stary backend nie
+  rozumie archiwum — produkcyjny rollout/rollback wymaga osobnej procedury/zgody.
 
 ## Widoczność pracy AI/OCR i wynik odczytu (2026-11-03)
 

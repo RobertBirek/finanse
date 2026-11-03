@@ -2,6 +2,28 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — Propozycja bezpiecznej archiwizacji, plan bez implementacji
+
+- Po diagnozie user„tak” na plan, następnie„zaproponuj bezpieczny wariant” zamiast
+  odpowiadania na pytanie o zatwierdzone finanse. To zgoda na zaproponowanie domyślnych
+  decyzji, nie na kasowanie produkcyjnych źródeł lub wdrożenie.
+- Rekomendacja asystenta: Archiwizuj/Przywróć zamiast harddelete. Ukrycie ze zwykłej
+  listy jest odwracalne, oryginał/rewizje/job/usage/audyt i finanse/linki/księga bez zmian.
+  Można ukryć także źródłoapprovedfinance, nadal dostępne zfinansów. Aktywny odczyt
+  blokuje archiwizację409; brak anulowania/próby odczytu przy restore/duplicateupload.
+- Spec `docs/superpowers/specs/2026-11-03-document-archive-design.md`, plan
+  `docs/superpowers/plans/2026-11-03-document-archive.md`, selfreview wykonany.
+  Dwa pionowe zadania: backend+addytywnearchived_at+serializacja z admission/worker,
+  potem UI/archiwum/feedback/sessionfencing i pełna weryfikacja/review.
+- Jawne decyzje do akceptacji: legacyDELETE staje się bezpieczną archiwizacją,
+  oryginały nadal liczą się w storagequota, duplicatearchive wymaga jawnego Przywróć,
+  prywatne odczyty poUUID zachowane, freshprepare naarchiwum409. W planie są testy
+  race/foreignowner/financelink/stalependingterminaljobs/legacytext/cachelogout.
+- Brak kodu aplikacji/migracji/AI/OCR/DBwrites/deployu. Rekomendowane Native inline
+  test-first +jeden niezależny wholereview, po zgodzie na pełny zakres. Zwykły rollback
+  do69b6f3d nie jest archive-aware; osobny rollout/rollbackplan przed produkcją,
+  bez downgradu tracącegoarchived_at. UnrelatedVelo/Q7 zachować.
+
 ## 2026-11-03 — Diagnoza usuwania: rzeczywista blokada409 i lokalny błąd historii500
 
 - User „Sprawdź usuwanie dokumentów” oznacza diagnozę, nie zgodę na kasowanie prywatnych
