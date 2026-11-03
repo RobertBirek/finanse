@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Diagnosis] — 2026-11-03 — Usuwanie dokumentów
+
+### Changed
+- Ostatni produkcyjny DELETE409 ma rzeczywiste powiązanie z zatwierdzonym dokumentem
+  finansowym; blokada jest prawidłowa, ale UI pokazuje wyłącznie ogólny błąd.
+- Lokalnie13przypadków +2FKprobes potwierdziły oddzielny błąd500 przy harddelete
+  niepowiązanego dokumentu z rewizją/jobem AI/OCR (FK RESTRICT) oraz niepoprawny
+  detail409 dla aktywnego jobu. To diagnoza, nie naprawa. Bez kasowania na produkcji,
+  zmian kodu aplikacji, AI/OCR lub wdrożenia.
+- Raport: `docs/audits/2026-11-03-document-delete-diagnosis.md`.
+
 ## [69b6f3d] — 2026-11-03 — Znacznik pracy AI/OCR i globalny toast na produkcji
 
 ### Changed

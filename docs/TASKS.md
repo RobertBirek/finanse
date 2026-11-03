@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Usuwanie dokumentów — diagnoza (2026-11-03)
+
+- [x] Sprawdzić UI/API/FK i odtworzyć na syntetykach:13przypadków +2SQLSTATE23503
+  probes. Ostatni produkcyjny409 ma approved/active powiązanie finansowe; bez DELETE
+  na produkcji, treści dokumentu lub nowych AI/OCR.
+- [ ] Uzgodnić naprawę: czytelne blokady finansowe/aktywnej pracy, bez500 przy historii
+  AI/OCR, spójny lifecycle z legacyOCR/review. Nie usuwać źródeł zatwierdzonych finansów,
+  historii/audytu/usage lub oryginałów przez automatyczny CASCADE. Jeszcze bez zgody
+  na implementację/wdrożenie. Raport: `docs/audits/2026-11-03-document-delete-diagnosis.md`.
+
 ## Widoczność pracy AI/OCR i wynik odczytu (2026-11-03)
 
 - [x] Potwierdzić brak payee_iban/sale_date w zapisanej revision5/ready (vision succeeded/1),

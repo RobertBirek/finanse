@@ -2,6 +2,28 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — Diagnoza usuwania: rzeczywista blokada409 i lokalny błąd historii500
+
+- User „Sprawdź usuwanie dokumentów” oznacza diagnozę, nie zgodę na kasowanie prywatnych
+  dokumentów/źródeł finansowych lub wdrożenie. Kod aplikacji i runtime pozostawione bez zmian.
+- Systematicdebugging UI→API→service→FK. Aktualny boundedlog backendu (24h/5000linii)
+  ma1DELETE409, bez IntegrityError. Read-onlymetadataprobe dokładnego dokumentu ztej409:
+  done/vision/revisioncount5, jobs3failed+3succeeded/brakactive, jedno financialsource do
+  approved/active dokumentu finansowego. To prawidłowa blokada ochrony źródła finansów.
+  Nie eksportowano identyfikatora/nazwy/treści/kwot; zero produkcyjnych DELETE/AI/OCR.
+- Lokalnie w identity-checkedfinanse_test:13casePASS diagnozy;200 bezhistorii/ztekstem,
+  500 zreadyreview lub terminalvision/OCRjob (succeeded/failed/paused),409 activejob i
+  financeLink,404obcy/brak. Legacyprocessingbezjob można usunąć200; oryginały pozostają.
+  Dodatkowe2probesPASS potwierdzają IntegrityError23503 na FKRESTRICT review/job→document.
+- Serwis harddelete bez lifecycle historii powoduje500; router każdeValueError zamienia
+  na409„linkedtofinancialdocument”, również aktywnyjob. UI wszystkieprzyczyny ukrywa
+  pod„Spróbujponownie”. Nie mylić lokalnego500 zostatnim produkcyjnym409.
+- Dowody /tmp/opencode/document-delete-check-20261103/,15syntetycznych przypadków,
+  testfixture reuse bez zmian checkoutu, transakcje cofniete. Raport
+  docs/audits/2026-11-03-document-delete-diagnosis.md. Następnie uzgodnić kontrakt
+  usuwania/archiwizacji i poprawkę komunikatów; nie usuwać RESTRICT/historii/oryginałów
+  wciemno. UnrelatedVelo/Q7 zachowane, brak push/mainmerge/deploy.
+
 ## 2026-11-03 — ZAKOŃCZONE: wskaźnik AI/OCR i globalny toast69b6f3d na produkcji
 
 - User „tak, wdrażaj na produkcję” po odbiorze lokalnego commitu
