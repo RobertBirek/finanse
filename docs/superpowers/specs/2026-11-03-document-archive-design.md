@@ -1,9 +1,10 @@
-# Bezpieczna archiwizacja dokumentów — propozycja do zatwierdzenia
+# Bezpieczna archiwizacja dokumentów — zakres zatwierdzony lokalnie
 
 ## Cel i decyzja proponowana przez asystenta
 
 Użytkownik poprosił o plan naprawy usuwania, następnie „zaproponuj bezpieczny wariant”.
-Nie zatwierdził jeszcze poniższego kontraktu ani implementacji/migracji/wdrożenia.
+Następnie zatwierdził pełny zakres lokalnej implementacji z testami i niezależnym
+przeglądem („tak”). Produkcyjna migracja ani wdrożenie nie są zatwierdzone.
 Rekomendacja: zamiast nieodwracalnego harddelete oferować **Archiwizuj / Przywróć**.
 Pozostać w obecnej architekturze FastAPI/PostgreSQL/React; nie dodawać zależności.
 Podstawa: `docs/audits/2026-11-03-document-delete-diagnosis.md`.

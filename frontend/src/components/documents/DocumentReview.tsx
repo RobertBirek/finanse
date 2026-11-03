@@ -16,6 +16,9 @@ import {
   usePrepareDocumentReview,
   usePrepareDocumentVision,
   useRetryDocumentOcr,
+  useDocumentMetadata,
+  useRestoreDocument,
+  documentArchiveError,
 } from "../../api/documents";
 import { useAccounts, useCategories } from "../../api/finance";
 import { Dialog } from "../Dialog";
@@ -28,10 +31,23 @@ const minor = (raw: string) =>
 const mutationError = (error: unknown) =>
   (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ??
   "Nie udało się zapisać zmian. Popraw pola i spróbuj ponownie.";
+const processingError = (error: unknown, fallback: string) => {
+  const data = (error as AxiosError<{ code?: string; detail?: string }>)
+    ?.response?.data;
+  const code = data?.code ?? data?.detail;
+  return code === "document_archived" || code === "document_processing_active"
+    ? documentArchiveError(error)
+    : fallback;
+};
 
 export function DocumentReview({ documentId, onClose }: Props) {
   const navigate = useNavigate();
   const review = useDocumentReview(documentId);
+  const metadata = useDocumentMetadata(documentId);
+  const restore = useRestoreDocument();
+  const archived = !!metadata.data?.archived_at;
+  const canProcess =
+    !!metadata.data && !Array.isArray(metadata.data) && !archived;
   const preview = useDocumentPreview(documentId);
   const original = useDocumentOriginal(documentId);
   const prepare = usePrepareDocumentReview();
@@ -187,10 +203,26 @@ export function DocumentReview({ documentId, onClose }: Props) {
         </button>
       </div>
       <div className="grid gap-5 p-4 md:grid-cols-2">
+        {archived && (
+          <div className="md:col-span-2 rounded border border-gray-700 p-3 text-sm text-gray-300">
+            <p>Dokument jest w archiwum. Przywróć go przed nowym odczytem.</p>
+            <button
+              type="button"
+              className="btn-secondary mt-2"
+              disabled={restore.isPending}
+              onClick={() => restore.mutate({ documentId })}
+            >
+              Przywróć dokument
+            </button>
+            {restore.isError && (
+              <p role="alert">{documentArchiveError(restore.error)}</p>
+            )}
+          </div>
+        )}
         <div className="md:col-span-2">
           <DocumentProcessingInline
             documentId={documentId}
-            review={review.data}
+            review={archived ? undefined : review.data}
           />
         </div>
         <section>
@@ -227,17 +259,26 @@ export function DocumentReview({ documentId, onClose }: Props) {
         <section>
           {prepare.error ? (
             <p role="alert" className="mb-3 text-sm text-red-300">
-              Nie udało się przygotować przeglądu dokumentu. Spróbuj ponownie.
+              {processingError(
+                prepare.error,
+                "Nie udało się przygotować przeglądu dokumentu. Spróbuj ponownie.",
+              )}
             </p>
           ) : null}
           {retryOcr.error ? (
             <p role="alert" className="mb-3 text-sm text-red-300">
-              Nie udało się ponowić OCR. Możesz poprawić pola ręcznie.
+              {processingError(
+                retryOcr.error,
+                "Nie udało się ponowić OCR. Możesz poprawić pola ręcznie.",
+              )}
             </p>
           ) : null}
           {prepareVision.error ? (
             <p role="alert" className="mb-3 text-sm text-red-300">
-              Nie udało się ponowić AI. Możesz poprawić pola ręcznie.
+              {processingError(
+                prepareVision.error,
+                "Nie udało się ponowić AI. Możesz poprawić pola ręcznie.",
+              )}
             </p>
           ) : null}
           {prepareBill.error || approve.error || attach.error ? (
@@ -307,6 +348,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
             <button
               type="button"
               className="btn-primary"
+              disabled={!canProcess}
               onClick={() => prepare.mutate({ documentId, refresh: false })}
             >
               Sprawdź dane
@@ -330,6 +372,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
                   <button
                     type="button"
                     className="btn-secondary ml-2"
+                    disabled={!canProcess || prepareVision.isPending}
                     onClick={() =>
                       prepareVision.mutate({
                         documentId,
@@ -342,6 +385,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
                   <button
                     type="button"
                     className="btn-secondary ml-2"
+                    disabled={!canProcess || retryOcr.isPending}
                     onClick={() =>
                       retryOcr.mutate({
                         documentId,

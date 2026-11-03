@@ -7,6 +7,13 @@ import {
 } from "./documentProcessing";
 
 describe("document processing state", () => {
+  it("does not show work for an archived document even with stale pending status", () => {
+    expect(
+      getDocumentOperations(
+        processingDocument({ archived_at: "2026-11-03T12:00:00Z" }),
+      ),
+    ).toEqual([]);
+  });
   it("uses revision identity and the real job state before stale review status", () => {
     const doc = processingDocument();
     doc.review!.status = "ready";

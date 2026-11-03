@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
+import { useAuthStore } from "../stores/authStore";
 import {
   captureProcessingActor,
   isProcessingActorCurrent,
   useDocumentProcessingStore,
+  type ProcessingActor,
 } from "../stores/documentProcessingStore";
 import {
   getDocumentOperations,
@@ -19,6 +21,7 @@ export interface DocumentData {
   sha256_hash: string;
   size_bytes: number;
   status: "pending" | "processing" | "done" | "error";
+  archived_at?: string | null;
   attempt_count: number;
   next_attempt_at: string | null;
   last_error_code: string | null;
@@ -87,6 +90,17 @@ export type DocumentUploadCapabilities = {
 };
 const mutationHeaders = () => ({ "Idempotency-Key": crypto.randomUUID() });
 
+export const documentQueryKey = (
+  id: string | null,
+  kind: string,
+  actor: ProcessingActor,
+) => ["documents", id, kind, actor.ownerId, actor.generation] as const;
+function useDocumentActor(): ProcessingActor {
+  const ownerId = useAuthStore((s) => s.user?.id ?? null);
+  const generation = useDocumentProcessingStore((s) => s.generation);
+  return { ownerId, generation };
+}
+
 export interface DocumentText {
   id: string;
   document_id: string;
@@ -101,11 +115,15 @@ export interface DocumentUploadResponse {
   is_duplicate: boolean;
 }
 
-export function useDocuments(params?: { status?: string }) {
+export function useDocuments(params?: { status?: string; archived?: boolean }) {
+  const actor = useDocumentActor();
   return useQuery({
-    queryKey: ["documents", params],
-    queryFn: async () => {
-      const { data } = await api.get<DocumentData[]>("/documents", { params });
+    queryKey: ["documents", "list", actor.ownerId, actor.generation, params],
+    queryFn: async ({ signal }) => {
+      const { data } = await api.get<DocumentData[]>("/documents", {
+        params,
+        signal,
+      });
       return data;
     },
     refetchInterval: (query) => {
@@ -118,15 +136,28 @@ export function useDocuments(params?: { status?: string }) {
   });
 }
 
+export function useDocumentMetadata(id: string) {
+  const actor = useDocumentActor();
+  return useQuery({
+    queryKey: documentQueryKey(id, "metadata", actor),
+    enabled: !!id,
+    queryFn: async ({ signal }) =>
+      (await api.get<DocumentData>(`/documents/${id}`, { signal })).data,
+  });
+}
+
 export function isDocumentWorkActive(document: DocumentData): boolean {
   return getDocumentOperations(document).some(isActiveOperation);
 }
 
 export function useDocumentText(id: string, enabled = true) {
+  const actor = useDocumentActor();
   return useQuery({
-    queryKey: ["documents", id, "text"],
-    queryFn: async () => {
-      const { data } = await api.get<DocumentText>(`/documents/${id}/text`);
+    queryKey: documentQueryKey(id, "text", actor),
+    queryFn: async ({ signal }) => {
+      const { data } = await api.get<DocumentText>(`/documents/${id}/text`, {
+        signal,
+      });
       return data;
     },
     enabled: !!id && enabled,
@@ -185,12 +216,14 @@ export function useDocumentUploadCapabilities() {
 }
 
 export function useDocumentReview(id: string | null) {
+  const actor = useDocumentActor();
   return useQuery({
-    queryKey: ["documents", id, "review"],
+    queryKey: documentQueryKey(id, "review", actor),
     enabled: !!id,
     retry: false,
-    queryFn: async () =>
-      (await api.get<DocumentReview>(`/documents/${id}/review`)).data,
+    queryFn: async ({ signal }) =>
+      (await api.get<DocumentReview>(`/documents/${id}/review`, { signal }))
+        .data,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === "pending" || status === "processing" ? 3000 : false;
@@ -223,18 +256,16 @@ export function usePrepareDocumentReview() {
         review.status === "pending" ||
         review.status === "processing"
       ) {
-        useDocumentProcessingStore
-          .getState()
-          .register(actor, {
-            key: `review:${review.id}`,
-            operationId: `review:${review.id}`,
-            documentId: review.document_id,
-            kind: "ai",
-            source: "review",
-          });
+        useDocumentProcessingStore.getState().register(actor, {
+          key: `review:${review.id}`,
+          operationId: `review:${review.id}`,
+          documentId: review.document_id,
+          kind: "ai",
+          source: "review",
+        });
       }
       queryClient.setQueryData(
-        ["documents", review.document_id, "review"],
+        documentQueryKey(review.document_id, "review", actor),
         review,
       );
       queryClient.invalidateQueries({ queryKey: ["documents"] });
@@ -264,17 +295,15 @@ export function usePrepareDocumentVision() {
       ).data,
     onSuccess: (review, _variables, actor) => {
       if (!isProcessingActorCurrent(actor)) return;
-      useDocumentProcessingStore
-        .getState()
-        .register(actor, {
-          key: `review:${review.id}`,
-          operationId: `review:${review.id}`,
-          documentId: review.document_id,
-          kind: "ai",
-          source: "review",
-        });
+      useDocumentProcessingStore.getState().register(actor, {
+        key: `review:${review.id}`,
+        operationId: `review:${review.id}`,
+        documentId: review.document_id,
+        kind: "ai",
+        source: "review",
+      });
       queryClient.setQueryData(
-        ["documents", review.document_id, "review"],
+        documentQueryKey(review.document_id, "review", actor),
         review,
       );
       queryClient.invalidateQueries({ queryKey: ["documents"] });
@@ -324,26 +353,30 @@ export function useRetryDocumentOcr() {
 }
 
 export function useDocumentPreview(id: string | null) {
+  const actor = useDocumentActor();
   return useQuery({
-    queryKey: ["documents", id, "preview"],
+    queryKey: documentQueryKey(id, "preview", actor),
     enabled: !!id,
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       (
         await api.get<Blob>(`/documents/${id}/preview`, {
           responseType: "blob",
+          signal,
         })
       ).data,
   });
 }
 
 export function useDocumentOriginal(id: string | null) {
+  const actor = useDocumentActor();
   return useQuery({
-    queryKey: ["documents", id, "original"],
+    queryKey: documentQueryKey(id, "original", actor),
     enabled: !!id,
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       (
         await api.get<Blob>(`/documents/${id}/original`, {
           responseType: "blob",
+          signal,
         })
       ).data,
   });
@@ -359,6 +392,58 @@ export function useDeleteDocument() {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
   });
+}
+
+function useDocumentArchiveMutation(archived: boolean) {
+  const client = useQueryClient();
+  return useMutation({
+    onMutate: () => captureProcessingActor(),
+    mutationFn: async ({ documentId }: { documentId: string }) =>
+      (
+        await api.post<DocumentData>(
+          `/documents/${documentId}/${archived ? "archive" : "restore"}`,
+        )
+      ).data,
+    onSuccess: async (document, _variables, actor) => {
+      if (
+        !isProcessingActorCurrent(actor) ||
+        document.user_id !== actor.ownerId
+      )
+        return;
+      const tracker = useDocumentProcessingStore.getState();
+      if (archived) tracker.clearDocumentFeedback(actor, document.id);
+      else tracker.restoreDocumentFeedback(actor, document.id);
+      await client.cancelQueries({ queryKey: ["documents"] });
+      if (!isProcessingActorCurrent(actor)) return;
+      client.setQueryData(
+        documentQueryKey(document.id, "metadata", actor),
+        document,
+      );
+      await client.invalidateQueries({ queryKey: ["documents"] });
+    },
+  });
+}
+export function useArchiveDocument() {
+  return useDocumentArchiveMutation(true);
+}
+export function useRestoreDocument() {
+  return useDocumentArchiveMutation(false);
+}
+
+export function documentArchiveError(error: unknown): string {
+  const response = (
+    error as {
+      response?: { status?: number; data?: { code?: string; detail?: string } };
+    }
+  )?.response;
+  const code = response?.data?.code ?? response?.data?.detail;
+  if (code === "document_processing_active")
+    return "Dokument jest przetwarzany. Poczekaj na zakończenie odczytu AI/OCR.";
+  if (code === "document_archived")
+    return "Dokument jest w archiwum. Przywróć go przed nowym odczytem.";
+  if (response?.status === 404)
+    return "Dokument nie jest już dostępny. Odśwież listę.";
+  return "Nie udało się zmienić archiwizacji dokumentu. Sprawdź połączenie i spróbuj ponownie.";
 }
 
 export function formatFileSize(bytes: number): string {

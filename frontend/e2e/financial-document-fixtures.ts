@@ -176,6 +176,9 @@ export async function financialDocumentFixtures(
       method = req.method();
     if (path === "/api/documents" && method === "GET")
       return route.fulfill({ json: docs });
+    const metadata = docs.find((doc) => path === `/api/documents/${doc.id}`);
+    if (metadata && method === "GET")
+      return route.fulfill({ json: { ...metadata, archived_at: null } });
     if (path === "/api/documents/upload" && method === "POST") {
       mutations.push({ method, path, body: "synthetic-heif", key: null });
       expect(req.postDataBuffer().includes(Buffer.from("ftypheic"))).toBe(true);

@@ -1,11 +1,32 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import api from "../lib/api";
 import { Documents } from "./Documents";
 import { MemoryRouter } from "react-router-dom";
+import { useAuthStore } from "../stores/authStore";
 
-afterEach(() => vi.restoreAllMocks());
+beforeEach(() =>
+  useAuthStore.setState({
+    user: {
+      id: "fixture-owner",
+      email: "fixture@example.test",
+      display_name: "Fixture",
+      is_active: true,
+    },
+    authStatus: "authenticated",
+    isAuthenticated: true,
+    isLoading: false,
+  }),
+);
+afterEach(() => {
+  vi.restoreAllMocks();
+  useAuthStore.setState({
+    user: null,
+    authStatus: "unauthenticated",
+    isAuthenticated: false,
+  });
+});
 
 function renderDocuments(
   status = "pending",

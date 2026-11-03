@@ -7,16 +7,28 @@ Backlog zadań ze statusami.
 - [x] Sprawdzić UI/API/FK i odtworzyć na syntetykach:13przypadków +2SQLSTATE23503
   probes. Ostatni produkcyjny409 ma approved/active powiązanie finansowe; bez DELETE
   na produkcji, treści dokumentu lub nowych AI/OCR.
-- [ ] Uzgodnić naprawę: czytelne blokady finansowe/aktywnej pracy, bez500 przy historii
+- [x] Uzgodnić naprawę: czytelne blokady finansowe/aktywnej pracy, bez500 przy historii
   AI/OCR, spójny lifecycle z legacyOCR/review. Nie usuwać źródeł zatwierdzonych finansów,
-  historii/audytu/usage lub oryginałów przez automatyczny CASCADE. Jeszcze bez zgody
-  na implementację/wdrożenie. Raport: `docs/audits/2026-11-03-document-delete-diagnosis.md`.
-- [~] Bezpieczny wariant zaproponowany na życzenie użytkownika: archiwizacja zamiast
+  historii/audytu/usage lub oryginałów przez automatyczny CASCADE. Implementacja lokalna
+  zatwierdzona jako archiwizacja; bez zgody na wdrożenie. Raport: `docs/audits/2026-11-03-document-delete-diagnosis.md`.
+- [x] Bezpieczny wariant uzgodniony i zatwierdzony lokalnie: archiwizacja zamiast
   harddelete (także źródeł approved finansów, ale bez ruszania finansów/linków/plików),
   przywracanie, blokada aktywnej pracy, bez powtórnego AI/OCR. Spec i plan zapisane:
-  `docs/superpowers/plans/2026-11-03-document-archive.md`. Czekać na zatwierdzenie zakresu
-  przed kodem; jedna addytywna migracja tylko lokalnie po zgodzie. Stary backend nie
+  `docs/superpowers/plans/2026-11-03-document-archive.md`. User„tak” na lokalną
+  implementację/testy/review; jedna addytywna migracja tylko wfinanse_test. Stary backend nie
   rozumie archiwum — produkcyjny rollout/rollback wymaga osobnej procedury/zgody.
+- [x] Lokalna implementacja archiwizacji: backendcommit8c96be6/417regresji/lint/typesPASS,
+  UIarchiwum/restore/duplikaty, financeoriginalretainedE2E6PASS; po review2Important
+  naprawione running-worker409 i prywatne cacheowner/session, frontend410PASS.
+  Końcowy pełny gate: 1183backend/410frontend/lint/types/build PASS, E2E103PASS+1skip;
+  zgodność źródeł/distu potwierdzona. Test starego headu migracji zaktualizowany,
+  powtórny pełny gate PASS. Nie wdrażać ani nie uruchamiać migracji produkcyjnej.
+- [ ] ReviewMinor: pominąć zbędne enqueue istniejącego terminalvisionjobu przy duplikacie
+  starego archivedvisiondoc/statuspending. Claim już odrzuca archiwum/terminaljob,
+  więc bez AI/OCR/usage lub zmiany widoczności; do poprawy wyłącznie efektywność kolejki.
+- [ ] VisualMinor: na375px długi badge OCR zwęża widoczny fragment nazwy pliku;
+  dać nazwie pełną pierwszą linię w wierszu. Pełna nazwa jest dostępna w podglądzie
+  i etykiecie dostępności, brak overflow; nie blokuje bezpiecznej archiwizacji.
 
 ## Widoczność pracy AI/OCR i wynik odczytu (2026-11-03)
 

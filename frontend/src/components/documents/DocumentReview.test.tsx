@@ -31,13 +31,19 @@ const apiState = vi.hoisted(() => ({
   prepareError: null as unknown,
   retryOcrError: null as unknown,
   navigate: vi.fn(),
+  archived: false,
   refetchBill: vi
     .fn()
     .mockResolvedValue({ data: { id: "draft-1", version: 5 } }),
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => apiState.navigate }));
 
-vi.mock("../../api/documents", () => ({
+vi.mock("../../api/documents", async (original) => ({
+  ...(await original<typeof import("../../api/documents")>()),
+  useDocumentMetadata: () => ({
+    data: { archived_at: apiState.archived ? "2026-11-03T12:00:00Z" : null },
+  }),
+  useRestoreDocument: () => ({ mutate: vi.fn(), isPending: false }),
   useDocumentReview: () => ({
     data: apiState.review,
     isLoading: false,
@@ -103,6 +109,64 @@ function renderReview() {
 }
 
 describe("DocumentReview", () => {
+  it("does not animate archived pending history as current work", () => {
+    const previous = apiState.review;
+    apiState.archived = true;
+    apiState.review = { ...previous!, status: "pending" };
+    try {
+      renderReview();
+      expect(
+        screen.queryByRole("status", { name: "Odczyt dokumentu" }),
+      ).not.toBeInTheDocument();
+    } finally {
+      apiState.archived = false;
+      apiState.review = previous;
+    }
+  });
+  it("explains a stale processing action rejected because the document was archived", () => {
+    apiState.prepareError = {
+      response: { status: 409, data: { code: "document_archived" } },
+    };
+    try {
+      renderReview();
+      expect(
+        screen.getByText(
+          "Dokument jest w archiwum. Przywróć go przed nowym odczytem.",
+        ),
+      ).toBeVisible();
+    } finally {
+      apiState.prepareError = null;
+    }
+  });
+  it("keeps archived original/history visible but disables new AI/OCR until restore", () => {
+    const previous = apiState.review;
+    apiState.archived = true;
+    apiState.review = {
+      ...previous!,
+      input_method: "image",
+      status: "incomplete",
+      error_code: "attempts_exhausted",
+      warnings: [],
+    };
+    try {
+      renderReview();
+      expect(
+        screen.getByText(
+          "Dokument jest w archiwum. Przywróć go przed nowym odczytem.",
+        ),
+      ).toBeVisible();
+      expect(screen.getByRole("button", { name: "Ponów AI" })).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Ponów lokalny OCR" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Przywróć dokument" }),
+      ).toBeEnabled();
+    } finally {
+      apiState.archived = false;
+      apiState.review = previous;
+    }
+  });
   it.each(["pending", "processing"] as const)(
     "marks actual %s AI work inside the native document dialog",
     (status) => {

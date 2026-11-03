@@ -72,6 +72,8 @@ vi.mock("../api/documents", async (original) => ({
     data: { max_file_bytes: 20 * 1024 * 1024, accepted_mime_types: [] },
   }),
   useDeleteDocument: () => ({ mutate: mocks.mutate }),
+  useArchiveDocument: () => ({ mutate: mocks.mutate, isPending: false }),
+  useRestoreDocument: () => ({ mutate: mocks.mutate, isPending: false }),
 }));
 
 const doc = {

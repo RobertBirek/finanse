@@ -202,7 +202,15 @@ export async function fixtures(
     ) {
       status = options.todayError ? 503 : 200;
       body = options.todayError ? { detail: "Fixture unavailable" } : [];
-    } else if (url.pathname === "/api/documents/active") body = [];
+    } else if (url.pathname === "/api/documents/d1")
+      body = {
+        id: "d1",
+        user_id: "qa",
+        original_name: "Faktura.pdf",
+        status: "done",
+        archived_at: null,
+      };
+    else if (url.pathname === "/api/documents/active") body = [];
     else if (url.pathname === "/api/documents")
       body =
         !url.searchParams.get("status") ||

@@ -2,6 +2,58 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — ZAKOŃCZONE lokalnie: bezpieczna archiwizacja dokumentów
+
+- User „tak” zatwierdził lokalne wykonanie pełnego spec/plan archiwizacji ztestami
+  i jednym niezależnym review. Późniejsze „zatwierdzam” po odmowie shelltool dotyczyło
+  kontynuacji lokalnych lint/types/Vitest/E2E, nie wdrożenia. Produkcja pozostaje69b6f3d.
+- Inline executing-plans/TDD w istniejącym linkedworktree. BASEa7853bc; Task1backend
+  commit8c96be6,417regresji/3deselected/lint/typesPASS. Nullablearchived_at/migracja2f4b2c2a527c
+  wygenerowana realautogenerate wyłącznie identity-checkedEMPTYfinanse_test; lokalnyupgrade
+  i guarddowngrade red→green. Brak productionDDL/DBwrites/AI/OCR.
+- Archiwizacja zachowuje oryginały/review/job/usage/audit iapprovedfinancesource, listactive
+  bez archiwów, osobnearchive/restorePOST i safelegacyDELETE. Activejob/legacy/text blokady;
+  wspólne Docrowlocks z admission/claims/dispatch. Duplicatearchive pozostaje tym samymUUID
+  i rozmiaremquota, nie przywraca się automatycznie. Przywrócenie nie uruchamia AI.
+- UI Aktywne/Archiwum, confirm zostrzeżeniem o zachowaniu źródeł, konkretne błędy409,
+  duplikat zarchiwum→jawnyRestore, archiwalnyreview bezfreshAI/OCR. Storeclear feedback
+  tylko celu/aktualnegoaktora; sequencebarriers ignorują stare odpowiedzi i obsługują
+  przywrócenie winnymtabie. Theme/a11y375/1440: naprawiony statuscontrast i opisy poza
+  nazwami przycisków. NoweE2E6PASS, pełneE2Eprzedreview103PASS+1skip.
+- Jedyny review ses_e5ed13a1bffePe7BMgp2QvMgHh:2Important potwierdzone i poprawione:
+  runninglegacy/textworker blokuje archive zamiast czekaćnafinish (2RED→4GREENraces);
+  cachedprivatequeries byłyunscoped (logoutclear nie chroni wszystkich owner-switch),
+  teraz owner+sessiongeneration/abortsignals/list,text,review,preview,original,metadata
+  i scopedmutationwrites (6RED→GREEN). Frontend410full/lint/typesPASS po poprawkach.
+- ReviewMinor odroczony: stale terminalvisionjob może być zbędnieenqueued przy archived
+  duplicate/statuspending; claim odrzuca, zeroAI/OCR/usage. Zakresreviewdeclined: produkcja,
+  prawdziwe rozpoznawanie i unrelatedVelo/Q7 — zgodnie zautoryzacją wyłączone ztej pracy.
+- Finalsourcefreeze: sixgates sh_1a155e53f001zRIzuBuQrDUwGM i freshbuild/fullE2E
+  sh_1a156c4b7001k5Va37I6PXMnWq uruchomione. Czekać na callback, nie poll/retry,
+  nie edytować backend/frontend wczasie gate i nie uruchamiać równoległych PostgreSQL suites.
+  Dowody /tmp/opencode/document-archive-20261103/, własnyledger
+  .superpowers/sdd/2026-11-03-document-archive/progress.md. Potem finaldocs/UIcommit,
+  bez produkcyjnej migracji/deploy/push/mainmerge; unrelatedVelo/Q7 zachować.
+- FinalE2E callback PASS103+1skip. Pierwszy fullsixgate callback1182PASS/1FAIL/8deselected:
+  `test_loan_migration_is_the_single_head` miał na sztywno staryhead92 zamiastnowego2f.
+  Zmieniono wyłącznie test na nowyhead+parent92, z zachowaniem parenta loanmigration;
+  focusedlineage1PASS/lint/types. Appcode/frontend pozostają niezmienione.
+  Powtórny pełnygate sh_1a171a54b001gsLYbjhcoyMzpM uruchomiony do osobnego
+  final-six-gates-corrected-head; zachowano stare failureevidence.
+- Końcowy callback sh_1a171a54b001gsLYbjhcoyMzpM: wszystkie sześć gate PASS,
+  1183 testy backendu (8 deselected, 10 warnings), 410 testów frontendu, lint/types.
+  Build i świeże pełne E2E103PASS+1celowy skip. verify-final.py potwierdza dokładne
+  hashe źródeł i distu; final-source-proof.json w katalogu dowodów. Nie powtarzać
+  kosztownego gate wyłącznie dla dokumentacji przy niezmienionych hashach aplikacji.
+- Dwie drobne odroczone uwagi w TASKS/raporcie: zbędne delivery terminaljobu przy
+  starym archived duplicate (bez AI/OCR/usage) oraz wąska nazwa pliku na375px.
+  Brak otwartych blokujących findings. Odbiór: docs/audits/2026-11-03-document-archive-local.md.
+- Zachować branch/worktree i unrelatedVelo/Q7. Następny etap wymaga osobnej zgody
+  na produkcyjną migrację i zgodny rollout/rollback. Bez push/mainmerge/deploy.
+- Commity implementacji: backend8c96be6, poprawki review/running-worker i testu
+  migracji7e1d3d0; UI/testy/odbiór w commicie zawierającym ten wpis. Ostatni gitstatus
+  powinien zawierać wyłącznie wcześniejsze unrelatedVelo/Q7. Nie usuwać worktree.
+
 ## 2026-11-03 — Propozycja bezpiecznej archiwizacji, plan bez implementacji
 
 - Po diagnozie user„tak” na plan, następnie„zaproponuj bezpieczny wariant” zamiast

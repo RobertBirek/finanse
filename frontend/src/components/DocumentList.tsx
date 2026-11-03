@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   useDocuments,
-  useDeleteDocument,
+  useArchiveDocument,
+  useRestoreDocument,
+  documentArchiveError,
   formatFileSize,
   STATUS_LABELS,
   STATUS_COLORS,
@@ -13,10 +15,12 @@ import { QueryFeedback } from "./QueryFeedback";
 import { getDocumentStatus } from "./documents/documentStatus";
 import { ProcessingPulse } from "./documents/ProcessingFeedback";
 import { isDocumentWorkActive } from "../api/documents";
+import { isProcessingActorCurrent } from "../stores/documentProcessingStore";
 
 export function DocumentList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedReview = searchParams.get("review");
+  const archived = searchParams.get("archived") === "true";
   const linkedReviewId =
     requestedReview &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -39,16 +43,57 @@ export function DocumentList() {
       setSearchParams(next, { replace: true });
     }
   };
-  const query = useDocuments(
-    statusFilter ? { status: statusFilter } : undefined,
-  );
-  const deleteDoc = useDeleteDocument();
+  const query = useDocuments({ status: statusFilter, archived });
+  const archiveDoc = useArchiveDocument();
+  const restoreDoc = useRestoreDocument();
+  const [feedback, setFeedback] = useState<string | null>(null);
   const documents = query.data ?? [];
   // Resolve from current query data so a polling result also updates an open viewer.
   const viewingDoc = documents.find((doc) => doc.id === viewingId);
 
   return (
     <div>
+      <div
+        role="group"
+        aria-label="Widoczność dokumentów"
+        className="mb-3 flex gap-2"
+      >
+        {[false, true].map((value) => (
+          <button
+            key={String(value)}
+            type="button"
+            aria-pressed={archived === value}
+            className={archived === value ? "btn-primary" : "btn-secondary"}
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              next.delete("review");
+              if (value) next.set("archived", "true");
+              else next.delete("archived");
+              setViewingId(null);
+              setReviewingId(null);
+              setStatusFilter(undefined);
+              setSearchParams(next);
+            }}
+          >
+            {value ? "Archiwum" : "Aktywne"}
+          </button>
+        ))}
+      </div>
+      {archived && (
+        <p className="mb-3 text-sm text-gray-400">
+          Archiwizacja ukrywa dokument na zwykłej liście. Pliki i powiązania
+          finansowe pozostają zachowane.
+        </p>
+      )}
+      {feedback && (
+        <p
+          role="status"
+          className="mb-3 text-sm"
+          style={{ color: "var(--ui-green)" }}
+        >
+          {feedback}
+        </p>
+      )}
       <div
         className="flex gap-2 mb-4 flex-wrap"
         role="group"
@@ -80,7 +125,9 @@ export function DocumentList() {
             <p>
               {statusFilter
                 ? "Brak dokumentów o wybranym statusie."
-                : "Brak dokumentów. Wybierz plik powyżej lub zrób zdjęcie."}
+                : archived
+                  ? "Archiwum jest puste."
+                  : "Brak dokumentów. Wybierz plik powyżej lub zrób zdjęcie."}
             </p>
             {statusFilter && (
               <button
@@ -109,33 +156,45 @@ export function DocumentList() {
                   key={doc.id}
                   className="flex items-center gap-2 p-3 bg-gray-900 rounded-lg"
                 >
-                  <button
-                    type="button"
-                    aria-label={`Otwórz dokument: ${doc.original_name}`}
-                    onClick={() => setViewingId(doc.id)}
-                    className="min-w-0 flex-1 rounded-lg p-2 text-left hover:bg-gray-800"
-                  >
-                    <span className="block truncate text-sm font-medium text-gray-200">
-                      {doc.original_name}
-                    </span>
-                    <span className="block text-xs text-gray-400">
+                  <div className="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      aria-label={`Otwórz dokument: ${doc.original_name}`}
+                      aria-describedby={`document-meta-${doc.id}${doc.status === "pending" && doc.next_attempt_at ? ` document-pending-${doc.id}` : ""}${doc.status === "error" ? ` document-error-${doc.id}` : ""}`}
+                      onClick={() => setViewingId(doc.id)}
+                      className="min-h-11 w-full min-w-0 rounded-lg p-2 text-left hover:bg-gray-800"
+                    >
+                      <span className="block truncate text-sm font-medium text-gray-200">
+                        {doc.original_name}
+                      </span>
+                    </button>
+                    <span
+                      id={`document-meta-${doc.id}`}
+                      className="block text-xs text-gray-400"
+                    >
                       {formatFileSize(doc.size_bytes)} ·{" "}
                       {new Date(doc.created_at).toLocaleDateString("pl-PL")}
                     </span>
                     {doc.status === "pending" && doc.next_attempt_at && (
-                      <span className="block text-xs text-yellow-300">
+                      <span
+                        id={`document-pending-${doc.id}`}
+                        className="block text-xs text-yellow-300"
+                      >
                         Ponowna próba od{" "}
                         {new Date(doc.next_attempt_at).toLocaleString("pl-PL")}{" "}
                         (wykonano prób: {doc.attempt_count}).
                       </span>
                     )}
                     {doc.status === "error" && (
-                      <span className="block text-xs text-red-300">
+                      <span
+                        id={`document-error-${doc.id}`}
+                        className="block text-xs text-red-300"
+                      >
                         Przetwarzanie zakończone błędem. Automatyczne próby
                         zakończone.
                       </span>
                     )}
-                  </button>
+                  </div>
                   <span
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[statusColor]}`}
                   >
@@ -144,19 +203,36 @@ export function DocumentList() {
                   </span>
                   <button
                     type="button"
-                    aria-label={`Usuń dokument: ${doc.original_name}`}
-                    disabled={deleteDoc.isPending}
+                    aria-label={`${archived ? "Przywróć" : "Archiwizuj"} dokument: ${doc.original_name}`}
+                    disabled={archiveDoc.isPending || restoreDoc.isPending}
                     onClick={() => {
                       if (
-                        window.confirm(
-                          `Usunąć dokument „${doc.original_name}”?`,
+                        !archived &&
+                        !window.confirm(
+                          "Przenieść dokument do archiwum? Plik, historia odczytu i powiązania finansowe pozostaną zachowane.",
                         )
                       )
-                        deleteDoc.mutate(doc.id);
+                        return;
+                      const mutation = archived ? restoreDoc : archiveDoc;
+                      mutation.mutate(
+                        { documentId: doc.id },
+                        {
+                          onSuccess: (_result, _variables, actor) => {
+                            if (!isProcessingActorCurrent(actor)) return;
+                            setViewingId(null);
+                            closeReview();
+                            setFeedback(
+                              archived
+                                ? "Dokument przywrócony."
+                                : "Dokument przeniesiony do archiwum.",
+                            );
+                          },
+                        },
+                      );
                     }}
                     className="min-h-11 px-2 text-sm text-red-300 rounded-lg hover:bg-gray-800 disabled:opacity-50"
                   >
-                    Usuń
+                    {archived ? "Przywróć" : "Archiwizuj"}
                   </button>
                 </li>
               );
@@ -164,9 +240,9 @@ export function DocumentList() {
           </ul>
         )}
       </QueryFeedback>
-      {deleteDoc.isError && (
+      {(archiveDoc.isError || restoreDoc.isError) && (
         <p role="alert" className="mt-3 text-sm text-red-300">
-          Nie udało się usunąć dokumentu. Spróbuj ponownie.
+          {documentArchiveError(archiveDoc.error ?? restoreDoc.error)}
         </p>
       )}
       {viewingDoc && (

@@ -4,7 +4,13 @@ import {
   formatFileSize,
   useDocumentUploadCapabilities,
   useUploadDocument,
+  useRestoreDocument,
+  documentArchiveError,
 } from "../api/documents";
+import {
+  captureProcessingActor,
+  isProcessingActorCurrent,
+} from "../stores/documentProcessingStore";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -18,6 +24,8 @@ type UploadItem = {
   file: File;
   state: "queued" | "uploading" | "success" | "error";
   error?: string;
+  archivedDocumentId?: string;
+  restored?: boolean;
 };
 
 function errorMessage(error: unknown) {
@@ -51,6 +59,7 @@ export function DocumentUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadDocument();
+  const restore = useRestoreDocument();
   const capabilities = useDocumentUploadCapabilities();
   const [dragActive, setDragActive] = useState(false);
   const [items, setItems] = useState<UploadItem[]>([]);
@@ -70,10 +79,24 @@ export function DocumentUpload() {
         ),
       );
       try {
-        await upload.mutateAsync(item.file);
+        const actor = captureProcessingActor();
+        const result = await upload.mutateAsync(item.file);
+        if (!isProcessingActorCurrent(actor)) {
+          queue.current = [];
+          draining.current = false;
+          return;
+        }
         setItems((current) =>
           current.map((entry) =>
-            entry.id === item.id ? { ...entry, state: "success" } : entry,
+            entry.id === item.id
+              ? {
+                  ...entry,
+                  state: "success",
+                  archivedDocumentId: result.document.archived_at
+                    ? result.document.id
+                    : undefined,
+                }
+              : entry,
           ),
         );
       } catch (error) {
@@ -157,12 +180,15 @@ export function DocumentUpload() {
         onClick={() => fileInputRef.current?.click()}
       >
         <span className="block text-gray-300 font-medium">
-          Upuść dokumenty tutaj lub kliknij, aby wybrać
-        </span>
-        <span id="upload-formats" className="block text-gray-400 text-sm mt-1">
-          PDF, JPG, PNG, HEIC, HEIF — {limit}
+          Wybierz dokument do przesłania
         </span>
       </button>
+      <span
+        id="upload-formats"
+        className="block text-center text-gray-400 text-sm mt-1"
+      >
+        PDF, JPG, PNG, HEIC, HEIF — {limit}
+      </span>
       <input
         ref={fileInputRef}
         type="file"
@@ -212,20 +238,54 @@ export function DocumentUpload() {
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex items-center gap-2 rounded-lg bg-gray-900 p-3 text-sm"
+              className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-900 p-3 text-sm"
             >
               <span className="min-w-0 flex-1 truncate text-gray-200">
                 {item.file.name}
               </span>
               <span role="status" className="text-gray-400">
-                {item.state === "uploading"
-                  ? "Przesyłanie…"
-                  : item.state === "queued"
-                    ? "Oczekuje"
-                    : item.state === "success"
-                      ? "Przesłano"
-                      : "Błąd"}
+                {item.archivedDocumentId
+                  ? "Ten plik jest już w archiwum. Możesz go przywrócić."
+                  : item.restored
+                    ? "Dokument przywrócony."
+                    : item.state === "uploading"
+                      ? "Przesyłanie…"
+                      : item.state === "queued"
+                        ? "Oczekuje"
+                        : item.state === "success"
+                          ? "Przesłano"
+                          : "Błąd"}
               </span>
+              {item.archivedDocumentId && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={restore.isPending}
+                  onClick={() =>
+                    restore.mutate(
+                      { documentId: item.archivedDocumentId! },
+                      {
+                        onSuccess: (_data, _variables, actor) => {
+                          if (!isProcessingActorCurrent(actor)) return;
+                          setItems((current) =>
+                            current.map((entry) =>
+                              entry.id === item.id
+                                ? {
+                                    ...entry,
+                                    archivedDocumentId: undefined,
+                                    restored: true,
+                                  }
+                                : entry,
+                            ),
+                          );
+                        },
+                      },
+                    )
+                  }
+                >
+                  Przywróć
+                </button>
+              )}
               {item.state === "error" && (
                 <button
                   type="button"
@@ -243,6 +303,11 @@ export function DocumentUpload() {
             </li>
           ))}
         </ul>
+      )}
+      {restore.isError && (
+        <p role="alert" className="mt-2 text-sm text-red-300">
+          {documentArchiveError(restore.error)}
+        </p>
       )}
     </div>
   );

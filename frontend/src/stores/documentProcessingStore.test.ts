@@ -20,6 +20,55 @@ const observe = (d = processingDocument()) =>
   store.getState().observeDocument(actor(), d, store.getState().sequence);
 
 describe("session document processing tracker", () => {
+  it("observes an authoritative restore from another tab without accepting older replies", () => {
+    observe();
+    store.getState().clearDocumentFeedback(actor(), processingDocument().id);
+    observe(processingDocument({ archived_at: null }));
+    expect(Object.keys(store.getState().watches)).toHaveLength(1);
+  });
+  it("accepts a fresh admitted operation after an external restore but fences pre-archive intents", () => {
+    const old = { ...actor(), sequence: store.getState().sequence };
+    store.getState().clearDocumentFeedback(actor(), processingDocument().id);
+    const input = {
+      key: "review:after-restore",
+      operationId: "review:after-restore",
+      documentId: processingDocument().id,
+      source: "review" as const,
+      kind: "ai" as const,
+    };
+    store.getState().register(old, input);
+    expect(Object.keys(store.getState().watches)).toHaveLength(0);
+    store
+      .getState()
+      .register({ ...actor(), sequence: store.getState().sequence }, input);
+    expect(Object.keys(store.getState().watches)).toHaveLength(1);
+  });
+  it("clears only archived feedback and refuses a delayed active snapshot", () => {
+    observe();
+    const stale = store.getState().sequence;
+    store.getState().clearDocumentFeedback(actor(), processingDocument().id);
+    store.getState().observeDocument(actor(), processingDocument(), stale);
+    expect(Object.keys(store.getState().watches)).toHaveLength(0);
+    expect(store.getState().toasts).toHaveLength(0);
+  });
+  it("allows newly requested work after restore, without accepting pre-archive replies", () => {
+    observe();
+    const stale = store.getState().sequence;
+    store.getState().clearDocumentFeedback(actor(), processingDocument().id);
+    store.getState().restoreDocumentFeedback(actor(), processingDocument().id);
+    store.getState().observeDocument(actor(), processingDocument(), stale);
+    expect(Object.keys(store.getState().watches)).toHaveLength(0);
+    observe();
+    expect(Object.keys(store.getState().watches)).toHaveLength(1);
+  });
+  it("does not let a previous session clear current document feedback", () => {
+    const previous = actor();
+    store.getState().bindOwner(null);
+    store.getState().bindOwner("owner");
+    observe();
+    store.getState().clearDocumentFeedback(previous, processingDocument().id);
+    expect(Object.keys(store.getState().watches)).toHaveLength(1);
+  });
   it("does not resurrect completed work from a delayed active-list response", () => {
     const pending = processingDocument();
     observe(pending);

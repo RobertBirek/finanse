@@ -7,6 +7,9 @@ import { useAuthStore } from "../stores/authStore";
 import { useDocumentProcessingStore as store } from "../stores/documentProcessingStore";
 import { processingDocument, processingReview } from "../test/documentFixtures";
 import {
+  documentQueryKey,
+  useArchiveDocument,
+  useRestoreDocument,
   usePrepareDocumentReview,
   usePrepareDocumentVision,
   useRetryDocumentOcr,
@@ -49,6 +52,94 @@ afterEach(() => {
 });
 
 describe("accepted document operations", () => {
+  it("clears archived feedback and restores without creating processing work", async () => {
+    vi.spyOn(api, "post")
+      .mockResolvedValueOnce({
+        data: processingDocument({ archived_at: "2026-11-03T12:00:00Z" }),
+      })
+      .mockResolvedValueOnce({
+        data: processingDocument({ archived_at: null }),
+      });
+    const actor = { ownerId: "owner", generation: store.getState().generation };
+    store
+      .getState()
+      .observeDocument(actor, processingDocument(), store.getState().sequence);
+    const { result } = renderHook(
+      () => ({ archive: useArchiveDocument(), restore: useRestoreDocument() }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current.archive.mutateAsync({
+        documentId: processingDocument().id,
+      });
+    });
+    expect(Object.keys(store.getState().watches)).toHaveLength(0);
+    await act(async () => {
+      await result.current.restore.mutateAsync({
+        documentId: processingDocument().id,
+      });
+    });
+    expect(Object.keys(store.getState().watches)).toHaveLength(0);
+    expect(api.post).toHaveBeenCalledTimes(2);
+  });
+  it.each([true, false])(
+    "fences a late archive after logout/relogin sameUser=%s",
+    async (sameUser) => {
+      let resolve!: (reply: {
+        data: ReturnType<typeof processingDocument>;
+      }) => void;
+      vi.spyOn(api, "post").mockReturnValue(
+        new Promise((r) => {
+          resolve = r;
+        }),
+      );
+      const { result } = renderHook(() => useArchiveDocument(), { wrapper });
+      let pending!: Promise<unknown>;
+      act(() => {
+        pending = result.current.mutateAsync({
+          documentId: processingDocument().id,
+        });
+      });
+      await waitFor(() => expect(api.post).toHaveBeenCalledOnce());
+      useAuthStore.setState({
+        user: null,
+        authStatus: "unauthenticated",
+        isAuthenticated: false,
+      });
+      const owner = sameUser ? user : { ...user, id: "other" };
+      useAuthStore.setState({
+        user: owner,
+        authStatus: "authenticated",
+        isAuthenticated: true,
+      });
+      const actor = {
+        ownerId: owner.id,
+        generation: store.getState().generation,
+      };
+      store
+        .getState()
+        .observeDocument(
+          actor,
+          processingDocument({ user_id: owner.id }),
+          store.getState().sequence,
+        );
+      await act(async () => {
+        resolve({
+          data: processingDocument({ archived_at: "2026-11-03T12:00:00Z" }),
+        });
+        await pending;
+      });
+      expect(Object.keys(store.getState().watches)).toHaveLength(1);
+      expect(
+        client.getQueryData(
+          documentQueryKey(processingDocument().id, "metadata", {
+            ownerId: owner.id,
+            generation: store.getState().generation,
+          }),
+        ),
+      ).toBeUndefined();
+    },
+  );
   it("registers a known vision revision and preserves the review cache", async () => {
     const review = processingReview();
     vi.spyOn(api, "post").mockResolvedValue({ data: review });
@@ -69,7 +160,12 @@ describe("accepted document operations", () => {
       }),
     ]);
     expect(
-      client.getQueryData(["documents", review.document_id, "review"]),
+      client.getQueryData(
+        documentQueryKey(review.document_id, "review", {
+          ownerId: "owner",
+          generation: store.getState().generation,
+        }),
+      ),
     ).toEqual(review);
     expect(api.post).toHaveBeenCalledTimes(1);
   });
@@ -141,11 +237,12 @@ describe("accepted document operations", () => {
       });
       expect(Object.keys(store.getState().watches)).toHaveLength(0);
       expect(
-        client.getQueryData([
-          "documents",
-          processingReview().document_id,
-          "review",
-        ]),
+        client.getQueryData(
+          documentQueryKey(processingReview().document_id, "review", {
+            ownerId: useAuthStore.getState().user?.id ?? null,
+            generation: store.getState().generation,
+          }),
+        ),
       ).toBeUndefined();
     },
   );

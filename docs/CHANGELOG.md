@@ -2,6 +2,26 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-03 — Bezpieczne archiwum dokumentów, odebrane lokalnie
+
+### Added
+- Archiwizacja/przywracanie zamiast harddelete, nullablearchived_at (migracja2f4b2c2a527c),
+  owner-scoped API, idempotentne audyty i widokArchiwum. Pliki/historia/finanse bez kasowania.
+- Duplikat zarchiwizowanego pliku wymaga jawnegoPrzywróć, nie tworzy odczytu ani refunduquota.
+
+### Fixed
+- Aktywna durable/legacy/text praca blokuje archiwizację409, także gdy worker trzyma
+  rowlock. Czytelne powody blokady; brak FK500 przy zachowanej historii.
+- Cache listy/tekstu/review/podglądu/oryginału izolowany perowner+generacja sesji,
+  spóźnione intencje/statusy nie odtwarzają pracy po archiwizacji.
+- Oba istotne findings niezależnego review poprawione RED→GREEN. Końcowe wyniki:
+  1183 testy backendu, 410 frontendu, lint/types obu warstw, build i 103 E2E PASS
+  (1 celowe pominięcie E2E). Manifest potwierdza zgodność źródeł i distu.
+- Pierwszy pełny gate ujawnił oczekiwanie starego headu Alembic w teście; poprawiony
+  test nadal sprawdza jedną liniową historię. Powtórny pełny gate PASS.
+- Odbiór i dwie drobne odroczone uwagi: `docs/audits/2026-11-03-document-archive-local.md`.
+  Produkcja pozostaje bez zmian; migracja i wdrożenie wymagają osobnej zgody.
+
 ## [Diagnosis] — 2026-11-03 — Usuwanie dokumentów
 
 ### Changed
