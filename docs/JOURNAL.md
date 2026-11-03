@@ -2,6 +2,35 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — PROJEKT etapu 2: zatwierdzane kategorie i splity
+
+- User po zakończeniu etapu1/commit63e2b9c: „ok, działaj dalej”. Kontynuacja lokalnego
+  zakresu; brak zgody na wdrożenie, produkcyjną historię, AI/OCR lub luźniejsze guardy.
+- Obowiązkowe hostdocs przeczytane w kolejności; są starsze niż linkedworktree, dlatego
+  aktualny stan zgodny z poniższym wpisem63e2b9c. Własna gałąź i unrelatedVelo/Q7 zachowane.
+- `verify-final.py` etapu1 świeżo potwierdził dokładne źródła1205backend/420frontend/
+  lint/types/build/E2E105+1expectedskip. Nie ponawiać pełnych suites dla samego projektu.
+- Spec `docs/superpowers/specs/2026-11-03-approved-category-splits-design.md`:
+  ledger jako jedyne źródło sum, jedna płatność, podział100→80/20 z jawną akceptacją,
+  manualprovenance i ochrona wersji; productcode/DB bez zmian. Plan zostanie pokazany
+  do zatwierdzenia przed implementacją zgodnie z workflow projektu.
+- Read-only buildercheck ses_e5c9b005effeJ1ZKa1OTo63A7v zakończony bez pytań po stronie
+  usera. Przyjęto FinanceCommandReceipt, osobną tabelęstate, lockorder bez późnych
+  lock_accounts i ochronęActual/loan/FX. Nie przyjęto one-shot-only ani zakazu użycia
+  importowanych kategorii: ręczna korekta/scalenie i wybór istniejących kategorii należą
+  do ustalonego zakresu. Nowa transakcja nie zmienia definicji/mappingu wybranej kategorii.
+- Plan `docs/superpowers/plans/2026-11-03-approved-category-splits.md`: backendcontext,
+  niemutujący preview z targetcategorysnapshot, apply z explicitconfirm/receipt; osobneUI
+  i finalnygate/review. Token bez targetparts byłby niewystarczający, więc preview
+  poprzedza zatwierdzenie. Nie dodawać własnej tabeli idempotencji, istnieje gotowa.
+- Parent sprawdził dodatkowo delete_category: brak category-tree lock i FKSETNULL
+  pozwoliłyby wyścigowi z nowympostingiem wyzerować kategorię po zatwierdzeniu. Plan
+  obejmuje serializację tej ścieżki i deterministyczną regresję; sam kod bez zmian.
+- Następny krok: zatwierdzenie pełnego planu przez użytkownika, potem native/TDD
+  w tym samymworktree. Bieżący docs-onlycommit nie oznacza implementacji etapu2.
+  Nie wykonano nowych testówaplikacji, migracji, realnychAI/OCR, produkcyjnychmutacji
+  ani historii; sprawdzono zgodność kodu z istniejącym dowodem1205/420/105+1skip.
+
 ## 2026-11-03 — ZAKOŃCZONY LOKALNIE etap 1: daty zakupów i księgowania
 
 - Po rozmowie w Plan user przełączył agenta na wykonawczego i odpowiedział „ok,

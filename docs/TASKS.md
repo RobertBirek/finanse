@@ -13,7 +13,12 @@ Backlog zadań ze statusami.
   420frontend/lint/types/build/105E2E+1expectedskipPASS; migracja84f28fe23ab8 tylko
   w izolowanymfinanse_test, bez backfillu/zmianyActualfingerprint/kwot/postings.
   Oba findingsreview (cacheowner/session i same-sessionrefresh) poprawione3RED→GREEN.
-- [ ] Etap2: zatwierdzana zmiana/split kategorii zachowująca stronę kontową i alokacje.
+- [~] Etap2: doprecyzowanie projektu i planu zatwierdzanej zmiany/splitu kategorii,
+  zachowanie strony kontowej i alokacji. Kod jeszcze bez zmian; pełny plan do
+  zatwierdzenia przed implementacją. User po odbiorze63e2b9c: „ok, działaj dalej”.
+  Buildercheck zakończony; spec/plan `2026-11-03-approved-category-splits*` zapisane.
+  Kontekst→preview→apply, ręczna ponowna korekta/scalenie, receipt replay, ochrona
+  Actual/loan/FX/pending; wspólny lock delete_category ma zamknąć wyścigSETNULL.
 - [ ] Etap3: trwałe propozycje, reguły, kontrolowane LLM i zatwierdzanie nowych kategorii.
   Przed uruchomieniem uzgodnić osobno automatyczne stosowanie wysokiej pewności vs
   zawsze zatwierdzane propozycje; nowe kategorie i splity zawsze wymagają zgody.

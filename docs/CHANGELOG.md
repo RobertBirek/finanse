@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Design] — 2026-11-03 — Zatwierdzane kategorie i splity, etap 2
+
+### Added
+- Projekt i plan następnego lokalnego etapu: jedna płatność, kategorie100→80/20→100,
+  ręczna proweniencja, niemutujący podgląd i jawne zatwierdzenie. ReuseFinanceCommandReceipt
+  do idempotencji; accountposting/alokacje/daty bez zmian.
+- Read-only buildercheck zakończony bez pytań blokujących. Plan obejmuje dodatkowo
+  wspólny lock kasowania kategorii i regresjęONDELETESETNULL. Chroni transakcjeActual,
+  pożyczki/FX/pending; pozwala wybrać istniejącą aktywną kategorię zaimportowaną zActual.
+- Plan `docs/superpowers/plans/2026-11-03-approved-category-splits.md` czeka na
+  zatwierdzenie przed implementacją. Brak zmiany kodu aplikacji, schematu lub danych,
+  nowych AI/OCR i działań produkcyjnych; etap1/63e2b9c pozostaje sprawdzonym baseline.
+
 ## [Unreleased] — 2026-11-03 — Daty zakupu i księgowania (lokalny etap 1)
 
 ### Added
