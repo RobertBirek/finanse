@@ -4,10 +4,17 @@ Backlog zadań ze statusami.
 
 ## Usuwanie dokumentów — diagnoza (2026-11-03)
 
-- [~] Po odbiorze8106532 użytkownik „zatwierdzam” na kierunek migracji/wdrożenia.
+- [x] Po odbiorze8106532 użytkownik „zatwierdzam” na kierunek migracji/wdrożenia,
+  następnie „akceptuję” na okno serwisowe i recovery zachowujące archiwum.
   Plan wydania: `docs/superpowers/plans/2026-11-03-document-archive-deployment.md`.
-  Przed wykonaniem uzgodnić krótkie okno serwisowe i recovery bez starego backendu,
-  jeśli istnieje stan archiwum. Na etapie planu brak backupu/DDL/restartu lub deployu.
+  Backup4e7b441f/installedrestore/izolowanyrehearsal92→2f/exactimages/12guardów/opsreview PASS.
+  Jednorazowy apply810/schema2f, browser375/1440,11próbek/343s/logi/workerreadiness,
+  finalsource/runtime/data/originalsproof PASS. Finalizacja13:53:23UTC; bez AI/OCR.
+  Nie powtarzać apply/migracji ani nie uruchamiać starego rollbacku.
+  Raport `docs/audits/2026-11-03-document-archive-deployment.md`. Bez hostmainmerge/push.
+- [ ] OpsReviewMinor: w osobnym hardeningu zabezpieczyć manualny downgrade2f przed
+  wyścigiem check→DDLlock z równoległą archiwizacją. Kontroler nigdy nie downgraduje,
+  ogólny rollback odmawia; produkcyjny downgrade pozostaje niedozwolony.
 
 - [x] Sprawdzić UI/API/FK i odtworzyć na syntetykach:13przypadków +2SQLSTATE23503
   probes. Ostatni produkcyjny409 ma approved/active powiązanie finansowe; bez DELETE

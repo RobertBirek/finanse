@@ -2,13 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Deployment planning] — 2026-11-03 — Archiwum dokumentów
+## [8106532] — 2026-11-03 — Archiwum dokumentów na produkcji
 
 ### Changed
-- Po „zatwierdzam” dla kierunku migracji/wdrożenia8106532 zapisano plan bezpiecznego
-  wydania z backup/restore i testem migracji na odtworzonej bazie. Do akceptacji pozostaje
-  krótkie okno serwisowe oraz recovery zachowujące archiwum zamiast niezgodnego rollbacku.
-  Produkcyjny schemat/runtime/ingress bez zmian na etapie przygotowania planu.
+- Po „zatwierdzam” i „akceptuję” dla migracji/wdrożenia oraz maintenance/recovery
+  wydano spójny backend/worker/frontend8106532 i addytywną migrację2f4b2c2a527c.
+- Backup4e7b441f/installedrestore, dodatkowy isolatedrestore92→2f, exactimage210plików,
+  12offlineguardów i niezależny operationsreview PASS. Dane/finanse/linki/usage/policy
+  i oryginały zachowane; bez nowych AI/OCR, replay, cleanupu lub historycznych napraw.
+- HTTPS/assets/authrejection, browser375/1440, workerreadiness i11próbek/343s obserwacji
+  PASS; active-release sfinalizowany13:53:23UTC. Generic rollback do starego backendu
+  wyłączony; zachować archived_at, przy problemie fence i naprawa zgodna z archiwum.
+- Raport: `docs/audits/2026-11-03-document-archive-deployment.md`.
+  Bez push/mainmerge; trzy drobne follow-upy pozostają w TASKS.
 
 ## [Unreleased] — 2026-11-03 — Bezpieczne archiwum dokumentów, odebrane lokalnie
 

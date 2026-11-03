@@ -2,6 +2,46 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — ZAKOŃCZONE: archiwum8106532 i migracja2f na produkcji
+
+- User „akceptuję” na przedstawiony maintenance/forward-repair kontrakt po „zatwierdzam”
+  migrację/wdrożenie. Dokładny candidate81065329cc4cc8edc511800c436bf0a2f7b94025;
+  plan docs/superpowers/plans/2026-11-03-document-archive-deployment.md, native inline.
+- Świeży backup4e7b441f i installedrestore tego samego snapshotu PASS. Osobny disposable
+  internal-only PostgreSQL restore, candidate92→2f, rows/ledger/links/usage/policy/original
+  checksum iNULL archived_at PASS. Zeroarchive old ORM/new schema zgodny w izolacji;
+  syntetyczne archiwum blokuje legacyrecovery. Kontener/sieć rehearse usunięte.
+- Exactpackage `/opt/finanse/webapp/releases/8106532/`,210sourcefiles/każdybackend,
+  routes/DTO/archiveguard offline, fullconfigcomparison,12offlineguards PASS.
+  Opsreview ses_e5e5a8f3dffeSRkQPmcwfI1T2e Approved/Critical0/Important0. Minor:
+  manualdowngrade check/dropTOCTOU — odroczony, downgrade nie jest dozwolony ani używany.
+- Review związany265artifactami. Preapply źródła/config/baseline/idlework/backupage1282sPASS.
+  One-shot apply sh_1a1a93a70001Czr6HpNj6dSyc5 callbackPASS: schemat2f4b2c2a527c,
+  backend/worker/frontend810. Fencedretention/internalhealth przed otwarciemfrontendPASS;
+  dataIDs/policy/originals/finanse bez zmian; brak rollbacku, replay lub nowych AI/OCR.
+- Browser GET-only375/1440 i11samples/>=5min finalizer sh_1a1aa1ada001vR8wdLyyHVnXPU
+  uruchomiony; czekać na callback, nie poll/retry. Potem final_check.py i finaldocs.
+  Dowody `/tmp/opencode/document-archive-deploy-20261103/`, własnyledger
+  `.superpowers/sdd/2026-11-03-document-archive-deployment/progress.md`.
+- Generic rollback w pakiecie odmawia. Po istnieniu archive state tylko maintenance/
+  forwardrepair, bez usuwania archived_at/downgrade/prodrestore. Nie uruchamiać starych
+  rollback.sh. Hostmain/push i unrelatedVelo/Q7 pozostają nietknięte.
+- Callback sh_1a1aa1ada001vR8wdLyyHVnXPU zakończonyPASS: browser375/1440 bez
+  overflow/błędów/foreignorigin/mutacji, fontsloaded, private→login;11próbek343,69s,
+  zero nowych błędów w logach. Active-release atomowo13:53:23.372938UTC, schema2f,
+  rollback_override=null/genericrollbackdisabled. Nigdy nie zakładać, że stary69 jest
+  archive-compatible na podstawie pozostawionych obrazów lub dawnych rollback.sh.
+- Fresh final_check.py PASS: exact runtimeimageIDs/OCI/source/dist/render, DB/Redis/
+  ARQworkerreadiness, HTTPS, dataIDs, ledger i oryginały. Żadne stare wiersze nie zmieniły
+  się poza23własnymi auditami auth401 (5API+18browser); policyepoch4 bez zmian.
+  `final-readonly-proof.json` i review/controller/rehearsal/baselineproofy w prywatnym
+  katalogu dowodów; wybrane dowody trwale w8106532/archive-operations-evidence.
+- Etap wydania zakończony. Nie ponawiać apply/finalize/backup/fullgate dla samego
+  docscommitu. Kolejna rzeczywista próba archiwizacji lub AI to działanie użytkownika,
+  nie ukryty smoke. Odświeżyć Dokumenty; Archiwum/Przywróć już dostępne.
+- Follow-upy: stare terminaljobdelivery, nazwa375px i manualny downgradeTOCTOU
+  (downgrade w produkcji niedozwolony). Bez nierozwiązanych blockerów opsreview.
+
 ## 2026-11-03 — Zgoda na kierunek wydania archiwum; kontrakt recovery do zatwierdzenia
 
 - Po lokalnym odbiorze81065329cc4cc8edc511800c436bf0a2f7b94025 i komunikacie o osobnej

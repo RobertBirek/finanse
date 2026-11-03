@@ -1,6 +1,6 @@
 # Document Archive Production Deployment Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for sequential execution. Track the checkboxes. Obtain approval of the maintenance/recovery contract below before changing production.
+> **For agentic workers:** Completed with superpowers:executing-plans after explicit maintenance/recovery approval. Do not replay this release. Evidence and exclusions are in the deployment audit.
 
 **Goal:** Release approved document archival without losing originals, financial links or archive state.
 
@@ -13,7 +13,7 @@
 ## Authorization and outstanding decision
 
 - User said „zatwierdzam” after the handoff naming `8106532` and requiring separate production migration/deployment consent. This authorizes the deployment direction, not destructive recovery.
-- Proposed operational contract still needs approval: a short maintenance window for the coordinated migration/release; if archive state exists, fail closed in maintenance and repair forward rather than run an archive-unaware backend.
+- Operational contract approved by user „akceptuję”: a short maintenance window for the coordinated migration/release; if archive state exists, fail closed in maintenance and repair forward rather than run an archive-unaware backend.
 - No backup, production DDL, container restart, ingress change or active-release update has been performed during plan preparation.
 
 ## Global Constraints
@@ -38,27 +38,27 @@
 
 **Files:** existing `ops/prepare_release.py`; root-only evidence under `/tmp/opencode/document-archive-deploy-20261103/`; versioned package under `/opt/finanse/webapp/releases/8106532/`. No product code changes planned.
 
-- [ ] Approve the maintenance/recovery contract, then capture exact candidate/source/dist proofs and live baseline service revisions, data IDs, full private Compose rendering and active-release bytes.
-- [ ] Obtain a fresh encrypted backup through the established backup service/Make target and installed `finanse-restore-verify.service`; require success and the same snapshot ID, no resetting failure/start limits.
-- [ ] On an isolated target whose identity is checked before writes, restore that snapshot and apply exactly candidate migration2f4b2c2a527c. Verify row/file/link/ledger retention, NULL archive defaults and unchanged finance/usage/policy. Keep private contents out of logs.
-- [ ] Rehearse recovery: old runtime with new schema and zero archives may serve only behind the write fence; synthetic archived state must make the recovery guard refuse old runtime. Never discard archived_at to make rollback possible.
-- [ ] Prepare candidate using `ops/prepare_release.py` with genuine active runtime revision and verified dist, build offline Dockerfiles, pin image IDs and verify all backend/worker source files against approved Git. Inspect full rendered configuration and test routes/models in exact images without provider access.
-- [ ] Prepare a one-shot, hash-bound execution/recovery checklist or controller with offline tests covering baseline drift, wrong migration, stale backup, nonidle work, archive-state recovery rejection and repeat-apply refusal. It must not auto-restore production.
-- [ ] Independent read-only operations review of the actual package, migration rehearsal and recovery procedure; resolve blocking findings before production apply.
+- [x] Maintenance/recovery approved; exact source/dist, live69b6f3d/schema92, service IDs/rows/originals/config and metadata captured.
+- [x] Fresh backup4e7b441f and installed isolated restore of the same snapshot PASS; no reset/retry of failure limits.
+- [x] Same snapshot restored into disposable internal-only PostgreSQL; candidate92→2f PASS, rows/ledger/links/usage/policy retained, nullableNULL archive defaults and backup checksums verified. Disposable DB/network removed.
+- [x] Isolated old ORM/new schema/zeroarchive PASS; real synthetic archive state makes guard refuse legacy recovery. Generic rollback script always refuses; no downgrade.
+- [x] Exact candidate package prepared via ops/prepare_release.py; full Compose comparison, pinned imageIDs,210sourcefiles/backend image and offline routes/models/guard PASS.
+- [x] One-shot hash-bound controller12offline tests PASS; drift/schema/backup/idle/transaction/fence/archive/repeat guards. No automatic production restore or legacy rollback.
+- [x] Operations review ses_e5e5a8f3dffeSRkQPmcwfI1T2e Approved, Critical0/Important0; manual-downgrade TOCTOU minor deferred because downgrade prohibited. Review bound to265artifacts.
 
 ## Task 2: Coordinated migration/release and acceptance
 
 **Interfaces:** consumes Task1 certified package, same verified snapshot, pinned baseline/config/image proofs and approved maintenance contract. Produces verified runtime evidence and atomically finalized active-release metadata.
 
-- [ ] Revalidate backup freshness (<1h), approval, metadata/config/image hashes, unchanged candidate and idle queues/DB work. Drift or user work means stop, not replace the baseline.
-- [ ] Fence external application access (including cached-client API writes) during the agreed maintenance window, allow existing requests to finish, recheck idleness, then quiesce old backend/worker. Keep data services and originals running/unchanged.
-- [ ] Run approved candidate Alembic upgrade to exactly2f4b2c2a527c with bounded lock/statement waits. If migration fails, inspect actual revision/state before recovery; never blindly downgrade or retry uncertain DDL.
-- [ ] Start matching backend/worker/frontend with the complete Compose file list. Verify source revisions, schema, no `/app` host mount, mounts/security settings and data IDs before exposing access.
-- [ ] Verify HTTPS/assets/API health/auth rejection, worker readiness, preserved private row/ledger/original/link fingerprints, usage/policy and logs. Do not archive a real user document as a smoke test; use local/in-isolation functional evidence.
-- [ ] Remove the maintenance fence only after acceptance checks pass. Browser375/1440 read-only checks and at least five minutes of bounded observation follow. New user actions after opening must not be mistaken for release corruption.
-- [ ] On failure, keep/fence maintenance first. Old images may resume only under a stable write fence with proven zero archived rows; keep the added column and schema revision. If any archive state exists, retain it and repair forward; ask separately for any destructive restore.
-- [ ] Only after successful verification finalize active-release metadata atomically, marking migration executed and the restricted recovery contract. Preserve old images but do not advertise their generic rollback script as archive-safe.
-- [ ] Update CHANGELOG/TASKS/JOURNAL and a deployment audit with exact images/revisions, snapshot, migration outcome and exclusions. Commit only owned documentation; no push or host-main merge implied.
+- [x] Revalidated backup1282s/approval/config/images/source/baseline and idlework/transactions; no drift.
+- [x] Fenced frontend/publicAPI, rechecked idleness, stopped old backend/worker; no active extraction cancelled or queues cleared.
+- [x] Exact-image Alembic upgrade92→2f succeeded with5s/60s server timeouts; no downgrade/replay.
+- [x] New backend/worker810 verified under closed ingress, then frontend810 opened; full Compose/no-deps/no-build and data IDs preserved.
+- [x] HTTPS/assets/health/authrejection, exact artifacts/source, workerARQ/DB/Redis readiness, fenced rows/ledger/originals/links/usage/policy and logs PASS. No real user archive smoke/provider calls.
+- [x] Browser375/1440 read-only and11samples/343.69s observation PASS; concurrent user activity allowed after opening. Final equality check found only23ownauth401 audits.
+- [x] Recovery path certified, not triggered: generic legacy rollback disabled, no downgrade/production restore; archive state must remain preserved.
+- [x] Active-release atomically finalized2026-11-03T13:53:23.372938+00:00, schema2f/migration_executed; old images retained but no generic rollback_override advertised.
+- [x] CHANGELOG/TASKS/JOURNAL and deployment audit completed in local docs commit; no push/mainmerge. Final-readonly-proof PASS.
 
 ## Self-review / handoff
 
