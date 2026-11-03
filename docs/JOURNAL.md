@@ -2,6 +2,24 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — Zgoda na kierunek wydania archiwum; kontrakt recovery do zatwierdzenia
+
+- Po lokalnym odbiorze81065329cc4cc8edc511800c436bf0a2f7b94025 i komunikacie o osobnej
+  zgodzie na migrację/wdrożenie user odpowiedział „zatwierdzam”. Traktować jako zgodę
+  na ten kierunek, nie na usuwanie archive state lub odtwarzanie produkcji ze snapshotu.
+- Przeczytano wymagane cztery dokumenty hosta (host docs nadal wcześniejsze od linked
+  worktree), /deploy, backup-restore i active-release. Metadane wskazują69b6f3d/schema92;
+  rzeczywiste runtime IDs i konfiguracja wymagają jeszcze rewalidacji przed apply.
+- verify-final.py ponownie PASS: dokładne źródła/dist,1183backend/410frontend/103E2E+1skip,
+  lint/types/build. Bez ponawiania pełnego gate na identycznych źródłach aplikacji.
+- Zapisano `docs/superpowers/plans/2026-11-03-document-archive-deployment.md`:
+  snapshot+installedrestore, osobny rehearsal candidate migration na restoredDB,
+  immutablepakiet/exactimage/opsreview, maintenance fence/idlework, jedna addytywna
+  migracja i spójne trzy usługi. Nowa decyzja do usera: krótkie okno serwisowe i przy
+  archive state wyłącznie maintenance/forwardrepair, nie archive-unaware rollback.
+- Jeszcze bez backupu, nowych AI/OCR, produkcyjnego DDL, zmiany ingress/runtime/metadanych,
+  pushu/mainmerge. UnrelatedVelo/Q7 bez zmian. Zaczekać na akceptację kontraktu recovery.
+
 ## 2026-11-03 — ZAKOŃCZONE lokalnie: bezpieczna archiwizacja dokumentów
 
 - User „tak” zatwierdził lokalne wykonanie pełnego spec/plan archiwizacji ztestami

@@ -4,6 +4,11 @@ Backlog zadań ze statusami.
 
 ## Usuwanie dokumentów — diagnoza (2026-11-03)
 
+- [~] Po odbiorze8106532 użytkownik „zatwierdzam” na kierunek migracji/wdrożenia.
+  Plan wydania: `docs/superpowers/plans/2026-11-03-document-archive-deployment.md`.
+  Przed wykonaniem uzgodnić krótkie okno serwisowe i recovery bez starego backendu,
+  jeśli istnieje stan archiwum. Na etapie planu brak backupu/DDL/restartu lub deployu.
+
 - [x] Sprawdzić UI/API/FK i odtworzyć na syntetykach:13przypadków +2SQLSTATE23503
   probes. Ostatni produkcyjny409 ma approved/active powiązanie finansowe; bez DELETE
   na produkcji, treści dokumentu lub nowych AI/OCR.

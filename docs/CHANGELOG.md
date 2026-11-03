@@ -2,6 +2,14 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Deployment planning] — 2026-11-03 — Archiwum dokumentów
+
+### Changed
+- Po „zatwierdzam” dla kierunku migracji/wdrożenia8106532 zapisano plan bezpiecznego
+  wydania z backup/restore i testem migracji na odtworzonej bazie. Do akceptacji pozostaje
+  krótkie okno serwisowe oraz recovery zachowujące archiwum zamiast niezgodnego rollbacku.
+  Produkcyjny schemat/runtime/ingress bez zmian na etapie przygotowania planu.
+
 ## [Unreleased] — 2026-11-03 — Bezpieczne archiwum dokumentów, odebrane lokalnie
 
 ### Added
