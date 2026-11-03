@@ -138,6 +138,10 @@ export function TransactionFilters({
               className="input w-full min-w-0 mt-1"
             />
           </label>
+          <p className="text-sm text-gray-400">
+            Zakres dat księgowania; dla historii bez oznaczenia — dotychczasowej
+            daty. Nie filtruje po dacie zakupu.
+          </p>
           <label className="text-sm text-gray-300">
             Data do
             <input

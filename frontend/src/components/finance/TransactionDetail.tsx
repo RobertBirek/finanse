@@ -1,7 +1,7 @@
 import { useTransaction, type Account, type Category } from "../../api/finance";
 import { TRANSACTION_TYPES } from "../../lib/transactionSearch";
 import { formatPLN } from "../../lib/format";
-import { formatCalendarDate } from "../../lib/date";
+import { TransactionDateLabel } from "./TransactionDateLabel";
 import { QueryFeedback } from "../QueryFeedback";
 import { Dialog } from "../Dialog";
 
@@ -43,7 +43,7 @@ export function TransactionDetail({
               {query.data.description}
             </p>
             <p className="text-sm text-gray-400">
-              {formatCalendarDate(query.data.transaction_date)} ·{" "}
+              <TransactionDateLabel transaction={query.data} />
               {TRANSACTION_TYPES[query.data.type]} · Źródło: {query.data.source}
             </p>
             <p className="text-sm text-gray-400">

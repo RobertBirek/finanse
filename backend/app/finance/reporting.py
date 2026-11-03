@@ -7,7 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.finance.dates import _month_bounds
-from app.finance.models import Account, Category, FinancialTransaction, Posting
+from app.finance.models import (
+    Account,
+    Category,
+    FinancialTransaction,
+    Posting,
+    TransactionDateMetadata,
+)
 from app.finance.queries import get_accounts
 from app.finance.schemas import (
     CategorySpendResponse,
@@ -15,6 +21,7 @@ from app.finance.schemas import (
     CategoryTreeNode,
     FinancialSummary,
 )
+from app.finance.transaction_dates import purchase_date_expression
 
 
 async def get_financial_summary(
@@ -93,13 +100,18 @@ async def get_financial_summary(
             & account_posting.category_id.is_(None),
         )
         .join(Account, Account.id == account_posting.account_id)
+        .outerjoin(
+            TransactionDateMetadata,
+            (TransactionDateMetadata.transaction_id == FinancialTransaction.id)
+            & (TransactionDateMetadata.user_id == FinancialTransaction.user_id),
+        )
         .where(
             FinancialTransaction.user_id == user_id,
             FinancialTransaction.type.in_(["income", "expense"]),
             Category.type == "expense",
             Category.user_id == user_id,
-            FinancialTransaction.date >= month_start,
-            FinancialTransaction.date < month_end,
+            purchase_date_expression() >= month_start,
+            purchase_date_expression() < month_end,
             Posting.category_id.is_not(None),
             Posting.account_id.is_(None),
             Account.is_budget_account.is_(True),
@@ -148,13 +160,18 @@ async def get_category_summary(
             & account_posting.category_id.is_(None),
         )
         .join(Account, Account.id == account_posting.account_id)
+        .outerjoin(
+            TransactionDateMetadata,
+            (TransactionDateMetadata.transaction_id == FinancialTransaction.id)
+            & (TransactionDateMetadata.user_id == FinancialTransaction.user_id),
+        )
         .where(
             FinancialTransaction.user_id == user_id,
             FinancialTransaction.type.in_(["income", "expense"]),
             Category.type == "expense",
             Category.user_id == user_id,
-            FinancialTransaction.date >= month_start,
-            FinancialTransaction.date < month_end,
+            purchase_date_expression() >= month_start,
+            purchase_date_expression() < month_end,
             Posting.account_id.is_(None),
             Account.is_budget_account.is_(True),
         )

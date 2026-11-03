@@ -21,7 +21,8 @@ def test_loan_migration_remains_in_the_single_head_lineage() -> None:
     config = Config(str(backend / "alembic.ini"))
     config.set_main_option("script_location", str(backend / "migrations"))
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == ["2f4b2c2a527c"]
+    assert len(scripts.get_heads()) == 1
+    assert "2f4b2c2a527c" in {revision.revision for revision in scripts.walk_revisions()}
     assert scripts.get_revision("2f4b2c2a527c").down_revision == "92eef8e8086c"
     assert scripts.get_revision("c2d7e9a4f801").down_revision == "b8e4c2f1a7d9"
 

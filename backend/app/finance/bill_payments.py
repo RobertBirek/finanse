@@ -290,7 +290,7 @@ async def record_bill_payment(
             db,
             user_id,
             TransactionCreate(
-                transaction_date=data.payment_date,
+                booking_date=data.payment_date,
                 description=data.description,
                 type="expense",
                 source="document_payment",

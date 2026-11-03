@@ -9,7 +9,8 @@ import {
   type Transaction,
 } from "../../api/finance";
 import { formatPLN } from "../../lib/format";
-import { formatCalendarDate } from "../../lib/date";
+import { TransactionDateLabel } from "./TransactionDateLabel";
+import { TransactionDatesDialog } from "./TransactionDatesDialog";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -196,6 +197,7 @@ export function TransactionList({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [dateTarget, setDateTarget] = useState<Transaction | null>(null);
 
   const updateError = apiErrorDetail(updateMutation.error);
   const deleteError = apiErrorDetail(deleteMutation.error);
@@ -222,7 +224,7 @@ export function TransactionList({
   function saveEdit(transaction: Transaction) {
     updateMutation.mutate({
       id: transaction.id,
-      transaction_date: editDate,
+      ...(transaction.date_metadata ? {} : { transaction_date: editDate }),
       description: editDescription,
     });
   }
@@ -259,6 +261,12 @@ export function TransactionList({
 
   return (
     <div className="space-y-1">
+      {dateTarget ? (
+        <TransactionDatesDialog
+          transaction={dateTarget}
+          onClose={() => setDateTarget(null)}
+        />
+      ) : null}
       {transactions.map((transaction) => {
         const posting = transaction.postings.find(
           (item) =>
@@ -299,7 +307,7 @@ export function TransactionList({
                     {transaction.description}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {formatCalendarDate(transaction.transaction_date)} ·{" "}
+                    <TransactionDateLabel transaction={transaction} />
                     {transaction.type}
                   </p>
                 </div>
@@ -338,12 +346,15 @@ export function TransactionList({
                     htmlFor={`transaction-date-${transaction.id}`}
                     className="mb-1 block text-xs text-gray-400"
                   >
-                    Data
+                    {transaction.date_metadata
+                      ? "Data księgowania (korekta osobno)"
+                      : "Data"}
                   </label>
                   <input
                     id={`transaction-date-${transaction.id}`}
                     type="date"
                     value={editDate}
+                    disabled={!!transaction.date_metadata}
                     onChange={(event) => setEditDate(event.target.value)}
                     className="w-full rounded-sm border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
                   />
@@ -384,7 +395,7 @@ export function TransactionList({
                 {transaction.description}
               </p>
               <p className="text-xs text-gray-500">
-                {formatCalendarDate(transaction.transaction_date)} ·{" "}
+                <TransactionDateLabel transaction={transaction} />
                 {transaction.type}
                 {accounts &&
                   posting &&
@@ -402,6 +413,18 @@ export function TransactionList({
               )}
             </p>
             <div className="flex flex-wrap gap-2">
+              {transaction.type === "expense" &&
+              transaction.source === "manual" &&
+              transaction.updated_at ? (
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-sm"
+                  onClick={() => setDateTarget(transaction)}
+                  disabled={isDeleting}
+                >
+                  Koryguj daty
+                </button>
+              ) : null}
               {onDetails && (
                 <button
                   type="button"

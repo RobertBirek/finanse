@@ -2,6 +2,52 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — ZAKOŃCZONY LOKALNIE etap 1: daty zakupów i księgowania
+
+- Po rozmowie w Plan user przełączył agenta na wykonawczego i odpowiedział „ok,
+  działaj dalej” na sześć etapów technicznych. Native/TDD, pionowe slice'y zamiast
+  dużegoMVP. Pierwszy obejmuje daty/proweniencję/raporty/UI, dalsze pięć jawnie pending.
+- Zgoda nie obejmuje wdrożenia, produkcyjnych migracji, realnego LLM/OCR lub wykonania
+  batchowej zmiany historii. Produkcyjny810/schema2f pozostaje bez zmian.
+- Wymagane cztery dokumenty hosta przeczytane; aktualny kontekst linkedworktree
+  pochodzi z późniejszych wpisów i commitu e9b1ce4. UnrelatedVelo/Q7 zachować.
+- Baseline code proof1183backend/410frontend/lint/types/build/E2E103+1skip nadalPASS;
+  existinglinkedworktree feat/financial-document-workflow. Bez nowych zależności/runtime.
+- Spec `docs/superpowers/specs/2026-11-03-smart-categorization-design.md` zapisuje
+  kontrakt rozmowy. Read-only builder check ses_e5d4b34f0ffeW0y33suCxOx4bb wybrał
+  osobne metadata, bo dodanie kolumn doFinancialTransaction złamałoby Actualfingerprints.
+- Testy tylko z guardem identity localhost55432/finanse_test; runner
+  `/tmp/opencode/smart-categorization-20261103/run.py` reużywa definicje /test,/lint,/typecheck.
+  Nie uruchamiać równoległych PostgreSQL suites.
+- Etap1 zaimplementowany lokalnie: date_metadata1:1 bez ruszania starych kolumn/importu,
+  proweniencja/version, create/correctionAPI z owner/version/snapshot/audit i chronionymi
+  alokacjami/loans/Actual, expense/budgetpurchasebasis i bankbookingprojection, jawneUI.
+  Plan `docs/superpowers/plans/2026-11-03-transaction-dates.md`; ledger w.superpowers/sdd.
+- Focused149backendPASS, frontend416PASS/lint/types/build i pełneE2E105+1skipPASS przed
+  review. Migracja84f28fe23ab8 generated/reviewed tylko ownedtestschema: oldrows/columns/
+  indexesunchanged, nobackfill, emptydowngrade+upgrade i populateddowngraderefusedPASS.
+- Jedno whole-review ses_e5ccc37e3ffeA4gw1JvV5CC2p6: Critical0, Important1 cachefinanse
+  między właścicielami, Minor1 obiektuser mylony z sesją. Potwierdzone3RED→GREEN:
+  provider QueryClient izolowany per jawne sessionVersion (login/logout/zmianaowner),
+  same-session/auth/me nie resetuje. Datecommandfence używa tego samego epoch.
+  Test14focusedfrontendPASS, brak nowych zależności, stare document-specifickeys zachowane.
+- Finalne źródła zamrożone przed pełnym6gate sh_1a346a370001qXUqvgFF7xBwLf i freshbuild/
+  fullE2E sh_1a346ea5a001Q9Zyy071TyHQJj. Oba callbacki zakończone poniżej; bez polling/retry.
+- Callback sh_1a346ea5a001Q9Zyy071TyHQJj: freshdist-final/buildPASS i pełneE2E105PASS+
+  1expectedskip po poprawkach review,375/1440. NonfatalVite ostrzega o516kB chunku
+  i zewnętrznym outDir; nie zmieniano konfiguracji/limitów dla ukrycia ostrzeżenia.
+  Pełne6gate również zakończyło się sukcesem, nie uruchamiać ponownie dla docscommitu.
+- Callback pełnego6gate sh_1a346a370001qXUqvgFF7xBwLf PASS:1205backend/420frontend,
+  lint/types obu warstw. `verify-final.py` PASS potwierdza niezmienione testowane źródła,
+  dist-final,105E2E+1expectedskip i isolatedmigrationretention. `final-proof.json` w
+  prywatnych dowodach; nie powtarzać suite dla samej aktualizacji dokumentacji/commitu.
+- Odbiór `docs/audits/2026-11-03-transaction-dates-local.md`; wszystkie blockersreview
+  zamknięte regresjami. Produkcja nadal810/schema2f, brak AI/OCR/historybatch/mainmerge/
+  push/deploy. Zachować worktree i unrelatedVelo/Q7; localcommit tylko własnych plików.
+- Następna jednostka pracy: etap2 zatwierdzana zmiana/split kategorii zachowująca stronę
+  kontową i alokacje. Etapy2–6 niegotowe. W etapie3 przed automatycznym stosowaniem
+  wysokiej pewności osobno ustalić politykę zgód; nowe kategorie/splity zawsze do akceptacji.
+
 ## 2026-11-03 — ZAKOŃCZONE: archiwum8106532 i migracja2f na produkcji
 
 - User „akceptuję” na przedstawiony maintenance/forward-repair kontrakt po „zatwierdzam”

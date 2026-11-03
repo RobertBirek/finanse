@@ -75,6 +75,34 @@ const categories = [
 ];
 
 describe("TransactionForm", () => {
+  it("keeps Friday purchase and Monday booking separate without a conflicting legacy date", () => {
+    render(<TransactionForm />);
+    fireEvent.change(screen.getByLabelText("Konto"), {
+      target: { value: "a1" },
+    });
+    fireEvent.change(screen.getByLabelText("Kategoria"), {
+      target: { value: "c1" },
+    });
+    fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
+      target: { value: "100" },
+    });
+    fireEvent.change(screen.getByLabelText("Opis"), {
+      target: { value: "Zakup" },
+    });
+    fireEvent.change(screen.getByLabelText("Data zakupu"), {
+      target: { value: "2026-01-30" },
+    });
+    fireEvent.click(screen.getByLabelText("Księgowanie w dniu zakupu"));
+    fireEvent.change(screen.getByLabelText("Data księgowania"), {
+      target: { value: "2026-02-02" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz transakcję" }));
+    expect(mutate.mock.calls[0][0]).toMatchObject({
+      purchase_date: "2026-01-30",
+      booking_date: "2026-02-02",
+    });
+    expect(mutate.mock.calls[0][0]).not.toHaveProperty("transaction_date");
+  });
   let mutate: ReturnType<typeof vi.fn>;
   let exchangeMutate: ReturnType<typeof vi.fn>;
 
@@ -177,7 +205,8 @@ describe("TransactionForm", () => {
     const payload = mutate.mock.calls[0][0] as {
       type: string;
       description: string;
-      transaction_date: string;
+      purchase_date: string;
+      booking_date: string;
       postings: Array<{
         account_id: string | null;
         category_id: string | null;
@@ -188,7 +217,9 @@ describe("TransactionForm", () => {
 
     expect(payload.type).toBe("expense");
     expect(payload.description).toBe("test");
-    expect(payload.transaction_date).toBe(localTodayIso());
+    expect(payload.purchase_date).toBe(localTodayIso());
+    expect(payload.booking_date).toBe(localTodayIso());
+    expect(payload).not.toHaveProperty("transaction_date");
     expect(payload).not.toHaveProperty("date");
 
     const debit = payload.postings.find((p) => p.direction === "debit");

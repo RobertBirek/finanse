@@ -45,6 +45,9 @@ describe("FinanceReports", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Przychody")).toBeInTheDocument();
     expect(screen.getByText("Wydatki")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Wydatki i budżety według daty zakupu/),
+    ).toBeInTheDocument();
     expect(screen.getByText("Bilans")).toBeInTheDocument();
     expect(screen.getByText(/5.*000,00 PLN/)).toBeInTheDocument();
     expect(useFinancialSummary).toHaveBeenCalledWith({

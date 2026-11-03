@@ -138,12 +138,27 @@ class PostingResponse(BaseModel):
 
 class TransactionCreate(BaseModel):
     transaction_date: dt.date | None = None
+    purchase_date: dt.date | None = None
+    booking_date: dt.date | None = None
     description: str = Field(min_length=1)
     type: str = Field(pattern=r"^(income|expense|transfer|exchange)$")
     is_pending: bool = False
     project_id: uuid.UUID | None = None
     source: str = Field(default="manual", max_length=50)
     postings: list[PostingCreate] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def validate_explicit_dates(self) -> "TransactionCreate":
+        if self.purchase_date is not None and self.booking_date is None:
+            raise ValueError("Purchase date requires an explicit booking date")
+        if self.booking_date is not None:
+            if self.transaction_date is not None:
+                raise ValueError("Use booking_date or legacy transaction_date, not both")
+            if self.type != "expense" or self.source not in {"manual", "document_payment"}:
+                raise ValueError("Explicit dates currently require a manual expense")
+            if self.source == "document_payment" and self.purchase_date is not None:
+                raise ValueError("Document payment cannot infer the purchase date")
+        return self
 
 
 class ExchangeCreate(BaseModel):
@@ -162,6 +177,30 @@ class TransactionUpdate(BaseModel):
     project_id: uuid.UUID | None = None
 
 
+class TransactionDateMetadataResponse(BaseModel):
+    purchase_date: dt.date | None
+    booking_date: dt.date | None
+    purchase_date_source: Literal["manual", "bank", "document", "import"] | None
+    booking_date_source: Literal["manual", "bank", "document", "import"] | None
+    version: int
+    model_config = {"from_attributes": True}
+
+
+class TransactionDatesUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+    purchase_date: dt.date | None
+    booking_date: dt.date
+    expected_version: int = Field(ge=0, strict=True)
+    expected_updated_at: dt.datetime
+
+    @field_validator("expected_updated_at")
+    @classmethod
+    def require_timezone(cls, value: dt.datetime) -> dt.datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("Expected timestamp requires a timezone")
+        return value
+
+
 class TransactionResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
@@ -175,6 +214,7 @@ class TransactionResponse(BaseModel):
     postings: list[PostingResponse]
     created_at: dt.datetime
     updated_at: dt.datetime
+    date_metadata: TransactionDateMetadataResponse | None = None
 
     model_config = {"from_attributes": True}
 

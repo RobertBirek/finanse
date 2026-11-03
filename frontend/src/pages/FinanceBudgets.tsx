@@ -18,6 +18,7 @@ import { MonthPicker } from "../components/finance/MonthPicker";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { CategoryPicker } from "../components/finance/CategoryPicker";
 import { useFinancePeriod } from "../components/finance/useFinancePeriod";
+import { ExpenseDateBasis } from "../components/finance/TransactionDateLabel";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -104,6 +105,7 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
       {!configure ? (
         <>
           <FinanceTabs />
+          <ExpenseDateBasis />
           <Link
             className="mb-4 inline-block text-sm text-advisor-700"
             to="/settings/finances/budgets"

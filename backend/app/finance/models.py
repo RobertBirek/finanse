@@ -169,6 +169,50 @@ class FinancialTransaction(Base):
     postings: Mapped[list["Posting"]] = relationship(
         "Posting", back_populates="transaction", cascade="all, delete-orphan"
     )
+    date_metadata: Mapped["TransactionDateMetadata | None"] = relationship(
+        back_populates="transaction", uselist=False, lazy="selectin", passive_deletes="all"
+    )
+
+
+class TransactionDateMetadata(Base):
+    """Explicit date evidence, never inferred from the legacy transaction date."""
+
+    __tablename__ = "transaction_date_metadata"
+    __table_args__ = (
+        CheckConstraint(
+            "(purchase_date IS NULL) = (purchase_date_source IS NULL)",
+            name="ck_transaction_purchase_date_pair",
+        ),
+        CheckConstraint(
+            "(booking_date IS NULL) = (booking_date_source IS NULL)",
+            name="ck_transaction_booking_date_pair",
+        ),
+        CheckConstraint(
+            "purchase_date_source IN ('manual','bank','document','import')",
+            name="ck_transaction_purchase_source",
+        ),
+        CheckConstraint(
+            "booking_date_source IN ('manual','bank','document','import')",
+            name="ck_transaction_booking_source",
+        ),
+        CheckConstraint("version > 0", name="ck_transaction_date_version"),
+        Index("ix_transaction_date_user_purchase", "user_id", "purchase_date"),
+        Index("ix_transaction_date_user_booking", "user_id", "booking_date"),
+    )
+
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_transactions.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    purchase_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    purchase_date_source: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    booking_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    booking_date_source: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    version: Mapped[int] = mapped_column(nullable=False, default=1, server_default="1")
+    transaction: Mapped["FinancialTransaction"] = relationship(back_populates="date_metadata")
 
 
 class LoanAgreement(Base):

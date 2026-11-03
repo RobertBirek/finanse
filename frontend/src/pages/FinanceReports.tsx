@@ -4,6 +4,7 @@ import { MonthPicker } from "../components/finance/MonthPicker";
 import { SummaryCard } from "../components/finance/SummaryCard";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { useFinancePeriod } from "../components/finance/useFinancePeriod";
+import { ExpenseDateBasis } from "../components/finance/TransactionDateLabel";
 
 export function FinanceReports() {
   const [period, setPeriod] = useFinancePeriod();
@@ -17,6 +18,7 @@ export function FinanceReports() {
         <MonthPicker period={period} onChange={setPeriod} />
       </div>
       <FinanceTabs />
+      <ExpenseDateBasis />
 
       {summary.isLoading ? (
         <div className="flex justify-center py-8">

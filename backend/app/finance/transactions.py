@@ -14,6 +14,7 @@ from app.finance.models import FinancialTransaction, LoanPaymentLink, Posting
 from app.finance.nbp_rates import NbpRateProvider
 from app.finance.queries import get_accounts
 from app.finance.schemas import ExchangeCreate, PostingCreate, TransactionCreate, TransactionUpdate
+from app.finance.transaction_dates import TransactionDateError, add_manual_date_metadata
 from app.work.service import validate_project_reference
 
 
@@ -44,7 +45,7 @@ async def create_transaction(
 
     txn = FinancialTransaction(
         user_id=user_id,
-        date=data.transaction_date or _local_today(),
+        date=data.booking_date or data.transaction_date or _local_today(),
         description=data.description,
         type=data.type,
         is_pending=data.is_pending,
@@ -53,6 +54,9 @@ async def create_transaction(
     )
     db.add(txn)
     await db.flush()
+
+    if data.booking_date is not None:
+        await add_manual_date_metadata(db, txn, data.purchase_date, data.booking_date)
 
     for p_data in data.postings:
         posting = Posting(
@@ -177,6 +181,15 @@ async def update_transaction(
     if txn is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    if (
+        txn.date_metadata is not None
+        and "transaction_date" in update_data
+        and update_data["transaction_date"] != txn.date
+    ):
+        raise TransactionDateError(
+            "date_editor_required",
+            "Użyj korekty dat zakupu i księgowania, aby zachować ich znaczenie.",
+        )
     if ("transaction_date" in update_data and update_data["transaction_date"] != txn.date) or (
         "is_pending" in update_data and update_data["is_pending"] != txn.is_pending
     ):

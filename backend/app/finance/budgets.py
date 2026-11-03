@@ -8,13 +8,21 @@ from sqlalchemy.orm import aliased
 
 from app.finance.dates import _month_bounds
 from app.finance.entities import get_categories
-from app.finance.models import Account, Category, CategoryBudget, FinancialTransaction, Posting
+from app.finance.models import (
+    Account,
+    Category,
+    CategoryBudget,
+    FinancialTransaction,
+    Posting,
+    TransactionDateMetadata,
+)
 from app.finance.schemas import (
     BudgetStatusItem,
     BudgetStatusResponse,
     CategoryBudgetCreate,
     CategoryBudgetUpdate,
 )
+from app.finance.transaction_dates import purchase_date_expression
 
 
 def category_descendants(
@@ -133,13 +141,18 @@ async def get_budget_status(
             & account_posting.category_id.is_(None),
         )
         .join(Account, Account.id == account_posting.account_id)
+        .outerjoin(
+            TransactionDateMetadata,
+            (TransactionDateMetadata.transaction_id == FinancialTransaction.id)
+            & (TransactionDateMetadata.user_id == FinancialTransaction.user_id),
+        )
         .where(
             FinancialTransaction.user_id == user_id,
             FinancialTransaction.type.in_(["income", "expense"]),
             Category.type == "expense",
             Category.user_id == user_id,
-            FinancialTransaction.date >= month_start,
-            FinancialTransaction.date < month_end,
+            purchase_date_expression() >= month_start,
+            purchase_date_expression() < month_end,
             Posting.account_id.is_(None),
             Posting.category_id.is_not(None),
             Account.is_budget_account.is_(True),

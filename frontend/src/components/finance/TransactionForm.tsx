@@ -44,6 +44,8 @@ export function TransactionForm({
   const [amount, setAmount] = useState("");
   const [fxRate, setFxRate] = useState("");
   const [date, setDate] = useState(localTodayIso());
+  const [purchaseDate, setPurchaseDate] = useState(localTodayIso());
+  const [sameDate, setSameDate] = useState(true);
   const [description, setDescription] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -75,6 +77,8 @@ export function TransactionForm({
     setFxRate("");
     setAmount("");
     setDate(localTodayIso());
+    setPurchaseDate(localTodayIso());
+    setSameDate(true);
     setDescription("");
     setValidationError(null);
   }
@@ -186,7 +190,12 @@ export function TransactionForm({
       {
         type,
         description: description.trim(),
-        transaction_date: date,
+        ...(type === "expense"
+          ? {
+              purchase_date: purchaseDate,
+              booking_date: sameDate ? purchaseDate : date,
+            }
+          : { transaction_date: date }),
         postings,
       },
       {
@@ -255,16 +264,42 @@ export function TransactionForm({
         </div>
         <div>
           <label htmlFor="tx-date" className="mb-1 block text-sm text-gray-400">
-            Data
+            {type === "expense" ? "Data księgowania" : "Data operacji"}
           </label>
           <input
             id="tx-date"
             type="date"
             className="input"
-            value={date}
+            value={type === "expense" && sameDate ? purchaseDate : date}
+            disabled={type === "expense" && sameDate}
             onChange={(event) => setDate(event.target.value)}
           />
         </div>
+        {type === "expense" ? (
+          <>
+            <label className="block text-sm text-gray-400">
+              Data zakupu
+              <input
+                className="input mt-1"
+                type="date"
+                required
+                value={purchaseDate}
+                onChange={(event) => setPurchaseDate(event.target.value)}
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={sameDate}
+                onChange={(event) => {
+                  setSameDate(event.target.checked);
+                  if (!event.target.checked) setDate(purchaseDate);
+                }}
+              />
+              Księgowanie w dniu zakupu
+            </label>
+          </>
+        ) : null}
         {type === "transfer" ? (
           <>
             <div>

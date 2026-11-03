@@ -2,6 +2,30 @@
 
 Backlog zadań ze statusami.
 
+## Inteligentna kategoryzacja i daty zakupów (2026-11-03, lokalnie)
+
+- [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
+  split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,
+  budżety według zakupu, uzgodnienie banku według księgowania. User po zmianie
+  agenta z Plan na wykonawczego: „ok, działaj dalej”.
+- [x] Etap1 lokalnie: daty/proweniencja, bezpieczna ręczna korekta, raporty/budżety
+  i jawny fallback dla starych danych; backend+UI+review. Końcowe1205backend/
+  420frontend/lint/types/build/105E2E+1expectedskipPASS; migracja84f28fe23ab8 tylko
+  w izolowanymfinanse_test, bez backfillu/zmianyActualfingerprint/kwot/postings.
+  Oba findingsreview (cacheowner/session i same-sessionrefresh) poprawione3RED→GREEN.
+- [ ] Etap2: zatwierdzana zmiana/split kategorii zachowująca stronę kontową i alokacje.
+- [ ] Etap3: trwałe propozycje, reguły, kontrolowane LLM i zatwierdzanie nowych kategorii.
+  Przed uruchomieniem uzgodnić osobno automatyczne stosowanie wysokiej pewności vs
+  zawsze zatwierdzane propozycje; nowe kategorie i splity zawsze wymagają zgody.
+- [ ] Etap4: pozycje paragonów/rabaty/kontrola sum i zatwierdzanie podziału.
+- [ ] Etap5: lepsze dopasowanie dokument↔płatność mimo różnicy dat, bez dublowania.
+- [ ] Etap6: jawne partie wcześniejszych nieskategoryzowanych transakcji, przegląd i odbiór.
+- [ ] Osobna zgoda i procedura przed produkcyjną migracją/wdrożeniem, realnymi AI/OCR
+  lub uruchomieniem historii. Obecna zgoda obejmuje lokalną implementację iteracyjną.
+
+Spec: `docs/superpowers/specs/2026-11-03-smart-categorization-design.md`.
+Odbiór etapu1: `docs/audits/2026-11-03-transaction-dates-local.md`.
+
 ## Usuwanie dokumentów — diagnoza (2026-11-03)
 
 - [x] Po odbiorze8106532 użytkownik „zatwierdzam” na kierunek migracji/wdrożenia,

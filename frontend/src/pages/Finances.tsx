@@ -15,6 +15,10 @@ import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { QueryFeedback } from "../components/QueryFeedback";
 import {
+  ExpenseDateBasis,
+  TransactionDateLabel,
+} from "../components/finance/TransactionDateLabel";
+import {
   financePeriodSearch,
   useFinancePeriod,
 } from "../components/finance/useFinancePeriod";
@@ -44,6 +48,7 @@ export function Finances() {
         <MonthPicker period={period} onChange={setPeriod} />
       </header>
       <FinanceTabs />
+      <ExpenseDateBasis />
       <div className="finance-primary-grid">
         <section className="card balance-surface">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -257,7 +262,7 @@ export function Finances() {
                         <span className="min-w-0 flex-1">
                           <strong>{t.description}</strong>
                           <small>
-                            {formatCalendarDate(t.transaction_date)} ·{" "}
+                            <TransactionDateLabel transaction={t} />
                             {TRANSACTION_TYPES[t.type]}
                           </small>
                         </span>

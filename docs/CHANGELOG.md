@@ -2,6 +2,30 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-03 — Daty zakupu i księgowania (lokalny etap 1)
+
+### Added
+- Jawne daty zakupu/księgowania dla ręcznych wydatków, proweniencja i wersja w osobnej
+  tabeli `transaction_date_metadata`; addytywna migracja84f28fe23ab8, bez backfillu.
+- Oddzielne polecenie korekty dat: owner/version/snapshot, locks, audyt/no-op oraz
+  ochrona importu Actual, płatności dokumentów i pożyczek. Kwoty/postings bez zmian.
+
+### Changed
+- Wydatki i budżety według daty zakupu, a historia banku nadal według księgowania.
+  Jawny fallback i etykieta nieustalonego typu daty dla starych danych, bez zgadywania.
+- Formularze tworzenia/korekty dat; po409 zachowanie wartości i konieczne ponowne
+  sprawdzenie świeżych danych. Nowa data nie tworzy kolejnej transakcji.
+
+### Fixed
+- Po niezależnym review izolacja QueryClient per generacja sesji zapobiega pokazaniu
+  finansów poprzedniego właściciela; same-session `/auth/me` nie resetuje cache ani
+  dialogu korekty. Regresje3RED→GREEN,14focusedfrontendPASS po poprawce.
+- Końcowy pełny gate po poprawkach:1205backend/420frontend, lint/types/buildPASS,
+  105E2E+1expectedskipPASS. Manifest potwierdza dokładne źródła i dist.
+  Migracja sprawdzona tylko w izolowanymfinanse_test: dane zachowane, brak backfillu.
+- Nie wdrożono. Agent kategoryzacji, zatwierdzane splity/paragony i historia to następne
+  etapy2–6. Raport: `docs/audits/2026-11-03-transaction-dates-local.md`.
+
 ## [8106532] — 2026-11-03 — Archiwum dokumentów na produkcji
 
 ### Changed

@@ -35,6 +35,7 @@ from app.finance.schemas import (
     ScheduledFinanceItemResponse,
     ScheduledFinanceItemUpdate,
     TransactionCreate,
+    TransactionDatesUpdate,
     TransactionResponse,
     TransactionSearch,
     TransactionSearchResponse,
@@ -73,6 +74,7 @@ from app.finance.service import (
     update_scheduled_item,
     update_transaction,
 )
+from app.finance.transaction_dates import TransactionDateError, set_transaction_dates
 from app.identity.models import User
 from app.identity.router import get_current_user
 
@@ -338,12 +340,28 @@ async def update_transaction_endpoint(
     except ValueError as e:
         code = (
             status.HTTP_409_CONFLICT
-            if "linked loan payment" in str(e)
+            if isinstance(e, TransactionDateError) or "linked loan payment" in str(e)
             else status.HTTP_422_UNPROCESSABLE_ENTITY
         )
         raise HTTPException(status_code=code, detail=str(e))
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    return txn
+
+
+@router.patch("/transactions/{transaction_id}/dates", response_model=TransactionResponse)
+async def update_transaction_dates_endpoint(
+    transaction_id: uuid.UUID,
+    data: TransactionDatesUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        txn = await set_transaction_dates(db, current_user.id, transaction_id, data)
+    except TransactionDateError as error:
+        return JSONResponse(status_code=409, content={"code": error.code, "detail": str(error)})
+    if txn is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
     return txn
 
 

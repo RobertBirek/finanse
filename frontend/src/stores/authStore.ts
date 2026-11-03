@@ -39,6 +39,8 @@ function getResponseStatus(error: unknown): number | undefined {
 }
 
 interface AuthState {
+  /** Changes on login/logout or owner change, not a same-session /auth/me refresh. */
+  sessionVersion: number;
   user: User | null;
   authStatus: AuthStatus;
   isAuthenticated: boolean;
@@ -50,6 +52,7 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
+  sessionVersion: 0,
   user: null,
   authStatus: "loading",
   isAuthenticated: false,
@@ -64,12 +67,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (!isCurrentAuthRequest(requestVersion)) return;
 
     resetUnauthorizedRedirect();
-    set({
+    set((state) => ({
+      sessionVersion: state.sessionVersion + 1,
       user: data,
       authStatus: "authenticated",
       isAuthenticated: true,
       isLoading: false,
-    });
+    }));
   },
 
   logout: async () => {
@@ -81,12 +85,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
     if (!isCurrentAuthRequest(requestVersion)) return;
 
-    set({
+    set((state) => ({
+      sessionVersion: state.sessionVersion + 1,
       user: null,
       authStatus: "unauthenticated",
       isAuthenticated: false,
       isLoading: false,
-    });
+    }));
   },
 
   fetchUser: async () => {
@@ -95,22 +100,25 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data } = await api.get<User>("/auth/me");
       if (!isCurrentAuthRequest(requestVersion)) return;
 
-      set({
+      set((state) => ({
+        sessionVersion:
+          state.sessionVersion + (state.user?.id !== data.id ? 1 : 0),
         user: data,
         authStatus: "authenticated",
         isAuthenticated: true,
         isLoading: false,
-      });
+      }));
     } catch (error) {
       if (!isCurrentAuthRequest(requestVersion)) return;
 
       if (getResponseStatus(error) === 401) {
-        set({
+        set((state) => ({
+          sessionVersion: state.sessionVersion + (state.user !== null ? 1 : 0),
           user: null,
           authStatus: "unauthenticated",
           isAuthenticated: false,
           isLoading: false,
-        });
+        }));
         return;
       }
 

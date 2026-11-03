@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import api from "../lib/api";
+import { useAuthStore } from "../stores/authStore";
 
 export interface Account {
   id: string;
@@ -98,6 +99,24 @@ export interface Transaction {
   project_id: string | null;
   source: string;
   postings: Posting[];
+  updated_at?: string;
+  date_metadata?: TransactionDateMetadata | null;
+}
+
+export interface TransactionDateMetadata {
+  purchase_date: string | null;
+  booking_date: string | null;
+  purchase_date_source: "manual" | "bank" | "document" | "import" | null;
+  booking_date_source: "manual" | "bank" | "document" | "import" | null;
+  version: number;
+}
+
+export interface TransactionDatesInput {
+  id: string;
+  purchase_date: string | null;
+  booking_date: string;
+  expected_version: number;
+  expected_updated_at: string;
 }
 
 export interface FinancialSummary {
@@ -653,6 +672,8 @@ export function useCreateTransaction() {
   return useMutation({
     mutationFn: async (tx: {
       transaction_date?: string;
+      purchase_date?: string;
+      booking_date?: string;
       description: string;
       type: string;
       is_pending?: boolean;
@@ -705,6 +726,20 @@ export function useUpdateTransaction() {
       return data;
     },
     onSuccess: () => invalidateFinanceLedger(queryClient),
+  });
+}
+
+export function useUpdateTransactionDates() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    onMutate: () => ({ session: useAuthStore.getState().sessionVersion }),
+    mutationFn: async ({ id, ...data }: TransactionDatesInput) =>
+      (await api.patch<Transaction>(`/finance/transactions/${id}/dates`, data))
+        .data,
+    onSuccess: (_data, _variables, context) => {
+      if (context?.session === useAuthStore.getState().sessionVersion)
+        invalidateFinanceLedger(queryClient);
+    },
   });
 }
 
