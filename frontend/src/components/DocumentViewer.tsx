@@ -3,6 +3,7 @@ import {
   type DocumentData,
   STATUS_COLORS,
   formatFileSize,
+  isDocumentWorkActive,
 } from "../api/documents";
 import { Dialog } from "./Dialog";
 import { QueryFeedback } from "./QueryFeedback";
@@ -58,8 +59,7 @@ export function DocumentViewer({ document: doc, onClose, onReview }: Props) {
         </div>
       </div>
       <div className="p-4">
-        {status.label === "Odczyt w kolejce" ||
-        status.label === "Odczytywanie" ||
+        {isDocumentWorkActive(doc) ||
         (!doc.review &&
           (doc.status === "pending" || doc.status === "processing")) ? (
           <p role="status" className="py-8 text-center text-gray-300">

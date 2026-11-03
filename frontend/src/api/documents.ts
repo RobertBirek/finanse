@@ -1,5 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
+import {
+  captureProcessingActor,
+  isProcessingActorCurrent,
+  useDocumentProcessingStore,
+} from "../stores/documentProcessingStore";
+import {
+  getDocumentOperations,
+  isActiveOperation,
+} from "../components/documents/documentProcessing";
 
 export interface DocumentData {
   id: string;
@@ -19,6 +28,8 @@ export interface DocumentData {
   review: ReviewSummary | null;
   has_extracted_text: boolean;
   local_ocr_state: string | null;
+  local_ocr_job_id?: string | null;
+  local_ocr_error_code?: string | null;
 }
 
 export type ReviewSummary = {
@@ -31,6 +42,7 @@ export type ReviewSummary = {
     "unreadable" | "missing_required_fields" | "unsupported_document"
   )[];
   job_state: string | null;
+  job_id?: string | null;
 };
 
 export type DocumentReview = {
@@ -107,23 +119,7 @@ export function useDocuments(params?: { status?: string }) {
 }
 
 export function isDocumentWorkActive(document: DocumentData): boolean {
-  if (
-    document.review?.status === "pending" ||
-    document.review?.status === "processing"
-  )
-    return true;
-  if (
-    document.review?.job_state === "pending" ||
-    document.review?.job_state === "processing"
-  )
-    return true;
-  if (
-    document.local_ocr_state === "pending" ||
-    document.local_ocr_state === "processing"
-  )
-    return true;
-  if (document.processing_method === "vision") return false;
-  return document.status === "pending" || document.status === "processing";
+  return getDocumentOperations(document).some(isActiveOperation);
 }
 
 export function useDocumentText(id: string, enabled = true) {
@@ -140,6 +136,7 @@ export function useDocumentText(id: string, enabled = true) {
 export function useUploadDocument() {
   const queryClient = useQueryClient();
   return useMutation({
+    onMutate: () => captureProcessingActor(),
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
@@ -152,7 +149,23 @@ export function useUploadDocument() {
       );
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (result, _file, actor) => {
+      if (!isProcessingActorCurrent(actor)) return;
+      const document = result.document;
+      if (!result.is_duplicate && document.user_id === actor.ownerId) {
+        const operation =
+          getDocumentOperations(document).find(isActiveOperation);
+        if (operation)
+          useDocumentProcessingStore.getState().register(actor, {
+            key: operation.id,
+            operationId: operation.id.startsWith("upload:")
+              ? undefined
+              : operation.id,
+            documentId: document.id,
+            source: operation.source,
+            kind: operation.kind,
+          });
+      }
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
   });
@@ -188,6 +201,7 @@ export function useDocumentReview(id: string | null) {
 export function usePrepareDocumentReview() {
   const queryClient = useQueryClient();
   return useMutation({
+    onMutate: () => captureProcessingActor(),
     mutationFn: async ({
       documentId,
       refresh,
@@ -202,7 +216,23 @@ export function usePrepareDocumentReview() {
           { params: { refresh }, headers: mutationHeaders() },
         )
       ).data,
-    onSuccess: (review) => {
+    onSuccess: (review, variables, actor) => {
+      if (!isProcessingActorCurrent(actor)) return;
+      if (
+        variables.refresh ||
+        review.status === "pending" ||
+        review.status === "processing"
+      ) {
+        useDocumentProcessingStore
+          .getState()
+          .register(actor, {
+            key: `review:${review.id}`,
+            operationId: `review:${review.id}`,
+            documentId: review.document_id,
+            kind: "ai",
+            source: "review",
+          });
+      }
       queryClient.setQueryData(
         ["documents", review.document_id, "review"],
         review,
@@ -215,6 +245,7 @@ export function usePrepareDocumentReview() {
 export function usePrepareDocumentVision() {
   const queryClient = useQueryClient();
   return useMutation({
+    onMutate: () => captureProcessingActor(),
     mutationFn: async ({
       documentId,
       intentKey,
@@ -231,7 +262,17 @@ export function usePrepareDocumentVision() {
           },
         )
       ).data,
-    onSuccess: (review) => {
+    onSuccess: (review, _variables, actor) => {
+      if (!isProcessingActorCurrent(actor)) return;
+      useDocumentProcessingStore
+        .getState()
+        .register(actor, {
+          key: `review:${review.id}`,
+          operationId: `review:${review.id}`,
+          documentId: review.document_id,
+          kind: "ai",
+          source: "review",
+        });
       queryClient.setQueryData(
         ["documents", review.document_id, "review"],
         review,
@@ -244,6 +285,7 @@ export function usePrepareDocumentVision() {
 export function useRetryDocumentOcr() {
   const queryClient = useQueryClient();
   return useMutation({
+    onMutate: () => captureProcessingActor(),
     mutationFn: async ({
       documentId,
       intentKey,
@@ -252,11 +294,27 @@ export function useRetryDocumentOcr() {
       intentKey: string;
     }) =>
       (
-        await api.post(`/documents/${documentId}/retry-ocr`, undefined, {
-          headers: { "Idempotency-Key": intentKey },
-        })
+        await api.post<{ id: string; status: string; job_id?: string }>(
+          `/documents/${documentId}/retry-ocr`,
+          undefined,
+          {
+            headers: { "Idempotency-Key": intentKey },
+          },
+        )
       ).data,
-    onSuccess: (_result, { documentId }) => {
+    onSuccess: (result, { documentId, intentKey }, actor) => {
+      if (!isProcessingActorCurrent(actor)) return;
+      useDocumentProcessingStore.getState().register(actor, {
+        key: result.job_id
+          ? `ocr:${result.job_id}`
+          : `legacy:${documentId}:${intentKey}`,
+        operationId: result.job_id
+          ? `ocr:${result.job_id}`
+          : `legacy:${documentId}`,
+        documentId,
+        source: result.job_id ? "local_ocr" : "legacy_ocr",
+        kind: "ocr",
+      });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       queryClient.invalidateQueries({
         queryKey: ["documents", documentId, "review"],

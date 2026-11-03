@@ -202,7 +202,8 @@ export async function fixtures(
     ) {
       status = options.todayError ? 503 : 200;
       body = options.todayError ? { detail: "Fixture unavailable" } : [];
-    } else if (url.pathname === "/api/documents")
+    } else if (url.pathname === "/api/documents/active") body = [];
+    else if (url.pathname === "/api/documents")
       body =
         !url.searchParams.get("status") ||
         url.searchParams.get("status") === "done"

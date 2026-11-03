@@ -187,6 +187,12 @@ export function DocumentReview({ documentId, onClose }: Props) {
         </button>
       </div>
       <div className="grid gap-5 p-4 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <DocumentProcessingInline
+            documentId={documentId}
+            review={review.data}
+          />
+        </div>
         <section>
           <h3 className="font-medium text-white">Oryginał dokumentu</h3>
           {originalUrl && (
@@ -689,3 +695,4 @@ function Field({
     </label>
   );
 }
+import { DocumentProcessingInline } from "./DocumentProcessingInline";

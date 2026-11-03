@@ -4,6 +4,7 @@ import { useLogout } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
 import { ContextualSidebar } from "./ContextualSidebar";
 import { Dialog } from "./Dialog";
+import { DocumentProcessingMonitor } from "./documents/DocumentProcessingMonitor";
 import { getContextForPathname, navigationContexts } from "./navigation";
 import {
   readThemePreference,
@@ -114,6 +115,7 @@ export function Layout() {
             {theme === "light" ? "◐" : "☀"}
           </button>
         </header>
+        <DocumentProcessingMonitor />
         <div
           id="main-content"
           tabIndex={0}

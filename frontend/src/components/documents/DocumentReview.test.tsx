@@ -103,6 +103,23 @@ function renderReview() {
 }
 
 describe("DocumentReview", () => {
+  it.each(["pending", "processing"] as const)(
+    "marks actual %s AI work inside the native document dialog",
+    (status) => {
+      const previous = apiState.review;
+      apiState.review = { ...previous!, status, error_code: null };
+      try {
+        renderReview();
+        expect(
+          screen.getByRole("status", { name: "Odczyt dokumentu" }),
+        ).toHaveTextContent(
+          status === "pending" ? "AI w kolejce" : "AI pracuje",
+        );
+      } finally {
+        apiState.review = previous;
+      }
+    },
+  );
   it.each(["multiple", "unsupported", "statement", "loan_schedule"] as const)(
     "does not add unreadable-image retry for unsupported %s",
     (document_type) => {

@@ -36,10 +36,21 @@ vi.mock("../api/advisor", () => ({
   useConfirmToolExecution: () => ({ mutate: mocks.confirm }),
   useDenyToolExecution: () => ({ mutate: mocks.deny }),
 }));
-vi.mock("../stores/authStore", () => ({
-  useAuthStore: (selector: (state: unknown) => unknown) =>
-    selector({ user: { display_name: "Anna", email: "anna@example.invalid" } }),
-}));
+vi.mock("../stores/authStore", async (original) => {
+  const actual = await original<typeof import("../stores/authStore")>();
+  actual.useAuthStore.setState({
+    user: {
+      id: "fixture-owner",
+      display_name: "Anna",
+      email: "anna@example.invalid",
+      is_active: true,
+    },
+    authStatus: "authenticated",
+    isAuthenticated: true,
+    isLoading: false,
+  });
+  return actual;
+});
 vi.mock("../api/work", () => ({
   useTasks: mocks.tasks,
   useTimeBlocks: mocks.blocks,
@@ -156,7 +167,11 @@ describe("document recovery UI", () => {
     mocks.docs.mockImplementation((params) =>
       query(params?.status ? [] : [doc]),
     );
-    render(<DocumentList />);
+    render(
+      <MemoryRouter>
+        <DocumentList />
+      </MemoryRouter>,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Oczekuje" }));
     expect(
       screen.getByText("Brak dokumentów o wybranym statusie."),
@@ -168,7 +183,11 @@ describe("document recovery UI", () => {
   });
   it("does not disguise document errors as no documents", () => {
     mocks.docs.mockReturnValue({ ...query(undefined), isError: true });
-    render(<DocumentList />);
+    render(
+      <MemoryRouter>
+        <DocumentList />
+      </MemoryRouter>,
+    );
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Nie udało się pobrać dokumentów",
     );
@@ -188,7 +207,7 @@ describe("document recovery UI", () => {
     expect(screen.getByText("Treść")).toBeInTheDocument();
   });
   it.each([
-    ["pending", null, "Odczyt w kolejce"],
+    ["pending", null, "AI w kolejce"],
     ["incomplete", null, "Uzupełnij ręcznie"],
     ["error", "provider_unavailable", "AI niedostępne"],
     ["incomplete", "invalid_model_output", "Nieprawidłowy wynik AI"],
@@ -206,7 +225,12 @@ describe("document recovery UI", () => {
           status,
           error_code,
           warnings: [],
-          job_state: status === "error" ? "failed" : "processing",
+          job_state:
+            status === "pending"
+              ? "pending"
+              : error_code
+                ? "failed"
+                : "succeeded",
         },
       };
       render(<DocumentViewer document={visionDocument} onClose={vi.fn()} />);

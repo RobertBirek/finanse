@@ -239,6 +239,17 @@ async def get_document_preview(
     return Response(content=preview, media_type="image/jpeg", headers=_private_headers())
 
 
+@router.get("/active", response_model=list[DocumentResponse])
+async def active_documents(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[DocumentResponse]:
+    documents = await service.get_active_documents(db, current_user.id, limit, offset)
+    return await service.document_responses(db, current_user.id, documents)
+
+
 @router.get("", response_model=list[DocumentResponse])
 async def list_documents(
     current_user: Annotated[User, Depends(get_current_user)],

@@ -2,6 +2,21 @@
 
 Backlog zadań ze statusami.
 
+## Widoczność pracy AI/OCR i wynik odczytu (2026-11-03)
+
+- [x] Potwierdzić brak payee_iban/sale_date w zapisanej revision5/ready (vision succeeded/1),
+  bez eksportowania wartości lub nowego AI. Formularz obu pól nie gubi.
+- [x] Uzgodnić lokalny zakres znacznika pracy AI/OCR i globalnego toastu; użytkownik
+  zatwierdził implementację bez nowych wywołań AI lub wdrożenia.
+- [x] Implementacja statusAPI, monitora Layout, wskaźnika i globalnych toastów: realny
+  jobstate/identity, paginacja pracy poza50dokumentami, nawigacja/deep-link, dedup i
+  izolacja sesji/użytkownika. ReviewImportant podglądu poprawiony4RED→GREEN;
+  pełny1151backend/388frontend/lint/types/build i mockedE2E4desktop/mobile PASS.
+  Po naprawie atrap akceptacji/statusu pełne E2E97PASS+1celowy skip; manifest źródeł
+  i build PASS. Gotowe lokalnie, bez AI/OCR/push/merge/deployu.
+- [ ] Osobno wyjaśnić, czy IBAN i data sprzedaży są czytelne w źródle; nie zgadywać
+  brakujących wartości, nie zmieniać semantyki dat i nie ponawiać AI bez zgody.
+
 ## Migracja AI do OpenAI i wydanie produkcyjne (2026-11-02)
 
 - [x] Po osobnej zgodzie na jedną dodatkową próbę AI: diagnostyka wskazała etap
@@ -29,8 +44,9 @@ Backlog zadań ze statusami.
   Browser375/1440 i ponad5min/9próbek PASS; active-release atomowo06:10:33UTC,
   świeżeHTTPS/liveimageIDs/contractpolicyepoch4 PASS. Bez agentAI/retry. Raport:
   `docs/audits/2026-11-03-vision-amount-deployment.md`.
-- [ ] Potwierdzić jedną rzeczywistą, jawną próbę PonówAI po d7a2432, na istniejącym
-  dokumencie bez reuploadu. Nie wykonywać jej automatycznie lub w imieniu użytkownika.
+- [x] Użytkownik potwierdził lepszy odczyt po d7a2432; read-only revision5/ready,
+  succeeded/1attempt. Brakuje IBAN i daty sprzedaży, nie deklarować kompletnego wyniku.
+  Agent nie wykonywał kolejnej wysyłki ani reuploadu; dalsze braki badane osobno.
 - [x] Późniejsza jawna próba lokalnegoOCR succeeded/1; odnotowany wyłącznie status,
   bez czytania tekstu/faktury lub twierdzenia o poprawności odczytu.
 - [x] Lokalnyqualityprobe bezAI: potwierdzone ucięcie przez async images.normalize_image:

@@ -21,6 +21,11 @@ vi.mock("../api/auth", () => ({
   useLogout: () => ({ mutate: vi.fn() }),
 }));
 
+// These tests exercise navigation; processing feedback has its own real Layout integration tests.
+vi.mock("./documents/DocumentProcessingMonitor", () => ({
+  DocumentProcessingMonitor: () => null,
+}));
+
 describe("getContextForPathname", () => {
   it("uses the context with the longest matching route prefix", () => {
     expect(getContextForPathname("/projects/project-42").id).toBe(

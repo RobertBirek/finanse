@@ -2,6 +2,87 @@ import { describe, expect, it } from "vitest";
 import { getDocumentStatus } from "./documentStatus";
 
 describe("getDocumentStatus", () => {
+  it("does not label an unknown authoritative job state as success", () => {
+    expect(
+      getDocumentStatus({
+        status: "done",
+        review: {
+          revision_id: "unknown",
+          revision: 1,
+          input_method: "image",
+          status: "ready",
+          error_code: null,
+          warnings: [],
+          job_state: "future-state",
+        },
+      }),
+    ).not.toMatchObject({ tone: "success" });
+  });
+  it("does not claim a ready proposal when its authoritative AI job failed", () => {
+    expect(
+      getDocumentStatus({
+        status: "done",
+        review: {
+          revision_id: "failed",
+          revision: 1,
+          input_method: "image",
+          status: "ready",
+          error_code: null,
+          warnings: [],
+          job_state: "failed",
+        },
+      }),
+    ).toMatchObject({ label: "Odczyt AI przerwany", tone: "warning" });
+  });
+  it("shows real local OCR work ahead of an old ready AI review", () => {
+    expect(
+      getDocumentStatus({
+        status: "done",
+        local_ocr_state: "processing",
+        review: {
+          revision_id: "old",
+          revision: 1,
+          input_method: "image",
+          status: "ready",
+          error_code: null,
+          warnings: [],
+          job_state: "succeeded",
+        },
+      }),
+    ).toMatchObject({ label: "OCR pracuje", tone: "warning" });
+  });
+  it("uses the actual AI job state rather than a stale ready review", () => {
+    expect(
+      getDocumentStatus({
+        status: "done",
+        review: {
+          revision_id: "new",
+          revision: 2,
+          input_method: "image",
+          status: "ready",
+          error_code: null,
+          warnings: [],
+          job_state: "processing",
+        },
+      }),
+    ).toMatchObject({ label: "AI pracuje", tone: "warning" });
+  });
+  it("does not present a paused AI job as still processing", () => {
+    expect(
+      getDocumentStatus({
+        status: "done",
+        review: {
+          revision_id: "paused",
+          revision: 1,
+          input_method: "image",
+          status: "processing",
+          error_code: null,
+          warnings: [],
+          job_state: "paused",
+        },
+      }),
+    ).toMatchObject({ label: "Odczyt AI wstrzymany", tone: "neutral" });
+  });
   it.each(["incomplete", "error"] as const)(
     "labels a recovered exhausted job as interrupted (%s)",
     (status) => {

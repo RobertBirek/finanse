@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import api from "../lib/api";
 import { Documents } from "./Documents";
+import { MemoryRouter } from "react-router-dom";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -29,7 +30,9 @@ function renderDocuments(
   });
   return render(
     <QueryClientProvider client={client}>
-      <Documents />
+      <MemoryRouter>
+        <Documents />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -81,7 +84,9 @@ describe("document retry and admission feedback", () => {
     });
     render(
       <QueryClientProvider client={client}>
-        <Documents />
+        <MemoryRouter>
+          <Documents />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
 

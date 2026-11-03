@@ -38,6 +38,7 @@ export async function documentVisionFixtures(
     body: Buffer | null;
   }[] = [];
   const reviewCalls = new Map<string, number>();
+  const reviewId = (id: string) => id.replace(/^d/, "f");
   const document = (
     id: string,
     name: string,
@@ -59,10 +60,11 @@ export async function documentVisionFixtures(
     last_error_code: null,
     processing_method: vision ? "vision" : "legacy_ocr",
     has_extracted_text: !vision,
-    local_ocr_state: null,
+    local_ocr_state: null as string | null,
+    local_ocr_job_id: null as string | null,
     review: vision
       ? {
-          revision_id: "r8000000-0000-0000-0000-000000000001",
+          revision_id: reviewId(id),
           revision: 1,
           input_method: "image",
           status: options.error ? "error" : "pending",
@@ -82,6 +84,26 @@ export async function documentVisionFixtures(
     const method = request.method();
     if (path === "/api/documents" && method === "GET")
       return route.fulfill({ json: docs });
+    const statusDocument = docs.find(
+      (doc) => path === `/api/documents/${doc.id}`,
+    );
+    if (statusDocument && method === "GET") {
+      const ready =
+        (reviewCalls.get(statusDocument.id) ?? 0) > 1 && !options.error;
+      return route.fulfill({
+        json: {
+          ...statusDocument,
+          review:
+            ready && statusDocument.review
+              ? {
+                  ...statusDocument.review,
+                  status: "ready",
+                  job_state: "succeeded",
+                }
+              : statusDocument.review,
+        },
+      });
+    }
     if (path === "/api/documents/upload-capabilities")
       return route.fulfill({
         json: {
@@ -136,7 +158,7 @@ export async function documentVisionFixtures(
       const ready = calls > 1 && (!isImage || !options.error);
       return route.fulfill({
         json: {
-          id: "r8000000-0000-0000-0000-000000000001",
+          id: reviewId(documentId),
           document_id: documentId,
           revision: 1,
           input_method: "image",
@@ -234,9 +256,35 @@ export async function documentVisionFixtures(
           status: 429,
           json: { detail: "vision_daily_limit" },
         });
+      const documentId = path.split("/")[3];
+      const doc = docs.find((item) => item.id === documentId)!;
+      if (path.endsWith("/retry-ocr")) {
+        doc.local_ocr_state = "pending";
+        doc.local_ocr_job_id = `ocr-${documentId}`;
+        return route.fulfill({
+          status: 202,
+          json: {
+            id: documentId,
+            status: "pending",
+            job_id: doc.local_ocr_job_id,
+          },
+        });
+      }
       return route.fulfill({
-        status: path.endsWith("retry-ocr") ? 202 : 202,
-        json: {},
+        status: 202,
+        json: {
+          id: reviewId(documentId),
+          document_id: documentId,
+          revision: 1,
+          input_method: "image",
+          status: "pending",
+          error_code: null,
+          document_type: "receipt",
+          fields: blankFields,
+          provenance: {},
+          parser_version: "fixture",
+          warnings: [],
+        },
       });
     }
     return route.fallback();

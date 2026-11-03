@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -205,15 +205,41 @@ async def get_document(
     return result.scalar_one_or_none()
 
 
+async def get_active_documents(
+    db: AsyncSession, user_id: uuid.UUID, limit: int = 100, offset: int = 0
+) -> list[Document]:
+    """Discover current work independently of the ordinary document-list page."""
+    from app.documents.processing_queries import active_processing_document_ids
+
+    statement = (
+        select(Document)
+        .where(
+            Document.user_id == user_id,
+            or_(
+                and_(
+                    Document.processing_method == "legacy_ocr",
+                    Document.status.in_(("pending", "processing")),
+                ),
+                Document.id.in_(active_processing_document_ids(user_id)),
+            ),
+        )
+        .order_by(Document.created_at.desc(), Document.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list((await db.execute(statement)).scalars().all())
+
+
 async def document_responses(
     db: AsyncSession, user_id: uuid.UUID, documents: list[Document]
 ) -> list[DocumentResponse]:
     """Map a page with one owner-scoped status query, never loading document content."""
     if not documents:
         return []
-    from app.documents.processing_queries import get_review_summaries
+    from app.documents.processing_queries import get_local_ocr_summaries, get_review_summaries
 
     summaries = await get_review_summaries(db, user_id, [document.id for document in documents])
+    ocr = await get_local_ocr_summaries(db, user_id, [document.id for document in documents])
     text_ids = set(
         (
             await db.execute(
@@ -228,7 +254,9 @@ async def document_responses(
             update={
                 "review": summaries.get(document.id),
                 "has_extracted_text": document.id in text_ids,
-                "local_ocr_state": None,
+                "local_ocr_state": ocr[document.id][1] if document.id in ocr else None,
+                "local_ocr_job_id": ocr[document.id][0] if document.id in ocr else None,
+                "local_ocr_error_code": ocr[document.id][2] if document.id in ocr else None,
             }
         )
         for document in documents

@@ -2,6 +2,78 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — ZAKOŃCZONE lokalnie: znacznik AI/OCR i globalny toast
+
+- User „tak” zatwierdził lokalny zakres; plan
+  docs/superpowers/plans/2026-11-03-document-processing-notifications.md, inline
+  w istniejącym linkedworktree. Bez nowych wywołań AI/OCR/produkcji/migracji.
+- Backend zwraca batched najnowszy owner-scoped job OCR z identity/error oraz reviewjobID.
+  GET /documents/active ma paginację i nie kolejkuje pracy. Frontend monitor w Layout
+  odkrywa pracę poza zwykłą listą50; śledzi zaakceptowane mutacje i szybkie zakończenia,
+  po zniknięciu z active odpytuje znany dokument. Nie toastuje ukończonej historii.
+- Session-only Zustand tracker z generacją sesji, fencing spóźnionych odpowiedzi,
+  dedup/retry/StrictMode, oddzielny OCR/AI i toast propozycji/niepełnego wyniku/błędu/pauzy.
+  GET/networkerror nie oznacza sukcesu. Toast link otwiera review spoza listy przez
+  ?review=UUID, bez mutacji. Portal w aktualnym natywnym dialogu omija inert tła;
+  motyw i reduced-motion zachowane, toast zostaje do ręcznego zamknięcia.
+- TDD RED→GREEN i frontend384/lint/types/build PASS, backend6focused/lint/types PASS.
+  Mocked Chromium4 desktop/mobile AI/OCR→nawigacja→toast→deep-link/modal/a11y PASS;
+  screenshot375 sprawdzony. Read-only whole-change review
+  ses_e5f981222ffe0RVBfppl85JhOl zakończony: Critical0/Important1/Minor0, declinedempty.
+- ReviewImportant potwierdzony: DocumentViewer porównywał przetłumaczone stare etykiety;
+  teraz structured isDocumentWorkActive. Bezpośrednie AI/OCR pending/processing4RED→GREEN,
+  focused27PASS. Pełny gate sh_1a06b3945001ttb4g10eBeLM5Z zakończony:
+  backend1151/8deselected, frontend388 i lint/types obu PASS, manifest niezmieniony.
+- Pierwszy fullE2E93PASS/1skip/4FAIL z niepełnych starych fakeAPI DTO (`{}` po prepare/retry)
+  i braku watched GET. Po gate zmieniony WYŁĄCZNIE document-vision-fixtures.ts: prawdziwa
+  tożsamość operacji, acceptedDTO/statusGET. Backend/aplikacja byte-identical zgate,
+  świeże frontend388/lint/types PASS. Finalbuild/focusedE2E4PASS, pełne E2E na tym
+  dist-final zakończone jako sh_1a086ab95001UznNFqkgk9MsGr:97PASS+1celowy skip.
+  verify-final.py PASS: backend1151/frontend388/E2E97+1skip/lint/types/build i dokładne
+  source/dist manifesty w final-source-proof.json. Nie powtarzać backendgate.
+- Dowody /tmp/opencode/document-processing-notifications-20261103/. Ledger własnego
+  planu .superpowers/sdd/2026-11-03-document-processing-notifications/progress.md.
+  Zachować unrelatedVelo/Q7, nie push/merge/deploy. IBAN/sale_date nadal osobny follow-up.
+
+### Decyzje wykonawcze i koszt pomyłki
+
+- Zachowano izolowane venv/testDB z istniejącego bezpiecznego gate zamiast starego
+  repoSDK/kolizyjnego Compose; ryzyko: nieidentyczne środowisko względem produkcji.
+- Review objął niezatwierdzony diff i wskazane nowe pliki przed finalgate/commitem;
+  ryzyko pominięcia untracked ograniczone jawną listą w pakiecie review.
+- Portal toastu śledzi natywny dialog, aby uniknąć inert tła; ryzyko remount/focus przy
+  zmianie modala, sprawdzone Chromium/a11y375/1440.
+- Batch discovery + indywidualny GET tylko po zniknięciu pracy z active zamiast N+1;
+  koszt: zakończenie może wymagać dodatkowego cyklu odczytu (smoke≤10s).
+- Review nie odroczył żadnych Minor i nie odmówił oceny żadnego zachowania.
+
+## 2026-11-03 — Odczyt lepszy; diagnoza i plan znacznika AI/OCR
+
+- Użytkownik potwierdził lepszy odczyt po d7a2432, ale brak IBAN odbiorcy i daty
+  sprzedaży. Poprosił o widoczny znacznik pracy AI/OCR i powiadomienie o zakończeniu;
+  doprecyzował kanał: toast w aplikacji. Implementacja pełnego zakresu jeszcze do zatwierdzenia.
+- Read-only diagnoza dokładnego istniejącego dokumentu (powiązanie SHA w pamięci):
+  najnowsza revision5/image/ready, visionjob succeeded/1attempt, errornull. W zapisanym
+  wyniku oba pola payee_iban/sale_date puste. Nie eksportowano wartości dokumentu,
+  nie wykonano AI/OCR/DBwrites/runtimechange. Dowód:
+  /tmp/opencode/doc-processing-feedback-20261103/field-presence-proof.json.
+- Oba pola istnieją w VisionFields/ReviewFields, konwersja zapisuje pełne fields,
+  frontend useReviewForm/DocumentReview je mapuje i renderuje. To nie brak kontrolek UI.
+  Nie ustalono, czy oryginał zawiera czytelne wartości; nie zgadywać IBAN/daty lub
+  kopiować issue_date do sale_date. Nie zmieniać ekstrakcji bez dalszego dowodu.
+- Read-only UI exploration ses_e5fd712e6ffedTqE4i7QchxRjW: brak istniejącego toasta;
+  wspólny Layout jest montażem globalnym. Obecny polling listy/review znika przy
+  zmianie podstrony; trzeba wspólny monitor powiązany z użytkownikiem i tożsamością
+  operacji, bez toastów starych zakończeń/StrictMode/refetch i bez wycieków po logout.
+- Dodatkowy rootcause statusu OCR w backend/app/documents/service.py:231:
+  document_responses ZAWSZE ustawia local_ocr_state=None. Same animacje frontendowe
+  nie naprawią informacji o rzeczywistej pracy. Potrzebny stan/identyfikator faktycznego
+  OCR jobu z bazy; list endpoint ma defaultlimit50, więc monitor nie może polegać
+  wyłącznie na pierwszej stronie. Istnieje owner-scoped GET pojedynczego dokumentu.
+- Następny krok: zatwierdzenie lokalnego zakresu statusAPI + znacznik/kolejka/praca
+  + jeden globalny toast peroperacja dla zakończenia/częściowego wyniku/błędu, również
+  po nawigacji. Bez nowych wywołań AI lub wdrożenia w ramach planowania.
+
 ## 2026-11-03 — ZAKOŃCZONE: d7a2432 i kontrakt2 na produkcji
 
 - User „tak” po pytaniu o exactpakiet d7a2432 + vision-openai-responses-2/vision-2

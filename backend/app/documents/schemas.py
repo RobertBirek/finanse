@@ -68,6 +68,8 @@ class DocumentResponse(BaseModel):
     review: "ReviewSummary | None" = None
     has_extracted_text: bool = False
     local_ocr_state: str | None = None
+    local_ocr_job_id: uuid.UUID | None = None
+    local_ocr_error_code: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -106,3 +108,4 @@ class ReviewSummary(BaseModel):
         Literal["unreadable", "missing_required_fields", "unsupported_document"], ...
     ] = ()
     job_state: str | None = None
+    job_id: uuid.UUID | None = None

@@ -2,6 +2,23 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-03 — Znacznik pracy AI/OCR i globalny toast
+
+### Changed
+- Użytkownik potwierdził lepszy odczyt; IBAN i data sprzedaży puste już w zapisanym
+  wyniku, nie ukryte przez formularz. Diagnoza wyłącznie read-only/bez wartości/bez AI.
+- Po zgodzie użytkownika lokalna implementacja monitora w Layout, znacznika AI/OCR,
+  globalnego toastu z otwarciem dokumentu również spoza pierwszej strony. Powiadomienie
+  nie oznacza poprawności ekstrakcji; rozróżnia propozycję, niepełny wynik, błąd i pauzę.
+- Rzeczywisty najnowszy job OCR i jego identyfikator zamiast hardcodedNone; paginowany,
+  owner-scoped odczyt aktywnej pracy bez mutacji. Izolacja sesji, deduplikacja operacji,
+  status nieznany przy błędzie sieci i portal toastu w natywnym dialogu.
+- Niezależny review: poprawiona regresja podglądu używającego starych etykiet zamiast
+  stanu pracy, 4RED→GREEN. Pełny gate1151backend/388frontend/lint/types PASS;
+  build i mockedE2E97PASS+1celowy skip (desktop/mobile). Dostosowane stare atrapy API,
+  świeże frontend388/lint/types PASS; backend/aplikacja byte-identical z pełnym gate.
+  Bez AI/OCR, wdrożenia, migracji lub zmiany ekstrakcji IBAN/daty sprzedaży.
+
 ## [d7a2432] — 2026-11-03 — Kontrakt kwoty na produkcji
 
 ### Changed

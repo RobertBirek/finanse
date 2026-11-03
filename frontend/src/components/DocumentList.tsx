@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   useDocuments,
   useDeleteDocument,
@@ -10,11 +11,34 @@ import { DocumentViewer } from "./DocumentViewer";
 import { DocumentReview } from "./documents/DocumentReview";
 import { QueryFeedback } from "./QueryFeedback";
 import { getDocumentStatus } from "./documents/documentStatus";
+import { ProcessingPulse } from "./documents/ProcessingFeedback";
+import { isDocumentWorkActive } from "../api/documents";
 
 export function DocumentList() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedReview = searchParams.get("review");
+  const linkedReviewId =
+    requestedReview &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      requestedReview,
+    )
+      ? requestedReview
+      : null;
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  useEffect(() => {
+    setViewingId(null);
+    setReviewingId(linkedReviewId);
+  }, [linkedReviewId]);
+  const closeReview = () => {
+    setReviewingId(null);
+    if (searchParams.has("review")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("review");
+      setSearchParams(next, { replace: true });
+    }
+  };
   const query = useDocuments(
     statusFilter ? { status: statusFilter } : undefined,
   );
@@ -113,8 +137,9 @@ export function DocumentList() {
                     )}
                   </button>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[statusColor]}`}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[statusColor]}`}
                   >
+                    {isDocumentWorkActive(doc) && <ProcessingPulse />}
                     {reviewStatus.label}
                   </span>
                   <button
@@ -156,8 +181,9 @@ export function DocumentList() {
       )}
       {reviewingId && (
         <DocumentReview
+          key={reviewingId}
           documentId={reviewingId}
-          onClose={() => setReviewingId(null)}
+          onClose={closeReview}
         />
       )}
     </div>
