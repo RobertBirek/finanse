@@ -2,6 +2,51 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — ZAKOŃCZONE: d7a2432 i kontrakt2 na produkcji
+
+- User „tak” po pytaniu o exactpakiet d7a2432 + vision-openai-responses-2/vision-2
+  + controlled policyoff/on, bez automatycznego odczytu. Zgoda zapisana osobno
+  /tmp/opencode/vision-amount-deploy-20261102/exact-revision-approval.json.
+- Przerwana odpowiedź była wznowiona bez operacji produkcyjnych: powstały tylko
+  offline verifier/stuby/testy. Dopiero po dokończeniu kodu i scoped review uruchomiono
+  apply. Nie interpretować poprzednich nagłówków jako wykonanych zmian policy.
+- Nowy kontroler pozwala na CAS2→3, coherentimages+metadata, disabledverification,
+  CAS3→4; bez migrations/replay. Policy-aware rollback przy znanych stanach, nigdy
+  epochreset. Verifier strictdata/auditdelta + liczba own auth audits. 23offlinePASS,
+  syntax i stagedconsolidatedrender PASS; source/runtime gates z przygotowania nadal
+  aktualne. Wiek backupu w stagingu30min; preflight wymaga <=1h i niezmienionego baseline.
+- Applyreview ses_e6186a627ffey0UmhqkB8yDnA5 PASS, Critical/Important brak. Minor:
+  wrapper browser delegates źródło sprawdzone wcześniej; parent je przeczytał i przypiął
+  hash, brak dodatkowego niezależnego review tego odziedziczonego źródła.
+- Apply **sh_19e7ee38b0019uL7GbHcVPA19B** uruchomiony jednorazowo; czekamy na callback,
+  nie poll/retry. Następnie tylko read-onlybrowser i5minobserwacji/finalize. Przy błędzie
+  czytać wyłącznie bezpieczne kody/klasy; surowe logi prywatne. Bez AI w smoke.
+- Raport docs/audits/2026-11-03-vision-amount-deployment.md. UnrelatedVelo/Q7 zachowane;
+  nie zmieniać źródeł ani ponawiać gate/build/prepare lub backupu bez ustalonej potrzeby.
+
+### Odbiór po apply i finalize
+
+- Applycallback exit0/verifiedPASS, rollbackfalse. Exact d7a2432 na backend/worker/frontend,
+  nowe etykiety/fingerprint487086c..., policy enabled/epoch4; schema/data/originals/dataIDs
+  niezmienione poza dwoma policy auditami i4własnymi security401. AgentAIcalls0.
+- Browser375/1440 i5minfinalize **sh_1a002b28c001mPqQ2RJzh2TLlE** exit0/PASS,
+  rollbackfalse. 9próbek/ponad300s obserwacji, browser bez mutation/egress/pageerror,
+  18browser401 +4APIsmoke401 =22 dokładnie dozwolone security audyty. Dwa policy audyty
+  exact2→3→4, brak pozostałych zmian user/doc/job/usage/ledger/originals/schema/dataIDs.
+- Active-release atomowo zapisany2026-11-03T06:10:33.419581+00:00. Odczytane browser/
+  finalized i świeże final-readonly-proof PASS: wszystkie liveimageIDs iOCId7a2432 zgodne
+  zmetadanymi, HTTPShealth/login200, settingsvision-openai-responses-2/vision-2/fp487086c...
+  zgodnepolicyepoch4. Runtime override compose.deployed.yaml; rollback d9a5797 zachowany,
+  wymaga policy-aware pause/oldimages+labels/freshCAS, nigdy epochreset.
+- Nie powtarzać apply/finalize/prepare ani gate. AgentAIcalls0; oryginalny dokument nie
+  był wysyłany ponownie. Teraz można poprosić użytkownika o1jawnePonówAI bez reuploadu;
+  nie obiecywać odczytu faktury przed rzeczywistym wynikiem. Usuwanie nadal osobnym zadaniem.
+- Zmiany dokumentacji zamykane lokalnym commitem na istniejącej branch, bez push/merge
+  na main. UnrelatedVelo/Q7 zachowane. Dowody /tmp/opencode/vision-amount-deploy-20261102/.
+- Przed końcowym docscommitem świeże95focusedbackend/23operatorguards/335frontend oraz
+  backend+frontend lint/types PASS. Pełny1147gate pozostaje dowodem tych samych,
+  niezmienionych hashy źródeł; nie wykonywano go po raz trzeci wyłącznie dla dokumentacji.
+
 ## 2026-11-02 — ZAKOŃCZONE: przygotowanie d7a2432, nie wdrożenie
 
 - User „tak” na przygotowanie pakietu/backup/restore/kontrolę wersji polityki;

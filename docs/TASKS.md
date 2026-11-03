@@ -23,9 +23,14 @@ Backlog zadań ze statusami.
   nowe etykiety prompt/schema i CAS policy wyłącznie nieaktywna propozycja. Stan
   produkcji bez zmian; operations review PASS. Raport:
   `docs/audits/2026-11-02-vision-amount-release.md`.
-- [ ] Osobno zatwierdzić wdrożenie dokładnych obrazów/SHA, zmianę etykiet konfiguracji
-  i audytowaną zmianę policy z CAS oraz rollbackiem kontraktu. Bez automatycznego AI
-  lub replay starych zadań. Produkcja pozostaje d9a5797.
+- [x] Użytkownik zatwierdził rollout d7a2432 + etykiety prompt/schema2 + audytowane
+  policyCASoff/on bez AI/replay. Kontroler23offlinePASS, applyreviewPASS i hashbinding;
+  jednorazowy apply PASS/exit0, policyenabled/epoch4 i data/originals/schemaPASS.
+  Browser375/1440 i ponad5min/9próbek PASS; active-release atomowo06:10:33UTC,
+  świeżeHTTPS/liveimageIDs/contractpolicyepoch4 PASS. Bez agentAI/retry. Raport:
+  `docs/audits/2026-11-03-vision-amount-deployment.md`.
+- [ ] Potwierdzić jedną rzeczywistą, jawną próbę PonówAI po d7a2432, na istniejącym
+  dokumencie bez reuploadu. Nie wykonywać jej automatycznie lub w imieniu użytkownika.
 - [x] Późniejsza jawna próba lokalnegoOCR succeeded/1; odnotowany wyłącznie status,
   bez czytania tekstu/faktury lub twierdzenia o poprawności odczytu.
 - [x] Lokalnyqualityprobe bezAI: potwierdzone ucięcie przez async images.normalize_image:

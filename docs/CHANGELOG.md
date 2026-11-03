@@ -2,6 +2,22 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [d7a2432] — 2026-11-03 — Kontrakt kwoty na produkcji
+
+### Changed
+- Użytkownik zatwierdził dokładny pakiet, nowe etykiety prompt/schema i kontrolowane
+  CAS policyoff/on, bez wywołań AI lub ponawiania historycznych dokumentów.
+- Kontroler wdrożenia:23offlinePASS, scoped applyreviewPASS i hashbinding. Jednorazowe
+  wdrożenie z blokadą driftu, świeżości backupu i policy-aware rollbackiem zakończone
+  PASS/exit0. Policyenabled/epoch4, exactimages i reszta danych/originals/schema PASS.
+  Browser375/1440 i ponad5min/9próbek obserwacji PASS. Active-release atomowo
+  sfinalizowany06:10:33UTC, świeżeHTTPS/liveimageIDs/OCIrevision/contractpolicy zgodne.
+- Nowy kontrakt vision-openai-responses-2/vision-2, policyepoch4; dwa zaplanowane
+  audyty policy i22 własne security401, reszta user/doc/job/usage/ledger/originals/schema
+  i dataIDs bez zmian. Rollback d9a5797 zachowany z monotoniczną procedurą CAS.
+- Bez AI/OCR/retry/reuploadu w diagnozie/wdrożeniu. Poprawność rzeczywistego odczytu
+  faktury nadal do potwierdzenia jedną jawną próbą użytkownika.
+
 ## [Prepared] — 2026-11-02 — Pakiet kontraktu kwoty, bez wdrożenia
 
 ### Changed

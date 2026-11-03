@@ -1,5 +1,8 @@
 # Przygotowanie wydania kontraktu kwoty — bez wdrożenia
 
+To zapis etapu przygotowania przed osobną zgodą na rollout. Późniejsze zatwierdzone
+wdrożenie i końcowy odbiór opisuje `2026-11-03-vision-amount-deployment.md`.
+
 ## Zakres zgody
 
 Użytkownik zatwierdził przygotowanie pakietu `d7a2432`, backup/restore i kontrolę
