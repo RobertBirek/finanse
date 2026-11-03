@@ -2,6 +2,46 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-03 — ZAKOŃCZONE: wskaźnik AI/OCR i globalny toast69b6f3d na produkcji
+
+- User „tak, wdrażaj na produkcję” po odbiorze lokalnego commitu
+  69b6f3d450fef83b0e583465aed4a2e0a680f434. Zgoda obejmuje spójne aplikacyjne
+  obrazy, backup/restore i smoke; nie obejmuje AI/OCR/retry/migracji lub zmianpolicy.
+- `/deploy` wykonany; poprzedni active-release d7a2432, override compose.deployed.yaml,
+  policyenabled/epoch4/promptschema2. Nowy release ten sam kontrakt: bez policyCAS.
+  Rollback tylko do dokładnego d7a2432 i jego pełnego override; d9a5797 zachowany.
+- Źródła tożsame zfinalgate1151backend/388frontend/97E2E+1skip/lint/typesPASS.
+  Świeży build runtimebytes identyczne; jedyna różnica to względne paths w sourcemap
+  przez inny outDir. Zweryfikowano równoważność JSON/absolute sources, zachowano
+  dokładny przetestowany map artifact; finaldist tożsamy z97E2E.
+- Reużycie reviewed no-migration/no-policy kontrolera. Guardyoffline15PASS,
+  nowa kontrola exactapproval, backup≤1h, exactimage smoke i hashbinding operationsreview.
+  Pakiet przez ops/prepare_release.py sh_1a09d9788001pd03efmWTkh9Wr PASS;
+  installedbackup+isolatedrestore sh_1a09a2fcd001NezzpdsHFAdVW9 PASS/e0963350,
+  ten sam snapshot, restoreexit0. Nie ponawiać procedur.
+- Dowody `/tmp/opencode/document-processing-deploy-20261103/`; raport
+  docs/audits/2026-11-03-document-processing-deployment.md. Exactimage smoke,
+  operationsreview, preflight, one-shotapply, browser/5minobservation/finalize PASS.
+  Bez mainmerge/push; unrelatedVelo/Q7 zachować. Nie restartować usług danych.
+- Preparecallback PASS; exact203backendfilesEachImage i activityAPI4casesEachImage
+  PASS/nonroot/networknone/zeroDB/AI/OCR. Operationsreview ses_e5f5ffa59ffeFqwVyURlYZWlzF
+  conditionalApproved, Critical0/Important0/Minor0; hashbinding28skryptów/pakietów zapisany.
+  Warunki review spełnione przed apply: samefreshsnapshot oraz hashbinding.
+- One-shot apply sh_1a0a5b5210010c77nXK5rYMETq zakończony exit0; verified.json odczytany.
+- Applycallback exit0/verifiedPASS odczytany: runtime69b6f3d, schema/policyunchanged,
+  pełneHTTPSassets/health/5API401 i niezmienione dane/originals/dataIDs/logiPASS.
+  Browser+finalize sh_1a0a67764001Gd4OTkGu8zB8id zakończony PASS:375/1440,
+  brak overflow/pageerrors/foreignorigin/mutations; chronione trasy → login.
+- Ponad5min/10próbek PASS, active-release atomowo2026-11-03T09:09:22.312699Z:
+  exact69b6f3d backend/worker/frontend i override69b6f3d/compose.active.yaml.
+  Fresh final-readonly-proof.json PASS: liveimageIDs/metadane/health/login zgodne,
+  schema92eef8e8086c/policyepoch4/promptschema2/dane/ledger/oryginały/dataIDs bez zmian.
+  Doliczone wyłącznie23własne securityaudits (5API401+18browser401), zeroAI/OCR/retry.
+- Rollback d7a2432 przygotowany i niewykorzystany, staryd9a5797 zachowany. Nie powtarzać
+  apply/finalize/backup/fullgate. Nie testowano mutacji po zalogowaniu na produkcji
+  (jawnie wyłączone zread-onlysmoke); pokryte lokalnym integration/E2E.
+  Następny krok: użytkownik odświeża stronę; nowy odczyt dokumentu tylko na jego decyzję.
+
 ## 2026-11-03 — ZAKOŃCZONE lokalnie: znacznik AI/OCR i globalny toast
 
 - User „tak” zatwierdził lokalny zakres; plan

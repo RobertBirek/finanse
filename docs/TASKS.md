@@ -14,6 +14,13 @@ Backlog zadań ze statusami.
   pełny1151backend/388frontend/lint/types/build i mockedE2E4desktop/mobile PASS.
   Po naprawie atrap akceptacji/statusu pełne E2E97PASS+1celowy skip; manifest źródeł
   i build PASS. Gotowe lokalnie, bez AI/OCR/push/merge/deployu.
+- [x] Po zgodzie „tak, wdrażaj na produkcję”: wdrożyć dokładny69b6f3d, spójny
+  backend/worker/frontend, po świeżym backup/restore i operations review. Zachować
+  schemat, policyepoch4, prompt/schema2, dane i oryginały; bez AI/OCR/retry/migracji.
+  Raport: `docs/audits/2026-11-03-document-processing-deployment.md`.
+  Backup e0963350/installedrestore, opsreview/15guardów/exactimage203files+API,
+  apply/HTTPS/assets/auth/browser375/1440/10próbek i finalreadonlyproof PASS.
+  Metadane09:09:22UTC; rollbackd7a2432 zachowany, zeroAI/OCR/migracji/policychange.
 - [ ] Osobno wyjaśnić, czy IBAN i data sprzedaży są czytelne w źródle; nie zgadywać
   brakujących wartości, nie zmieniać semantyki dat i nie ponawiać AI bez zgody.
 

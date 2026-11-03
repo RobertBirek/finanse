@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Unreleased] — 2026-11-03 — Znacznik pracy AI/OCR i globalny toast
+## [69b6f3d] — 2026-11-03 — Znacznik pracy AI/OCR i globalny toast na produkcji
 
 ### Changed
 - Użytkownik potwierdził lepszy odczyt; IBAN i data sprzedaży puste już w zapisanym
@@ -17,7 +17,13 @@ Wszystkie istotne zmiany w projekcie.
   stanu pracy, 4RED→GREEN. Pełny gate1151backend/388frontend/lint/types PASS;
   build i mockedE2E97PASS+1celowy skip (desktop/mobile). Dostosowane stare atrapy API,
   świeże frontend388/lint/types PASS; backend/aplikacja byte-identical z pełnym gate.
-  Bez AI/OCR, wdrożenia, migracji lub zmiany ekstrakcji IBAN/daty sprzedaży.
+  Bez nowegoAI/OCR, migracji lub zmiany ekstrakcji IBAN/daty sprzedaży.
+- Po jawnej zgodzie użytkownika wdrożono dokładne69b6f3d backend/worker/frontend.
+  Backup e0963350 + installedsame-snapshotrestore PASS; operationsreview/15offlineguards/
+  exactimage203filesEachBackendWorker/API4casesEachImage PASS. HTTPS/assets/auth,
+  browser375/1440 i ponad5min/10próbek PASS; active-release sfinalizowany09:09:22UTC.
+  Schema/policyepoch4/dane/oryginały/dataIDs niezmienione, rollbackd7a2432 zachowany.
+  Raport: `docs/audits/2026-11-03-document-processing-deployment.md`.
 
 ## [d7a2432] — 2026-11-03 — Kontrakt kwoty na produkcji
 
