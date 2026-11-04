@@ -1,13 +1,14 @@
 """Batched optional provenance projection, not new ledger columns or amounts."""
 
 import uuid
+from typing import cast
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.finance.models import FinanceCommandReceipt, FinancialTransaction
 from app.finance.rule_models import TransactionCategorizationOrigin as Origin
-from app.finance.rule_schemas import AssignmentOrigin
+from app.finance.rule_schemas import AssignmentKind, AssignmentOrigin
 
 
 async def attach_assignment_origins(
@@ -32,12 +33,13 @@ async def attach_assignment_origins(
     for origin, response in rows:
         grant = response.get("grant", {}) if response else {}
         origins[origin.transaction_id] = AssignmentOrigin(
-            origin="approved_rule" if origin.origin == "approved_rule" else "manual",
+            origin=cast(AssignmentKind, origin.origin),
             version=origin.version,
             rule_id=origin.rule_id,
             rule_version=origin.rule_version,
             display_description=grant.get("display_description"),
             target_path=grant.get("target_path"),
+            proposal_item_id=origin.proposal_item_id,
         )
     for txn in transactions:
         txn.assignment_origin = origins.get(txn.id)

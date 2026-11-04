@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from app.finance import suggestion_models as _suggestion_models  # noqa: F401
 
 
 class TransactionCategorizationSettings(Base):
@@ -69,10 +70,16 @@ class TransactionCategorizationOrigin(Base):
     __tablename__ = "transaction_categorization_origins"
     __table_args__ = (
         CheckConstraint("version > 0", name="ck_rule_origin_version"),
-        CheckConstraint("origin IN ('manual','approved_rule')", name="ck_rule_origin_kind"),
+        CheckConstraint(
+            "origin IN ('manual','approved_rule','approved_llm')", name="ck_rule_origin_kind"
+        ),
         CheckConstraint(
             "origin != 'approved_rule' OR (rule_id IS NOT NULL AND rule_version IS NOT NULL AND approval_receipt_id IS NOT NULL AND approval_snapshot_sha256 IS NOT NULL)",
             name="ck_rule_origin_grant",
+        ),
+        CheckConstraint(
+            "(origin = 'approved_llm' AND proposal_item_id IS NOT NULL AND approval_receipt_id IS NOT NULL AND approval_snapshot_sha256 IS NOT NULL AND rule_id IS NULL AND rule_version IS NULL) OR (origin != 'approved_llm' AND proposal_item_id IS NULL)",
+            name="ck_rule_origin_proposal_grant",
         ),
     )
     transaction_id: Mapped[uuid.UUID] = mapped_column(
@@ -90,3 +97,6 @@ class TransactionCategorizationOrigin(Base):
     )
     approval_snapshot_sha256: Mapped[str | None] = mapped_column(String(64))
     assignment_sha256: Mapped[str] = mapped_column(String(64))
+    proposal_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("categorization_proposal_items.id", ondelete="RESTRICT")
+    )

@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +34,7 @@ from app.finance.models import (
     TransactionDateMetadata,
 )
 from app.finance.rule_models import TransactionCategorizationOrigin
-from app.finance.rule_schemas import AssignmentOrigin
+from app.finance.rule_schemas import AssignmentKind, AssignmentOrigin
 
 
 class CategorizationError(ValueError):
@@ -89,11 +89,14 @@ class LedgerContext:
     origin_grant: dict[str, Any] | None = None
 
     def snapshot(self) -> str:
+        return self._snapshot("expense-categorization-v3")
+
+    def _snapshot(self, schema: str) -> str:
         # Complete mapped financial fields. State hash/timestamps excluded to avoid
         # recursion; link absence explicit and ordering deterministic in load().
         return digest(
             {
-                "schema": "expense-categorization-v2",
+                "schema": schema,
                 "origin": {
                     "id": str(self.origin.id),
                     "origin": self.origin.origin,
@@ -101,6 +104,7 @@ class LedgerContext:
                     "rule_id": self.origin.rule_id,
                     "rule_version": self.origin.rule_version,
                     "approval_snapshot_sha256": self.origin.approval_snapshot_sha256,
+                    "proposal_item_id": self.origin.proposal_item_id,
                 }
                 if self.origin
                 else None,
@@ -205,7 +209,7 @@ class LedgerContext:
             context_snapshot=self.snapshot(),
             max_parts=settings.FINANCE_CATEGORY_SPLIT_MAX_PARTS,
             assignment_origin=AssignmentOrigin(
-                origin="approved_rule" if self.origin.origin == "approved_rule" else "manual",
+                origin=cast(AssignmentKind, self.origin.origin),
                 version=self.origin.version,
                 rule_id=self.origin.rule_id,
                 rule_version=self.origin.rule_version,
@@ -213,10 +217,18 @@ class LedgerContext:
                 if self.origin_grant
                 else None,
                 target_path=self.origin_grant.get("target_path") if self.origin_grant else None,
+                proposal_item_id=self.origin.proposal_item_id,
             )
             if self.origin
             else None,
         )
+
+
+def legacy_rule_source_snapshot(ctx: LedgerContext) -> str | None:
+    """Read-only compatibility for complete v2 creation events, never human previews."""
+    if ctx.state is not None or ctx.origin is not None:
+        return None
+    return ctx._snapshot("expense-categorization-v2")
 
 
 async def load_context(

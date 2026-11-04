@@ -17,14 +17,15 @@ from app.finance.categorization_context import (
     build_preview,
     columns,
     digest,
+    legacy_rule_source_snapshot,
     load_context,
 )
+from app.finance.categorization_enrollment import CreationObservation, observe_creation_policy
 from app.finance.categorization_schemas import CategorizationPart
 from app.finance.models import FinanceCommandReceipt, FinancialTransaction
 from app.finance.rule_event_models import TransactionRuleEvent
 from app.finance.rule_models import TransactionCategorizationOrigin as Origin
 from app.finance.rule_models import TransactionCategorizationRule as Rule
-from app.finance.rule_models import TransactionCategorizationSettings as Policy
 from app.finance.rule_policy import (
     category_path,
     get_settings,
@@ -54,7 +55,11 @@ def eligible_unclassified(ctx: LedgerContext, marker: uuid.UUID | None) -> bool:
 
 
 async def record_new_expense_event(
-    db: AsyncSession, user_id: uuid.UUID, transaction: FinancialTransaction
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    transaction: FinancialTransaction,
+    *,
+    observation: CreationObservation | None = None,
 ) -> uuid.UUID | None:
     """Internal creation-path hook: no commits, broker calls, row/advisory locks."""
     if (
@@ -64,35 +69,17 @@ async def record_new_expense_event(
         or len(transaction.postings) != 2
     ):
         return None
-    try:
-        normalized = normalize_rule_description(transaction.description)
-    except CategorizationError:
-        normalized = ""  # Invalid rule matcher never prevents recording a valid payment.
     observed = (
-        await db.execute(
-            select(Policy, Rule)
-            .outerjoin(
-                Rule,
-                and_(
-                    Rule.user_id == Policy.user_id,
-                    Rule.state == "active",
-                    Rule.approved_version == Rule.version,
-                    Rule.normalized_description_exact == normalized,
-                ),
-            )
-            .where(Policy.user_id == user_id)
-            .execution_options(populate_existing=True)
-        )
-    ).all()
-    if not observed:
-        return None
-    policy = observed[0][0]
-    if not policy.rules_enabled:
+        observation
+        if observation is not None
+        else await observe_creation_policy(db, user_id, transaction.description)
+    )
+    if not observed.rules_enabled:
         return None
     ctx = await load_context(db, user_id, transaction.id)
-    if not eligible_unclassified(ctx, policy.uncategorized_category_id):
+    if not eligible_unclassified(ctx, observed.marker_id):
         return None
-    rules = [r for _, r in observed if r is not None]
+    rules = observed.rule_candidates
     rule = rules[0] if len(rules) == 1 else None
     event_id = uuid.uuid4()
     await db.execute(
@@ -101,9 +88,9 @@ async def record_new_expense_event(
             id=event_id,
             transaction_id=transaction.id,
             user_id=user_id,
-            settings_version=policy.version,
-            observed_rule_id=rule.id if rule else None,
-            observed_rule_version=rule.version if rule else None,
+            settings_version=observed.settings_version,
+            observed_rule_id=rule[0] if rule else None,
+            observed_rule_version=rule[1] if rule else None,
             source_context_sha256=ctx.snapshot(),
             status="ready" if rule else "skipped",
             reason_code=None if rule else ("ambiguous" if rules else "no_match"),
@@ -201,7 +188,7 @@ async def _validate_grant(
         return None, None, "marker_invalid"
     if not eligible_unclassified(ctx, marker.id):
         return None, None, "ledger_protected"
-    if ctx.snapshot() != event.source_context_sha256:
+    if event.source_context_sha256 not in {ctx.snapshot(), legacy_rule_source_snapshot(ctx)}:
         return None, None, "input_changed"
     rule = await db.scalar(
         select(Rule)
@@ -276,6 +263,7 @@ async def apply_rule_event(db: AsyncSession, lease: RuleLease) -> str:
         await db.flush()
         return "skipped"
     assert rule is not None and grant is not None
+    source_snapshot_schema = "v3" if ctx.snapshot() == event.source_context_sha256 else "v2"
     parts = [
         CategorizationPart(
             category_id=rule.target_category_id,
@@ -308,6 +296,7 @@ async def apply_rule_event(db: AsyncSession, lease: RuleLease) -> str:
         result_ids=[str(ctx.txn.id)],
         version=1,
         response_json={
+            "source_snapshot_schema": source_snapshot_schema,
             "origin": "approved_rule",
             "rule_id": str(rule.id),
             "rule_version": rule.version,

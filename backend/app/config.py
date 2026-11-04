@@ -76,6 +76,29 @@ class Settings(BaseSettings):
     FINANCE_RULE_RETRY_INITIAL_SECONDS: PositiveInt = 10
     FINANCE_RULE_RETRY_LATER_SECONDS: PositiveInt = 60
     FINANCE_RULE_UI_POLL_MS: PositiveInt = 2000
+    FINANCE_SUGGESTIONS_ENABLED: bool = False
+    FINANCE_SUGGESTIONS_PROVIDER: str = ""
+    FINANCE_SUGGESTIONS_BASE_URL: str = ""
+    FINANCE_SUGGESTIONS_MODEL: str = ""
+    FINANCE_SUGGESTIONS_API_KEY: str = Field(default="", repr=False)
+    FINANCE_SUGGESTIONS_DESCRIPTION_MAX_CHARS: PositiveInt = Field(default=500, le=2000)
+    FINANCE_SUGGESTIONS_MAX_CATEGORIES: PositiveInt = Field(default=200, le=1000)
+    FINANCE_SUGGESTIONS_MAX_REQUEST_BYTES: PositiveInt = Field(default=32768, le=262144)
+    FINANCE_SUGGESTIONS_MAX_OUTPUT_TOKENS: PositiveInt = Field(default=1024, le=8192)
+    FINANCE_SUGGESTIONS_EXPLANATION_MAX_CHARS: PositiveInt = Field(default=500, le=2000)
+    FINANCE_SUGGESTIONS_NEW_CATEGORY_MAX_CHARS: PositiveInt = Field(default=80, le=200)
+    FINANCE_SUGGESTIONS_DAILY_CALL_LIMIT: PositiveInt = Field(default=5, le=1000)
+    FINANCE_SUGGESTIONS_TTL_DAYS: PositiveInt = Field(default=7, le=365)
+    FINANCE_SUGGESTIONS_MAX_JOB_AGE_HOURS: PositiveInt = Field(default=24, le=168)
+    FINANCE_SUGGESTIONS_REVIEW_PAGE_SIZE: PositiveInt = Field(default=20, le=100)
+    FINANCE_SUGGESTIONS_TIMEOUT_SECONDS: PositiveFloat = 30
+    FINANCE_SUGGESTIONS_LEASE_SECONDS: PositiveInt = 90
+    FINANCE_SUGGESTIONS_JOB_TIMEOUT_SECONDS: PositiveInt = 120
+    FINANCE_SUGGESTIONS_MAX_ATTEMPTS: PositiveInt = 3
+    FINANCE_SUGGESTIONS_RETRY_INITIAL_SECONDS: PositiveInt = 10
+    FINANCE_SUGGESTIONS_RETRY_LATER_SECONDS: PositiveInt = 60
+    FINANCE_SUGGESTIONS_DISPATCH_BATCH: PositiveInt = Field(default=20, le=100)
+    FINANCE_SUGGESTIONS_UI_POLL_MS: PositiveInt = 2000
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     DOCUMENT_PROCESSING_ACTION_RATE_LIMIT: PositiveInt = 10
@@ -185,6 +208,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
+        if self.FINANCE_SUGGESTIONS_LEASE_SECONDS <= self.FINANCE_SUGGESTIONS_TIMEOUT_SECONDS + 10:
+            raise ValueError("Suggestion lease must exceed provider timeout plus safety margin")
+        if self.FINANCE_SUGGESTIONS_JOB_TIMEOUT_SECONDS <= self.FINANCE_SUGGESTIONS_LEASE_SECONDS:
+            raise ValueError("Suggestion job timeout must exceed lease")
         if len(self.DOCUMENT_RETRY_DELAYS_SECONDS) != self.DOCUMENT_MAX_ATTEMPTS - 1:
             raise ValueError("Retry delay count must equal max attempts minus one")
         if self.DOCUMENT_MAX_BODY_BYTES <= self.DOCUMENT_MAX_FILE_BYTES:

@@ -81,9 +81,19 @@ async def create_transaction(
         .where(FinancialTransaction.id == txn.id)
     )
     created = result.scalar_one()
+    from app.finance.categorization_enrollment import observe_creation_policy
     from app.finance.rule_events import record_new_expense_event
+    from app.finance.suggestion_jobs import record_new_suggestion_intent
 
-    await record_new_expense_event(db, user_id, created)
+    if (
+        created.source == "manual"
+        and created.type == "expense"
+        and not created.is_pending
+        and len(created.postings) == 2
+    ):
+        observation = await observe_creation_policy(db, user_id, created.description)
+        await record_new_expense_event(db, user_id, created, observation=observation)
+        await record_new_suggestion_intent(db, user_id, created, observation)
     return created
 
 

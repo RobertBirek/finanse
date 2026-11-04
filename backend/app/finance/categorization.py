@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import UTC, datetime
+from typing import Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +34,56 @@ from app.finance.models import (
 from app.finance.rule_models import TransactionCategorizationOrigin
 
 ACTION = "apply_expense_categorization"
+
+
+async def _record_human_assignment(
+    db: AsyncSession,
+    ctx: LedgerContext,
+    *,
+    before: CategorizationContext,
+    parts: list[CategorizationPart],
+    origin: Literal["manual", "approved_llm"],
+    proposal_id: uuid.UUID | None = None,
+    approval_receipt_id: uuid.UUID | None = None,
+    approval_snapshot_sha256: str | None = None,
+) -> None:
+    """Private metadata writer; the calling human command proves authority and locks."""
+    if ctx.state is None:
+        ctx.state = TransactionCategorizationState(
+            transaction_id=ctx.txn.id,
+            user_id=ctx.txn.user_id,
+            version=1,
+            source="manual",
+            before_snapshot_sha256=before.context_snapshot,
+            after_snapshot_sha256="0" * 64,
+        )
+        db.add(ctx.state)
+    else:
+        ctx.state.version += 1
+        ctx.state.before_snapshot_sha256 = before.context_snapshot
+    if ctx.origin is None:
+        ctx.origin = TransactionCategorizationOrigin(
+            transaction_id=ctx.txn.id,
+            user_id=ctx.txn.user_id,
+            origin=origin,
+            version=1,
+            assignment_sha256=digest({"parts": normalized_parts(parts)}),
+        )
+        db.add(ctx.origin)
+    else:
+        ctx.origin.version += 1
+    ctx.origin.origin = origin
+    ctx.origin.rule_id = ctx.origin.rule_version = None
+    ctx.origin.proposal_item_id = proposal_id
+    ctx.origin.approval_receipt_id = approval_receipt_id
+    ctx.origin.approval_snapshot_sha256 = approval_snapshot_sha256
+    ctx.origin.assignment_sha256 = digest({"parts": normalized_parts(parts)})
+    if origin == "manual":
+        ctx.origin_grant = None
+    ctx.txn.updated_at = datetime.now(UTC)
+    await db.flush()
+    await db.refresh(ctx.txn, attribute_names=["updated_at"])
+    ctx.state.after_snapshot_sha256 = ctx.snapshot()
 
 
 async def _write_category_parts(
@@ -167,50 +218,18 @@ async def apply_categorization(
         raise CategorizationError(
             "category_snapshot_conflict", "Dane zmieniły się. Zamknij okno i odśwież podział."
         )
-    if not (ctx.state and normalized_parts(before.parts) == normalized_parts(data.parts)):
+    if not (
+        ctx.state
+        and normalized_parts(before.parts) == normalized_parts(data.parts)
+        and (ctx.origin is None or ctx.origin.origin == "manual")
+    ):
         old_postings = [columns(p) for p in ctx.txn.postings]
         await _write_category_parts(db, ctx, data.parts)
-        if ctx.state is None:
-            ctx.state = TransactionCategorizationState(
-                transaction_id=transaction_id,
-                user_id=user_id,
-                version=1,
-                source="manual",
-                before_snapshot_sha256=before.context_snapshot,
-                after_snapshot_sha256="0" * 64,
-            )
-            db.add(ctx.state)
-        else:
-            ctx.state.version += 1
-            ctx.state.before_snapshot_sha256 = before.context_snapshot
-        if ctx.origin is None:
-            ctx.origin = TransactionCategorizationOrigin(
-                transaction_id=transaction_id,
-                user_id=user_id,
-                origin="manual",
-                version=1,
-                assignment_sha256=digest({"parts": normalized_parts(data.parts)}),
-            )
-            db.add(ctx.origin)
-        else:
-            ctx.origin.version += 1
-            ctx.origin.origin = "manual"
-            ctx.origin.rule_id = None
-            ctx.origin.rule_version = None
-            ctx.origin.approval_receipt_id = None
-            ctx.origin.approval_snapshot_sha256 = None
-            ctx.origin.assignment_sha256 = digest({"parts": normalized_parts(data.parts)})
-        ctx.origin_grant = None
-        ctx.txn.updated_at = datetime.now(UTC)
-        await db.flush()
-        await db.refresh(ctx.txn, attribute_names=["updated_at"])
-        # Posting.updated_at is server-generated and expires after a category edit.
-        await db.scalars(
-            select(Posting)
-            .where(Posting.transaction_id == transaction_id)
-            .execution_options(populate_existing=True)
-        )
-        ctx.state.after_snapshot_sha256 = ctx.snapshot()
+        await _record_human_assignment(db, ctx, before=before, parts=data.parts, origin="manual")
+        from app.finance.proposal_state import supersede_pending_proposals
+
+        await supersede_pending_proposals(db, user_id, transaction_id)
+        assert ctx.state is not None
         await log_event(
             db,
             user_id,

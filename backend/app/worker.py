@@ -7,6 +7,7 @@ from typing import ClassVar
 import httpx
 from arq import create_pool, cron
 from arq.connections import ArqRedis, RedisSettings
+from arq.worker import func
 from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,11 +30,21 @@ from app.documents.ocr_pipeline import (
 from app.documents.retry import is_retryable_ocr_error, retry_delay_seconds
 from app.documents.review_service import pending_review_ids, process_review_revision
 from app.documents.schemas import DocumentStatus
+from app.finance.proposal_state import expire_proposal_items
 from app.finance.rule_worker import dispatch_rule_events, process_rule_event
+from app.finance.suggestion_worker import dispatch_suggestion_jobs, process_suggestion_job
 
 logger = logging.getLogger(__name__)
 
 REDIS_SETTINGS = RedisSettings.from_dsn(settings.REDIS_URL)
+
+
+async def expire_category_proposals(ctx) -> None:
+    async with async_session_factory() as db:
+        await expire_proposal_items(
+            db, datetime.now(UTC), limit=settings.FINANCE_SUGGESTIONS_DISPATCH_BATCH
+        )
+        await db.commit()
 
 
 async def enqueue_process_document(document_id: str) -> None:
@@ -316,6 +327,12 @@ class WorkerSettings:
         prepare_document_review,
         process_document_job,
         process_rule_event,
+        func(
+            process_suggestion_job,
+            name="process_suggestion_job",
+            timeout=settings.FINANCE_SUGGESTIONS_JOB_TIMEOUT_SECONDS,
+            max_tries=1,
+        ),
     ]
     redis_settings: ClassVar = REDIS_SETTINGS
     cron_jobs: ClassVar = [
@@ -323,6 +340,8 @@ class WorkerSettings:
         cron(dispatch_pending_document_reviews, second={15, 45}, run_at_startup=True),
         cron(dispatch_document_jobs, second={5, 35}, run_at_startup=True),
         cron(dispatch_rule_events, second={10, 40}, run_at_startup=True),
+        cron(dispatch_suggestion_jobs, second={20, 50}, run_at_startup=True),
+        cron(expire_category_proposals, second={25, 55}, run_at_startup=True),
     ]
     keep_result = 0
     job_timeout = settings.DOCUMENT_JOB_TIMEOUT_SECONDS

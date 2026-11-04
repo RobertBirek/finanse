@@ -14,6 +14,7 @@ from app.finance.bills_router import router as bills_router
 from app.finance.categorization_router import router as categorization_router
 from app.finance.loan_router import router as loan_router
 from app.finance.models import FinancialTransaction, Posting
+from app.finance.proposals_router import router as proposals_router
 from app.finance.rule_origin_reads import attach_assignment_origins
 from app.finance.rule_router import router as rule_router
 from app.finance.schemas import (
@@ -86,6 +87,7 @@ router.include_router(loan_router)
 router.include_router(bills_router)
 router.include_router(categorization_router)
 router.include_router(rule_router)
+router.include_router(proposals_router)
 
 
 @router.post("/accounts", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)

@@ -33,10 +33,14 @@ class RuleApproval(RuleVersion):
     confirm_future_only: StrictBool
 
 
+AssignmentKind = Literal["manual", "approved_rule", "approved_llm"]
+
+
 class AssignmentOrigin(BaseModel):
-    origin: Literal["manual", "approved_rule"]
+    origin: AssignmentKind
     version: int
     rule_id: uuid.UUID | None = None
     rule_version: int | None = None
     display_description: str | None = None
     target_path: str | None = None
+    proposal_item_id: uuid.UUID | None = None
