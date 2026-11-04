@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased, local] — 2026-11-04 — Produkty paragonu 4A odebrane
+
+### Added
+- Po kolejnym „tak” na plan3be47c9: ręczne produkty/rabaty i własne sklepy,
+  immutable rewizje, wskazówki exact/prefix z historii i osobny przegląd podziału płatności.
+- Migracjaa3ffcaf427aa sprawdzona tylko w nowym izolowanym schemacie testowym:
+  sześć tabel bez backfillu, zachowane stare dane/indeksy, odmowa cofnięcia po dodaniu dowodów.
+- Jeden niezależny whole-review i poprawka statusu aktualności dowodu4RED→5GREEN.
+  Pełny gate1506backend/476frontend/lint/types/freshbuild/131E2E+1expectedskip PASS;
+  exactsource/dist/migrationproof PASS, także po commitachbackend09a624d/UI5ea6454.
+- Raport: `docs/audits/2026-11-04-receipt-items-local.md`. Zachowano branch/worktree,
+  niepowiązane Velo/Q7 dirty oraz dawne dowody; nie powtarzać niezmienionego gate.
+- Bez AI/OCR, przetwarzania historii, mainmerge/push i produkcji;4B pozostaje osobne.
+
 ## [Plan] — 2026-11-04 — Ręczne produkty paragonu i historia sklepu, etap 4A
 
 ### Added

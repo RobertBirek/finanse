@@ -3,8 +3,11 @@
 ## Status i zgody
 
 Projekt zatwierdzony przez usera słowem „tak” po commicieb972368 i przedstawieniu pięciu
-wyborów4A. Osobny plan `../plans/2026-11-04-receipt-item-categorization.md` wymaga teraz
-akceptacji przed implementacją. Po lokalnym odbiorze3B user: „ok, działaj dalej”. Doprecyzowania:
+wyborów4A. Osobny plan `../plans/2026-11-04-receipt-item-categorization.md` (3be47c9)
+zatwierdzony kolejnym „tak”;4A odebrane lokalnie:backend09a624d/UI5ea6454,
+1506backend/476frontend/static/build/131E2E+1expectedskip i retainedexactsourceproofPASS.
+Raport `../../audits/2026-11-04-receipt-items-local.md`.4B pozostaje osobne i niegotowe.
+Po lokalnym odbiorze3B user: „ok, działaj dalej”. Doprecyzowania:
 
 - Najtrudniejsze jest dopasowanie produktów do kategorii; dotąd nie było takiej możliwości.
 - Przy skróconej/niejasnej nazwie: „sprawdzaj historię zakupów z tego sklepu i zaproponuj kategorię”.

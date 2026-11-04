@@ -8,6 +8,24 @@
 
 **Tech Stack:** Existing Python3.12+/FastAPI/Pydantic2/asyncSQLAlchemy/PostgreSQL16/Alembic; React18/Vite/TypeScript/Tailwind/TanStackQuery/Zustand. No new runtime dependencies.
 
+## Execution result — 4A local acceptance
+
+Plan3be47c9 approved by the next user “tak”; nativeinline/TDD completed, one independent
+whole-review plus one Important-by-effect fix4RED→5GREEN, no unresolved findings/minors.
+Backend09a624d/UI5ea6454; fullfrozengate1506backend/476frontend/static/freshbuild/
+131E2E+1expectedskipPASS, exactsource/dist/migrationproofretained. No provider/OCR/historybatch/
+production/mainmerge/push.4B remains separate and NOT DONE.
+
+- [x] Task1: six additive evidence tables, DTOs and exact arithmetic; migrationretention/restrictFK/rollbackproof.
+- [x] Task2: explicit own stores, nonmutating contexts, append-only drafts, durable replay and real CSRF.
+- [x] Task3: bounded exact/prefix history, conflict/incomplete signals, sourcehint barriers and human approval.
+- [x] Task4: onefullpayment reviewed split, conserved account/allocations, human origin, rollback and22DBbarriers.
+- [x] Task5: editor/categorysearch/history/rebates/twoconsents, rawamounts/session/unknown/replay,476frontend/4newE2E.
+- [x] Task6: independentreview/fix/fullgate/hashproof/localhandoff; archive own scratch, preserve unrelated Velo/Q7/worktree.
+
+The checklists below retain the approved step-by-step brief; the completion matrix above
+and `docs/audits/2026-11-04-receipt-items-local.md` record the execution/evidence and rulings.
+
 **Spec:** `docs/superpowers/specs/2026-11-04-receipt-item-categorization-design.md`, authorcommitb972368, zatwierdzona przez usera kolejnym „tak” po przedstawieniu4A/4B i pięciu wyborów zakresu. Ten NOWY plan nadal wymaga zatwierdzenia przed kodem/testami/migracją. Baseline3B8a9560f/0347e58/docs0cd6bb1:1406backend/456frontend/lint/types/build/127E2E+1expectedskipPASS, exactsource/dist/migrationproof.
 
 ## Global Constraints

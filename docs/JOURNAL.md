@@ -2,6 +2,45 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — 4A ODEBRANE LOKALNIE; produkty, historia sklepu, podział
+
+- User zatwierdził osobny plan3be47c9 kolejnym „tak”. Wykonanie native inline/TDD,
+  bez nowych podagentów wykonawczych; jeden niezależny whole-review
+  (`ses_e585e723dffeuBe5dgiLRdd7yQ`), read-only całego kandydata tracked+untracked.
+  Zakończony: jednoMinor podniesione doImportant (mylący status aktualności po zmianie
+  nagłówka/sklepu/kategorii),4RED+1controlPASS →5GREEN, static4PASS; bez kolejnego review.
+- Zamrożony pełny gate/build/fullE2E **sh_1a7a782fa001hvL3PHkKLfLag5** zakończony:
+  1506backend (8jawnie odznaczonych proxy, bez skipped),476frontend,4staticchecks,
+  freshbuild i131E2E+1expecteddesktopskip mobileagendacontract PASS.10znanych warnings
+  deprecations backendu i advisorylargechunkbuild; bez nowych zależności lub ukrytychskipów.
+  `verify-final.py verify` potwierdził source/dist/migrationhash, również po commitach.
+  NIE powtarzać niezmienionego godzinnego gate, migracji ani seed.
+- Kod zapisany po pełnym gate: backend09a624d, UI5ea6454. Docs-onlyfinalizacja korzysta
+  z retainedproof, źródła produktu identyczne. Zachować Velo/Q7 dirty i branch/worktree.
+  Nic nie uruchomiono na produkcji/preview, bez providerów/OCR/merge/push.
+- Task1/2 odebrane28/37PASS. Późniejsze focused52PASS obejmuje historie/approval/płatność
+  i18wyścigów: oba porządki draft/approve/store/category/header/unlink/manual/attach_source,
+  dwa apply z tym samym/różnymi kluczami. FinalTask3 19PASS iTask4 37PASS obejmuje także
+  4sourcehintbarriers sourcearchive/newapproval vs targetapproval w obu admissions.
+- Dynamiczne limity wejścia sprawdzane w serwisie dopiero po replay: zmniejszenie limitu
+  nie może unieważnić odczytu starego dowodu ani identycznego receipt; nowe nadmiarowe
+  dane422. Schematy zachowują twarde storagecaps. TestRED→GREEN i35focusedPASS.
+- UI po commandresponse zawsze odczytuje stan kanoniczny, nie reinstaluje historycznej
+  rewizji z replay. Dirtydraft/refetch/session/unknownsamebodykey/hintgeneration testowane.
+  Nowe19RTL/hooks+1CategoryPicker; pełne476frontend/lint/typesPASS. Freshbuild i4E2E
+  desktop1440/mobile375 z dialogAxe, rabatem800/200,7200/1800, oddzielnymi zgodami,
+  hintami i niepewnymapply po zapisie po stronie serwera PASS.
+- Migracjaa3ffcaf427aa wygenerowana raz i próba tylko w receipt_items_stage4a_test
+  w finanse_test. Stare kolumny/wiersze/indeksy/manual/rule/LLM origin/alokacje/audit/receipts
+  zachowane,6pustychtabel, emptyrollback/reupgrade i populatedrefusal PASS. Bajty migracji
+  nadal zgodne z proof; nie powtarzać próby/seed bez zmiany migracji.
+- Dowody/run/verify-final.py/final-proof.json: `/tmp/opencode/receipt-items-20261104/`;
+  własny ledger/briefty archiwizowane tam przy zakończeniu, potem wyłącznie własny scratch
+  usuwany. Raport `docs/audits/2026-11-04-receipt-items-local.md` zawiera wszystkie decyzje
+  wykonawcze z kosztami błędu. Brak deferredminors/niezamkniętych findings.
+- Dalej osobny projekt4B odczytu pozycjiOCR/AI albo etap5 dopasowania płatności, po decyzji
+  użytkownika; nie poszerzać samodzielnie zgód.4A nie zamyka całości etapu4.
+
 ## 2026-11-04 — PLAN4A gotowy; projekt zatwierdzony, wykonanie czeka
 
 - User „tak” po b972368 i przekazaniu dokumentu/5wyborów:4A ręczne produkty przed4B,

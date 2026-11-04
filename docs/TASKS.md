@@ -4,6 +4,14 @@ Backlog zadań ze statusami.
 
 ## Inteligentna kategoryzacja i daty zakupów (2026-11-03, lokalnie)
 
+- [x] Wykonać4A po akceptacji planu3be47c9: ręczne produkty, udziały rabatów,
+  własne sklepy, bounded historia exact/prefix, wyszukiwarka wszystkich kategorii,
+  immutable zatwierdzenia i osobny podział jednej pełnej istniejącej płatnościPLN.
+  Odebrane lokalnie: backend09a624d/UI5ea6454; jeden whole-review, poprawka statusu
+  aktualności dowodu4RED→5GREEN;1506backend/476frontend/static/freshbuild/131E2E+1skipPASS,
+  exactsource/dist/migrationproofPASS. Raport `2026-11-04-receipt-items-local.md`.
+- [ ] Odrębne4B: projekt i zatwierdzany odczyt pozycjiOCR/AI. Nie jest częścią zgody4A.
+
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,
   budżety według zakupu, uzgodnienie banku według księgowania. User po zmianie
@@ -65,8 +73,10 @@ Backlog zadań ze statusami.
   najpierw4A ręczne pozycje/historyhint/discounts/humanapply, potem4B odczyt pozycji.
   Obecny OCR nie ma produktów. Po buildercheck i commicieb972368 user zatwierdził
   dokument i5wyborów „tak”. Plan `2026-11-04-receipt-item-categorization.md` zapisany,
-  sprawdzony względemspec:6zadań/native/TDD/jedno końcowe review. Czeka na akceptację
-  przed kodem/testami/migracją; brak nowej implementacji, providerów/historybatch/produkcji.
+   sprawdzony względemspec:6zadań/native/TDD/jedno końcowe review, zatwierdzony kolejnym„tak”.
+   4A zrealizowane i odebrane lokalnie w09a624d/5ea6454:1506backend/476frontend/131E2E+1skip,
+   static/build/exactsource/dist/migrationproofPASS. Cały etap4 nadal wymaga osobnego4B;
+   bez providerów/historybatch/produkcji. Raport `2026-11-04-receipt-items-local.md`.
 - [ ] Etap5: lepsze dopasowanie dokument↔płatność mimo różnicy dat, bez dublowania.
 - [ ] Etap6: jawne partie wcześniejszych nieskategoryzowanych transakcji, przegląd i odbiór.
 - [ ] Osobna zgoda i procedura przed produkcyjną migracją/wdrożeniem, realnymi AI/OCR
