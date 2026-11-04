@@ -2,9 +2,11 @@
 
 ## Status, zgody i źródła wymagań
 
-**Projekt po buildercheck, do akceptacji; nie plan implementacji.** User na propozycję przygotowania projektu4B
-odpowiedział „tak”. Zgoda dotyczy napisania projektu: bez kodowania, migracji, realnych wywołań
-AI/OCR, aktywacji polityk, wysyłania prywatnych dokumentów ani produkcji.
+**Projekt zatwierdzony; implementacja czeka na osobny plan i jego akceptację.** User najpierw
+odpowiedział „tak” na przygotowanie projektu, a po przekazaniu c147b85 i pięciu decyzji zakresu
+zatwierdził CAŁY projekt kolejnym „tak”. Akceptacja obejmuje opisany wariant na żądanie,
+dodatkowycall, anulowanie przeddispatch i nową zgodę na ponowną płatną próbę. Nie uprawnia
+jeszcze do kodowania, migracji, realnych wywołańAI/OCR, aktywacji lub produkcji.
 
 Zatwierdzony kierunek4A/4B: pozycjom przypisujemy kategorie z pomocą własnej historii jawnie
 wybranego sklepu; bez pomocnej wskazówki dostępna jest pełna lista kategorii z wyszukiwarką.
@@ -311,8 +313,8 @@ zwrotu rezerwacji i bez twierdzenia, że cofnięto eksport.
 ## Builder check i decyzje autora
 
 Readonlybuildercheck `ses_e57fccadfffeJPFI7tUzO5vrP8` zakończony. Trzy pytania:
-1. Czy cały proponowany zakres/on-demand/dodatkowycall został zaakceptowany? Jeszcze nie;
-   to dokładnie przedmiot przekazania TEGO projektu użytkownikowi, nie założenie planu.
+1. Czy cały proponowany zakres/on-demand/dodatkowycall został zaakceptowany? Przy buildercheck
+   jeszcze nie; po przekazaniu c147b85 user potwierdził całość kolejnym„tak”.
 2. Czy i do kiedy anulowanie? Autor rekomenduje jawne anulowanie przeddispatch, odmowę po;
    opisano skutki stanów/rezerwacji/audytu i bariery, do potwierdzenia w pełnym zakresie.
 3. Co oznacza „Ponów” pounknown? Doprecyzowano osobno utraconą odpowiedź startową, statusGET

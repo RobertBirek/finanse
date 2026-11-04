@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Plan] — 2026-11-04 — Odczyt pozycji paragonu 4B
+
+### Added
+- User zatwierdził CAŁY projektc147b85 kolejnym „tak”, w tym odczyt na żądanie jednego
+  zdjęcia, dodatkowy koszt względem nagłówka, cancel przeddispatch i nową zgodę na reread.
+- Plan `docs/superpowers/plans/2026-11-04-receipt-item-extraction.md`:7zadań native/TDD,
+  7addytywnychtabel, strictadapter bezretry, zgoda/polityka/contentstream, jednokrotnydispatch,
+  jawny import/provenance i warningreview, UI oraz końcowy whole-review/frozengate.
+- Self-review autora: zgodnośćspec/interfejsów/5ReviewFocus, konkretne limity i lockgraph.
+  Plan wymaga osobnej akceptacji przed wykonaniem. Kod4A i jego retainedproof bez zmian;
+  bez nowych testów produktu, migracji, AI/OCR lub produkcji.
+
 ## [Design candidate] — 2026-11-04 — Odczyt pozycji paragonu 4B
 
 ### Added

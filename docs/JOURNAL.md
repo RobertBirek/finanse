@@ -2,6 +2,33 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — PLAN4B gotowy; projekt zatwierdzony, wykonanie czeka
+
+- User po c147b85 i przekazaniu5decyzji (jednozdjęcie/on-demand/additionalcall/cancelbefore/
+  noautoresend/twoconsents) zatwierdził CAŁY projekt „tak”. Użyto wyłącznie writing-plans;
+  bez skilli wykonawczych, kodu, migracji, providerów lub prób prywatnych zdjęć.
+- Plan `docs/superpowers/plans/2026-11-04-receipt-item-extraction.md`:7jednostek
+  storage/contracts/config/migration; puretranscription/adapter; consent/policy/start/cancel;
+  worker/quota/recovery; jawny import/lineage/review; UI; jeden whole-review/frozengate/handoff.
+  Tryb nativeinline/TDD zachowany, bez kolejnego wyboru. TENplan czeka na osobną akceptację.
+- Wybrane7nowychtabel: policy, contentstream, job, immutableextraction, usage, reservation,
+  lineageper4Arevision. Żadnych zmian shape/kind starych headerjobs/revisions ani backfillu.
+  Defaultoff, osobneepoch/config z output/inputcaps, SDK/transportretry0; masked/corrected
+  kwoty i warningacks nie dają modelowi uprawnień. Exactintmoney/parser i manual4A zostają.
+- Lockgraph ustalony: optionalcommandkey→readadmission→policy→Document→stream→job→
+  ownerallocation→tree→bill→itemstate/stores. Lifecycleczytaaktywnenowejoby podDocument,
+  nie bierze potemadmission/financegates. Nie dodawaćbill→Document do4Aapproval. Po jawnym
+  imporcie lineagejestdowodem, sourcearchivalniezmuszapłatnegoreread; freshsourcegate naimporcie.
+- Selffixyprzedhandoff: unique(owner,id) dla compositeFK; frozenpayloadcaps wfingerprint
+  zamiastdynamicznychlimitównaodczyciehistorii; konserwatywny edge²pixelbudget z izolowanego
+  normalizatora zamiastnowegodekodera; contextchangedafterHTTP→superseded, nie wiszącyjob;
+  importunknownblokujeparenteditor, samonadejściewynikunienadpisujedirtydraftu.
+- Każdy z5ReviewFocus ma namedtest/assertions w taskmatrix; selekcje guardedtest/check,
+  fixedlimits i wiarygodny oneHTTPtransportcounter, prawdziweDBbarriers obukolejności.
+  Końcowygate dopiero po akceptacji i implementacji, nie powtarzać teraz4A1hbaseline.
+- W tej sesji verifier4A1506backend/476frontend/131E2E+1skip/static/build/exactsourcePASS.
+  Zastane Velo/Q7/branch/worktree/dowody zachowane, aktualizacja wyłącznie dokumentacji.
+
 ## 2026-11-04 — PROJEKT4B: odczyt pozycji obrazu, bez implementacji
 
 - Po lokalnym odbiorze4A user „co proponujesz teraz?”. Rekomendacja:4B odczyt produktów/

@@ -14,8 +14,11 @@ Backlog zadań ze statusami.
   `2026-11-04-receipt-item-extraction-design.md`: odczyt wybranego obrazu na żądanie,
   jednorazowy dispatch/zgoda/limity, immutablepropozycja i jawny import do szkicu4A.
   Buildercheck zakończony: jawne anulowanie tylko przeddispatch i osobna zgoda nowejgeneracji
-  pounknown. Pełny projekt oraz późniejszy plan wymagają osobnych akceptacji.
-  Nie jest to zgoda na kodowanie, realneAI, aktywację lub produkcję.
+  pounknown. Po przekazaniu c147b85 user zatwierdził CAŁY projekt kolejnym„tak”.
+  Plan `2026-11-04-receipt-item-extraction.md` gotowy:7zadań native/TDD, osobnyreadpurpose,
+  contentkey/dispatchmarker/usage/cancel/worker/importlineage/UI, jeden końcowy review.
+  Self-review względemspec i5ReviewFocus zakończony; teraz czeka na akceptację TEGO planu.
+  Nie kodować/migrować ani uruchamiać realnegoAI/aktywacji/produkcji przed kolejnymi zgodami.
 
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,
