@@ -42,8 +42,11 @@ Backlog zadań ze statusami.
   `docs/audits/2026-11-04-approved-categorization-rules-local.md`.
 - [x] Etap3A lokalnie: zatwierdzane reguły dla nowych ręcznych wydatkówPLN,
   technicalmarker/off, immutablegrant/origin/outbox/worker/UI i bezpieczne retry.
-- [ ] Etap3B: osobny plan i realizacja trwałych propozycjiAI, limitów/jobów i ludzkiego
-  przeglądu wybranej partii. Realne providery/AI/historia i produkcja wymagają osobnej zgody.
+- [~] Etap3B: szczegółowy projekt trwałych propozycjiAI, limitów/jobów i ludzkiego
+  przeglądu wybranej partii. User po odbiorze3A: „ok, działaj dalej”. Spec
+  `2026-11-04-reviewed-ai-categorization-design.md` gotowy po read-only buildercheck
+  („nothing important left”). Do zatwierdzenia pełny projekt, potem osobny plan przed kodem.
+  Realne providery/AI/historia i produkcja nadal wymagają osobnej zgody.
 - [ ] Etap4: pozycje paragonów/rabaty/kontrola sum i zatwierdzanie podziału.
 - [ ] Etap5: lepsze dopasowanie dokument↔płatność mimo różnicy dat, bez dublowania.
 - [ ] Etap6: jawne partie wcześniejszych nieskategoryzowanych transakcji, przegląd i odbiór.

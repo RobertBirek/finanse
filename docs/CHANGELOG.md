@@ -2,6 +2,16 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Design] — 2026-11-04 — Propozycje kategorii AI i przegląd, etap 3B
+
+### Added
+- Rozpoczęto szczegółowy projekt3B po zgodzie na dalszy krok: trwałe propozycje,
+  niezależna zgoda na ograniczony kontekst, nowe źródła tylko przez creationhook,
+  quota/dispatch fencing i peritemakceptacja wybranych pozycji po ludzkim przeglądzie.
+- Spisany projekt przeszedł read-only buildercheck bez pytań blokujących; gotowy do
+  akceptacji. To dokumentacja, nie implementacja lub aktywacjaAI: kod3A i produkcja
+  pozostają bez zmian. Spec: `2026-11-04-reviewed-ai-categorization-design.md`.
+
 ## [Unreleased] — 2026-11-04 — Zatwierdzone reguły kategoryzacji, etap 3A lokalnie
 
 ### Added

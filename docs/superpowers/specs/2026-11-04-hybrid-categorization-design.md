@@ -156,7 +156,15 @@ nadpisać wyniku lub nowej rezerwacji.
 
 ## Propozycje i AI, krok 3B
 
-Odrębne batch/items przechowują wersjonowaną propozycję, kontekst wejścia, target,
+Szczegółowy projekt do akceptacji:
+`docs/superpowers/specs/2026-11-04-reviewed-ai-categorization-design.md`.
+Pierwszy3B doprecyzowuje poniższy ogólny zarys: trwały peritem/job/usage, a partia jest
+ograniczoną sekwencjąUI (bez dodatkowej tabeli batch); quota wynika z rezerwacji, bez
+dualcountera. Nowe kategorie są niewykonywalną sugestią do osobnego create + manualapply.
+To decyzje projektowe wykonawcy do akceptacji, nie gotowy kod lub zgoda na providera.
+
+Trwałe items prezentowane w ograniczonych partiach przechowują wersjonowaną propozycję,
+kontekst wejścia, target,
 uzasadnienie, confidence, provider/model/prompt/schema i stan
 pending/approved/rejected/stale/superseded/expired. Brak pasującej reguły nie oznacza
 automatycznego zapisu; pewność jest tylko informacją w przeglądzie.

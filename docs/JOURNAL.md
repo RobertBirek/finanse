@@ -2,6 +2,31 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — PROJEKT3B, propozycjeAI i przegląd wybranych płatności
+
+- Po odbiorze3A backend28ce7f0/UI2b960ee/docsabf65dc user „ok, działaj dalej”. To
+  przejście do projektu3B, nie dodatkowa zgoda na realne providery/historię/produkcję.
+- Hostdocs przeczytane w wymaganej kolejności; nowszy lokalny kontekst potwierdzony.
+  verify-final.pyPASS exact1303backend/439frontend/lint/types/build/111E2E+1skip+2browser.
+  Nie powtarzać suite ani poprzednich migracji/seed. UnrelatedVelo/Q7 pozostają dirty.
+- Spec `docs/superpowers/specs/2026-11-04-reviewed-ai-categorization-design.md`:
+  niezależny opt-inAI/futureonly, policyepochs/defaultoff, creation-only intent bez
+  odblokowywania starego backlogu, boundeddescription/taxonomy z opaquekeys, ścisły
+  structuredoutput bez narzędzi/kwot. Quota rezerwacji i brak retry/refund po uncertain.
+- Builder defaults (nie nowe preferencje usera):5tabel zamiast batch+dualcounter,
+  peritemreceipty i batchUX jako sekwencja skończonego wyboru; approved_llmorigin z
+  faktycznym humanmanualstate; nowe kategorie osobno istniejącym create + manualapply,
+  bez dedykowanego inlinecreate-and-assign w pierwszym3B.
+- Read-only buildercheck spisanego projektu ses_e59d8b4d3ffeBS7Tn33DBmUslJ zakończony:
+  „nothing important left”, bez dodatkowych pytań produktowych. Dopisano jawnie
+  interpretacje wykonawcy: wyłączanie generowania nie blokuje lokalnego review już
+  zapisanych propozycji; marker nie jest targetem; commitdispatch przyjmuje call, więc
+  revoke nie odwoła już przyjętego requestu/zużycia, ale blokuje nową publikację wyniku.
+  Globalpolicylock nie służy do bulkupdate jobów/ledger.
+- Brak zmian backend/frontend/config/bazy i brak instalacji/wywołańAI/OCR. Projekt3B
+  do akceptacji użytkownika; dopiero potem writing-plans i osobna zgoda na pełny plan.
+  Dowód/ledger: `/tmp/opencode/categorization-proposals-design-20261104/`.
+
 ## 2026-11-04 — ZAKOŃCZONE LOKALNIE3A, reguły kategoryzacji
 
 - User zatwierdził pełny plan5e679b5 słowem „tak”. Native inline/TDD w istniejącym
