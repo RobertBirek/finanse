@@ -2,8 +2,9 @@
 
 ## Status i zgody
 
-Projekt do akceptacji, nie zgoda na implementację. Po lokalnym odbiorze3B user:
-„ok, działaj dalej”. Doprecyzowania:
+Projekt zatwierdzony przez usera słowem „tak” po commicieb972368 i przedstawieniu pięciu
+wyborów4A. Osobny plan `../plans/2026-11-04-receipt-item-categorization.md` wymaga teraz
+akceptacji przed implementacją. Po lokalnym odbiorze3B user: „ok, działaj dalej”. Doprecyzowania:
 
 - Najtrudniejsze jest dopasowanie produktów do kategorii; dotąd nie było takiej możliwości.
 - Przy skróconej/niejasnej nazwie: „sprawdzaj historię zakupów z tego sklepu i zaproponuj kategorię”.
@@ -13,11 +14,12 @@ Projekt do akceptacji, nie zgoda na implementację. Po lokalnym odbiorze3B user:
 Fresh buildercheck `ses_e58a87357ffeRN9tjWrIHZ12UA` zakończony. Pytania dotyczą
 potwierdzenia pięciu jawnych decyzji zakresu: ręczne4A przed4B, wybierana tożsamość sklepu,
 jawne udziały rabatów, exact/prefixhistory z konfliktami i dwa zatwierdzenia z singlefull
-allocationgate. Nie utożsamiać tego wyniku z akceptacją użytkownika. Przed planem trzeba
-potwierdzić te propozycje albo zmienić projekt zgodnie z jego odpowiedzią.
+allocationgate. Sam buildercheck nie był akceptacją użytkownika; po przekazaniu dokumentu
+i tych decyzji uzyskano odrębne „tak”, więc stanowią już zatwierdzony zakres projektu.
 
-To wymagania użytkownika. Poniższe ograniczenie pierwszego slice'a, identyfikacja sklepu,
-algorytm dopasowania i szczegóły rabatów to propozycje projektowe autora, nie już uzyskane zgody.
+Powyższe cytaty są wymaganiami użytkownika. Ograniczenie pierwszego slice'a, identyfikacja
+sklepu, algorytm dopasowania i szczegóły rabatów były propozycjami autora, następnie
+zatwierdzonymi razem z dokumentem. Nie rozszerza to zgody na4B/providerów/produkcję.
 Pełny kontrakt nadrzędny: `2026-11-03-smart-categorization-design.md`.
 Baseline3B: backend8a9560f/UI0347e58/docs0cd6bb1;1406backend/456frontend/static/build/
 127E2E+1expectedskip PASS, exactsource/dist/migrationproof zachowane. Nie powtarzać
@@ -297,8 +299,7 @@ kontrakcie i bez nowych runtimepackages. Nie należą do niego zmiana zakresu4A/
 domyślnegooff, autoapprove, globalnego sklepu, wyliczanie rabatów za użytkownika lub
 zniesienie ochrony importów.
 
-Projekt przeszedł jeden fresh buildercheck; pięć zaproponowanych decyzji zakresu zostaje
-przekazanych userowi razem do akceptacji. Dopiero jego akceptacja prowadzi do osobnego
-szczegółowego planu4A; plan także przedstawiamy do
-akceptacji przed kodem/testami/migracją. Realny odczyt pozycji4B ma odrębny projekt,
+Projekt przeszedł jeden fresh buildercheck; pięć zaproponowanych decyzji zakresu zostało
+zatwierdzonych przez usera. Szczegółowy plan4A jest zapisany i czeka na osobną akceptację
+przed kodem/testami/migracją. Realny odczyt pozycji4B ma odrębny projekt,
 zgody/koszty/dispatch i odbiór. Żadne zdanie tego projektu nie uruchamia przetwarzania.

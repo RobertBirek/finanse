@@ -56,8 +56,9 @@ iteracyjną, nie wdrożenie, produkcyjną migrację, kosztowne realne AI lub zmi
 
 Etapy1/2 oraz3A/3B ukończono lokalnie, bez wdrożenia; odbiór3B8a9560f/0347e58/0cd6bb1.
 Aktualna jednostka to projekt etapu4 (`2026-11-04-receipt-item-categorization-design.md`)
-z historią produktów sklepu i wyszukiwaną listą kategorii. Rekomendowane4A ręczne/4B odczyt
-wymaga akceptacji użytkownika; etapy4–6 nie są gotowe po samych datach/splitach/propozycjach.
+z historią produktów sklepu i wyszukiwaną listą kategorii.4A ręczne/4B odczyt zatwierdzone
+przez usera „tak” po b972368; szczegółowy plan4A wymaga osobnej akceptacji przed kodem.
+Etapy4–6 nie są gotowe po samych datach/splitach/propozycjach.
 Dalsza realizacja opiera się na tym kontrakcie;
 kolejne wydania wymagają własnego odbioru i osobnej zgody.
 

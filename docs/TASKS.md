@@ -63,9 +63,10 @@ Backlog zadań ze statusami.
   filtrującą nazwy podczas pisania. Makieta odrzucona jako zbędna. Spec
   `2026-11-04-receipt-item-categorization-design.md` po buildercheck; rekomendacja autora:
   najpierw4A ręczne pozycje/historyhint/discounts/humanapply, potem4B odczyt pozycji.
-  Obecny OCR nie ma produktów. Buildercheck pyta o potwierdzenie5jawnych wyborów zakresu,
-  nie daje zgody na kod. Projekt/etapowanie i późniejszy plan wymagają akceptacji;
-  brak nowej implementacji, migracji, providerów, historybatch lub produkcji.
+  Obecny OCR nie ma produktów. Po buildercheck i commicieb972368 user zatwierdził
+  dokument i5wyborów „tak”. Plan `2026-11-04-receipt-item-categorization.md` zapisany,
+  sprawdzony względemspec:6zadań/native/TDD/jedno końcowe review. Czeka na akceptację
+  przed kodem/testami/migracją; brak nowej implementacji, providerów/historybatch/produkcji.
 - [ ] Etap5: lepsze dopasowanie dokument↔płatność mimo różnicy dat, bez dublowania.
 - [ ] Etap6: jawne partie wcześniejszych nieskategoryzowanych transakcji, przegląd i odbiór.
 - [ ] Osobna zgoda i procedura przed produkcyjną migracją/wdrożeniem, realnymi AI/OCR

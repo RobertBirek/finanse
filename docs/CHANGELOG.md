@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Plan] — 2026-11-04 — Ręczne produkty paragonu i historia sklepu, etap 4A
+
+### Added
+- User zatwierdził projektb972368 słowem „tak”, w tym ręczne4A przed odczytem4B,
+  jawny wybór sklepu, udziały rabatów i dwa osobne zatwierdzenia.
+- Plan `docs/superpowers/plans/2026-11-04-receipt-item-categorization.md`:6zadań,
+  native/TDD i jedno końcowe whole-review;6nowych tabel, kontrolowany odczyt historii,
+  humanapply jednej całej płatnościPLN, UI wyszukiwanej listy kategorii. Samodzielny
+  self-review planu względem zatwierdzonej specyfikacji; bez kolejnego review projektu.
+- Plan czeka na akceptację przed kodem/testami/migracją. Źródła3B i retainedproof bez
+  zmian; nie uruchomiono providerów/OCR, historii lub produkcji.
+
 ## [Design candidate] — 2026-11-04 — Produkty paragonu i historia sklepu, etap 4
 
 ### Added

@@ -2,6 +2,34 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — PLAN4A gotowy; projekt zatwierdzony, wykonanie czeka
+
+- User „tak” po b972368 i przekazaniu dokumentu/5wyborów:4A ręczne produkty przed4B,
+  jawny własny sklep, rabaty z udziałami, exact/prefixhistoria z konfliktem, oddzielne
+  zatwierdzenie pozycji i podział tylko jednej całej płatnościPLN. To akceptacja projektu,
+  nie jeszcze osobnego planu. Zastosowano writing-plans, bez skillu implementacyjnego.
+- Plan `docs/superpowers/plans/2026-11-04-receipt-item-categorization.md`,6zadań:
+  storage/math/migration; sklepy/draft; historia/approveditems; paymentpreview/apply;
+  UI; jeden whole-review/finalproof. Native/TDD zachowane bez ponownego wyboru trybu.
+- Decyzje konkretne:6nowych tabel, immutable rewizje/wiersze/rabaty/udziały i mutablehead;
+  pointer lastapply dofinance receipt, nie równoległa suma. Historyhint rewalidowany do
+  zatwierdzenia docelowych pozycji; potem dowód immutable, bez rekursywnego unieważniania.
+  Headerhash wyłącza version/timestampsnoise: allocation/attachsourcebill.version++ nie
+  wymagają ponownego rozpoznania produktów, ale preview jest zawsze na pełnej bieżącej wersji.
+- Graf locków jawny:command→ownerallocation→tree→bill→head→stores→existingledgerorder;
+  4A nie blokujeDocument/source, więc nie odwraca attach_source Document→bill.
+  `_bill` wymaga populate_existing po locku; rzeczywiste wyścigi obu admissions wplanie.
+- CategoryPicker domyślniebez zmian;4A wyłącza zachowanie selectedoption poza filtrem,
+  pokazując wybraną kategorię oddzielnie. HistoryGET na świadome żądanie, nie na każdy
+  znak kategorii. UI edits/unknown/session/refetch mają osobne testy i zachowane intencje.
+- Self-review autora (bez subagentaplanreview): pokrycie10sekcji/spec,6interfaces,
+  5ReviewFocusprzypisanych testom, boundedhistoria i niezerowe kwoty, stare writer/protection
+  bez poszerzeniaActual, rollback/retention/migrationhash. Aktualizacja docs-only; kod,
+  konfiguracja i migracje3B niezmienione. Nie uruchamiać godzinnego baseline ponownie.
+- Następnie czekać na akceptację TEGO planu, dopiero potem executing-plans/TDD w tym
+  worktree. Tylko synthetic/localtests, bez providerów/OCR/produkcji/merge/push/historybatch.
+  Zachować Velo/Q7 i3Bproof `/tmp/opencode/category-proposals-20261104/`.
+
 ## 2026-11-04 — PROJEKT etapu4: pozycje paragonu i historia sklepu
 
 - Po lokalnym odbiorze3B user „ok, działaj dalej”. Brainstorming: trudność to dopasowanie
