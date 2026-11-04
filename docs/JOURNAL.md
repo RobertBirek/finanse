@@ -2,6 +2,37 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — PROJEKT4B: odczyt pozycji obrazu, bez implementacji
+
+- Po lokalnym odbiorze4A user „co proponujesz teraz?”. Rekomendacja:4B odczyt produktów/
+  rabatów zdjęcia, historia4A podpowiada kategorie, kontrola sum i dwa zatwierdzenia bez zmian.
+  User „tak” na PRZYGOTOWANIE PROJEKTU, nie implementację, plan, wywołanieAI ani wdrożenie.
+- Wznowiono brainstorming/session-workflow; przeczytano wymaganehostdocs, lokalny kontekst,
+  obecne DocumentProcessingJob/ExtractionRevision/headerclient, normalizator i źródła4A.
+  Ponieważ kindjob/revisions dotyczą nagłówka, propozycja produktów ma oddzielny cel i modele,
+  bez rozszerzenia starychpayloadów po cichu. Nie uruchamiano providerów lub migracji.
+- Kandydat `docs/superpowers/specs/2026-11-04-receipt-item-extraction-design.md`:
+  singleimageJPEG/PNG/HEIF, jawny wybór już dołączonego source, zgoda na całyobraz,
+  nowe immutablewyniki i provenance w szkicu4A, brak automerge/categories/modelauthority.
+  At-most-oneattempt po trwałej rezerwacji/dispatch, noSDKretry, unknownterminal dla wysyłki;
+  ewentualny nowy płatny odczyt wyłącznie jako nowageneracja z ponowną zgodą.
+- Rekomendacja autora na pierwszy4B: on-demand zamiast zmiany automatycznego headerupload.
+  Jawny koszt: nagłówek już odczytany przez vision nie ma produktów, więc ten odczyt produktów
+  może kosztować dodatkowe wywołanie. Wspólny przyszły header+items to alternatywa wymagająca
+  szerszej zmiany obecnej polityki; decyzja do odbioru projektu, nie ukryte wcześniejsze wymaganie.
+- Buildercheck readonly `ses_e57fccadfffeJPFI7tUzO5vrP8` zakończony:3pytania. Akceptacja
+  całości projektu/on-demand/dodatkowegocallu nadal do usera. Autor doprecyzował rekomendację
+  anulowania przeddispatch (0HTTP/0płatnejrezerwacji), odmowy po (bez fikcyjnego cofnięcia
+  bajtów) oraz ścisłego oddzielenia replayutraconegostartu, statusGET i nowejpłatnejgeneracji.
+  Gotowy wynik można użyć po wyłączeniu polityki bez nowegoexportu; inflightzmianaepoch
+  nie daje prawa przyjęcia spóźnionej odpowiedzi. Nie robiono drugiego builderchecka.
+- Następnie przedstawić dokument i najważniejsze proponowane decyzje w jednej wiadomości,
+  poprosić o akceptację CAŁEGO projektu. Dopiero po niej writing-plans; nie kodować/migrować
+  na podstawie zgody na przygotowanie projektu. Późniejszy plan wymaga osobnej akceptacji.
+- Przed pracą `verify-final.py verify`4A PASS1506backend/476frontend/131E2E+1expectedskip/
+  static/build/source/dist/migrationhash. Wyłącznie docs; nie powtarzać niezmienionegogate.
+  Zachować c46be4d, branch/worktree, Velo/Q7 dirty i wszystkie dotychczasowe dowody.
+
 ## 2026-11-04 — 4A ODEBRANE LOKALNIE; produkty, historia sklepu, podział
 
 - User zatwierdził osobny plan3be47c9 kolejnym „tak”. Wykonanie native inline/TDD,

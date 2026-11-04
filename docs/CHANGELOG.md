@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Design candidate] — 2026-11-04 — Odczyt pozycji paragonu 4B
+
+### Added
+- Po rekomendacji następnego kroku user zatwierdził przygotowanie projektu4B („tak”),
+  nie implementację lub wywołania modelu. Projekt odczytu jednego wybranego obrazu,
+  propozycji produktów/rabatów i jawnego przeniesienia do nowego szkicu4A.
+- Oddzielna zgoda celu eksportu, limity i trwały znacznik pojedynczego dispatchu;
+  unknown po wysłaniu nie uruchamia automatycznego ponowienia. Dwa zatwierdzenia4A zachowane.
+- Wariant na żądanie może oznaczać dodatkowe płatne wywołanie względem obecnego odczytu
+  nagłówka; kompromis oznaczony jako propozycja do potwierdzenia. Buildercheck zakończony:
+  doprecyzowano cancel przeddispatch/odmowę po i oddzielne status/replay/nowąpłatnągenerację.
+- Projekt czeka na akceptację całego opisanego zakresu; dopiero potem osobny plan.
+- Bez zmian kodu/testów/migracji/AI/OCR/produkcji; retainedexactsource4A pozostaje zgodny.
+
 ## [Unreleased, local] — 2026-11-04 — Produkty paragonu 4A odebrane
 
 ### Added

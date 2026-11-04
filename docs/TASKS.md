@@ -10,7 +10,12 @@ Backlog zadań ze statusami.
   Odebrane lokalnie: backend09a624d/UI5ea6454; jeden whole-review, poprawka statusu
   aktualności dowodu4RED→5GREEN;1506backend/476frontend/static/freshbuild/131E2E+1skipPASS,
   exactsource/dist/migrationproofPASS. Raport `2026-11-04-receipt-items-local.md`.
-- [ ] Odrębne4B: projekt i zatwierdzany odczyt pozycjiOCR/AI. Nie jest częścią zgody4A.
+- [~] Odrębne4B: user „tak” na przygotowanie projektu po rekomendacji następnego kroku.
+  `2026-11-04-receipt-item-extraction-design.md`: odczyt wybranego obrazu na żądanie,
+  jednorazowy dispatch/zgoda/limity, immutablepropozycja i jawny import do szkicu4A.
+  Buildercheck zakończony: jawne anulowanie tylko przeddispatch i osobna zgoda nowejgeneracji
+  pounknown. Pełny projekt oraz późniejszy plan wymagają osobnych akceptacji.
+  Nie jest to zgoda na kodowanie, realneAI, aktywację lub produkcję.
 
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,
