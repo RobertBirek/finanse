@@ -2,6 +2,26 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — PLAN3B zapisany, oczekuje akceptacji
+
+- User „tak” po projekcie2dc69c4 zatwierdza spec3B i przygotowanie szczegółowego planu,
+  nie jeszcze niepokazany plan kodowania. Zmieniono wyłącznie dokumentację.
+- Plan `docs/superpowers/plans/2026-11-04-reviewed-ai-categorization.md`:5zależnych
+  zadań (consent/storage, creation/dispatch/usage, humanreview, UI, odbiór). Zachowany
+  native inline/TDD i jeden końcowy niezależny whole-review, bez par agentów perzadanie.
+- Self-review względem spec obejmuje niezależne rulesoff/AIon, sharedMVCC observation,
+  quota/version/lease fencing, niepewny commit bez calla, późne usage bez publikacji,
+  pełny taxonomyhash, manualoverride oraz immutable peritemretry/sessionfences.
+- Snapshotv3 ma zachować kompletne v2 zdarzenia3A wyłącznie przy niezmienionym źródle,
+  braku state/origin i wszystkich aktualnych grantach; nie akceptuje dawnych preview.
+  ARQ func timeout/max_tries sprawdzone read-only; recovery pozostaje w DB, bez drugiej
+  płatnej wysyłki. Migracja raz w nowym ownedschema, proof wiązany z końcowym hashem.
+- Brak zmian backend/frontend/config/DB, wywołańAI/OCR, aktywacji lub działań produkcyjnych.
+  git diff --check i kontrola struktury planu PASS; verify-final.py potwierdził niezmienione
+  źródła/dist/migrację i zachowane wyniki gate3A, bez ponownego uruchamiania testów.
+  Nie powtarzać pełnego gate3A dla dokumentacji; zachować dirtyVelo/Q7. Następny krok:
+  pokazać plan i uzyskać akceptację, dopiero potem executing-plans i lokalne fake-onlyTDD.
+
 ## 2026-11-04 — PROJEKT3B, propozycjeAI i przegląd wybranych płatności
 
 - Po odbiorze3A backend28ce7f0/UI2b960ee/docsabf65dc user „ok, działaj dalej”. To

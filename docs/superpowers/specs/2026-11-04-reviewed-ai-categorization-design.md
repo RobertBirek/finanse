@@ -2,9 +2,10 @@
 
 ## Status, intencja i zgody
 
-Projekt sprawdzony przez buildera, do zatwierdzenia przez użytkownika. „ok, działaj
-dalej” po odbiorze3A rozpoczyna projekt3B, nie uruchamia jeszcze providera ani kodowania
-według niepokazanego planu. Baseline: backend28ce7f0/UI2b960ee/docsabf65dc, zweryfikowane
+Projekt sprawdzony przez buildera i zatwierdzony przez użytkownika słowem „tak” po
+commicie2dc69c4. Osobny plan `../plans/2026-11-04-reviewed-ai-categorization.md`
+oczekuje akceptacji przed implementacją. Zgoda na projekt nie uruchamia providera ani
+kodowania według niezatwierdzonego planu. Baseline: backend28ce7f0/UI2b960ee/docsabf65dc, zweryfikowane
 1303backend/439frontend/lint/types/build/111E2E+1expectedskip i2browseroriginPASS.
 
 Użytkownik chce mniej ręcznego kategoryzowania bez oddawania modelowi kontroli nad
@@ -16,7 +17,7 @@ manualne decyzje mają pierwszeństwo. PostgreSQL pozostaje jedynym źródłem p
 Ten dokument doprecyzowuje3B z `2026-11-04-hybrid-categorization-design.md`.
 Kod3A nie jest ponownie implementowany lub wydawany. Brak zgody na realne AI/OCR,
 aktywację modeli, historybatch, produkcyjną migrację/wdrożenie, mainmerge lub push.
-Po akceptacji projektu powstanie osobny szczegółowy plan realizacji.
+Osobny szczegółowy plan realizacji jest zapisany i wymaga własnego zatwierdzenia.
 
 ## Cel i twarde granice pierwszego3B
 
@@ -267,4 +268,4 @@ spisanego projektu i reuse aktualnego kodu zakończony: „nothing important lef
 dodatkowej rundy pytań produktowych. Po checku dopisano jawne interpretacje wykonawcze:
 oddzielenie revokegenerowania od lokalnego review, marker nie jest targetem, liniowy
 punkt dispatch oraz brak bulkjobmutation pod globalpolicylockiem. Przed kodem potrzebne
-są akceptacja tego projektu i następnie zatwierdzenie szczegółowego planu.
+jest zatwierdzenie szczegółowego planu; akceptacja projektu została już uzyskana.

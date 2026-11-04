@@ -45,7 +45,9 @@ Backlog zadań ze statusami.
 - [~] Etap3B: szczegółowy projekt trwałych propozycjiAI, limitów/jobów i ludzkiego
   przeglądu wybranej partii. User po odbiorze3A: „ok, działaj dalej”. Spec
   `2026-11-04-reviewed-ai-categorization-design.md` gotowy po read-only buildercheck
-  („nothing important left”). Do zatwierdzenia pełny projekt, potem osobny plan przed kodem.
+  („nothing important left”), zatwierdzony słowem „tak” po2dc69c4. Plan
+  `docs/superpowers/plans/2026-11-04-reviewed-ai-categorization.md` zapisany i sprawdzony
+  względem spec:5zadań, native/TDD i jeden końcowy review. Czeka na akceptację przed kodem.
   Realne providery/AI/historia i produkcja nadal wymagają osobnej zgody.
 - [ ] Etap4: pozycje paragonów/rabaty/kontrola sum i zatwierdzanie podziału.
 - [ ] Etap5: lepsze dopasowanie dokument↔płatność mimo różnicy dat, bez dublowania.

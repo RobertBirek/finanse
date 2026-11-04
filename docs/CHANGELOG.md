@@ -8,9 +8,14 @@ Wszystkie istotne zmiany w projekcie.
 - Rozpoczęto szczegółowy projekt3B po zgodzie na dalszy krok: trwałe propozycje,
   niezależna zgoda na ograniczony kontekst, nowe źródła tylko przez creationhook,
   quota/dispatch fencing i peritemakceptacja wybranych pozycji po ludzkim przeglądzie.
-- Spisany projekt przeszedł read-only buildercheck bez pytań blokujących; gotowy do
-  akceptacji. To dokumentacja, nie implementacja lub aktywacjaAI: kod3A i produkcja
-  pozostają bez zmian. Spec: `2026-11-04-reviewed-ai-categorization-design.md`.
+- Spisany projekt przeszedł read-only buildercheck bez pytań blokujących i został
+  zaakceptowany słowem „tak”. Szczegółowy plan pięciu etapów zapisano w
+  `docs/superpowers/plans/2026-11-04-reviewed-ai-categorization.md`; wymaga akceptacji
+  przed kodem. Zachowany native/TDD i jeden końcowy niezależny review.
+- Plan rozdziela zgodę na generowanie od ludzkiego zatwierdzenia, księgowanie usage
+  od publikacji wyniku i zamrożony wybór UI od bieżącego cache. Uwzględnia zgodność
+  istniejących zdarzeń3A przy snapshotv3 oraz brak ponownej wysyłki po uncertain.
+  To wyłącznie dokumentacja, nie implementacja/aktywacjaAI: kod3A i produkcja bez zmian.
 
 ## [Unreleased] — 2026-11-04 — Zatwierdzone reguły kategoryzacji, etap 3A lokalnie
 
