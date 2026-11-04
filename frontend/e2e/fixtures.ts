@@ -123,6 +123,44 @@ export async function fixtures(
       };
     else if (url.pathname === "/api/finance/categorization/events")
       body = { events: [], poll_after_ms: 2000 };
+    else if (
+      url.pathname === "/api/finance/categorization/suggestions/activity"
+    )
+      body = { active_jobs: [], recent_outcomes: [], poll_after_ms: 2000 };
+    else if (
+      url.pathname === "/api/finance/categorization/suggestions/settings"
+    )
+      body = {
+        version: 0,
+        enabled: false,
+        effective_enabled: false,
+        available: false,
+        blocked_reason: "server_unavailable",
+        server_epoch: 0,
+        configuration_fingerprint: null,
+        daily_call_limit: 5,
+        max_description_chars: 500,
+        max_categories: 200,
+        review_page_size: 20,
+        privacy_text:
+          "Opis i własny katalog kategorii; zgoda tylko na przyszłe wydatki.",
+      };
+    else if (url.pathname === "/api/finance/categorization/suggestions/usage")
+      body = {
+        usage_date: "2026-11-04",
+        limit: 5,
+        held: 0,
+        dispatched: 0,
+        known: 0,
+        unknown: 0,
+        released: 0,
+        remaining_slots: 5,
+        known_input_tokens: null,
+        known_output_tokens: null,
+        cost_status: "unpriced",
+      };
+    else if (url.pathname === "/api/finance/categorization/proposals")
+      body = { items: [], next_cursor: null, page_size: 20 };
     else if (url.pathname === "/api/finance/accounts") body = [account];
     else if (url.pathname === "/api/finance/categories") body = [];
     else if (url.pathname === "/api/finance/transactions") body = [transaction];

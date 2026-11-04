@@ -1,6 +1,7 @@
 import { NavLink, useInRouterContext, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { RuleEventWatcher } from "./RuleEventWatcher";
+import { SuggestionActivityWatcher } from "./SuggestionActivityWatcher";
 import { financePeriodSearch, periodFromSearch } from "./useFinancePeriod";
 
 const tabs = [
@@ -9,6 +10,7 @@ const tabs = [
   ["/finances/budgets", "Budżet", false],
   ["/finances/cashflow", "Nadchodzące", false],
   ["/finances/documents", "Dokumenty", false],
+  ["/finances/proposals", "Propozycje", false],
   ["/finances/reports", "Raporty", false],
 ] as const;
 
@@ -20,6 +22,7 @@ export function FinanceTabs() {
   return (
     <>
       {authenticated ? <RuleEventWatcher /> : null}
+      {authenticated ? <SuggestionActivityWatcher /> : null}
       {inRouter ? <FinanceTabLinks /> : <FinanceTabLabels />}
     </>
   );

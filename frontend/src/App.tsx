@@ -22,6 +22,7 @@ import { FinanceSettings } from "./pages/FinanceSettings";
 import { FinanceCategorizationSettings } from "./pages/FinanceCategorizationSettings";
 import { FinanceLoans } from "./pages/FinanceLoans";
 import { FinanceDocuments } from "./pages/FinanceDocuments";
+import { FinanceCategoryProposals } from "./pages/FinanceCategoryProposals";
 
 export default function App() {
   const fetchUser = useAuthStore((s) => s.fetchUser);
@@ -65,6 +66,10 @@ export default function App() {
         />
         <Route path="/finances/reports" element={<FinanceReports />} />
         <Route path="/finances/documents" element={<FinanceDocuments />} />
+        <Route
+          path="/finances/proposals"
+          element={<FinanceCategoryProposals />}
+        />
         <Route path="/advisor" element={<Advisor />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/settings" element={<Settings />} />

@@ -14,6 +14,7 @@ import { QueryFeedback } from "../components/QueryFeedback";
 import { useAuthStore } from "../stores/authStore";
 import api from "../lib/api";
 import { categoryPath } from "../lib/categories";
+import { SuggestionSettings } from "../components/finance/SuggestionSettings";
 
 function MarkerSettings({ snapshot }: { snapshot: RuleSettings }) {
   const [session] = useState(() => useAuthStore.getState().sessionVersion);
@@ -224,8 +225,9 @@ export function FinanceCategorizationSettings() {
         <h1 className="text-xl font-semibold">Kategoryzacja</h1>
         <p className="mt-2 text-sm text-gray-400">
           Zatwierdzone reguły dla przyszłych ręcznych wydatków PLN. Importy
-          Actual, dokumenty i historia nie są automatycznie zmieniane. Bez
-          wywołań AI.
+          Actual, dokumenty i historia nie są automatycznie zmieniane. Reguły
+          nie wywołują AI; propozycje mają osobną zgodę i wymagają Twojego
+          przeglądu.
         </p>
       </header>
       <QueryFeedback
@@ -241,6 +243,7 @@ export function FinanceCategorizationSettings() {
           <MarkerSettings key={session} snapshot={settings.data} />
         ) : null}
       </QueryFeedback>
+      <SuggestionSettings />
       <section className="card space-y-4" aria-label="Reguły kategoryzacji">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Reguły</h2>

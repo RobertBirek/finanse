@@ -8,12 +8,13 @@ export interface CategoryPart {
   amount_minor: number;
 }
 export interface AssignmentOrigin {
-  origin: "manual" | "approved_rule";
+  origin: "manual" | "approved_rule" | "approved_llm";
   version: number;
   rule_id?: string | null;
   rule_version?: number | null;
   display_description?: string | null;
   target_path?: string | null;
+  proposal_item_id?: string | null;
 }
 export interface CategorizationContext {
   transaction_id: string;
@@ -99,6 +100,7 @@ export function useApplyCategorization(id?: string) {
           queryKey: ["finance", "categorization"],
         });
         queryClient.invalidateQueries({ queryKey: ["finance", "bills"] });
+        queryClient.invalidateQueries({ queryKey: ["finance", "proposals"] });
       }
     },
   });

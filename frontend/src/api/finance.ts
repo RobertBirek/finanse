@@ -690,6 +690,9 @@ export function useCreateTransaction() {
       if (context?.session !== useAuthStore.getState().sessionVersion) return;
       invalidateFinanceLedger(queryClient);
       queryClient.invalidateQueries({ queryKey: ["finance", "rule-events"] });
+      queryClient.invalidateQueries({
+        queryKey: ["finance", "suggestion-activity"],
+      });
     },
   });
 }
