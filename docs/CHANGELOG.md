@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Design candidate] — 2026-11-04 — Produkty paragonu i historia sklepu, etap 4
+
+### Added
+- Doprecyzowany przez użytkownika kierunek: proponować kategorię produktu na podstawie
+  własnych zakupów z tego sklepu; przy braku wskazówki pokazywać pełną listę kategorii
+  z wyszukiwarką zawężającą wyniki podczas pisania. Makieta nie jest potrzebna.
+- Projekt etapowania:4A ręczne pozycje/rabaty, zatwierdzona historia produktów i osobny
+  preview/apply kategorii istniejącej całej płatnościPLN;4B oddzielny odczyt pozycjiOCR/AI.
+  Ten podział jest rekomendacją autora do akceptacji, nie już zatwierdzonym zakresem.
+- Projekt `docs/superpowers/specs/2026-11-04-receipt-item-categorization-design.md`
+  po buildercheck: do potwierdzenia5decyzji zakresu, w tym ręczne4A przed odczytem4B.
+  Brak nowych zmian aplikacji, testów produktu, migracji, wywołań
+  providerów albo produkcji. Pełny odbiór3B pozostaje dowodem niezmienionego baseline.
+
 ## [Unreleased] — 2026-11-04 — Propozycje kategorii AI, etap 3B ukończony lokalnie
 
 ### Added

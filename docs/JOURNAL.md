@@ -2,6 +2,38 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — PROJEKT etapu4: pozycje paragonu i historia sklepu
+
+- Po lokalnym odbiorze3B user „ok, działaj dalej”. Brainstorming: trudność to dopasowanie
+  produktów do kategorii; przy niejasnej nazwie używać historii zakupów tego sklepu i
+  proponować kategorię. Gdy brak wskazówki: wszystkie kategorie. User odmówił makiety:
+  lista z wyszukiwarką zawężającą nazwy podczas pisania, nie sam autocomplete z domysłem.
+- Read-only rozpoznanie: ReviewFields/VisionFields mają tylko nagłówek/total; brak pozycji.
+  FinancialDocument+Source są kanonicznym dokumentem, Allocation dotyczy accountposting.
+  Stage2/3B writer/manualstate, receipt i categorytree/allocationlocks do ponownego użycia;
+  CategoryPicker już wyszukuje ścieżki, lecz selectedoption poza filtrem wymaga uwagi.
+- Projekt `docs/superpowers/specs/2026-11-04-receipt-item-categorization-design.md`.
+  Rekomendacja autora, NIE decyzja usera:4A użyteczny pionowy slice ręcznych pozycji/
+  jawnych rabatów, własnego sklepu i historyhint, approvedrevision oraz osobnego exact
+  paymentpreview/apply;4B oddzielne rozpoznawanie produktów i własne zgody/limity/calljob.
+  Nie ukrywać, że4A nie odczyta produktów automatycznie; całość4 niegotowa po4A.
+- Historyhint deterministyczny, tylko inne aktualne zatwierdzone własne paragony tego
+  sklepu, exact→jawny słabszyprefix, konflikty nie rozstrzygają się automatycznie.
+  Bez równoległej bazy „uczenia”, globalnych produktów lub utożsamiania sklepów po nazwie.
+  Niedopasowane/niepełne/błędne wyniki nie blokują ręcznej listy kategorii.
+- Jeden read-only buildercheck `ses_e58a87357ffeRN9tjWrIHZ12UA` zakończony, bez kolejnego
+  review.5pytań to zatwierdzenie jawnych propozycji: manual4A przed4B; własny wybierany
+  sklep bez autofuzzymerge; ręczne udziały rabatów; exact/prefixhistoria i konflikt;
+  osobno approveditems oraz humanapply tylko singlefullallocation. Nie zamieniać tych
+  rekomendacji w rzekome ustaleniausera. Zebrane razem przy przekazaniu projektu do
+  akceptacji, bez5osobnych rund pytań. Dopiero zatwierdzenie projektu uruchamia writing-plans,
+  potem osobna akceptacja planu przed implementacją.
+- Kod3B/konfiguracja/migracje bez zmian, bez providerów/OCR/historii/produkcji. Zachować
+  baseline proof `/tmp/opencode/category-proposals-20261104/final-proof.json`, Velo/Q7,
+  branch/worktree. Sesja projektowa nie wymaga ponownej godzinnej pełnej suite.
+  Świeży verify-final.py verify potwierdził exactsource backend1406/frontend456/static/
+  build/E2E127+1expectedskip i retentionproof3B; nowy diff wyłącznie własne docs.
+
 ## 2026-11-04 — ZAKOŃCZONE LOKALNIE3B; review i pełny końcowy gate PASS
 
 - User zatwierdził planbecb54c słowem „tak”. Native inline/TDD w tym samym linked

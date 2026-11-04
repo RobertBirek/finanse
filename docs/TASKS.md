@@ -57,7 +57,15 @@ Backlog zadań ze statusami.
   dist/migrationproofPASS. Backend8a9560f/UI0347e58; raport
   `docs/audits/2026-11-04-reviewed-ai-categorization-local.md`.
   Realne providery/AI/historia i produkcja nadal wymagają osobnej zgody.
-- [ ] Etap4: pozycje paragonów/rabaty/kontrola sum i zatwierdzanie podziału.
+- [~] Etap4: projekt pozycji paragonów/rabatów/kontroli sum i zatwierdzania podziału.
+  User po odbiorze3B: „ok, działaj dalej”; najtrudniejsze dopasowanie produktów do
+  kategorii. Wskazówka z historii zakupów tego sklepu; bez niej pełna lista z wyszukiwarką
+  filtrującą nazwy podczas pisania. Makieta odrzucona jako zbędna. Spec
+  `2026-11-04-receipt-item-categorization-design.md` po buildercheck; rekomendacja autora:
+  najpierw4A ręczne pozycje/historyhint/discounts/humanapply, potem4B odczyt pozycji.
+  Obecny OCR nie ma produktów. Buildercheck pyta o potwierdzenie5jawnych wyborów zakresu,
+  nie daje zgody na kod. Projekt/etapowanie i późniejszy plan wymagają akceptacji;
+  brak nowej implementacji, migracji, providerów, historybatch lub produkcji.
 - [ ] Etap5: lepsze dopasowanie dokument↔płatność mimo różnicy dat, bez dublowania.
 - [ ] Etap6: jawne partie wcześniejszych nieskategoryzowanych transakcji, przegląd i odbiór.
 - [ ] Osobna zgoda i procedura przed produkcyjną migracją/wdrożeniem, realnymi AI/OCR

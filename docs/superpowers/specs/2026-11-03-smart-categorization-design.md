@@ -54,9 +54,11 @@ iteracyjną, nie wdrożenie, produkcyjną migrację, kosztowne realne AI lub zmi
 5. Kandydaci płatności z rozdzielonymi datami, lepsze wyjaśnienia i brak duplikatów.
 6. Jawnie uruchamiane partie historii, przegląd propozycji i finalny UX/odbiór.
 
-Etapy1/2 ukończono lokalnie w63e2b9c/9fef438, bez wdrożenia. Aktualna jednostka to
-projekt/plan etapu3 w zatwierdzonym trybie hybrydowym. Etapy3–6 nie są oznaczane jako
-gotowe po samych datach/splitach. Dalsza realizacja opiera się na tym kontrakcie;
+Etapy1/2 oraz3A/3B ukończono lokalnie, bez wdrożenia; odbiór3B8a9560f/0347e58/0cd6bb1.
+Aktualna jednostka to projekt etapu4 (`2026-11-04-receipt-item-categorization-design.md`)
+z historią produktów sklepu i wyszukiwaną listą kategorii. Rekomendowane4A ręczne/4B odczyt
+wymaga akceptacji użytkownika; etapy4–6 nie są gotowe po samych datach/splitach/propozycjach.
+Dalsza realizacja opiera się na tym kontrakcie;
 kolejne wydania wymagają własnego odbioru i osobnej zgody.
 
 ## Nienaruszalne ograniczenia
