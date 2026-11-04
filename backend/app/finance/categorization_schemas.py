@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, StrictInt, model_validator
 
 from app.config import settings
 from app.finance.bills_schemas import MAX_SAFE_MINOR
+from app.finance.rule_schemas import AssignmentOrigin
 
 
 class CategorizationPart(BaseModel):
@@ -59,6 +60,7 @@ class CategorizationContext(BaseModel):
     source: Literal["manual"] | None
     context_snapshot: str
     max_parts: int
+    assignment_origin: AssignmentOrigin | None = None
 
 
 class CategorizationPreview(BaseModel):

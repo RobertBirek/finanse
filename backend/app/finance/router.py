@@ -14,6 +14,8 @@ from app.finance.bills_router import router as bills_router
 from app.finance.categorization_router import router as categorization_router
 from app.finance.loan_router import router as loan_router
 from app.finance.models import FinancialTransaction, Posting
+from app.finance.rule_origin_reads import attach_assignment_origins
+from app.finance.rule_router import router as rule_router
 from app.finance.schemas import (
     AccountCreate,
     AccountResponse,
@@ -83,6 +85,7 @@ router = APIRouter()
 router.include_router(loan_router)
 router.include_router(bills_router)
 router.include_router(categorization_router)
+router.include_router(rule_router)
 
 
 @router.post("/accounts", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
@@ -173,7 +176,9 @@ async def get_account_transactions(
         .limit(limit)
         .offset(offset)
     )
-    txns = result.unique().scalars().all()
+    txns = await attach_assignment_origins(
+        db, current_user.id, list(result.unique().scalars().all())
+    )
 
     return [TransactionResponse.model_validate(t) for t in txns]
 

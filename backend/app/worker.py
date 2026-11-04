@@ -29,6 +29,7 @@ from app.documents.ocr_pipeline import (
 from app.documents.retry import is_retryable_ocr_error, retry_delay_seconds
 from app.documents.review_service import pending_review_ids, process_review_revision
 from app.documents.schemas import DocumentStatus
+from app.finance.rule_worker import dispatch_rule_events, process_rule_event
 
 logger = logging.getLogger(__name__)
 
@@ -310,12 +311,18 @@ async def process_local_ocr_job(ctx, job_id: str) -> None:
 
 
 class WorkerSettings:
-    functions: ClassVar = [process_document, prepare_document_review, process_document_job]
+    functions: ClassVar = [
+        process_document,
+        prepare_document_review,
+        process_document_job,
+        process_rule_event,
+    ]
     redis_settings: ClassVar = REDIS_SETTINGS
     cron_jobs: ClassVar = [
         cron(dispatch_pending_documents, second={0, 30}, run_at_startup=True),
         cron(dispatch_pending_document_reviews, second={15, 45}, run_at_startup=True),
         cron(dispatch_document_jobs, second={5, 35}, run_at_startup=True),
+        cron(dispatch_rule_events, second={10, 40}, run_at_startup=True),
     ]
     keep_result = 0
     job_timeout = settings.DOCUMENT_JOB_TIMEOUT_SECONDS

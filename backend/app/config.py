@@ -4,7 +4,7 @@ import re
 from typing import Any
 from urllib.parse import urlsplit
 
-from pydantic import PositiveFloat, PositiveInt, PrivateAttr, model_validator
+from pydantic import Field, PositiveFloat, PositiveInt, PrivateAttr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_CORS_ORIGINS = "http://localhost:5173"
@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     DOCUMENT_VISION_LEASE_SECONDS: PositiveInt = 120
     BILL_PAYMENT_CANDIDATE_DATE_WINDOW_DAYS: PositiveInt = 30
     FINANCE_CATEGORY_SPLIT_MAX_PARTS: PositiveInt = 50
+    FINANCE_RULE_DESCRIPTION_MAX_CHARS: PositiveInt = Field(default=500, le=2000)
+    FINANCE_RULE_DISPATCH_BATCH: PositiveInt = 50
+    FINANCE_RULE_LEASE_SECONDS: PositiveInt = 60
+    FINANCE_RULE_MAX_ATTEMPTS: PositiveInt = 3
+    FINANCE_RULE_RETRY_INITIAL_SECONDS: PositiveInt = 10
+    FINANCE_RULE_RETRY_LATER_SECONDS: PositiveInt = 60
+    FINANCE_RULE_UI_POLL_MS: PositiveInt = 2000
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     DOCUMENT_PROCESSING_ACTION_RATE_LIMIT: PositiveInt = 10

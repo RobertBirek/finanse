@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit.service import log_event
 from app.finance.categorization_context import (
     CategorizationError,
+    LedgerContext,
     build_preview,
     columns,
     digest,
@@ -18,6 +19,7 @@ from app.finance.categorization_context import (
 from app.finance.categorization_schemas import (
     CategorizationApply,
     CategorizationContext,
+    CategorizationPart,
     CategorizationPreview,
     CategorizationPreviewRequest,
 )
@@ -28,8 +30,55 @@ from app.finance.models import (
     Posting,
     TransactionCategorizationState,
 )
+from app.finance.rule_models import TransactionCategorizationOrigin
 
 ACTION = "apply_expense_categorization"
+
+
+async def _write_category_parts(
+    db: AsyncSession, ctx: LedgerContext, parts: list[CategorizationPart]
+) -> None:
+    """Private ledger writer. Caller must validate authority and hold context locks."""
+    account = next(p for p in ctx.txn.postings if p.account_id)
+    account_before = columns(account)
+    available = sorted([p for p in ctx.txn.postings if p.category_id], key=lambda p: str(p.id))
+    budget_impact = available[0].is_budget_impact
+    assigned: dict[uuid.UUID, Posting] = {}
+    for part in parts:
+        match = next((p for p in available if p.category_id == part.category_id), None)
+        if match:
+            assigned[part.category_id] = match
+            available.remove(match)
+    for part in sorted(parts, key=lambda p: str(p.category_id)):
+        posting = assigned.get(part.category_id)
+        if posting is None:
+            if available:
+                posting = available.pop(0)
+            else:
+                posting = Posting(
+                    transaction_id=ctx.txn.id,
+                    source_currency="PLN",
+                    fx_rate=1,
+                    fx_rate_source="manual",
+                    direction="credit",
+                    is_budget_impact=budget_impact,
+                )
+                ctx.txn.postings.append(posting)
+                db.add(posting)
+        posting.category_id = part.category_id
+        posting.source_amount = posting.base_amount_pln = part.amount_minor
+    for obsolete in available:
+        ctx.txn.postings.remove(obsolete)
+        await db.delete(obsolete)
+    _validate_posting_sum(ctx.txn.postings, "expense")
+    await db.flush()
+    await db.scalars(
+        select(Posting)
+        .where(Posting.transaction_id == ctx.txn.id)
+        .execution_options(populate_existing=True)
+    )
+    if columns(account) != account_before:
+        raise RuntimeError("Account posting changed during categorization")
 
 
 async def get_categorization_context(
@@ -119,39 +168,8 @@ async def apply_categorization(
             "category_snapshot_conflict", "Dane zmieniły się. Zamknij okno i odśwież podział."
         )
     if not (ctx.state and normalized_parts(before.parts) == normalized_parts(data.parts)):
-        account = next(p for p in ctx.txn.postings if p.account_id)
-        account_before = columns(account)
         old_postings = [columns(p) for p in ctx.txn.postings]
-        available = sorted([p for p in ctx.txn.postings if p.category_id], key=lambda p: str(p.id))
-        budget_impact = available[0].is_budget_impact
-        assigned: dict[uuid.UUID, Posting] = {}
-        for part in data.parts:
-            match = next((p for p in available if p.category_id == part.category_id), None)
-            if match:
-                assigned[part.category_id] = match
-                available.remove(match)
-        for part in sorted(data.parts, key=lambda p: str(p.category_id)):
-            posting = assigned.get(part.category_id)
-            if posting is None:
-                if available:
-                    posting = available.pop(0)
-                else:
-                    posting = Posting(
-                        transaction_id=transaction_id,
-                        source_currency="PLN",
-                        fx_rate=1,
-                        fx_rate_source="manual",
-                        direction="credit",
-                        is_budget_impact=budget_impact,
-                    )
-                    ctx.txn.postings.append(posting)
-                    db.add(posting)
-            posting.category_id = part.category_id
-            posting.source_amount = posting.base_amount_pln = part.amount_minor
-        for obsolete in available:
-            ctx.txn.postings.remove(obsolete)
-            await db.delete(obsolete)
-        _validate_posting_sum(ctx.txn.postings, "expense")
+        await _write_category_parts(db, ctx, data.parts)
         if ctx.state is None:
             ctx.state = TransactionCategorizationState(
                 transaction_id=transaction_id,
@@ -165,6 +183,24 @@ async def apply_categorization(
         else:
             ctx.state.version += 1
             ctx.state.before_snapshot_sha256 = before.context_snapshot
+        if ctx.origin is None:
+            ctx.origin = TransactionCategorizationOrigin(
+                transaction_id=transaction_id,
+                user_id=user_id,
+                origin="manual",
+                version=1,
+                assignment_sha256=digest({"parts": normalized_parts(data.parts)}),
+            )
+            db.add(ctx.origin)
+        else:
+            ctx.origin.version += 1
+            ctx.origin.origin = "manual"
+            ctx.origin.rule_id = None
+            ctx.origin.rule_version = None
+            ctx.origin.approval_receipt_id = None
+            ctx.origin.approval_snapshot_sha256 = None
+            ctx.origin.assignment_sha256 = digest({"parts": normalized_parts(data.parts)})
+        ctx.origin_grant = None
         ctx.txn.updated_at = datetime.now(UTC)
         await db.flush()
         await db.refresh(ctx.txn, attribute_names=["updated_at"])
@@ -174,8 +210,6 @@ async def apply_categorization(
             .where(Posting.transaction_id == transaction_id)
             .execution_options(populate_existing=True)
         )
-        if columns(account) != account_before:
-            raise RuntimeError("Account posting changed during categorization")
         ctx.state.after_snapshot_sha256 = ctx.snapshot()
         await log_event(
             db,
@@ -183,7 +217,13 @@ async def apply_categorization(
             "financial_transaction",
             str(transaction_id),
             ACTION,
-            old_state={"postings": old_postings, "snapshot": before.context_snapshot},
+            old_state={
+                "postings": old_postings,
+                "snapshot": before.context_snapshot,
+                "assignment_origin": before.assignment_origin.model_dump(mode="json")
+                if before.assignment_origin
+                else None,
+            },
             new_state={
                 "postings": [columns(p) for p in ctx.txn.postings],
                 "version": ctx.state.version,

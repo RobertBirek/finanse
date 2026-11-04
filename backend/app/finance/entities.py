@@ -199,7 +199,28 @@ async def delete_category(db: AsyncSession, user_id: uuid.UUID, category_id: uui
         select(CategoryBudget.id).where(CategoryBudget.category_id == category_id).limit(1)
     )
     child = await db.execute(select(Category.id).where(Category.parent_id == category_id).limit(1))
-    if any(result.first() is not None for result in (posting, scheduled, budget, child, bill)):
+    from app.finance.rule_models import (
+        TransactionCategorizationRule,
+        TransactionCategorizationSettings,
+    )
+
+    rule_ref = await db.execute(
+        select(TransactionCategorizationRule.id)
+        .where(
+            (TransactionCategorizationRule.target_category_id == category_id)
+            | (TransactionCategorizationRule.approved_for_uncategorized_category_id == category_id)
+        )
+        .limit(1)
+    )
+    marker_ref = await db.execute(
+        select(TransactionCategorizationSettings.id)
+        .where(TransactionCategorizationSettings.uncategorized_category_id == category_id)
+        .limit(1)
+    )
+    if any(
+        result.first() is not None
+        for result in (posting, scheduled, budget, child, bill, rule_ref, marker_ref)
+    ):
         raise ValueError("Category has records; deactivate it instead of deleting")
     await db.delete(category)
     await db.flush()

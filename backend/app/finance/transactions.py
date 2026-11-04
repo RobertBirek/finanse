@@ -80,7 +80,11 @@ async def create_transaction(
         .options(selectinload(FinancialTransaction.postings))
         .where(FinancialTransaction.id == txn.id)
     )
-    return result.scalar_one()
+    created = result.scalar_one()
+    from app.finance.rule_events import record_new_expense_event
+
+    await record_new_expense_event(db, user_id, created)
+    return created
 
 
 async def create_exchange_transaction(

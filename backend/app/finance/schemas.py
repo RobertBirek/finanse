@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.finance.account_validation import normalize_bic, normalize_iban
+from app.finance.rule_schemas import AssignmentOrigin
 
 
 class AccountCreate(BaseModel):
@@ -202,6 +203,7 @@ class TransactionDatesUpdate(BaseModel):
 
 
 class TransactionResponse(BaseModel):
+    assignment_origin: AssignmentOrigin | None = None
     id: uuid.UUID
     user_id: uuid.UUID
     transaction_date: dt.date = Field(validation_alias="date")

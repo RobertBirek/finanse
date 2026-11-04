@@ -173,6 +173,15 @@ class FinancialTransaction(Base):
         back_populates="transaction", uselist=False, lazy="selectin", passive_deletes="all"
     )
 
+    @property
+    def assignment_origin(self) -> object:
+        """Optional batched read projection, deliberately not a mapped ledger column."""
+        return self.__dict__.get("_assignment_origin")
+
+    @assignment_origin.setter
+    def assignment_origin(self, value: object) -> None:
+        self.__dict__["_assignment_origin"] = value
+
 
 class TransactionDateMetadata(Base):
     """Explicit date evidence, never inferred from the legacy transaction date."""

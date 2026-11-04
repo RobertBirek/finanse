@@ -33,6 +33,8 @@ from app.finance.models import (
     TransactionCategorizationState,
     TransactionDateMetadata,
 )
+from app.finance.rule_models import TransactionCategorizationOrigin
+from app.finance.rule_schemas import AssignmentOrigin
 
 
 class CategorizationError(ValueError):
@@ -83,13 +85,25 @@ class LedgerContext:
     loans: list[LoanPaymentLink]
     allocations: list[DocumentPaymentAllocation]
     dates: TransactionDateMetadata | None
+    origin: TransactionCategorizationOrigin | None = None
+    origin_grant: dict[str, Any] | None = None
 
     def snapshot(self) -> str:
         # Complete mapped financial fields. State hash/timestamps excluded to avoid
         # recursion; link absence explicit and ordering deterministic in load().
         return digest(
             {
-                "schema": "expense-categorization-v1",
+                "schema": "expense-categorization-v2",
+                "origin": {
+                    "id": str(self.origin.id),
+                    "origin": self.origin.origin,
+                    "version": self.origin.version,
+                    "rule_id": self.origin.rule_id,
+                    "rule_version": self.origin.rule_version,
+                    "approval_snapshot_sha256": self.origin.approval_snapshot_sha256,
+                }
+                if self.origin
+                else None,
                 "transaction": columns(self.txn),
                 "postings": [
                     columns(p) for p in sorted(self.txn.postings, key=lambda p: str(p.id))
@@ -190,6 +204,18 @@ class LedgerContext:
             source="manual" if self.state else None,
             context_snapshot=self.snapshot(),
             max_parts=settings.FINANCE_CATEGORY_SPLIT_MAX_PARTS,
+            assignment_origin=AssignmentOrigin(
+                origin="approved_rule" if self.origin.origin == "approved_rule" else "manual",
+                version=self.origin.version,
+                rule_id=self.origin.rule_id,
+                rule_version=self.origin.rule_version,
+                display_description=self.origin_grant.get("display_description")
+                if self.origin_grant
+                else None,
+                target_path=self.origin_grant.get("target_path") if self.origin_grant else None,
+            )
+            if self.origin
+            else None,
         )
 
 
@@ -230,6 +256,30 @@ async def load_context(
     if lock:
         state_stmt = state_stmt.with_for_update()
     state = await db.scalar(state_stmt)
+    origin_stmt = (
+        select(TransactionCategorizationOrigin)
+        .where(TransactionCategorizationOrigin.transaction_id == txn_id)
+        .execution_options(populate_existing=True)
+    )
+    if lock:
+        origin_stmt = origin_stmt.with_for_update()
+    origin = await db.scalar(origin_stmt)
+    origin_grant: dict[str, Any] | None = None
+    if origin and origin.user_id != user:
+        raise CategorizationError("protected", "Nieprawidłowy właściciel proweniencji.")
+    if origin and origin.approval_receipt_id:
+        from app.finance.models import FinanceCommandReceipt
+
+        receipt = await db.scalar(
+            select(FinanceCommandReceipt).where(
+                FinanceCommandReceipt.id == origin.approval_receipt_id,
+                FinanceCommandReceipt.user_id == user,
+            )
+        )
+        if receipt:
+            value = receipt.response_json.get("grant")
+            if isinstance(value, dict):
+                origin_grant = value
     cat_stmt = (
         select(Category)
         .where(Category.user_id == user)
@@ -286,7 +336,9 @@ async def load_context(
         .where(TransactionDateMetadata.transaction_id == txn_id)
         .execution_options(populate_existing=True)
     )
-    return LedgerContext(txn, state, categories, account, mappings, loans, allocations, dates)
+    return LedgerContext(
+        txn, state, categories, account, mappings, loans, allocations, dates, origin, origin_grant
+    )
 
 
 def build_preview(ctx: LedgerContext, parts: list[CategorizationPart]) -> CategorizationPreview:

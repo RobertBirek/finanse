@@ -16,6 +16,7 @@ from app.finance.models import (
     Posting,
     ScheduledFinanceItem,
 )
+from app.finance.rule_origin_reads import attach_assignment_origins
 from app.finance.schemas import TransactionResponse, TransactionSearch, TransactionSearchResponse
 
 
@@ -135,7 +136,7 @@ async def get_transactions(
 
     stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    return await attach_assignment_origins(db, user_id, list(result.scalars().all()))
 
 
 async def search_transactions(
@@ -227,7 +228,10 @@ async def search_transactions(
         .offset(filters.offset)
     )
     return TransactionSearchResponse(
-        items=[TransactionResponse.model_validate(txn) for txn in result.scalars().all()],
+        items=[
+            TransactionResponse.model_validate(txn)
+            for txn in await attach_assignment_origins(db, user_id, list(result.scalars().all()))
+        ],
         total=total or 0,
         limit=filters.limit,
         offset=filters.offset,
@@ -242,4 +246,7 @@ async def get_transaction(
         .options(selectinload(FinancialTransaction.postings))
         .where(FinancialTransaction.id == transaction_id, FinancialTransaction.user_id == user_id)
     )
-    return result.scalar_one_or_none()
+    txn = result.scalar_one_or_none()
+    if txn is not None:
+        await attach_assignment_origins(db, user_id, [txn])
+    return txn
