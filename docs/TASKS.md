@@ -42,12 +42,20 @@ Backlog zadań ze statusami.
   `docs/audits/2026-11-04-approved-categorization-rules-local.md`.
 - [x] Etap3A lokalnie: zatwierdzane reguły dla nowych ręcznych wydatkówPLN,
   technicalmarker/off, immutablegrant/origin/outbox/worker/UI i bezpieczne retry.
-- [~] Etap3B: szczegółowy projekt trwałych propozycjiAI, limitów/jobów i ludzkiego
+- [x] Etap3B lokalnie: trwałe propozycjeAI, limity/joby i ludzki
   przeglądu wybranej partii. User po odbiorze3A: „ok, działaj dalej”. Spec
   `2026-11-04-reviewed-ai-categorization-design.md` gotowy po read-only buildercheck
   („nothing important left”), zatwierdzony słowem „tak” po2dc69c4. Plan
   `docs/superpowers/plans/2026-11-04-reviewed-ai-categorization.md` zapisany i sprawdzony
-  względem spec:5zadań, native/TDD i jeden końcowy review. Czeka na akceptację przed kodem.
+  względem spec:5zadań, native/TDD i jeden końcowy review. Zatwierdzony kolejnym „tak”.
+  Implementacja odebrana lokalnie: zgody/storage, creation-only job/dispatch/
+  usage, kontrolowane peritem preview/apply/reject i UI zamrożonego przeglądu. Task1
+  75focusedPASS, Task2 125focusedPASS, końcowy Task3 74focusedPASS; frontend456/lint/types
+  i16nowych browsercasesPASS. Jedna migracja243aa1d9461c tylko w nowym ownedfinanse_test,
+  bez backfillu. Jeden whole-review Critical0/Important0/Minor0. Pełny finalgate
+  1406backend/456frontend/lint/types/freshbuild/127E2E+1expectedskip PASS; exactsource/
+  dist/migrationproofPASS. Backend8a9560f/UI0347e58; raport
+  `docs/audits/2026-11-04-reviewed-ai-categorization-local.md`.
   Realne providery/AI/historia i produkcja nadal wymagają osobnej zgody.
 - [ ] Etap4: pozycje paragonów/rabaty/kontrola sum i zatwierdzanie podziału.
 - [ ] Etap5: lepsze dopasowanie dokument↔płatność mimo różnicy dat, bez dublowania.

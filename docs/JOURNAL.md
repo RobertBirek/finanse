@@ -2,6 +2,48 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — ZAKOŃCZONE LOKALNIE3B; review i pełny końcowy gate PASS
+
+- User zatwierdził planbecb54c słowem „tak”. Native inline/TDD w tym samym linked
+  worktree; brak uprawnień do realnych providerów, historii, aktywacji lub produkcji.
+- Task1:5tabel i oddzielna polityka/consent/usage, origin proposalFK, snapshotv3.
+  75focusedPASS i static4checksPASS. Migracja243aa1d9461c wygenerowana raz po c063;
+  stary manual/rule origin i kolumny/indeksy/kwoty zachowane, brak backfillu, empty
+  downgrade/reupgrade i populated refusal PASS tylko w ownedfinanse_test.
+- Task2: shared MVCC observation i creation-only intent (rulesoff/AIon też działa),
+  bounded packet/opaq keys/no tools, no-retry adapter, quota/lease/version fencing,
+  commitdispatch przed siecią, osobne accounting/publication i recovery uncertain.
+  125focusedPASS, w tym rzeczywiste wyścigi DB, transport wyłącznie MockTransport.
+- Task3: batched reads/preview, realne humanapply przez prywatny writer, receipt/grant/
+  audyt/state/origin atomowo; approved_llm nie jest źródłem manualstate reguły.
+  Same-category manualoverride RED→GREEN. Kursory malformed422, proposal-only FK409,
+  expiry metadata i foreignsource bez wycieku; finalcandidate74focusedPASS. Wcześniejszy
+  szerszy run85PASS/2fixture-importfail nie jest gate; import poprawiony, oba rzeczywiste
+  global-policy/dispatch wyścigi PASS. Nie ukrywać tej nieudanej próby.
+- Konfiguracja: osobny reconcile pod globalpolicy-only lockiem, w oddzielnych krótkich
+  transakcjach workera przed/po pracy i cronie. Zaobserwowany drift trwale podnosi epokę
+  i wyłącza politykę, bez bulkjobupdate; GET pozostaje niemutujący. Revert konfiguracji
+  nie ożywia starego grantu. Reprodukcja RED→GREEN +2raceadmissions PASS.
+- Task4: skończony wybór/preview/sekwencja peritem; refetch nie zastępuje frozenintent,
+  unknown przerywa i zachowuje klucze; zmiana sesji blokuje stare callbacks. Osobne
+  create-category/manualapply, off/unknownusage, watcher tylko aktywnych jobów.
+  Frontend456/lint/typesPASS i16nowych E2E375/1440(main-areaAxe/keyboard/nooverflow)PASS.
+- Jeden read-only whole-review `ses_e593852d3ffe24k0l8Y2ebvh2V` zakończony na zamrożonym
+  working diff po becb54c: Critical0/Important0/Minor0, bez podagentów reviewera i bez
+  drugiego review. FullcandidateE2E127PASS+1expectedskip. Pełny końcowy backend/frontend/
+  static/build/E2E zakończony:1406backend/456frontend/lint/types PASS
+  (`sh_1a6cc2a4e001ExTlQVyinPMfVK`, backend56m44s); freshbuild/full127E2E+1expectedskip
+  PASS (`sh_1a6ce773e001Y6siQ9cks4jxbf`). verify-final.py potwierdził exactsource/dist/
+  migrationproof przed i po commitach backend8a9560f/UI0347e58. Nie powtarzać pełnego
+  suite/rehearsal dla dokumentacji. Produkcja i realne providery nietknięte.
+- Własny ledger `.superpowers/sdd/2026-11-04-reviewed-ai-categorization/progress.md`,
+  dowody `/tmp/opencode/category-proposals-20261104/`; zachować unrelated dirtyVelo/Q7.
+  Productcommits odroczono do pełnego gate, żeby spełnić AGENTS testy przed commitem;
+  teraz zapisane. Finalne dowody final-proof.json/build-proof.json/migration-proof.json,
+  review final-review.md, ledger po domknięciu archiwizowany jako execution-ledger/.
+  Zachowano branch/worktree, bez merge/push/deploy/AI/historii. Następna decyzja to
+  osobna aktywacja realnego modelu albo etap4 paragonów, nigdy automatyczne wydanie.
+
 ## 2026-11-04 — PLAN3B zapisany, oczekuje akceptacji
 
 - User „tak” po projekcie2dc69c4 zatwierdza spec3B i przygotowanie szczegółowego planu,

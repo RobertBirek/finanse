@@ -8,7 +8,16 @@
 
 **Tech Stack:** Existing Python/FastAPI/Pydantic/async SQLAlchemy/PostgreSQL/Alembic, ARQ/Redis, bounded OpenAI Responses client, React/TypeScript/TanStack Query. No new dependencies, services or global client stores.
 
-**Spec:** `docs/superpowers/specs/2026-11-04-reviewed-ai-categorization-design.md`, approved by user “tak” after design commit2dc69c4. This newly written execution plan still requires approval before product code/tests/config/data changes. Baseline3A backend28ce7f0/UI2b960ee, exact1303backend/439frontend/111E2E+1expectedskip+2extraorigin PASS.
+**Spec:** `docs/superpowers/specs/2026-11-04-reviewed-ai-categorization-design.md`, approved by user “tak” after design commit2dc69c4. This execution planbecb54c was subsequently approved with “tak” for local fake-only implementation. Baseline3A backend28ce7f0/UI2b960ee, exact1303backend/439frontend/111E2E+1expectedskip+2extraorigin PASS.
+
+**Execution status:** Tasks1–5 complete locally. One whole-review
+`ses_e593852d3ffe24k0l8Y2ebvh2V`: Critical0/Important0/Minor0. Final frozen-source gate:
+1406backend/456frontend/lint/types/build/127E2E+1expectedskip PASS; retained migration
+hash/retention proof PASS. Backend8a9560f, UI0347e58; no production/provider activation.
+Completed checkboxes below summarize actual evidence; original test examples remain
+in approved planbecb54c. Shared3A/Stage2 guards are covered by retained focused runs
+and the full suite, not a duplicated new test for every example. Rulings and evidence:
+`docs/audits/2026-11-04-reviewed-ai-categorization-local.md`.
 
 ## Global Constraints
 
@@ -90,12 +99,12 @@ Add origin.proposal_item_id nullableFKRESTRICT; extend `ck_rule_origin_kind` wit
 
 ### Steps
 
-- [ ] Write policy tests: `test_default_off_read_is_nonmutating`, `test_optin_binds_current_server_scope_and_explicit_export_consent`, `test_unavailable_or_rotated_policy_requires_new_consent`, `test_user_off_does_not_enable_rules`, `test_settings_receipt_replay_and_foreign_marker`, strictfield and real-session CSRF cases. Assert zero adapter/client calls and no financial mutations.
-- [ ] Run `/test` equivalent restricted to these tests. Expected RED at missing endpoints/behavior, not an accidental import/fixture error.
-- [ ] Implement schema/config/policy/DTO/API and optional origin fields described above, not worker calls. Bump canonical snapshot to v3 including proposalreference; extend all origin mappings/literals without converting approved_llm to manual on reads. Keep legacy receipts optional-compatible and manual-only state intact.
-- [ ] Add migration contract tests before generation: exactly five created tables, only origin nullablecolumn/FK/check extensions outside them, no oldledger/backfill/index drift. Generate `/migration "reviewed ai categorization"` only in a fresh owned schema atc063; inspect/remove unrelated autogen drift, add all-table+origin DDL locks and populated downgrade refusal.
-- [ ] Rehearse upgrade preserving old manual/approved_rule origins and every pre-existing financial column/value/index. Compare OLD column projections after the nullable addition, not to_jsonb hashes that treat the newnull field as a changed oldrow. Empty downgrade restoresc063; any newtable data or approved_llm/proposal reference refuses before destructive DDL. Expected PASS, no production `/migrate`.
-- [ ] Run focused policy/migration/categorization/projection/security tests, `/lint` and `/typecheck` equivalents. Expected allPASS. Commit own verified foundation or keep uncommitted if the shared schema is still moving; never commit failing consumer interfaces.
+- [x] Consent/default-off/rotation/strict-body/real-CSRF/no-ledger-write tests in `test_suggestion_policy.py` and config tests.
+- [x] Observe missing-endpoint RED (`policy-red.log`), then initial7GREEN.
+- [x] Implement five-table schema, independent policy/config/consent/usage API, truthful origin DTOs and canonicalv3; manual-only state unchanged.
+- [x] Add migration contract tests before generating243aa1d9461c once; remove unrelated index drift and add named origin checks/FK plus downgrade locks.
+- [x] Rehearse only new ownedfinanse_test schema: old manual/rule origins/columns/indexes retained, no backfill, empty rollback/reupgrade and populated refusal PASS.
+- [x] Foundation75focused/static4checks PASS; commit deferred while shared interfaces moved, then included in verified backend8a9560f.
 
 ## Task 2: Creation-only generation with one paid-dispatch opportunity
 
@@ -128,12 +137,12 @@ Add origin.proposal_item_id nullableFKRESTRICT; extend `ck_rule_origin_kind` wit
 
 ### Steps
 
-- [ ] Write creation/packet tests: rulesoff+AIon succeeds, ruleson/exactcandidate suppressesAI, AIoff/missing AI rows still preserves3A rule enrollment, ambiguous/stale rule does not fallback, source dates do not define newness, source rollback/duplicate hook, off→enable/startup/newrule never discovers oldtxn or3A no_match. Assert one shared MVCC observation and no implicit policy/rule FK wait while source holds account/category refs. `test_legacy_v2_rule_opportunity_preserves_all_guards` accepts an unchanged old complete snapshot but rejects changed date/account/postings/mapping/manualstate/origin; old interactivepreview still409 and AI accepts onlyv3.
-- [ ] Write strict packet/adapter tests using FakeAdapter/MockTransport: no IDs/amounts/balances/docs/tools in wire payload; enum/private mapping, marker/foreign/inactive key rejection, Unicode/oversized input/catalog blocking without truncation; refusal/partial/extraneous output/tool message, malformedJSON, keyinjection and boundedtransport all failclosed. Usage survives invalid model text. Run RED, then implement the packet and adapter.
-- [ ] Write DB quota/lease tests: two jobs competing for last of5slots; excess job cancels without a next-day backlog; replayed reservation charges once; known nosend releases once; UTC midnight retains one slot identity; broker failure spends no attempt. A stolen predispatch lease reuses the slot under a new version and the old worker cannot release/admit it. Expire/steal tokens before/after admission and assert exact transitions. Run RED, then implement reservations/claims/recovery.
-- [ ] Write barrier tests for ReviewFocus1/2: disable/config/identity deactivation/marker/manual/ledger mutation before admission→zero sends; after admission→at most originalcall, no post-revoke publication; no globalpolicy/job lock inversion. Inject admission COMMIT failure and assert zero adapter calls. Inject crash after committed marker/before call and assert recovery never sends. Late known usage updates accounting once without recreating uncertain job or proposal.
-- [ ] Implement orchestrator/creation observation sharing/worker/cron and activity read endpoint `GET /categorization/suggestions/activity`: separate bounded activejobs and recent_outcomes (last7days, at mostreviewpage20), ownjob ID/transactionID/state/result_kind/safe reason/updated_at plus poll_after_ms. Read only job rows; no claims/generation/oldledger discovery or payload/keymap leakage. This exposes quota/input limits/no_suggestion/uncertain errors instead of disguising them as an empty queue. Do not change rule assignments or resurrect oldevents.
-- [ ] Run `/test` equivalents for new policy/packet/job/usage/races plus3A rule/categorization/date/Actual/bill/account regressions; lint/types. Expected PASS with ledger and all account columns unchanged by generation. Record actual fake calls, not inferred counts. Commit verified generation slice when green.
+- [x] Creation-only/rules-off/rule-priority/rollback/duplicate/shared-MVCC/no-late-FK tests, plus strict full v2 legacy-rule guard regression and existing3A tests.
+- [x] Packet/MockTransport22cases RED→GREEN: bounded private-map request, no financial IDs/amounts/tools, semantic variants, invalid/refused/partial output, limits and preserved usage.
+- [x] Quota last-slot race, replay/nosend/stolen-lease/version fencing, UTC-day retention, no next-day backlog and terminal dispatch recovery tests. Expired-during-validation RED→GREEN.
+- [x] Both global-policy admission orders, before/after revoke/config/identity/marker/source/manual changes, failed/ambiguous commit and late-accounting-without-publication tests.
+- [x] Implement shared observation, orchestrator/cron/activity projection; add policy-only drift reconciliation without ledger/job lock inversion. Observed drift/revert cannot revive consent (RED→GREEN).
+- [x] Task2 focus125PASS, later candidate74PASS and final full regression1406PASS/staticPASS; generation/account/payment conservation verified. Backend8a9560f after full gate.
 
 ## Task 3: Owned proposal reads and actual human decisions
 
@@ -159,11 +168,11 @@ Routes: GET `/categorization/proposals`, GET `/{proposal_id}`, POST `/{proposal_
 
 ### Steps
 
-- [ ] Write queue/preview tests for ownership, immutableGET, bounded pagination and bounded query count, missing/foreign sources, whole-taxonomy/sourcehash/expiry/manualstate staleness, readonly newcategory, and zero provider calls even with server/userAI now OFF. Run RED; implement batched context/read/preview.
-- [ ] Write apply/reject tests: exact10000grosze target change leaves account ID/every mapped column, dates/source/payment count/sumzero unchanged; no Actual/loan/FX/pending/allocation/manual overwrite, highconfidence no write before explicitconfirmedtrue, spoofed fields rejected and real-session CSRF enforced.
-- [ ] Write receipt/audit rollback and replay tests: same key/body exact historical decision, changed intent409; uncertain same request cannot double apply; concurrent manual confirmation/category archive/source delete versus apply in both admissions; no dangling receipt/origin/proposal state after injected audit failure. Run RED; implement human commands and immutable evidence ordering.
-- [ ] Pin ReviewFocus4: approvedLLM→same-category manual confirmation becomes originmanual and manualstate increments; approved_rule behavior stays unchanged. Fresh session/identitymap account-history, general list, search and detail show the truthful approved_llm label/description from the immutable grant even after rule/model changes, without N+1; linked proposal detail retains the original explanation. Run existing3A receipt no-op and fingerprint tests to prevent regressions.
-- [ ] Run focused proposal/policy/worker/categorization/security suites + lint/types. Expected PASS, no actual calls. Commit the reviewed-assignment slice only with all its consumers green.
+- [x] Queue404 RED→GREEN; owned/nonmutating/bounded reads, malformed cursor422, missing/foreign sources, expiry/taxonomy/source protection, readonly new-category and review-after-AI-off tests.
+- [x] Actual10000grosze human approval preserves payment/account/date/source/sumzero; strict confirmedtrue and owner/CSRF enforcement, protected-source regressions.
+- [x] Peritem receipt replay/conflict, audit rollback and both manual-versus-AI admission orders; shared owner/tree protection and existing categorization race regressions included in full suite.
+- [x] Same-category manualoverride RED→GREEN; fresh account history/search/list/detail retain approved_llm lineage, then manual confirmation clears it. Existing manual/rule no-op behavior verified.
+- [x] Final candidate74PASS; full backend1406/staticPASS on frozen sources. Human commands included in backend8a9560f.
 
 ## Task 4: Explicit selection/review UX with partial outcomes
 
@@ -182,20 +191,20 @@ Routes: GET `/categorization/proposals`, GET `/{proposal_id}`, POST `/{proposal_
 
 ### Steps
 
-- [ ] Write failing RTL/hook tests for unavailable opt-in, explicit exportconsent, known-vs-unknown quota, source labels and genuine loading/error/empty states; no model fields/provider/network in browser. Implement cards/route/readhooks.
-- [ ] Write ReviewFocus5 tests with two successful/stale/unknown items: one final confirmation, exact selected IDs only, unknown stops remaining posts, retry same keys/body, mutation busy prevents doublelaunch; no cache receipt install. Refetch during first apply cannot replace second item or its key. Same-session authrefresh preserves review; logout/login invalidates old callbacks and stops the sequence. Run RED; implement local frozen-review controller and commands.
-- [ ] Write watcher tests pending→empty, alreadycompleted-before-firstread and oldsession response; assert no empty polling/self-invalidation loop or perrow browser query. Extend existing fixtures with empty activity response; implement watcher and create/manual invalidations.
-- [ ] Mocked E2E375/1440: opted-in syntheticexisting proposals→preview selected→one approved/one conflict→truthful partial summary; uncertain replay without second payment; newcategory cannot batchapply and uses separate manual path; approved_llm→same-category human confirmation→manual label. Include keyboard/focus/nooverflow and main-areaAxe, block every real API/provider route.
-- [ ] Run fullfrontend `/test`/`lint`/`typecheck`, freshbuild and focusedE2E; expected PASS. Run backend focused contract tests if DTOs changed. Commit verified UI only; never ship a live/demo fake provider path.
+- [x] Failing RTL for consent/cards/page states and source label, then real hook/API-boundary tests; no browser model/secrets/provider access.
+- [x] Frozen finite review, partial conflict/unknown, same body/key retry, busy guard, refetch during apply and session replacement tests; no receipt-as-current-cache installation.
+- [x] Activity watcher active→terminal, initiallyempty and old-session tests; no empty polling/self-invalidation; create/manual invalidations and fixture defaults.
+- [x] Sixteen new mocked browsercases across375/1440 and both projects: reviewed selection, partial outcomes, uncertain receipt replay, separate new-category/manual path, AI→manual origin; keyboard/main-areaAxe/nooverflow PASS.
+- [x] Final full456frontend/lint/tsc/build PASS; full127E2E+1expectedskip PASS. UI0347e58, no runtimefake/provider activation path.
 
 ## Task 5: One whole-change review, proof and local handoff
 
 **Files:** docs/CHANGELOG.md, TASKS.md, JOURNAL.md, this plan and new `docs/audits/2026-11-04-reviewed-ai-categorization-local.md`; private proofs in the new verification directory. Fix only actual Critical/Important review findings with their regression tests, not unrequested polish or unrelated Velo/Q7.
 
-- [ ] Freeze completed candidate and dispatch one fresh read-only whole-review against this spec/ReviewFocus plus ledger rulings. No reviewer subtasks or re-review. Re-grade by effect; one Critical/Important fix pass, each reproduced RED→GREEN; record remaining minors.
-- [ ] Full guarded `/test`, `/lint`, `/typecheck`, freshbuild/fullE2E after the fixes. Serialize public PostgreSQL suites; separate owned schemas for migration evidence. Record exact backend/frontend sources, dist, generated migration hash and real results, including expected skips/unknown usage cases. No realprovider/production trial.
-- [ ] Verify the retained Task1 migration rehearsal proof against the final migration hash: old-origin retention, no backfill/oldledger writes, safe empty rollback/re-upgrade and populated/approved_llm refusal. Do not repeat an unchanged rehearsal/seed. If review changes migration bytes, the old proof is invalid: rehearse the changed revision in a NEW owned schema. Migration after data has approved_llm origins is not permission to roll application back to3A; any eventual release needs its own compatible rollback/operations plan.
-- [ ] Update CHANGELOG/TASKS/JOURNAL/audit and plancheckboxes, commit only own verified code/docs, preserve Velo/Q7, branch/worktree. Report3B LOCAL only, defaultoff, no model activation. Keep verified artifacts; do not repeat unchanged33minute suites for docs-only completion.
+- [x] One independent whole-review: Critical0/Important0/Minor0, no fixes or re-review. Declined-to-judge scope rulings retained in audit.
+- [x] Full guarded1406backend/456frontend/lint/types/freshbuild/127E2E+1expectedskip PASS after review; exactsource/dist proof matches current files. No real provider/production trial.
+- [x] Retained migration243aa1 proof matches final bytes: old origins/rows/columns/indexes preserved, no backfill, empty rollback/reupgrade and populated refusal. No repeated rehearsal/seed or old-backend rollback permission.
+- [x] Own verified backend8a9560f/UI0347e58 committed; CHANGELOG/TASKS/JOURNAL/audit updated. Keep named branch/worktree and Velo/Q7, archive this plan's scratch ledger after final verification; local-only/defaultoff handoff.
 
 ## Plan self-review and execution handoff
 
@@ -205,4 +214,4 @@ Interfaces: CreationObservation and packet/taxonomy hashes are shared between en
 
 Five ReviewFocus entries each have a named owning test step above. Locks/retries/days/partial state behavior and schema capacity are decisions, not “handle edge cases”. Bodies are left to the implementer; no new runtime dependency or duplicated batch/counter engine. The five tasks form one dependent suggestion→review vertical slice, not independent projects needing separate plans.
 
-Preserve the native execution method used for3A: shared policy/job/review interfaces make fresh implementers per task repetitive; one final independent reviewer is retained. This plan is ready for user review, not yet permission to implement or activate realAI.
+Native execution method used for3A was preserved: shared policy/job/review interfaces make fresh implementers per task repetitive; one final independent reviewer was retained. User approved local implementation; activation of realAI remains separately gated and was not performed.

@@ -4,8 +4,8 @@
 
 Projekt sprawdzony przez buildera i zatwierdzony przez użytkownika słowem „tak” po
 commicie2dc69c4. Osobny plan `../plans/2026-11-04-reviewed-ai-categorization.md`
-oczekuje akceptacji przed implementacją. Zgoda na projekt nie uruchamia providera ani
-kodowania według niezatwierdzonego planu. Baseline: backend28ce7f0/UI2b960ee/docsabf65dc, zweryfikowane
+zatwierdzony kolejnym „tak” po becb54c. Implementacja lokalna fake-only została odebrana;
+nie uruchamia to providera ani produkcji. Baseline: backend28ce7f0/UI2b960ee/docsabf65dc, zweryfikowane
 1303backend/439frontend/lint/types/build/111E2E+1expectedskip i2browseroriginPASS.
 
 Użytkownik chce mniej ręcznego kategoryzowania bez oddawania modelowi kontroli nad
@@ -17,7 +17,7 @@ manualne decyzje mają pierwszeństwo. PostgreSQL pozostaje jedynym źródłem p
 Ten dokument doprecyzowuje3B z `2026-11-04-hybrid-categorization-design.md`.
 Kod3A nie jest ponownie implementowany lub wydawany. Brak zgody na realne AI/OCR,
 aktywację modeli, historybatch, produkcyjną migrację/wdrożenie, mainmerge lub push.
-Osobny szczegółowy plan realizacji jest zapisany i wymaga własnego zatwierdzenia.
+Osobny szczegółowy plan realizacji jest zapisany i został zatwierdzony do lokalnej realizacji.
 
 ## Cel i twarde granice pierwszego3B
 
@@ -268,4 +268,5 @@ spisanego projektu i reuse aktualnego kodu zakończony: „nothing important lef
 dodatkowej rundy pytań produktowych. Po checku dopisano jawne interpretacje wykonawcze:
 oddzielenie revokegenerowania od lokalnego review, marker nie jest targetem, liniowy
 punkt dispatch oraz brak bulkjobmutation pod globalpolicylockiem. Przed kodem potrzebne
-jest zatwierdzenie szczegółowego planu; akceptacja projektu została już uzyskana.
+było zatwierdzenie szczegółowego planu; obie zgody zostały już uzyskane. Odbiór lokalny
+nie obejmuje aktywacji rzeczywistego modelu lub wydania produkcyjnego.

@@ -2,6 +2,30 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-04 — Propozycje kategorii AI, etap 3B ukończony lokalnie
+
+### Added
+- Oddzielna zgoda na generowanie propozycji dla nowych ręcznych wydatków PLN,
+  domyślne OFF, wersjonowana polityka serwera i jawne limity/nieznane zużycie.
+- Trwałe zadania utworzenia, rezerwacje quota i pojedyncze dopuszczenie wysyłki.
+  Niepewny dispatch nie jest ponawiany; późne usage nie przywraca publikacji.
+- Kolejka propozycji, preview i rzeczywiste ludzkie zatwierdzenie jednej kategorii,
+  immutable receipt/audyt i approved_llm origin z chronionym stanem manualnym.
+- UI skończonego przeglądu wybranych pozycji, częściowe wyniki, zachowane klucze
+  ponowienia i izolacja sesji. Nowa kategoria nadal wymaga osobnego utworzenia
+  i ręcznego przypisania; brak splitów lub automatyzacji historii.
+
+### Fixed
+- Ręczne potwierdzenie tej samej kategorii zastępuje approved_llm origin manualnym.
+  Zmiana konfiguracji blokuje stare zgody także po przywróceniu poprzedniej konfiguracji,
+  jeśli worker zaobserwował zmianę; GET nie zapisuje polityki.
+- Lokalne testy TDD i próba migracji243aa1d9461c zachowują dawną księgę/proweniencję.
+  Jeden whole-review: Critical0/Important0/Minor0. Pełny końcowy gate1406backend/
+  456frontend/lint/types/freshbuild/127E2E+1expectedskip PASS. Exactsource/dist i hash
+  migracji z dowodem retencji PASS, bez powtarzania rehearsal. Backend8a9560f/UI0347e58.
+  Odbiór wyłącznie lokalny: bez realnych AI/OCR, aktywacji modelu, zmian produkcji lub historii.
+  Raport: `docs/audits/2026-11-04-reviewed-ai-categorization-local.md`.
+
 ## [Design] — 2026-11-04 — Propozycje kategorii AI i przegląd, etap 3B
 
 ### Added
