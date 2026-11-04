@@ -30,12 +30,20 @@ Backlog zadań ze statusami.
   uzasadnieniem, człowiek może zatwierdzić wybrane propozycje zbiorczo po przeglądzie.
   Pewność modelu nie daje prawa zapisu; manualne kategorie chronione. Nowe kategorie/
   podkategorie i splity zawsze wymagają akceptacji, historia tylko osobnym poleceniem.
-  Kod jeszcze bez zmian; szczegółowy projekt/plan przed implementacją do zatwierdzenia.
+  Pełny plan5e679b5 zatwierdzony kolejnym „tak”; lokalna implementacja3A i finalgate zakończone.
   Spec `2026-11-04-hybrid-categorization-design.md`; pierwszy plan3A
   `2026-11-04-approved-categorization-rules.md`: explicitmarker, exact reguły,
   osobnyorigin i outbox nowych wydatków.3B z propozycjami/LLM jest osobnym następnym
-  krokiem, nie gotową częścią3A. Builder zakończył walidację; pięć doprecyzowań worker/
-  grant/retry uwzględniono, brak pytań produktowych blokujących. Pełny plan3A do akceptacji.
+  krokiem, nie gotową częścią3A. Ustawienia/grant/origin/outbox/worker/UI są lokalnie,
+  86focused +32worker/security/races/439frontend/lint/types/build/111E2E+1skip oraz2browser
+  origin→manualPASS. Jedno whole-reviewImportant: account-history originRED→GREEN.
+  Obowiązkowy fullgate po poprawce:1303backend/439frontend/lint/typesPASS, exactsource/
+  dist/migrationhashPASS.3A gotowy lokalnie, nie całość etapu3. Raport
+  `docs/audits/2026-11-04-approved-categorization-rules-local.md`.
+- [x] Etap3A lokalnie: zatwierdzane reguły dla nowych ręcznych wydatkówPLN,
+  technicalmarker/off, immutablegrant/origin/outbox/worker/UI i bezpieczne retry.
+- [ ] Etap3B: osobny plan i realizacja trwałych propozycjiAI, limitów/jobów i ludzkiego
+  przeglądu wybranej partii. Realne providery/AI/historia i produkcja wymagają osobnej zgody.
 - [ ] Etap4: pozycje paragonów/rabaty/kontrola sum i zatwierdzanie podziału.
 - [ ] Etap5: lepsze dopasowanie dokument↔płatność mimo różnicy dat, bez dublowania.
 - [ ] Etap6: jawne partie wcześniejszych nieskategoryzowanych transakcji, przegląd i odbiór.

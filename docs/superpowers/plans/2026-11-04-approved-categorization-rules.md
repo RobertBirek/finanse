@@ -12,7 +12,9 @@
 
 ## Approval and global constraints
 
-The user approved the hybrid policy, not this newly written execution plan. Present this plan for approval before changing application code, tests, configuration or data. Continue on the existing isolated worktree after approval; preserve unrelated Velo/Q7 files.
+The user approved this full plan at5e679b5 with “tak”, after approving the hybrid policy. Implementation is local on the existing isolated worktree; preserve unrelated Velo/Q7 files. “ok, działaj dalej” continues this acceptance, not provider activation, Stage3B, historical processing or a release.
+
+**Execution status:** completed locally after one whole-review; account-history origin omission reproduced RED→GREEN. Final frozen-source gate (`sh_1a5f2a35a001VtfDN4s5439AGc`):1303backend/439frontend/lint/typesPASS, build/111E2E+1expectedskip/2extraoriginbrowserPASS; source/dist/migration hash verified. No production/provider/history action. Acceptance report: `docs/audits/2026-11-04-approved-categorization-rules-local.md`.
 
 - No production migration/deployment, main merge/push, real LLM/OCR, provider activation or historical batch. Stage 3A has no provider adapter or LLM task at all.
 - Rule auto-write only for new `source=manual`, booked, positive PLN expense; one account debit, one technical-placeholder credit, rate1 and source_amount==base_amount_pln. No Actual/mappings, pending, loan, FX/refund, document allocations, existing manual state or any assignment origin.
@@ -36,7 +38,7 @@ The user approved the hybrid policy, not this newly written execution plan. Pres
 
 ## File map
 
-- New `backend/app/finance/rule_models.py`: settings/rule/origin/event ORM; import it for Base metadata and Alembic. No mapped columns on FinancialTransaction/Posting.
+- New `backend/app/finance/rule_models.py`: settings/rule/origin ORM, with outbox model in `rule_event_models.py`; both imported for Base metadata and Alembic. No new mapped columns on FinancialTransaction/Posting; optional origin is a batched read projection (`rule_origin_reads.py`).
 - New `rule_schemas.py`, `rule_policy.py`, `rule_router.py`: strict owner-scoped configuration/rule CRUD, normalization, preview/approval, receipts and epoch/target checks.
 - Modify `categorization.py`, `categorization_context.py`, `categorization_schemas.py`: factor private category writer, add optional origin to opaque snapshot/context, retain manual behavior.
 - New `rule_events.py`, `rule_worker.py`: creation registration, DB claim/lease/CAS, rule apply and delivery/recovery.
@@ -57,7 +59,7 @@ The user approved the hybrid policy, not this newly written execution plan. Pres
 `TransactionCategorizationOrigin`: unique transaction dependent FK/CASCADE, owner, origin=manual/approved_rule, version, rule_id/version/approval_receipt_id nullable, assignment_sha256, Base fields. Rule origin requires all grant refs; manual clears current grant refs after audit. No amount mirror. Existing Stage 2 state is still an independent human-protection signal.
 `Rule.approval_receipt_id` and `origin.approval_receipt_id` are RESTRICT FKs to finance_command_receipts.id. Origin additionally retains approval_snapshot_sha256; the immutable receipt JSON contains the reviewed rule/version, original and normalized pattern, markerID, target fields/path/hash, future-only scope, timestamp and real actor. Never edit a receipt or point a new rule version at the prior grant. Historical UI labels use this snapshot, not mutable rule fields. A persisted rule/origin never references a foreign owner's receipt.
 
-- `GET/PATCH /api/finance/categorization/settings`; PATCH uses expected_version, category_id/rules_enabled, explicit `confirm_future_only=true` and Idempotency-Key. Context includes max description length and version, not a guess about which category to choose.
+- `GET/PATCH /api/finance/categorization/settings`; PATCH uses expected_version, uncategorized_category_id/rules_enabled, explicit `confirm_future_only=true` and Idempotency-Key. Context includes max description length and version, not a guess about which category to choose.
 - `GET/POST /api/finance/categorization/rules`; create makes draft only. `PATCH /rules/{id}` edits to draft. `POST /rules/{id}/preview` is nonmutating and binds ruleversion, normalized pattern, markerID and complete target/ancestor fields.
 - `POST /rules/{id}/approve` requires expected_version, preview_snapshot, `confirm_future_only=true`, Idempotency-Key. `POST /rules/{id}/pause|retire` requires version/key. No harddelete.
 - Owner404, stale/conflicting approval409, invalid/missing/foreign/inactive category or wrong input422. Client cannot supply approved_by/source/origin/version increments.
@@ -68,12 +70,12 @@ The user approved the hybrid policy, not this newly written execution plan. Pres
 
 ### TDD steps
 
-- [ ] Write `test_marker_is_explicit_and_never_name_inferred`: unset/off→no eligibility, exact ID only, active own expense validation, root descendants not inferred. Write strict/spoofed-fields/owner/real-session-CSRF tests for each mutation family.
-- [ ] Write `test_rule_approval_binds_normalized_exact_pattern_and_target`: draft cannot auto-apply; preview no writes; approved then edit/pause/target rename/archive is no longer the old grant; duplicate active pattern rejects, no substring/fuzzy match. Include Unicode/case/whitespace and overlong input (reject, do not truncate).
-- [ ] Write `test_manual_origin_overrides_rule_without_faking_approval`: Stage2 behavior unchanged, legacy manualstate protects without origin, rule-origin→human same-category confirmation creates manualstate, existing human splits preserve account/date/allocations and origin history. Test wrong-owner grant refs.
-- [ ] Run guarded focused tests, observe RED at real behavior (not merely import error).
-- [ ] Implement data/DTO/policy/private writer and reference guards. `delete_category` must reject settings/rule/origin references under the existing tree lock; do not add owner-document lock after tree. Refresh policy/category state under locks and preserve established account-edit serialization.
-- [ ] Run focused policy/categorization/date/Actual/bill/account tests, ruff/mypy; expect PASS. Commit verified focused work only after lint/types/tests for both affected layers as appropriate, or keep uncommitted until whole-step gate if interfaces are still moving.
+- [x] Write `test_marker_is_explicit_and_never_name_inferred`: unset/off→no eligibility, exact ID only, active own expense validation, root descendants not inferred. Write strict/spoofed-fields/owner/real-session-CSRF tests for each mutation family.
+- [x] Write `test_rule_approval_binds_normalized_exact_pattern_and_target`: draft cannot auto-apply; preview no writes; approved then edit/pause/target rename/archive is no longer the old grant; duplicate active pattern rejects, no substring/fuzzy match. Include Unicode/case/whitespace and overlong input (reject, do not truncate).
+- [x] Write `test_manual_origin_overrides_rule_without_faking_approval`: Stage2 behavior unchanged, legacy manualstate protects without origin, rule-origin→human same-category confirmation creates manualstate, existing human splits preserve account/date/allocations and origin history. Test wrong-owner grant refs.
+- [x] Run guarded focused tests, observe RED at real behavior (not merely import error).
+- [x] Implement data/DTO/policy/private writer and reference guards. `delete_category` must reject settings/rule/origin references under the existing tree lock; do not add owner-document lock after tree. Refresh policy/category state under locks and preserve established account-edit serialization.
+- [x] Run focused policy/categorization/date/Actual/bill/account tests, ruff/mypy; expect PASS. Commit verified focused work only after lint/types/tests for both affected layers as appropriate, or keep uncommitted until whole-step gate if interfaces are still moving.
 
 ## Task 2: Creation-only outbox and approved-rule worker
 
@@ -95,32 +97,32 @@ The observed ruleID/version are opaque snapshot values, NOT rule/receipt FKs. En
 
 ### TDD steps
 
-- [ ] Write `test_only_creation_enrolls_observed_approval`: pre-enable/old transactions untouched; rule approved later cannot apply to no-match event; source dates may be old without being historical discovery; concurrent approval is bound to the observed committed grant, not transaction-start timestamp.
-- [ ] Write `test_record_event_never_takes_late_finance_locks`: creation paths retain lock order, including implicit FK locks; overlap a source creation holding category/account refs with a worker holding the approved rule row and prove enrollment commits without a rule FK wait. Explicit-loaded input cannot trigger MissingGreenlet. Broker offline/rollback/duplicate hook or delivery never loses or duplicates payment; include document_payment/scheduled/Actual exclusions.
-- [ ] Write `test_rule_job_writes_origin_without_manualstate`: exact new unclassified expense10000 changes one category, account Posting mapped columns/date/source unchanged, signed sumzero, no fabricated human approval, correct receipt/audit/grant lineage. New manual actual-category selection or split never enters job.
-- [ ] Write deterministic concurrent tests: pause/edit/settings disable/target or account change/manual confirm/allocation admitted before job→skip; job admitted first→later edit waits. Expired/stolen lease and repeated delivery cannot apply twice. Inject audit failure and broker failure, verify rollback/recovery.
+- [x] Write `test_only_creation_enrolls_observed_approval`: pre-enable/old transactions untouched; rule approved later cannot apply to no-match event; source dates may be old without being historical discovery; concurrent approval is bound to the observed committed grant, not transaction-start timestamp.
+- [x] Write `test_record_event_never_takes_late_finance_locks`: creation paths retain lock order, including implicit FK locks; overlap a source creation holding category/account refs with a worker holding the approved rule row and prove enrollment commits without a rule FK wait. Explicit-loaded input cannot trigger MissingGreenlet. Broker offline/rollback/duplicate hook or delivery never loses or duplicates payment; include document_payment/scheduled/Actual exclusions.
+- [x] Write `test_rule_job_writes_origin_without_manualstate`: exact new unclassified expense10000 changes one category, account Posting mapped columns/date/source unchanged, signed sumzero, no fabricated human approval, correct receipt/audit/grant lineage. New manual actual-category selection or split never enters job.
+- [x] Write deterministic concurrent tests: pause/edit/settings disable/target or account change/manual confirm/allocation admitted before job→skip; job admitted first→later edit waits. Expired/stolen lease and repeated delivery cannot apply twice. Inject audit failure and broker failure, verify rollback/recovery.
   Add marker archive without settingsversion change, old receipt retained after rule edit, and failure CAS versus stolen lease. Prove claim-only attempt accounting, enqueue-no-attempt, audit rollback then separate failure transaction, and terminal states never re-dispatch.
-- [ ] Run guarded tests RED, implement events/worker/hook and existing ARQ handler/dispatcher integration, then focused GREEN including Stage2 races/Actual/date/bill/account suites.
-- [ ] Generate `/migration "approved categorization rules"` equivalent only in newly owned finanse_test schema upgraded to2268. Inspect four-table additive DDL; keep prior manual check, transaction/posting columns and all old rows/indexes unchanged, no backfill/events for old ledger.
-- [ ] Test actual isolated upgrade/retention, empty rollback/re-upgrade and populated downgrade refusal under all new-table DDL locks. No table with policy/origin/events is dropped to ease rollback. No production migrate.
+- [x] Run guarded tests RED, implement events/worker/hook and existing ARQ handler/dispatcher integration, then focused GREEN including Stage2 races/Actual/date/bill/account suites.
+- [x] Generate `/migration "approved categorization rules"` equivalent only in newly owned finanse_test schema upgraded to2268. Inspect four-table additive DDL; keep prior manual check, transaction/posting columns and all old rows/indexes unchanged, no backfill/events for old ledger.
+- [x] Test actual isolated upgrade/retention, empty rollback/re-upgrade and populated downgrade refusal under all new-table DDL locks. No table with policy/origin/events is dropped to ease rollback. No production migrate.
 
 ## Task 3: Settings and rule review UI
 
-**Interfaces:** add `/finances/settings/categorization`, with session-scoped `useCategorizationSettings`, `useCategorizationRules`, receipt-keyed mutations and preview. Server supplies limit/version/eligibility messages; frontend does not infer eligibility from names or confidence. Origin display reads optional assignment_origin from Task1.
+**Interfaces:** use canonical `/settings/finances/categorization` (execution ruling: retain existing settings layout, not the originally transposed path), with session-scoped `useCategorizationSettings`, `useCategorizationRules`, receipt-keyed mutations and preview. Server supplies limit/version/eligibility messages; frontend does not infer eligibility from names or confidence. Origin display reads optional assignment_origin from Task1.
 `GET /api/finance/categorization/events?status=active` returns bounded owner-scoped public ID/transactionID/status/safe reason and poll_after_ms. It reads only the event table and never claims/runs jobs or discovers ledger history. FinanceTabs watcher polls only while active events exist; a successful event-list read/terminal transition invalidates ledger reads, never its own query key, so there is no empty polling loop. New-transaction mutation also invalidates this watcher. Optional assignment_origin in TransactionResponse is read-only, bulk/selectin loaded and uses the immutable approval label. CategorizationContext may expose last_event status/reason for diagnosis without including mutable job state in the ledger token.
 
-- [ ] Write failing UI tests: explicit marker selection, rules initially off, future-only confirmation, no historical-run button, draft→preview→approve, exact original/normalized description and full target path, edit/pause invalidates old preview,409 retains fields but requires refresh.
-- [ ] Write failing session/receipt tests: delayed old-owner result does not invalidate/install new-session rules; same-session auth refresh retains editor; uncertain retry preserves key; changed intent generates new key/preview.
+- [x] Write failing UI tests: explicit marker selection, rules initially off, future-only confirmation, no historical-run button, draft→preview→approve, exact original/normalized description and full target path, edit/pause invalidates old preview,409 retains fields but requires refresh.
+- [x] Write failing session/receipt tests: delayed old-owner result does not invalidate/install new-session rules; same-session auth refresh retains editor; uncertain retry preserves key; changed intent generates new key/preview.
   Test pending→terminal invalidates finance even if apply finished before the first watcher read, while empty state does not keep polling; no per-row query or new mapped financial column. A paused/edited rule name cannot rewrite a historical origin label.
-- [ ] Implement focused settings page/editor using existing CategoryPicker/Dialog/style, add route/settingsnav, explain source limitations and why a rule needs reapproval. Separate manual/rule origin labels; preserve existing category split editing.
-- [ ] Add mockedE2E375/1440 for settings/rule approval and source origin/manual override, a11y/keyboard/nooverflow. Mock server and block provider/backend traffic; real ledger invariants remain covered by backend tests.
-- [ ] Run fullfrontend/lint/tsc/build and focusedE2E; expect PASS. No AI generation button or provider activation in3A.
+- [x] Implement focused settings page/editor using existing CategoryPicker/Dialog/style, add route/settingsnav, explain source limitations and why a rule needs reapproval. Separate manual/rule origin labels; preserve existing category split editing.
+- [x] Add mockedE2E375/1440 for settings/rule approval and source origin/manual override, a11y/keyboard/nooverflow. Mock server and block provider/backend traffic; real ledger invariants remain covered by backend tests.
+- [x] Run fullfrontend/lint/tsc/build and focusedE2E; expect PASS. No AI generation button or provider activation in3A.
 
 ## Task 4: Whole-step acceptance and local handoff
 
-- [ ] One fresh-context whole-change review against spec/ReviewFocus; verify/fix Critical/Important RED→GREEN in one pass, record remaining minors. No per-task reviewer loop or live provider/production test.
-- [ ] Freeze source; full guarded `/test`, `/lint`, `/typecheck`, fresh build/fullE2E and migration retention with exactsource/dist/revision proof. Run public PostgreSQL suites serially.
-- [ ] Update CHANGELOG/TASKS/JOURNAL and audit, commit only own verified files. Stage3A done locally is not fullStage3 or deployment; 3B proposals/LLM remains pending. Preserve branch/worktree/Velo/Q7.
+- [x] One fresh-context whole-change review against spec/ReviewFocus; verify/fix Critical/Important RED→GREEN in one pass, record remaining minors. No per-task reviewer loop or live provider/production test.
+- [x] Freeze source; full guarded `/test`, `/lint`, `/typecheck`, fresh build/fullE2E and migration retention with exactsource/dist/revision proof. Run public PostgreSQL suites serially.
+- [x] Update CHANGELOG/TASKS/JOURNAL and audit, commit only own verified files. Stage3A done locally is not fullStage3 or deployment; 3B proposals/LLM remains pending. Preserve branch/worktree/Velo/Q7.
 
 ## Builder decisions and self-review
 

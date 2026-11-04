@@ -14,7 +14,11 @@ Po odbiorze lokalnych etapów1/2 (63e2b9c/9fef438) użytkownik zatwierdził 2026
 To zgoda na politykę produktu, nie na niepokazany plan implementacji, produkcyjną
 migrację/wdrożenie, realne wywołania AI/OCR lub batch historyczny. Kod etapu2 nadal
 jest sprawdzonym baseline1250backend/429frontend/107E2E+1skip. Ten dokument opisuje
-etap3; pierwszy plan wykonawczy dotyczy niezależnego kroku3A. Kod jeszcze bez zmian.
+etap3; pierwszy plan wykonawczy dotyczy niezależnego kroku3A. Pełny plan5e679b5 następnie
+zatwierdzono „tak”; lokalny kod3A i jedna poprawka po whole-review przeszły końcowy
+fullgate:1303backend/439frontend/lint/types/build/111E2E+1expectedskip oraz2browserorigin.
+Exactsource/dist/migrationhashPASS.3B pozostaje poza implementacją. Szczegóły odbioru:
+`docs/audits/2026-11-04-approved-categorization-rules-local.md`.
 
 ## Cel i kolejność
 

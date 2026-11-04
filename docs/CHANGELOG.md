@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-04 — Zatwierdzone reguły kategoryzacji, etap 3A lokalnie
+
+### Added
+- Jawna kategoria techniczna, domyślnie wyłączone reguły i zatwierdzany exactdescription
+  dla przyszłych ręcznych wydatkówPLN. Osobnyorigin/immutablegrant i trwałe zdarzenia
+  z lease/CAS/retry; bez AI, historii i zmiany strony kontowej płatności.
+- UI w ustawieniach finansów: szkic/podgląd/zgoda, pause/edit/retire, idempotentne retry,
+  sessionfences, batchedorigin i eventwatcher. Addytywna migracjac063 tylko izolowanytest.
+
+### Fixed
+- Whole-review: informacja o regule dołączana także w historii konkretnego konta;
+  freshidentitymap regresjaRED→GREEN. Manualny audyt zachowuje poprzedni ruleorigin.
+- Pełny końcowy gate po review:1303backend/439frontend/lint/typesPASS, freshbuild/
+  111E2E+1expectedskip i2dodatkowebrowseroriginPASS. Exactsource/dist/migrationhashPASS;
+  odbiór lokalny zamknięty.3B/providery/historia/produkcja poza zakresem.
+  Raport: `docs/audits/2026-11-04-approved-categorization-rules-local.md`.
+  Kod lokalny: backend28ce7f0, UI2b960ee; brak wydania produkcyjnego.
+
 ## [Design] — 2026-11-04 — Hybrydowa kategoryzacja, projekt etapu 3
 
 ### Added

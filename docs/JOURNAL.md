@@ -2,6 +2,36 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — ZAKOŃCZONE LOKALNIE3A, reguły kategoryzacji
+
+- User zatwierdził pełny plan5e679b5 słowem „tak”. Native inline/TDD w istniejącym
+  worktree, bez nowych usług/providerów, historii, produkcji, mainmerge lub push.
+- Ustawienia explicitmarker/off, exactNFKC/casefold, wersjonowane zgody/immutable receipts,
+  osobnyorigin, creationoutbox bez późnych ruleFKlocków i lease/CASworker są lokalnie.
+  Stage2manual-only constraint niezmieniony, writer kategorii współdzielony prywatnie.
+- UI canonical `/settings/finances/categorization`, draft→preview→approval, retrykeys,
+  409/sessionfences i batchedorigin/eventwatcher.3B zLLM/propozycjami nadal poza zakresem.
+- 86focusedPASS, następnie32worker/security/racesPASS; frontend439/lint/types/buildPASS,
+  pełne111E2E+1expectedskipPASS i dodatkowe2browserorigin→manual375/1440PASS.
+- Migracjac06315385b4e wygenerowana raz i sprawdzona tylko w owned
+  approved_rules_stage3a_test/finanse_test:4additivetables/nobackfill/retention/emptyrollback/
+  populatedguardPASS. Unrelated scheduled-index drift odrzucony. Nie ponawiać generate/seed.
+- Whole-review ses_e5a1dba5effeyjHjQdXkOy7cvt Critical0/Important1/Minor0. Account history
+  pomijał origin; freshidentitymap endpointRED→GREEN, wspólnybatchedloader. Nie re-review.
+- **Pełny gate zamrożonego kodu zakończony** `sh_1a5f2a35a001VtfDN4s5439AGc`:
+  1303backend/439frontend/lint/typesPASS. Przeczytano callback; verify-final.pyPASS
+  potwierdza exactsource/dist/6results/migrationhash. Nie powtarzać suite. Wcześniejsze
+  1266publicPASS nie zastępuje tego końcowego dowodu.
+- Domknięcie: własne commity backend/UI/docs i odbiór lokalny, bez automatycznego wydania.
+  Backend28ce7f0 i UI2b960ee zapisane po fullgate, identyczny sourceproofPASS.
+  Następny etap to osobny plan3B (propozycjeAI/przegląd), nie od razu realneLLM/historia.
+  Audyt `docs/audits/2026-11-04-approved-categorization-rules-local.md`, dowody
+  `/tmp/opencode/categorization-rules-20261104/`; ledger po odbiorze archiwizowany tam
+  jako `execution-ledger/`, workspace planu usuwany bez dotykania innych planów.
+- Zachować dirtyVelo/Q7. Pre-existing sidebarbrandAxe mismatch poza main-area pozostaje;
+  nowe main-area i stare taggedscansPASS. Testy używają guarded command equivalents;
+  tool wywołujący slashcommands nie jest udostępniony. Brak realnychAI/OCR/providerów.
+
 ## 2026-11-04 — PROJEKT etapu 3: zaakceptowany tryb hybrydowy
 
 - Po „co teraz?”/„co proponujesz?” user przyjął słowem „tak” konkretną politykę:
