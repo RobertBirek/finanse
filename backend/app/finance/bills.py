@@ -91,8 +91,10 @@ async def _run_bill_command(
 async def _bill(
     db: AsyncSession, user_id: uuid.UUID, bill_id: uuid.UUID, *, lock: bool = False
 ) -> FinancialDocument | None:
-    stmt = select(FinancialDocument).where(
-        FinancialDocument.id == bill_id, FinancialDocument.user_id == user_id
+    stmt = (
+        select(FinancialDocument)
+        .where(FinancialDocument.id == bill_id, FinancialDocument.user_id == user_id)
+        .execution_options(populate_existing=True)
     )
     if lock:
         stmt = stmt.with_for_update()

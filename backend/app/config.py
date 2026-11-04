@@ -99,6 +99,15 @@ class Settings(BaseSettings):
     FINANCE_SUGGESTIONS_RETRY_LATER_SECONDS: PositiveInt = 60
     FINANCE_SUGGESTIONS_DISPATCH_BATCH: PositiveInt = Field(default=20, le=100)
     FINANCE_SUGGESTIONS_UI_POLL_MS: PositiveInt = 2000
+    FINANCE_RECEIPT_MAX_LINES: PositiveInt = Field(default=200, le=1000)
+    FINANCE_RECEIPT_MAX_DISCOUNTS: PositiveInt = Field(default=50, le=200)
+    FINANCE_RECEIPT_MAX_DISCOUNT_SHARES: PositiveInt = Field(default=1000, le=5000)
+    FINANCE_RECEIPT_ITEM_NAME_MAX_CHARS: PositiveInt = Field(default=300, le=2000)
+    FINANCE_RECEIPT_STORE_NAME_MAX_CHARS: PositiveInt = Field(default=200, le=500)
+    FINANCE_RECEIPT_HISTORY_PAGE_SIZE: PositiveInt = Field(default=5, le=20)
+    FINANCE_RECEIPT_HISTORY_SCAN_LIMIT: PositiveInt = Field(default=200, le=2000)
+    FINANCE_RECEIPT_HISTORY_PREFIX_MIN_CHARS: PositiveInt = Field(default=4, le=50)
+    FINANCE_RECEIPT_STORE_PAGE_SIZE: PositiveInt = Field(default=50, le=100)
     UPLOAD_RATE_LIMIT: PositiveInt = 10
     UPLOAD_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     DOCUMENT_PROCESSING_ACTION_RATE_LIMIT: PositiveInt = 10
@@ -208,6 +217,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
+        if self.FINANCE_RECEIPT_HISTORY_SCAN_LIMIT < self.FINANCE_RECEIPT_HISTORY_PAGE_SIZE:
+            raise ValueError("Receipt history scan limit must cover a result page")
         if self.FINANCE_SUGGESTIONS_LEASE_SECONDS <= self.FINANCE_SUGGESTIONS_TIMEOUT_SECONDS + 10:
             raise ValueError("Suggestion lease must exceed provider timeout plus safety margin")
         if self.FINANCE_SUGGESTIONS_JOB_TIMEOUT_SECONDS <= self.FINANCE_SUGGESTIONS_LEASE_SECONDS:

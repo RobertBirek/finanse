@@ -224,9 +224,24 @@ async def delete_category(db: AsyncSession, user_id: uuid.UUID, category_id: uui
         .where(CategorizationProposalItem.target_category_id == category_id)
         .limit(1)
     )
+    from app.finance.receipt_models import ReceiptItemLine
+
+    item_ref = await db.execute(
+        select(ReceiptItemLine.id).where(ReceiptItemLine.category_id == category_id).limit(1)
+    )
     if any(
         result.first() is not None
-        for result in (posting, scheduled, budget, child, bill, rule_ref, marker_ref, proposal_ref)
+        for result in (
+            posting,
+            scheduled,
+            budget,
+            child,
+            bill,
+            rule_ref,
+            marker_ref,
+            proposal_ref,
+            item_ref,
+        )
     ):
         raise ValueError("Category has records; deactivate it instead of deleting")
     await db.delete(category)
