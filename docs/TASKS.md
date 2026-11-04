@@ -15,7 +15,7 @@ Backlog zadań ze statusami.
   Oba findingsreview (cacheowner/session i same-sessionrefresh) poprawione3RED→GREEN.
 - [x] Etap2 lokalnie: zatwierdzane zmiany/splity kategorii,
   zachowanie strony kontowej i alokacji. Pełny plan656e9e6 zatwierdzony „tak”; lokalna
-  implementacja native/TDD w toku. User po odbiorze63e2b9c: „ok, działaj dalej”.
+  implementacja native/TDD zakończona w9fef438. User po odbiorze63e2b9c: „ok, działaj dalej”.
   Buildercheck zakończony; spec/plan `2026-11-03-approved-category-splits*` zapisane.
   Kontekst→preview→apply, ręczna ponowna korekta/scalenie, receipt replay, ochrona
   Actual/loan/FX/pending; wspólny lock delete_category ma zamknąć wyścigSETNULL.

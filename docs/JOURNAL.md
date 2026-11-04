@@ -28,6 +28,9 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Raport `docs/audits/2026-11-04-approved-category-splits-local.md`, własnyledger
   `.superpowers/sdd/2026-11-03-approved-category-splits/progress.md`; kolejny etap3
   po odbiorze to propozycje/reguły/LLM; realneAI/history/prod wymagają osobnej zgody.
+- Kod etapu2 zapisany w9fef438 (28własnychplików). Postcommit exactsource/fullgateproof
+  PASS bez ponawiania suite; końcowy docscommit tylko odnotowuje SHA/status.
+  Branch feat/financial-document-workflow i worktree pozostają, bez push/mainmerge.
 
 ## 2026-11-03 — W TOKU etap 2: zatwierdzane kategorie i splity
 

@@ -5,6 +5,7 @@
 Kod i testy odebrano lokalnie po końcowym pełnym gate. Użytkownik zatwierdził plan656e9e6
 słowem „tak”. Nie wdrożono funkcji i nie uruchomiono migracji produkcyjnej, AI/OCR
 ani partii historii. Stary release810/schema2f pozostaje poza tą zmianą.
+Kod funkcji: `9fef438`. Tylko28własnychplików; unrelatedVelo/Q7 pozostały nietknięte.
 
 Plan: `docs/superpowers/plans/2026-11-03-approved-category-splits.md`.
 Spec: `docs/superpowers/specs/2026-11-03-approved-category-splits-design.md`.
