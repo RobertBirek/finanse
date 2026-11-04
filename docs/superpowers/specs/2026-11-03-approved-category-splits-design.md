@@ -4,8 +4,8 @@
 
 Kontynuacja kontraktu `2026-11-03-smart-categorization-design.md` po lokalnym etapie
 dat63e2b9c. Użytkownik odpowiedział „ok, działaj dalej” na następny etap: zmiany i podziały
-kategorii bez dublowania płatności. Ten dokument doprecyzowuje wykonanie; przed zmianą
-kodu aplikacji plan zostanie przedstawiony do zatwierdzenia. Nie jest zgodą na wdrożenie,
+kategorii bez dublowania płatności. Użytkownik zatwierdził pełny plan656e9e6 słowem „tak”
+przed zmianą kodu aplikacji. Zgoda obejmuje realizację lokalną, nie jest zgodą na wdrożenie,
 produkcyjne mutacje ani uruchomienie przetwarzania historii.
 
 ## Co użytkownik otrzyma

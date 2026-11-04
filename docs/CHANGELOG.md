@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased] — 2026-11-04 — Zatwierdzane kategorie i podziały płatności, etap 2
+
+### Added
+- Podgląd i ręczne zatwierdzanie rozkładu kategorii wydatkuPLN, w tym100→80/20→100.
+  Ledger jest jedynym źródłem kwot; ID i kolumny płatności/alokacje/daty bez zmian.
+- Wersjonowane manualstate, snapshot, audyt i FinanceCommandReceipt do bezpiecznego
+  ponowienia. Addytywna migracja2268bca97cb8 sprawdzona wyłącznie w ownedfinanse_test,
+  bez backfillu lub zmiany zachowanej historiiActual.
+
+### Fixed
+- Serializacja usuwania kategorii z zatwierdzaniem splitu chroni przed wyścigiemSETNULL.
+- Important review: zwykłe edycje konta serializowane z zatwierdzonym snapshotem,
+  oba porządki odtworzone2RED→GREEN/focused28PASS; bez późnego account-row lock.
+- Końcowe pełne6gate po review:1250backend/429frontend/lint/typesPASS, freshbuild
+  i107E2E+1expectedskipPASS. Manifest potwierdza dokładne źródła/dist i hash migracji.
+  Produkcja bez zmian, AI/OCR/historybatch niewykonane.
+  Raport `docs/audits/2026-11-04-approved-category-splits-local.md`.
+
 ## [Design] — 2026-11-03 — Zatwierdzane kategorie i splity, etap 2
 
 ### Added

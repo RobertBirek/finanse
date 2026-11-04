@@ -2,7 +2,34 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
-## 2026-11-03 — PROJEKT etapu 2: zatwierdzane kategorie i splity
+## 2026-11-04 — ZAKOŃCZONY LOKALNIE etap 2, ręczne kategorie i splity
+
+- Plan656e9e6 zatwierdzony „tak”; native/TDD w istniejącym linkedworktree, bez zmian
+  produkcji810/2f, providerów, partii historii, mainmerge lub push. UnrelatedVelo/Q7 zachować.
+- Backendcontext/preview/apply/state/receipt/audit i UI gotowe lokalnie, initial20RED→GREEN,
+  focused140backendPASS +7eligibility/1productionCSRF/authPASS. Fullfrontend429/lint/typesPASS.
+- Migration2268 autogenerate/rehearsal tylko ownedtestschema; alloldrows/columns/indexes
+  retained/nobackfill/emptydowngrade+upgrade/populateddowngradeguardPASS. Nie powtarzać
+  generate/seed/upgraderehearsal tego samego schematu. Prywatny migration-proof z hashem.
+- Jedno whole-review ses_e5c6ac4e2ffeY67NUsPOSm3fwl Critical0/Important1accountTOCTOU:
+  potwierdzono2RED→GREEN obu porządków, wszystkie update_account mają ownerdocmutex
+  przed odczytami. Focused28account/races/securityPASS. Minor 'source=base' to numeryczna
+  source_amount==base_amount_pln, nie etykietaFX; plan doprecyzowany, bez runtimeprzepisywania.
+- FullE2E/build sh_1a52939f9001bT87h0l4BTKZJe callback107PASS+1expectedskip/375/1440,
+  frontend bez zmian po build. Vite524kBchunk ostrzeżenie bez ukrywania.
+- Źródła zamrożone po fixie. Pełne6gate sh_1a52db2ff001FNL2gYNIMyQtXJ callbackPASS:
+  1250backend/429frontend/lint/types. `verify-final.py` PASS potwierdza dokładne źródła,
+  dist,107E2E+1expectedskip i niezmieniony hash migracji2268/retention. final-proof.json
+  w prywatnych dowodach. Nie ponawiać suite dla finaldocs/commitu, kod bez zmian.
+- Dodatkowe niemutujące strict-contract probesPASS: zły token, spoofsource/account/FX,
+  boolversion/limitparts i nonliteralconfirmation. Bez DB/providerów i zmiany źródeł;
+  `contract-probes.log` uzupełnia pełne testy. Odbiór lokalny zakończony; commit tylko
+  własnych plików, zachować unrelatedVelo/Q7, branch/worktree i produkcję810/schema2f.
+- Raport `docs/audits/2026-11-04-approved-category-splits-local.md`, własnyledger
+  `.superpowers/sdd/2026-11-03-approved-category-splits/progress.md`; kolejny etap3
+  po odbiorze to propozycje/reguły/LLM; realneAI/history/prod wymagają osobnej zgody.
+
+## 2026-11-03 — W TOKU etap 2: zatwierdzane kategorie i splity
 
 - User po zakończeniu etapu1/commit63e2b9c: „ok, działaj dalej”. Kontynuacja lokalnego
   zakresu; brak zgody na wdrożenie, produkcyjną historię, AI/OCR lub luźniejsze guardy.
@@ -30,6 +57,21 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   w tym samymworktree. Bieżący docs-onlycommit nie oznacza implementacji etapu2.
   Nie wykonano nowych testówaplikacji, migracji, realnychAI/OCR, produkcyjnychmutacji
   ani historii; sprawdzono zgodność kodu z istniejącym dowodem1205/420/105+1skip.
+- User zatwierdził pełny plan656e9e6 słowem „tak”. Trwa lokalna realizacja native/TDD
+  w istniejącymworktree. Powyższy docs-only status dotyczył etapu planowania, nie kodu teraz.
+- Dodano context/preview/apply, category-only apply z receipt/audit/manualstate, dokładne
+  grosze, stale409, zachowanieaccountposting/linków, serializację delete_category.
+  Kod kontekstu/snapshot wydzielony w categorization_context.py. Initial20RED→20GREEN,
+  wyścigcategorydelete i archivedtarget2RED→GREEN. Focused rozszerzony140backendPASS,
+  frontend425/lint/typesPASS przed rozszerzeniem UI o czytelne before/after i busyDialog.
+- Migracja2268bca97cb8 autogenerate/review w owned schema category_splits_stage2_test
+  (localhost55432/finanse_test), tylko nowa tabela. Realne oldrows/columns/indexesretain,
+  nobackfill/emptydowngrade+reupgrade/populateddowngradeguardPASS. Public/produkcja
+  bez migracji, AI/OCR bez wywołań. Nie ponawiać generate ani seed/rehearsal tego schematu.
+- Aktualne dowody `/tmp/opencode/category-splits-20261103/`; własnyledger
+  `.superpowers/sdd/2026-11-03-approved-category-splits/progress.md`. Frontend/fullunit/
+  build/focusedE2E callback sh_1a3901d280013eR5EXU5bxFF0T pending; nie poll/retry.
+  Backendsecuritycheck i finalreview/fullgate jeszcze przed odbiorem; appcode bezcommitu.
 
 ## 2026-11-03 — ZAKOŃCZONY LOKALNIE etap 1: daty zakupów i księgowania
 

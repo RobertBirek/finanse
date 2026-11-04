@@ -1,4 +1,6 @@
 import { useTransaction, type Account, type Category } from "../../api/finance";
+import { useState } from "react";
+import { TransactionCategorizationDialog } from "./TransactionCategorizationDialog";
 import { TRANSACTION_TYPES } from "../../lib/transactionSearch";
 import { formatPLN } from "../../lib/format";
 import { TransactionDateLabel } from "./TransactionDateLabel";
@@ -17,6 +19,7 @@ export function TransactionDetail({
   onClose: () => void;
 }) {
   const query = useTransaction(id);
+  const [categorizing, setCategorizing] = useState(false);
   return (
     <Dialog
       label="Szczegóły transakcji"
@@ -39,6 +42,21 @@ export function TransactionDetail({
       >
         {query.data && (
           <div className="space-y-4">
+            {categorizing ? (
+              <TransactionCategorizationDialog
+                id={id}
+                onClose={() => setCategorizing(false)}
+              />
+            ) : null}
+            {query.data.type === "expense" ? (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setCategorizing(true)}
+              >
+                Zmień kategorie
+              </button>
+            ) : null}
             <p className="text-white [overflow-wrap:anywhere]">
               {query.data.description}
             </p>

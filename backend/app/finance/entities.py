@@ -34,9 +34,11 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCrea
 async def update_account(
     db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID, data: AccountUpdate
 ) -> Account | None:
+    # Categorization approves a snapshot of this account's full mapped state.
+    # Serialize all account edits with it before any account/ledger row locks.
+    await lock_document_mutations(db, user_id)
     update_data = data.model_dump(exclude_unset=True)
     if "currency" in update_data:
-        await lock_document_mutations(db, user_id)
         existing = await get_account(db, user_id, account_id)
         if existing is not None and update_data["currency"] != existing.currency:
             await guard_bill_account_change(
@@ -168,8 +170,12 @@ async def update_category(
 
 
 async def delete_category(db: AsyncSession, user_id: uuid.UUID, category_id: uuid.UUID) -> bool:
+    await db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"category-tree:{user_id}"))))
     result = await db.execute(
-        select(Category).where(Category.id == category_id, Category.user_id == user_id)
+        select(Category)
+        .where(Category.id == category_id, Category.user_id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     category = result.scalar_one_or_none()
     if category is None:

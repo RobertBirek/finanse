@@ -11,6 +11,7 @@ import {
 import { formatPLN } from "../../lib/format";
 import { TransactionDateLabel } from "./TransactionDateLabel";
 import { TransactionDatesDialog } from "./TransactionDatesDialog";
+import { TransactionCategorizationDialog } from "./TransactionCategorizationDialog";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -198,6 +199,7 @@ export function TransactionList({
   const [editDescription, setEditDescription] = useState("");
   const [editDate, setEditDate] = useState("");
   const [dateTarget, setDateTarget] = useState<Transaction | null>(null);
+  const [categoryTarget, setCategoryTarget] = useState<string | null>(null);
 
   const updateError = apiErrorDetail(updateMutation.error);
   const deleteError = apiErrorDetail(deleteMutation.error);
@@ -261,6 +263,12 @@ export function TransactionList({
 
   return (
     <div className="space-y-1">
+      {categoryTarget ? (
+        <TransactionCategorizationDialog
+          id={categoryTarget}
+          onClose={() => setCategoryTarget(null)}
+        />
+      ) : null}
       {dateTarget ? (
         <TransactionDatesDialog
           transaction={dateTarget}
@@ -413,6 +421,16 @@ export function TransactionList({
               )}
             </p>
             <div className="flex flex-wrap gap-2">
+              {transaction.type === "expense" ? (
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-sm"
+                  disabled={isDeleting}
+                  onClick={() => setCategoryTarget(transaction.id)}
+                >
+                  Zmień kategorie
+                </button>
+              ) : null}
               {transaction.type === "expense" &&
               transaction.source === "manual" &&
               transaction.updated_at ? (

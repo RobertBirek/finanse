@@ -431,6 +431,27 @@ class RecurringOccurrenceCoverage(Base):
     )
 
 
+class TransactionCategorizationState(Base):
+    """Approval evidence, not another financial amount source."""
+
+    __tablename__ = "transaction_categorization_states"
+    __table_args__ = (
+        CheckConstraint("version > 0", name="ck_categorization_version"),
+        CheckConstraint("source = 'manual'", name="ck_categorization_source"),
+    )
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_transactions.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(nullable=False)
+    source: Mapped[str] = mapped_column(String(30), nullable=False, default="manual")
+    before_snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    after_snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
 class FinanceCommandReceipt(Base):
     __tablename__ = "finance_command_receipts"
     __table_args__ = (
