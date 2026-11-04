@@ -14,11 +14,16 @@ import { BillRegister } from "../components/finance/bills/BillRegister";
 import { BillDetail } from "../components/finance/bills/BillDetail";
 import { BillPaymentDialog } from "../components/finance/bills/BillPaymentDialog";
 import { BillCoverageDialog } from "../components/finance/bills/BillCoverageDialog";
+import { ReceiptItemsPanel } from "../components/finance/receipts/ReceiptItemsPanel";
+import { useAuthStore } from "../stores/authStore";
 
 export function FinanceDocuments() {
   const [params, setParams] = useSearchParams();
   const [filters, setFilters] = useState<BillFilters>({ limit: 25, offset: 0 });
-  const [dialog, setDialog] = useState<"payment" | "coverage" | null>(null);
+  const [dialog, setDialog] = useState<"payment" | "coverage" | "items" | null>(
+    null,
+  );
+  const session = useAuthStore((s) => s.sessionVersion);
   const selectedId = params.get("bill");
   const bills = useBills(filters);
   const selected = useBill(selectedId);
@@ -215,6 +220,7 @@ export function FinanceDocuments() {
             onClose={() => select(null)}
             onPayment={() => setDialog("payment")}
             onCoverage={() => setDialog("coverage")}
+            onReceipt={() => setDialog("items")}
             onLifecycle={(nextLifecycle, confirmForecastEffect) =>
               lifecycle.mutate(
                 {
@@ -311,6 +317,13 @@ export function FinanceDocuments() {
       {dialog === "coverage" && selected.data ? (
         <BillCoverageDialog
           bill={selected.data}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
+      {dialog === "items" && selected.data ? (
+        <ReceiptItemsPanel
+          key={`${session}:${selected.data.id}`}
+          billId={selected.data.id}
           onClose={() => setDialog(null)}
         />
       ) : null}

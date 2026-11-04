@@ -75,6 +75,7 @@ export function BillDetail({
   onClose,
   onPayment,
   onCoverage,
+  onReceipt,
   onLifecycle,
   onUnlink,
   actionsDisabled = false,
@@ -83,6 +84,7 @@ export function BillDetail({
   onClose: () => void;
   onPayment: () => void;
   onCoverage: () => void;
+  onReceipt?: () => void;
   onLifecycle: (
     lifecycle: BillResponse["lifecycle"],
     confirmForecastEffect?: true,
@@ -193,6 +195,16 @@ export function BillDetail({
         )}
       </section>
       <div className="mt-5 flex flex-wrap gap-2">
+        {onReceipt ? (
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={actionsDisabled}
+            onClick={onReceipt}
+          >
+            Produkty i kategorie
+          </button>
+        ) : null}
         <button
           type="button"
           className="btn-primary"

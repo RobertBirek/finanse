@@ -525,6 +525,8 @@ export function useCategories() {
 
 function invalidateCategoryMutationQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["finance", "categories"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "receipt-items"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "receipt-payment"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "category-summary"] });
   invalidateFinanceLedger(queryClient);
 }

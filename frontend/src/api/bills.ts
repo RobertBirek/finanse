@@ -143,6 +143,8 @@ const invalidate = (
   ledger = false,
 ) => {
   client.invalidateQueries({ queryKey: ["finance", "bills"] });
+  client.invalidateQueries({ queryKey: ["finance", "receipt-items"] });
+  client.invalidateQueries({ queryKey: ["finance", "receipt-payment"] });
   client.invalidateQueries({ queryKey: ["documents"] });
   client.invalidateQueries({ queryKey: ["finance", "cashflow"] });
   if (ledger) {

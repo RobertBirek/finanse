@@ -11,6 +11,7 @@ export function CategoryPicker({
   type,
   includeInactive = false,
   excludedIds,
+  retainSelectedOption = true,
 }: {
   id: string;
   label?: string;
@@ -20,13 +21,14 @@ export function CategoryPicker({
   type?: Category["type"];
   includeInactive?: boolean;
   excludedIds?: ReadonlySet<string>;
+  retainSelectedOption?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const options = useMemo(() => {
     const selected = categories.find((category) => category.id === value);
     return categories.filter(
       (category) =>
-        category.id === selected?.id ||
+        (retainSelectedOption && category.id === selected?.id) ||
         ((!type || category.type === type) &&
           !excludedIds?.has(category.id) &&
           (includeInactive || category.is_active !== false) &&
@@ -34,7 +36,15 @@ export function CategoryPicker({
             .toLocaleLowerCase("pl")
             .includes(query.toLocaleLowerCase("pl"))),
     );
-  }, [categories, includeInactive, query, type, value, excludedIds]);
+  }, [
+    categories,
+    includeInactive,
+    query,
+    type,
+    value,
+    excludedIds,
+    retainSelectedOption,
+  ]);
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-sm text-gray-400">
@@ -50,7 +60,7 @@ export function CategoryPicker({
       <select
         id={id}
         className="input"
-        value={value}
+        value={options.some((option) => option.id === value) ? value : ""}
         onChange={(event) => onChange(event.target.value)}
       >
         <option value="">Wybierz kategorię</option>
@@ -61,6 +71,11 @@ export function CategoryPicker({
           </option>
         ))}
       </select>
+      {!options.length ? (
+        <p role="status" className="mt-1 text-xs text-gray-400">
+          Brak pasujących kategorii
+        </p>
+      ) : null}
     </div>
   );
 }

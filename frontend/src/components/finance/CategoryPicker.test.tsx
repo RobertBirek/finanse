@@ -34,6 +34,38 @@ const categories = [
 ];
 
 describe("CategoryPicker", () => {
+  it("receipt search excludes a selected nonmatching category without changing its value", () => {
+    const change = vi.fn();
+    const view = render(
+      <CategoryPicker
+        id="receipt-category"
+        categories={categories}
+        value="home"
+        onChange={change}
+        type="expense"
+        retainSelectedOption={false}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Szukaj: Kategoria"), {
+      target: { value: "czynsz" },
+    });
+    const select = screen.getByLabelText("Kategoria");
+    expect(
+      within(select).queryByRole("option", { name: /^Dom$/ }),
+    ).not.toBeInTheDocument();
+    expect(change).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Szukaj: Kategoria"), {
+      target: { value: "zzzz" },
+    });
+    expect(screen.getByText("Brak pasujących kategorii")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Szukaj: Kategoria"), {
+      target: { value: "" },
+    });
+    expect(
+      within(select).getByRole("option", { name: /^Dom$/ }),
+    ).toBeInTheDocument();
+    view.unmount();
+  });
   it("searches hierarchy paths, filters by transaction type and excludes archived items", () => {
     const onChange = vi.fn();
     render(
