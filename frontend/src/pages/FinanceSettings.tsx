@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 const financeSettings = [
   ["accounts", "Konta i rachunki"],
   ["categories", "Kategorie"],
+  ["categorization", "Kategoryzacja"],
   ["budgets", "Limity budżetu"],
   ["schedules", "Harmonogramy"],
   ["forecast", "Prognoza"],

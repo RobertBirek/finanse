@@ -402,6 +402,7 @@ export function TransactionList({
               <p className="truncate text-sm text-gray-200">
                 {transaction.description}
               </p>
+              <AssignmentOriginLabel origin={transaction.assignment_origin} />
               <p className="text-xs text-gray-500">
                 <TransactionDateLabel transaction={transaction} />
                 {transaction.type}
@@ -479,3 +480,4 @@ export function TransactionList({
     </div>
   );
 }
+import { AssignmentOriginLabel } from "./AssignmentOriginLabel";

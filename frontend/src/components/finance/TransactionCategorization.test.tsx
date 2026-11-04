@@ -83,6 +83,32 @@ async function open() {
   fireEvent.click(screen.getByRole("button", { name: "Zmień kategorie" }));
   await screen.findByLabelText("Kwota PLN 1");
 }
+
+it("labels approved-rule origin distinctly from human approval in the transaction list", () => {
+  render(
+    <TransactionList
+      transactions={[
+        {
+          ...txn,
+          assignment_origin: {
+            origin: "approved_rule" as const,
+            version: 1,
+            rule_id: "rule",
+            rule_version: 1,
+            display_description: "Czynsz mieszkanie",
+            target_path: "Dom",
+          },
+        },
+      ]}
+      loading={false}
+      error={false}
+    />,
+    { wrapper },
+  );
+  expect(
+    screen.getByText("Kategoria z zatwierdzonej reguły"),
+  ).toBeInTheDocument();
+});
 async function split() {
   fireEvent.change(screen.getByLabelText("Kwota PLN 1"), {
     target: { value: "80" },

@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import api from "../lib/api";
 import { useAuthStore } from "../stores/authStore";
+import type { AssignmentOrigin } from "./categorization";
 
 export interface Account {
   id: string;
@@ -91,6 +92,7 @@ export interface PostingInput {
 }
 
 export interface Transaction {
+  assignment_origin?: AssignmentOrigin | null;
   id: string;
   transaction_date: string;
   description: string;
@@ -670,6 +672,7 @@ export function invalidateFinanceLedger(queryClient: QueryClient) {
 export function useCreateTransaction() {
   const queryClient = useQueryClient();
   return useMutation({
+    onMutate: () => ({ session: useAuthStore.getState().sessionVersion }),
     mutationFn: async (tx: {
       transaction_date?: string;
       purchase_date?: string;
@@ -683,7 +686,11 @@ export function useCreateTransaction() {
       const { data } = await api.post<Transaction>("/finance/transactions", tx);
       return data;
     },
-    onSuccess: () => invalidateFinanceLedger(queryClient),
+    onSuccess: (_data, _variables, context) => {
+      if (context?.session !== useAuthStore.getState().sessionVersion) return;
+      invalidateFinanceLedger(queryClient);
+      queryClient.invalidateQueries({ queryKey: ["finance", "rule-events"] });
+    },
   });
 }
 

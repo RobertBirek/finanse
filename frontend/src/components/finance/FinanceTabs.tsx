@@ -1,4 +1,6 @@
 import { NavLink, useInRouterContext, useLocation } from "react-router-dom";
+import { useAuthStore } from "../../stores/authStore";
+import { RuleEventWatcher } from "./RuleEventWatcher";
 import { financePeriodSearch, periodFromSearch } from "./useFinancePeriod";
 
 const tabs = [
@@ -12,7 +14,15 @@ const tabs = [
 
 export function FinanceTabs() {
   const inRouter = useInRouterContext();
-  return inRouter ? <FinanceTabLinks /> : <FinanceTabLabels />;
+  const authenticated = useAuthStore(
+    (s) => s.authStatus === "authenticated" && !!s.user,
+  );
+  return (
+    <>
+      {authenticated ? <RuleEventWatcher /> : null}
+      {inRouter ? <FinanceTabLinks /> : <FinanceTabLabels />}
+    </>
+  );
 }
 
 function FinanceTabLinks() {

@@ -17,6 +17,7 @@ import {
 import { useAuthStore } from "../../stores/authStore";
 import { formatPLN } from "../../lib/format";
 import { Dialog } from "../Dialog";
+import { AssignmentOriginLabel } from "./AssignmentOriginLabel";
 import { QueryFeedback } from "../QueryFeedback";
 import { CategorySplitEditor, type SplitRow } from "./CategorySplitEditor";
 
@@ -118,6 +119,7 @@ function ReviewedEditor({
   }
   return (
     <div className="mt-4 space-y-4">
+      <AssignmentOriginLabel origin={snapshot.assignment_origin} />
       {!active ? (
         <p role="alert">
           Sesja zmieniła się. Zamknij okno i wczytaj aktualne dane.

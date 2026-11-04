@@ -6,6 +6,7 @@ import { formatPLN } from "../../lib/format";
 import { TransactionDateLabel } from "./TransactionDateLabel";
 import { QueryFeedback } from "../QueryFeedback";
 import { Dialog } from "../Dialog";
+import { AssignmentOriginLabel } from "./AssignmentOriginLabel";
 
 export function TransactionDetail({
   id,
@@ -64,6 +65,7 @@ export function TransactionDetail({
               <TransactionDateLabel transaction={query.data} />
               {TRANSACTION_TYPES[query.data.type]} · Źródło: {query.data.source}
             </p>
+            <AssignmentOriginLabel origin={query.data.assignment_origin} />
             <p className="text-sm text-gray-400">
               Status: {query.data.is_pending ? "Oczekująca" : "Zaksięgowana"}
             </p>

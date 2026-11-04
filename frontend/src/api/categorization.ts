@@ -7,6 +7,14 @@ export interface CategoryPart {
   category_id: string;
   amount_minor: number;
 }
+export interface AssignmentOrigin {
+  origin: "manual" | "approved_rule";
+  version: number;
+  rule_id?: string | null;
+  rule_version?: number | null;
+  display_description?: string | null;
+  target_path?: string | null;
+}
 export interface CategorizationContext {
   transaction_id: string;
   eligibility: {
@@ -21,6 +29,7 @@ export interface CategorizationContext {
   source: "manual" | null;
   context_snapshot: string;
   max_parts: number;
+  assignment_origin?: AssignmentOrigin | null;
 }
 export interface CategoryPreview {
   expected_version: number;

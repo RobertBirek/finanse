@@ -19,6 +19,7 @@ import { Advisor } from "./pages/Advisor";
 import { Documents } from "./pages/Documents";
 import { Settings } from "./pages/Settings";
 import { FinanceSettings } from "./pages/FinanceSettings";
+import { FinanceCategorizationSettings } from "./pages/FinanceCategorizationSettings";
 import { FinanceLoans } from "./pages/FinanceLoans";
 import { FinanceDocuments } from "./pages/FinanceDocuments";
 
@@ -87,6 +88,10 @@ export default function App() {
             element={<FinanceCashflow configure settingsSection="forecast" />}
           />
           <Route path="loans" element={<FinanceLoans />} />
+          <Route
+            path="categorization"
+            element={<FinanceCategorizationSettings />}
+          />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/today" replace />} />
