@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Design] — 2026-11-04 — Hybrydowa kategoryzacja, projekt etapu 3
+
+### Added
+- Użytkownik zatwierdził politykę: autozapis tylko z wcześniej zaakceptowanej reguły
+  na nowym nieskategoryzowanym wydatku; LLM proponuje do ludzkiego przeglądu, także
+  wybranej partii. Pewność nie daje prawa zapisu, ręczne decyzje pozostają chronione.
+- Spec etapu3 i plan niezależnego3A: jawna kategoria techniczna, exactdescription,
+  zatwierdzane reguły, osobnyorigin i creationoutbox.3B propozycje/LLM/usage ma własny
+  późniejszy odbiór. Reguła nie fałszuje manualstate etapu2 i nie dotyka historiiActual.
+- Szczegółowy plan gotowy po read-only buildercheck i walidacji spisanego dokumentu:
+  osobny zapis błędu po rollbacku, loadedpostings, aktualny marker, trwały grant i
+  ścisłe retry/CAS. Oczekuje zatwierdzenia przed implementacją. To dokumentacja,
+  nie implementacja: brak zmian kodu/bazy, providerów, realnychAI/OCR i produkcji.
+
 ## [Unreleased] — 2026-11-04 — Zatwierdzane kategorie i podziały płatności, etap 2
 
 ### Added

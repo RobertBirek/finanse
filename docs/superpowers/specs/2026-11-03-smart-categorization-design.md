@@ -13,6 +13,10 @@ iteracyjną, nie wdrożenie, produkcyjną migrację, kosztowne realne AI lub zmi
 
 - Ręczne przypisania mają pierwszeństwo. Istniejące kategorie wybierane z użyciem
   zatwierdzonych reguł, źródeł dokumentowych i dopiero w pozostałych przypadkach LLM.
+- Doprecyzowanie usera2026-11-04: hybryda. Autozapis tylko z wcześniej zatwierdzonej
+  reguły na nowej nieskategoryzowanej transakcji; LLM wyłącznie propozycje do ludzkiego
+  przeglądu, także zatwierdzenie wybranej partii. Pewność modelu nigdy nie wystarcza do
+  zapisu. Reguły nie mogą nadpisywać ręcznych przypisań ani uruchamiać historii wstecz.
 - Nowe kategorie/podkategorie wymagają zatwierdzenia. Nie duplikować podobnych nazw
   ani samodzielnie scalać/przenosić istniejącego drzewa. Proponowany limit dwóch
   poziomów dotyczy nowych propozycji agenta, nie zastanego ręcznego drzewa.
@@ -50,9 +54,10 @@ iteracyjną, nie wdrożenie, produkcyjną migrację, kosztowne realne AI lub zmi
 5. Kandydaci płatności z rozdzielonymi datami, lepsze wyjaśnienia i brak duplikatów.
 6. Jawnie uruchamiane partie historii, przegląd propozycji i finalny UX/odbiór.
 
-Obecny pierwszy pionowy slice to etap1 (API+UI+raporty+testy). Pozostałe nie są
-oznaczane jako gotowe po samym wdrożeniu dat. Dalsza lokalna realizacja opiera się
-na tym samym kontrakcie; kolejne wydania wymagają własnego odbioru i osobnej zgody.
+Etapy1/2 ukończono lokalnie w63e2b9c/9fef438, bez wdrożenia. Aktualna jednostka to
+projekt/plan etapu3 w zatwierdzonym trybie hybrydowym. Etapy3–6 nie są oznaczane jako
+gotowe po samych datach/splitach. Dalsza realizacja opiera się na tym kontrakcie;
+kolejne wydania wymagają własnego odbioru i osobnej zgody.
 
 ## Nienaruszalne ograniczenia
 

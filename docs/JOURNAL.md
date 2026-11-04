@@ -2,6 +2,50 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-04 — PROJEKT etapu 3: zaakceptowany tryb hybrydowy
+
+- Po „co teraz?”/„co proponujesz?” user przyjął słowem „tak” konkretną politykę:
+  wcześniej zatwierdzone reguły mogą auto-przypisać istniejące kategorie wyłącznie nowym
+  nieskategoryzowanym transakcjom. LLM tworzy uzasadnione propozycje, do zatwierdzenia
+  wybranej partii po przeglądzie. Sama wysoka pewność nie upoważnia modelu do mutacji.
+- Manualne przypisania pozostają chronione; nowe kategorie/podkategorie i splity zawsze
+  do akceptacji. Historybatch, wdrożenie/migracja produkcyjna i realne AI/OCR wymagają
+  osobnej zgody. Zgoda na politykę nie oznacza zgody na jeszcze niepokazany plan kodu.
+- Wymagane hostdocs przeczytane w kolejności, lokalny kontekst jest nowszy. Świeży
+  verify-final.py PASS:1250backend/429frontend/lint/types/build/E2E107+1skip exactsource,
+  kod9fef438/docs e8cfa8b. Nie powtarzać suite dla dokumentacji. Velo/Q7 nietknięte.
+- Read-only buildercheck ses_e5aa56365ffeFvTF8OHW4I6XXL sprawdził gateway/usage/jobs,
+  rozpoznanie nieskategoryzowanego wydatku i reuse polecenia etapu2 bez fałszowania
+  ręcznej proweniencji. Kontrakt UX i dokumentacja są zapisane.
+  Brak kodu aplikacji, bazowych mutacji, providerów lub działań produkcyjnych.
+- Recon zakończony: brak scalarmerchant, Stage2state ma źródło tylko manual, brak
+  jawnego cennikaLLM. Spec `docs/superpowers/specs/2026-11-04-hybrid-categorization-design.md`
+  rozdziela3A (reguły/origin/creationoutbox) i3B (propozycje/LLM/review/usage). Pierwszy
+  plan `docs/superpowers/plans/2026-11-04-approved-categorization-rules.md` dotyczy3A.
+- Nie wolno inline apply po lockach źródłowego konta ani traktować samego created_at
+  jako nowości (DBczas początku transakcji). Projekt rejestruje przycreate trwałe
+  zdarzenie z zaobserwowaną zgodą/weryfikacją wersji; dispatcher nie skanuje historii.
+  Osobnyorigin zapobiega udawaniu manualnej zgody przez regułę, bez luzowania starego checka.
+- Ten sam builder zwalidował spisany plan/spec bez nowego recon/kodu. Callback zakończony,
+  doprecyzowania zapisane poniżej; nie ponawiać checkera. Pełny plan wymaga zgody usera
+  przed implementacją.
+  Ledger `.superpowers/sdd/2026-11-04-approved-categorization-rules/progress.md`.
+- Transport przerwał odpowiedź, nie wykonanie produktu. Nie powtarzać poprzedniego
+  odbioru1250/429/107+1skip ani nie uruchamiać kodu etapu3 przed zgodą na plan.
+- Builder zakończył walidację spisanych dokumentów: plan implementowalny, brak pytań
+  produktowych. Uwzględniono5wskazań: osobna krótka transakcja failure po rollbacku
+  writer/audit; jawnie załadowane postings do enrollment; currentmarker owner/active/type/
+  exactID; immutableapprovalReceiptFK/hash; attempts tylko po skutecznymclaim, brak
+  replayterminal oraz leaseCAS dla failure/recovery.
+- Doprecyzowano też brak FK z obserwowanego ruleID w creationevent: taki FK mógłby
+  wziąć późny lock reguły po lockach źródłowego konta/kategorii. Worker dopiero pod
+  właściwymi lockami sprawdza żywy ownedgrant i immutable receipt. Zapis tożsamości
+  eventu nie jest autoryzacją. Small eventwatcher odświeża UI bez historyscan/N+1.
+- Plan3A gotowy do przedstawienia użytkownikowi; domknięcie sesji docs-only. Kod,
+  testy, konfiguracja i dane pozostają identyczne z9fef438; sourceproof1250/429/107+1skip
+  weryfikowany bez ponawiania suite. Następny krok to zgoda na pełny plan, nie automatyczna
+  implementacja z samej wcześniejszej zgody na politykę hybrydową.
+
 ## 2026-11-04 — ZAKOŃCZONY LOKALNIE etap 2, ręczne kategorie i splity
 
 - Plan656e9e6 zatwierdzony „tak”; native/TDD w istniejącym linkedworktree, bez zmian

@@ -24,9 +24,18 @@ Backlog zadań ze statusami.
   tylko ownedtestschema/retentionPASS. Important whole-review: accountTOCTOU2RED→GREEN/
   focused28PASS. Końcowy pełny6gate1250backend/429frontend/lint/typesPASS i exactsource/
   dist/migrationproofPASS. Raport: `docs/audits/2026-11-04-approved-category-splits-local.md`.
-- [ ] Etap3: trwałe propozycje, reguły, kontrolowane LLM i zatwierdzanie nowych kategorii.
-  Przed uruchomieniem uzgodnić osobno automatyczne stosowanie wysokiej pewności vs
-  zawsze zatwierdzane propozycje; nowe kategorie i splity zawsze wymagają zgody.
+- [~] Etap3: projekt trwałych propozycji, reguł, kontrolowanego LLM i zgód. User
+  2026-11-04 zatwierdził wariant hybrydowy: automatyczne przypisanie tylko przez wcześniej
+  zatwierdzone reguły dla nowych nieskategoryzowanych transakcji; LLM proponuje z
+  uzasadnieniem, człowiek może zatwierdzić wybrane propozycje zbiorczo po przeglądzie.
+  Pewność modelu nie daje prawa zapisu; manualne kategorie chronione. Nowe kategorie/
+  podkategorie i splity zawsze wymagają akceptacji, historia tylko osobnym poleceniem.
+  Kod jeszcze bez zmian; szczegółowy projekt/plan przed implementacją do zatwierdzenia.
+  Spec `2026-11-04-hybrid-categorization-design.md`; pierwszy plan3A
+  `2026-11-04-approved-categorization-rules.md`: explicitmarker, exact reguły,
+  osobnyorigin i outbox nowych wydatków.3B z propozycjami/LLM jest osobnym następnym
+  krokiem, nie gotową częścią3A. Builder zakończył walidację; pięć doprecyzowań worker/
+  grant/retry uwzględniono, brak pytań produktowych blokujących. Pełny plan3A do akceptacji.
 - [ ] Etap4: pozycje paragonów/rabaty/kontrola sum i zatwierdzanie podziału.
 - [ ] Etap5: lepsze dopasowanie dokument↔płatność mimo różnicy dat, bez dublowania.
 - [ ] Etap6: jawne partie wcześniejszych nieskategoryzowanych transakcji, przegląd i odbiór.
