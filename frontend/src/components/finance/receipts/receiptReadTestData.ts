@@ -1,0 +1,87 @@
+import { body } from "./receiptTestData";
+export const readContext = {
+  bill_id: "bill",
+  bill_version: 1,
+  state_version: 1,
+  enabled: true,
+  blocked_reason: null,
+  policy_epoch: 1,
+  provider: "openai",
+  model: "synthetic-model",
+  limits: { max_bytes: 4194304, max_pixels: 16777216, daily_user_calls: 10 },
+  sources: [
+    {
+      document_id: "photo",
+      name: "Mój paragon.png",
+      mime_type: "image/png",
+      source_sha256: "a".repeat(64),
+      allowed: true,
+      blocked_reason: null,
+    },
+  ],
+  next_source_cursor: null,
+};
+export const readJob = {
+  id: "job",
+  bill_id: "bill",
+  document_id: "photo",
+  generation: 1,
+  version: 1,
+  state: "pending" as const,
+  source_sha256: "a".repeat(64),
+  dispatched: false,
+  extraction_id: null,
+  error_code: null,
+  can_cancel: true,
+  poll_after_ms: 30000,
+  created_at: "2026-11-04T12:00:00Z",
+};
+export const exportPreview = {
+  document_id: "photo",
+  source_sha256: "a".repeat(64),
+  export_snapshot: "b".repeat(64),
+  policy_epoch: 1,
+  provider: "openai",
+  model: "synthetic-model",
+  reread_of_job_id: null,
+  limits: readContext.limits,
+  remaining_user_calls: 10,
+  remaining_global_calls: 100,
+  notice:
+    "Do modelu trafi kopia całego obrazu z danymi osobowymi. To dodatkowe płatne wywołanie względem odczytu nagłówka.",
+};
+export const readResult = {
+  job: {
+    ...readJob,
+    state: "succeeded",
+    can_cancel: false,
+    poll_after_ms: null,
+  },
+  extraction_id: "extraction",
+  payload_sha256: "c".repeat(64),
+  proposal: { body, problems: [], importable: true },
+  payload: {
+    printed_total: "90.00",
+    currency: "PLN",
+    lines: [],
+    discounts: [],
+  },
+  source_sha256: "a".repeat(64),
+  derivative_sha256: "d".repeat(64),
+  provider: "openai",
+  model: "synthetic-model",
+  prompt_version: "v1",
+  schema_version: "v1",
+  quality: "complete",
+  created_at: "2026-11-04T12:00:00Z",
+};
+export const importPreview = {
+  job_id: "job",
+  extraction_id: "extraction",
+  payload_sha256: "c".repeat(64),
+  bill_version: 1,
+  state_version: 1,
+  import_snapshot: "e".repeat(64),
+  will_replace_draft: true,
+  proposal: readResult.proposal,
+};

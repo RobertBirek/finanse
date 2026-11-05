@@ -12,10 +12,25 @@ import api from "../../../lib/api";
 import { useAuthStore } from "../../../stores/authStore";
 import { ReceiptItemsPanel } from "./ReceiptItemsPanel";
 import { context, categories, preview } from "./receiptTestData";
+import {
+  readContext,
+  readJob,
+  readResult,
+  importPreview,
+} from "./receiptReadTestData";
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  useAuthStore.setState({ sessionVersion: 42 });
+  useAuthStore.setState({
+    sessionVersion: 42,
+    user: {
+      id: "owner",
+      email: "test@example.invalid",
+      display_name: "Test",
+      is_active: true,
+    },
+    authStatus: "authenticated",
+  });
 });
 function mount() {
   const client = new QueryClient({
@@ -51,6 +66,65 @@ function reads() {
           : context(),
   }));
 }
+
+it("explicit_import_still_requires_two_financial_confirmations", async () => {
+  const initial = context();
+  let current = initial;
+  const get = vi.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: String(url).endsWith("/categories")
+      ? categories
+      : String(url).includes("receipt-stores")
+        ? { items: [], next_cursor: null }
+        : String(url).endsWith("/payment")
+          ? { allowed: true, last_application: null }
+          : String(url).endsWith("/reads/context")
+            ? readContext
+            : String(url).endsWith("/reads")
+              ? {
+                  items: [{ ...readJob, state: "succeeded" }],
+                  next_cursor: null,
+                }
+              : String(url).endsWith("/result")
+                ? readResult
+                : String(url).includes("/reads/")
+                  ? {
+                      ...readJob,
+                      state: "succeeded",
+                      can_cancel: false,
+                      poll_after_ms: null,
+                    }
+                  : current,
+  }));
+  const post = vi.spyOn(api, "post").mockImplementation(async (url) => {
+    if (String(url).endsWith("read-import-preview"))
+      return { data: importPreview };
+    current = structuredClone(context(2));
+    current.draft!.body.lines[0].name = "Imported milk";
+    return { data: current };
+  });
+  mount();
+  const input = await screen.findByLabelText("Produkt 1");
+  fireEvent.change(input, { target: { value: "Mój niezapisany" } });
+  fireEvent.click(await screen.findByRole("button", { name: /Próba 1/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Użyj w szkicu" }));
+  await screen.findByRole("button", { name: "Zastąp szkic odczytem" });
+  expect(input).toHaveValue("Mój niezapisany");
+  expect(input).toBeDisabled();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Zastąp szkic odczytem" }),
+  );
+  await waitFor(() =>
+    expect(screen.getByLabelText("Produkt 1")).toHaveValue("Imported milk"),
+  );
+  expect(get).toHaveBeenCalled();
+  expect(
+    post.mock.calls.filter(
+      (c) =>
+        String(c[0]).endsWith("/approve") ||
+        String(c[0]).endsWith("payment-apply"),
+    ),
+  ).toHaveLength(0);
+});
 it("preserves dirty products through query refetch and same-session auth refresh", async () => {
   reads();
   const view = mount();

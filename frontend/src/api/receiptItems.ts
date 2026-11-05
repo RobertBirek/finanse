@@ -8,6 +8,7 @@ import api from "../lib/api";
 import { useAuthStore } from "../stores/authStore";
 import { invalidateFinanceLedger } from "./finance";
 import type { CategoryPart, CategorizationContext } from "./categorization";
+import type { ReceiptReadEvidence } from "./receiptRead";
 
 export interface ReceiptHistoryRef {
   source_bill_id: string;
@@ -60,6 +61,7 @@ export interface ReceiptRevisionView {
   created_at: string;
   current: boolean;
   problems: ReceiptProblem[];
+  evidence?: ReceiptReadEvidence | null;
 }
 export interface ReceiptItemsContext {
   bill_id: string;
@@ -240,6 +242,9 @@ function useReceiptCommand<T>(action: string, ledger = false) {
       if (input.session !== useAuthStore.getState().sessionVersion) return;
       client.invalidateQueries({ queryKey: ["finance", "receipt-items"] });
       client.invalidateQueries({ queryKey: ["finance", "receipt-payment"] });
+      client.invalidateQueries({
+        queryKey: ["finance", "receipt-read", input.session, input.billId],
+      });
       if (ledger) {
         invalidateFinanceLedger(client);
         client.invalidateQueries({ queryKey: ["finance", "bills"] });

@@ -90,6 +90,19 @@ async function receiptFixture(page: Page, loseApply = false) {
     if (path === `/api/finance/bills/${id}`)
       return route.fulfill({ json: bill(id) });
     const action = path.split("/")[6];
+    if (action === "reads" && req.method() === "GET")
+      return route.fulfill({
+        json: path.endsWith("/context")
+          ? {
+              bill_id: id,
+              enabled: false,
+              blocked_reason: "Odczyt AI wyłączony w ręcznym scenariuszu",
+              sources: [],
+              limits: {},
+              next_source_cursor: null,
+            }
+          : { items: [], next_cursor: null },
+      });
     if (!action && req.method() === "GET")
       return route.fulfill({ json: { ...s, bill_id: id } });
     if (action === "payment")

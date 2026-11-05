@@ -22,6 +22,8 @@ import { ReceiptStorePicker } from "./ReceiptStorePicker";
 import { ReceiptLineEditor } from "./ReceiptLineEditor";
 import { ReceiptDiscountEditor } from "./ReceiptDiscountEditor";
 import { ReceiptPaymentReview } from "./ReceiptPaymentReview";
+import { ReceiptReadPanel } from "./ReceiptReadPanel";
+import { ReceiptReadEvidence } from "./ReceiptReadEvidence";
 import { fromReceiptBody, toReceiptBody } from "./receiptDraft";
 import type { ReceiptDraft } from "./receiptDraft";
 import { formatPLN } from "../../../lib/format";
@@ -91,6 +93,10 @@ function Editor({
     [message, setMessage] = useState<string | null>(null),
     [closing, setClosing] = useState(false);
   const [preview, setPreview] = useState<ReceiptPaymentPreview | null>(null);
+  const [importLocked, setImportLocked] = useState(false);
+  const importLockRef = useRef(false);
+  const [reviewKeys, setReviewKeys] = useState<string[] | null>(null);
+  const evidence = (snapshot.draft ?? snapshot.approved)?.evidence;
   const intent = useRef<{ action: Action; input: ReceiptCommandInput } | null>(
       null,
     ),
@@ -103,14 +109,23 @@ function Editor({
   const payment = useReceiptPaymentContext(snapshot.bill_id),
     categories = useCategories();
   const current = () => session === useAuthStore.getState().sessionVersion;
-  const locked = !active || busy || unknown || storeBusy || !snapshot.editable;
+  const locked =
+    !active ||
+    busy ||
+    unknown ||
+    storeBusy ||
+    importLocked ||
+    !snapshot.editable;
   function edit(value: ReceiptDraft) {
+    if (importLockRef.current) return;
     setDraft(value);
     setDirty(true);
     setPreview(null);
     setMessage(null);
+    setReviewKeys([]);
   }
   function canonical(value: ReceiptItemsContext) {
+    setReviewKeys(null);
     setSnapshot(value);
     setDraft(
       fromReceiptBody(
@@ -126,7 +141,8 @@ function Editor({
     setPreview(null);
   }
   async function run(action: Action) {
-    if (busyRef.current || !current() || storeBusy) return;
+    if (busyRef.current || !current() || storeBusy || importLockRef.current)
+      return;
     let captured = intent.current;
     if (!captured) {
       let body: Record<string, unknown>;
@@ -136,6 +152,15 @@ function Editor({
             expected_version: snapshot.state_version,
             expected_bill_version: snapshot.bill_version,
             body: toReceiptBody(draft),
+            ...(evidence && reviewKeys !== null
+              ? {
+                  extraction_review: {
+                    extraction_id: evidence.extraction_id,
+                    expected_extraction_sha256: evidence.extraction_sha256,
+                    acknowledged_problem_keys: reviewKeys,
+                  },
+                }
+              : {}),
           };
         else if (action === "discard")
           body = { expected_version: snapshot.state_version };
@@ -266,7 +291,7 @@ function Editor({
     }
   }
   async function reload() {
-    if (busyRef.current || !current()) return;
+    if (busyRef.current || !current() || importLockRef.current) return;
     const value = await refresh();
     if (value && current()) {
       canonical(value);
@@ -282,7 +307,7 @@ function Editor({
   );
   const calculation = snapshot.calculation;
   function requestClose() {
-    if (dirty || unknown || busy || storeBusy) setClosing(true);
+    if (dirty || unknown || busy || storeBusy || importLocked) setClosing(true);
     else onClose();
   }
   return (
@@ -303,8 +328,8 @@ function Editor({
           </button>
         </div>
         <p className="text-sm text-gray-400">
-          Na tym etapie wpisujesz produkty ręcznie. Nie uruchamiamy odczytu
-          AI/OCR. Zatwierdzenie pozycji nie zmienia płatności.
+          Wpisz produkty ręcznie lub świadomie przenieś propozycję ze zdjęcia.
+          Zatwierdzenie pozycji nie zmienia płatności.
         </p>
         {!active ? (
           <p role="alert">Sesja zmieniła się. Wczytaj aktualne dane.</p>
@@ -314,9 +339,43 @@ function Editor({
             Edycja wymaga aktywnego zatwierdzonego paragonu PLN.
           </p>
         ) : null}
+        {active ? (
+          <ReceiptReadPanel
+            billId={snapshot.bill_id}
+            dirty={dirty}
+            disabled={
+              !active || busy || unknown || storeBusy || !snapshot.editable
+            }
+            onImportLockChange={(value) => {
+              importLockRef.current = value;
+              setImportLocked(value);
+            }}
+            onImported={async () => {
+              const value = await refresh();
+              if (!value || !current())
+                throw new Error("receipt_reload_failed");
+              canonical(value);
+            }}
+          />
+        ) : null}
+        {evidence ? (
+          <ReceiptReadEvidence
+            billId={snapshot.bill_id}
+            evidence={evidence}
+            selected={reviewKeys}
+            disabled={locked}
+            onChange={(keys) => {
+              setReviewKeys(keys);
+              setDirty(true);
+              setPreview(null);
+            }}
+          />
+        ) : null}
         <ReceiptStorePicker
           storeId={draft.store_id}
-          disabled={!active || busy || unknown || !snapshot.editable}
+          disabled={
+            !active || busy || unknown || importLocked || !snapshot.editable
+          }
           maxName={snapshot.limits.store_name_max_chars}
           onBusyChange={setStoreBusy}
           onChange={(s) =>
@@ -507,7 +566,7 @@ function Editor({
             <button
               type="button"
               className="btn-secondary"
-              disabled={busy || storeBusy || !active}
+              disabled={busy || storeBusy || importLocked || !active}
               onClick={() => setClosing(true)}
             >
               Wczytaj aktualne dane
