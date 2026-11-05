@@ -51,10 +51,14 @@ class BoundedTransport(httpx.AsyncBaseTransport):
         await self._transport.aclose()
 
 
-def create_http_client(*, timeout: float) -> httpx.AsyncClient:
+def create_http_client(
+    *, timeout: float, max_response_bytes: int = _MAX_RESPONSE_BYTES
+) -> httpx.AsyncClient:
+    if not 0 < max_response_bytes <= _MAX_RESPONSE_BYTES:
+        raise ValueError("Invalid response byte bound")
     return httpx.AsyncClient(
         transport=BoundedTransport(
-            httpx.AsyncHTTPTransport(retries=0), max_bytes=_MAX_RESPONSE_BYTES
+            httpx.AsyncHTTPTransport(retries=0), max_bytes=max_response_bytes
         ),
         timeout=httpx.Timeout(timeout),
         follow_redirects=False,

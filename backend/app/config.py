@@ -67,6 +67,31 @@ class Settings(BaseSettings):
     DOCUMENT_VISION_RETRY_DELAYS_SECONDS: tuple[PositiveInt, ...] = (30,)
     DOCUMENT_VISION_DAILY_CALL_LIMIT_PER_USER: PositiveInt = 50
     DOCUMENT_VISION_LEASE_SECONDS: PositiveInt = 120
+    DOCUMENT_RECEIPT_ITEMS_ENABLED: bool = False
+    DOCUMENT_RECEIPT_ITEMS_PROVIDER: str = ""
+    DOCUMENT_RECEIPT_ITEMS_BASE_URL: str = ""
+    DOCUMENT_RECEIPT_ITEMS_MODEL: str = ""
+    DOCUMENT_RECEIPT_ITEMS_API_KEY: str = ""
+    DOCUMENT_RECEIPT_ITEMS_PROMPT_VERSION: str = ""
+    DOCUMENT_RECEIPT_ITEMS_SCHEMA_VERSION: str = ""
+    DOCUMENT_RECEIPT_ITEMS_MAX_EDGE: PositiveInt = Field(default=4096, le=8192)
+    DOCUMENT_RECEIPT_ITEMS_MAX_BYTES: PositiveInt = 4 * 1024 * 1024
+    DOCUMENT_RECEIPT_ITEMS_MAX_PIXELS: PositiveInt = 16_777_216
+    DOCUMENT_RECEIPT_ITEMS_MAX_OUTPUT_TOKENS: PositiveInt = Field(default=8192, le=32768)
+    DOCUMENT_RECEIPT_ITEMS_MAX_RESPONSE_BYTES: PositiveInt = Field(default=262144, le=1048576)
+    DOCUMENT_RECEIPT_ITEMS_REASONING_EFFORT: str = "none"
+    DOCUMENT_RECEIPT_ITEMS_TIMEOUT_SECONDS: PositiveFloat = 60
+    DOCUMENT_RECEIPT_ITEMS_CONCURRENCY: PositiveInt = Field(default=2, le=8)
+    DOCUMENT_RECEIPT_ITEMS_PREPARE_MAX_ATTEMPTS: PositiveInt = Field(default=2, le=4)
+    DOCUMENT_RECEIPT_ITEMS_PREPARE_RETRY_SECONDS: PositiveInt = 30
+    DOCUMENT_RECEIPT_ITEMS_LEASE_SECONDS: PositiveInt = 180
+    DOCUMENT_RECEIPT_ITEMS_DISPATCH_BATCH: PositiveInt = Field(default=25, le=100)
+    DOCUMENT_RECEIPT_ITEMS_QUEUE_LIMIT_PER_USER: PositiveInt = Field(default=10, le=100)
+    DOCUMENT_RECEIPT_ITEMS_QUEUE_LIMIT_GLOBAL: PositiveInt = Field(default=100, le=1000)
+    DOCUMENT_RECEIPT_ITEMS_DAILY_CALL_LIMIT_PER_USER: PositiveInt = Field(default=10, le=1000)
+    DOCUMENT_RECEIPT_ITEMS_DAILY_CALL_LIMIT_GLOBAL: PositiveInt = Field(default=100, le=10000)
+    DOCUMENT_RECEIPT_ITEMS_POLL_MS: PositiveInt = Field(default=2000, ge=1000, le=30000)
+    DOCUMENT_RECEIPT_ITEMS_PAGE_SIZE: PositiveInt = Field(default=25, le=100)
     BILL_PAYMENT_CANDIDATE_DATE_WINDOW_DAYS: PositiveInt = 30
     FINANCE_CATEGORY_SPLIT_MAX_PARTS: PositiveInt = 50
     FINANCE_RULE_DESCRIPTION_MAX_CHARS: PositiveInt = Field(default=500, le=2000)
@@ -217,6 +242,26 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
+        if self.DOCUMENT_RECEIPT_ITEMS_MAX_BYTES > self.DOCUMENT_IMAGE_OUTPUT_MAX_BYTES:
+            raise ValueError("Receipt image byte limit exceeds the normalizer safety bound")
+        if self.DOCUMENT_RECEIPT_ITEMS_MAX_PIXELS > self.DOCUMENT_MAX_IMAGE_PIXELS:
+            raise ValueError("Receipt image pixel budget exceeds the parser safety bound")
+        if (
+            self.DOCUMENT_RECEIPT_ITEMS_LEASE_SECONDS
+            <= self.DOCUMENT_PARSER_TIMEOUT_SECONDS
+            + self.DOCUMENT_RECEIPT_ITEMS_TIMEOUT_SECONDS
+            + 30
+        ):
+            raise ValueError("Receipt read lease must exceed preparation and HTTP deadlines")
+        if self.DOCUMENT_JOB_TIMEOUT_SECONDS <= self.DOCUMENT_RECEIPT_ITEMS_LEASE_SECONDS:
+            raise ValueError("Worker timeout must exceed the receipt read lease")
+        if (
+            self.DOCUMENT_RECEIPT_ITEMS_DAILY_CALL_LIMIT_GLOBAL
+            < self.DOCUMENT_RECEIPT_ITEMS_DAILY_CALL_LIMIT_PER_USER
+            or self.DOCUMENT_RECEIPT_ITEMS_QUEUE_LIMIT_GLOBAL
+            < self.DOCUMENT_RECEIPT_ITEMS_QUEUE_LIMIT_PER_USER
+        ):
+            raise ValueError("Global receipt limits must cover per-user limits")
         if self.FINANCE_RECEIPT_HISTORY_SCAN_LIMIT < self.FINANCE_RECEIPT_HISTORY_PAGE_SIZE:
             raise ValueError("Receipt history scan limit must cover a result page")
         if self.FINANCE_SUGGESTIONS_LEASE_SECONDS <= self.FINANCE_SUGGESTIONS_TIMEOUT_SECONDS + 10:

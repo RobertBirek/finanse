@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.documents.receipt_read_models import ReceiptReadExtraction
 from app.finance.categorization_context import columns, digest
 from app.finance.models import Category, FinancialDocument
 from app.finance.receipt_commands import receipt_locks
@@ -20,6 +21,11 @@ from app.finance.receipt_models import (
     ReceiptItemState,
     ReceiptStore,
 )
+from app.finance.receipt_read_evidence import (
+    derive_receipt_read_lineage,
+    receipt_read_evidence_view,
+)
+from app.finance.receipt_read_models import ReceiptReadLineage
 from app.finance.receipt_schemas import (
     ReceiptBody,
     ReceiptDiscountInput,
@@ -85,6 +91,8 @@ class ReceiptDomainContext:
     categories: dict[uuid.UUID, Category]
     marker_id: uuid.UUID | None
     path_hashes: dict[uuid.UUID, dict[uuid.UUID, str | None]] = field(default_factory=dict)
+    lineages: dict[uuid.UUID, ReceiptReadLineage] = field(default_factory=dict)
+    read_extractions: dict[uuid.UUID, ReceiptReadExtraction] = field(default_factory=dict)
 
 
 def receipt_blocked_reason(bill: FinancialDocument) -> str | None:
@@ -167,6 +175,30 @@ async def load_receipt_context(
         policy.uncategorized_category_id if policy else None,
     )
     views = {}
+    ctx.lineages = {
+        r.item_revision_id: r
+        for r in (
+            await db.scalars(
+                select(ReceiptReadLineage).where(
+                    ReceiptReadLineage.user_id == owner,
+                    ReceiptReadLineage.bill_id == bill_id,
+                    ReceiptReadLineage.item_revision_id.in_(ids),
+                )
+            )
+        ).all()
+    }
+    ctx.read_extractions = {
+        r.id: r
+        for r in (
+            await db.scalars(
+                select(ReceiptReadExtraction).where(
+                    ReceiptReadExtraction.user_id == owner,
+                    ReceiptReadExtraction.bill_id == bill_id,
+                    ReceiptReadExtraction.id.in_([r.extraction_id for r in ctx.lineages.values()]),
+                )
+            )
+        ).all()
+    }
     for revision in revisions:
         lines = (
             await db.scalars(
@@ -234,6 +266,16 @@ async def load_receipt_context(
             current=True,
             problems=[],
         )
+        parent = ctx.lineages.get(revision.id)
+        if parent:
+            extraction = ctx.read_extractions.get(parent.extraction_id)
+            lineage = derive_receipt_read_lineage(
+                parent, extraction=extraction, body=body, header_sha256=receipt_header_sha256(bill)
+            )
+            if lineage and extraction:
+                view.evidence = receipt_read_evidence_view(
+                    lineage, extraction, receipt_header_sha256(bill)
+                )
         view.problems = revision_problems(ctx, view)
         view.current = not view.problems
         views[revision.id] = view
@@ -259,6 +301,11 @@ def revision_problems(ctx: ReceiptDomainContext, view: ReceiptRevisionView) -> l
         issue("receipt_not_editable", "Potrzebny aktywny zatwierdzony paragon PLN.")
     if view.header_sha256 != receipt_header_sha256(ctx.bill):
         issue("header_changed", "Nagłówek paragonu zmienił się; zatwierdź aktualne dane.")
+    if view.evidence and view.evidence.pending_problems:
+        issue(
+            "receipt_extraction_review_required",
+            "Sprawdź i potwierdź niejasności odczytu zdjęcia dla tej wersji produktów.",
+        )
     store = ctx.stores.get(view.body.store_id) if view.body.store_id else None
     if not store or not store.active or store.version != view.body.store_version:
         issue("store_changed", "Wybierz aktualny własny sklep.")

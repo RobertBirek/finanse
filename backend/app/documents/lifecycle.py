@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit.service import log_event
 from app.documents.job_models import DocumentProcessingJob
 from app.documents.models import Document, DocumentExtractionRevision
+from app.documents.receipt_read_models import ReceiptReadJob
+from app.documents.receipt_read_schemas import READ_ACTIVE_STATES
 
 
 class DocumentLifecycleError(ValueError):
@@ -23,6 +25,16 @@ def require_document_unarchived(document: Document) -> None:
 
 
 async def _has_active_work(db: AsyncSession, document: Document) -> bool:
+    if await db.scalar(
+        select(ReceiptReadJob.id)
+        .where(
+            ReceiptReadJob.document_id == document.id,
+            ReceiptReadJob.user_id == document.user_id,
+            ReceiptReadJob.state.in_(READ_ACTIVE_STATES),
+        )
+        .limit(1)
+    ):
+        return True
     if document.processing_method == "legacy_ocr" and document.status in {"pending", "processing"}:
         return True
     active = await db.scalar(

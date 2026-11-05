@@ -9,6 +9,7 @@ from app.finance.receipt_commands import ReceiptCommandOutcome, run_receipt_comm
 from app.finance.receipt_context import (
     ReceiptDomainContext,
     load_receipt_context,
+    receipt_header_sha256,
     revision_problems,
 )
 from app.finance.receipt_history import validate_receipt_history_refs
@@ -17,6 +18,7 @@ from app.finance.receipt_items import (
     check_receipt_version,
     get_receipt_items,
 )
+from app.finance.receipt_read_evidence import derive_receipt_read_lineage
 from app.finance.receipt_schemas import (
     ReceiptItemsApprove,
     ReceiptItemsContext,
@@ -65,8 +67,15 @@ async def approve_receipt_items(
                 "incomplete_receipt", "Sprawdź produkty, kategorie, sklep i sumę paragonu.", 422
             )
         await validate_receipt_history_refs(db, owner, bill_id, draft.body)
+        parent = ctx.lineages.get(draft.id)
+        lineage = derive_receipt_read_lineage(
+            parent,
+            extraction=ctx.read_extractions.get(parent.extraction_id) if parent else None,
+            body=draft.body,
+            header_sha256=receipt_header_sha256(ctx.bill),
+        )
         revision = await append_receipt_revision(
-            db, ctx, draft.body, kind="approved", receipt_id=receipt_id
+            db, ctx, draft.body, kind="approved", receipt_id=receipt_id, lineage=lineage
         )
         response = await get_receipt_items(db, owner, bill_id)
         return ReceiptCommandOutcome(response, bill_id, response.state_version, [revision.id])

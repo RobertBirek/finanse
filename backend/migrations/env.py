@@ -14,6 +14,8 @@ import app.finance.rule_models
 import app.finance.rule_event_models
 import app.finance.suggestion_models
 import app.finance.receipt_models
+import app.documents.receipt_read_models
+import app.finance.receipt_read_models
 import app.identity.models
 import app.inbox.models
 import app.work.models  # noqa: F401

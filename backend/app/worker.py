@@ -27,6 +27,7 @@ from app.documents.ocr_pipeline import (
     _ocr_pdf,
     _pdf_to_text,
 )
+from app.documents.receipt_read_worker import dispatch_receipt_reads, process_receipt_read
 from app.documents.retry import is_retryable_ocr_error, retry_delay_seconds
 from app.documents.review_service import pending_review_ids, process_review_revision
 from app.documents.schemas import DocumentStatus
@@ -326,6 +327,12 @@ class WorkerSettings:
         process_document,
         prepare_document_review,
         process_document_job,
+        func(
+            process_receipt_read,
+            name="process_receipt_read",
+            timeout=settings.DOCUMENT_JOB_TIMEOUT_SECONDS,
+            max_tries=1,
+        ),
         process_rule_event,
         func(
             process_suggestion_job,
@@ -339,6 +346,7 @@ class WorkerSettings:
         cron(dispatch_pending_documents, second={0, 30}, run_at_startup=True),
         cron(dispatch_pending_document_reviews, second={15, 45}, run_at_startup=True),
         cron(dispatch_document_jobs, second={5, 35}, run_at_startup=True),
+        cron(dispatch_receipt_reads, second={7, 37}, run_at_startup=True),
         cron(dispatch_rule_events, second={10, 40}, run_at_startup=True),
         cron(dispatch_suggestion_jobs, second={20, 50}, run_at_startup=True),
         cron(expire_category_proposals, second={25, 55}, run_at_startup=True),

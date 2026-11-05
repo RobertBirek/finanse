@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, StrictBool, StrictInt, field_validator, m
 from app.config import settings
 from app.finance.bills_schemas import MAX_SAFE_MINOR
 from app.finance.categorization_schemas import CategorizationContext, CategorizationPart
+from app.finance.receipt_read_contracts import ReceiptReadEvidenceView, ReceiptReadReviewInput
 
 
 def normalize_receipt_name(value: str) -> str:
@@ -179,6 +180,7 @@ class ReceiptStorePage(BaseModel):
 class ReceiptDraftSave(ReceiptVersion):
     expected_bill_version: StrictInt = Field(gt=0)
     body: ReceiptBody
+    extraction_review: ReceiptReadReviewInput | None = None
 
 
 class ReceiptItemsApprove(ReceiptVersion):
@@ -213,6 +215,7 @@ class ReceiptRevisionView(BaseModel):
     created_at: datetime
     current: bool
     problems: list[ReceiptProblem]
+    evidence: ReceiptReadEvidenceView | None = None
 
 
 class ReceiptItemsContext(BaseModel):

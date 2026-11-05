@@ -22,6 +22,12 @@ from app.finance.receipt_models import (
     ReceiptItemState,
     ReceiptStore,
 )
+from app.finance.receipt_read_evidence import (
+    ReceiptReadLineageData,
+    derive_receipt_read_lineage,
+    lineage_values,
+)
+from app.finance.receipt_read_models import ReceiptReadLineage
 from app.finance.receipt_schemas import (
     ReceiptBody,
     ReceiptDraftSave,
@@ -45,6 +51,7 @@ async def append_receipt_revision(
     *,
     kind: str,
     receipt_id: uuid.UUID,
+    lineage: ReceiptReadLineageData | None = None,
 ) -> ReceiptItemRevision:
     body = canonical_receipt_body(body)
     if ctx.state is None:
@@ -69,6 +76,15 @@ async def append_receipt_revision(
     )
     db.add(revision)
     await db.flush([revision])
+    if lineage:
+        db.add(
+            ReceiptReadLineage(
+                user_id=ctx.bill.user_id,
+                bill_id=ctx.bill.id,
+                item_revision_id=revision.id,
+                **lineage_values(lineage),
+            )
+        )
     paths = receipt_category_paths(ctx.categories, ctx.marker_id)
     for position, line in enumerate(body.lines):
         db.add(
@@ -163,8 +179,18 @@ async def save_receipt_draft(
         from app.finance.receipt_history import validate_receipt_history_refs
 
         await validate_receipt_history_refs(db, owner, bill_id, data.body)
+        parent_view = ctx.draft or ctx.approved
+        parent = ctx.lineages.get(parent_view.id) if parent_view else None
+        extraction = ctx.read_extractions.get(parent.extraction_id) if parent else None
+        lineage = derive_receipt_read_lineage(
+            parent,
+            extraction=extraction,
+            body=data.body,
+            header_sha256=receipt_header_sha256(ctx.bill),
+            review=data.extraction_review,
+        )
         revision = await append_receipt_revision(
-            db, ctx, data.body, kind="draft", receipt_id=receipt_id
+            db, ctx, data.body, kind="draft", receipt_id=receipt_id, lineage=lineage
         )
         response = await get_receipt_items(db, owner, bill_id)
         return ReceiptCommandOutcome(response, bill_id, response.state_version, [revision.id])
@@ -174,7 +200,13 @@ async def save_receipt_draft(
         owner,
         action="save_receipt_draft",
         key=idempotency_key,
-        payload={"bill_id": str(bill_id), **data.model_dump(mode="json")},
+        payload={
+            "bill_id": str(bill_id),
+            **data.model_dump(
+                mode="json",
+                exclude={"extraction_review"} if data.extraction_review is None else set(),
+            ),
+        },
         operation=operation,
     )
     return ReceiptItemsContext.model_validate(result)
