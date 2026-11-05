@@ -2,6 +2,17 @@
 
 Backlog zadań ze statusami.
 
+## Powdrożeniowy przegląd finansów (2026-11-05)
+
+- [x] Po zgodzie użytkownika i potwierdzeniu konta wykonać właścicielskie agregaty
+  READ ONLY/rollback + publiczny browser375/1440 + przegląd kodu UI. Bez zmian danych,
+  sesji, AI, grantów lub wdrożenia. Raport `2026-11-05-finance-readonly-review.md`.
+- [ ] Osobno uzgodnić drobne poprawki UI: jednostka PLN w walidacji podziału, komunikat
+  braku obrazu paragonu, ewentualnie zachowanie wyboru historycznej próby przy paginacji.
+- [ ] Zalogowany test użytkowy na wskazanym koncie: wymaga legalnej sesji użytkownika;
+  nie zastępować go przeglądem źródeł lub publicznego logowania. Kategoria techniczna,
+  zgoda AI i reguły pozostają decyzjami użytkownika, nie skutkiem samego wdrożenia.
+
 ## Inteligentna kategoryzacja i daty zakupów (2026-11-03; wydanie 2026-11-05)
 
 - [x] Wdrożenie i serwerowa aktywacja gotowych etapów1–4B po jawnym „tak” na exact8121512.

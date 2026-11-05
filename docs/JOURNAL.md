@@ -2,6 +2,31 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-05 — ZAKOŃCZONY ograniczony read-only przegląd finansów po wdrożeniu
+
+- User zatwierdził przegląd UI/danych bez zmian/AI/importu/księgowania. Production nadal
+  exact8121512/verified-active/schema7b57, trzy usługi zgodne. Przeczytano wymagane pliki
+  /opt po kolei; hostdocs na8121512 są starsze niż docs-only finalizacja42e9e58 w worktree.
+- PreflightusersLIMIT2 wykazał wiele kont, więc STOP przed odczytem danych właściciela.
+  Pierwsze pytanie dismissed, na polecenie user ponowione; user jawnie podał konto.
+  Parametryzowane SELECT-y ograniczone do tego właściciela. Nie publikować email/ownerID
+  w docs. Brak sesji użytkownika: bez wyszukiwania tokenów, bez sessioncreate/authoverride.
+- Wynik READ ONLY/REPEATABLE READ/statementtimeout/rollback: istniejąca historia tylkoActual,
+  brak marker/rule/AIuserconsent/dateevidence, jedna zatwierdzona fakturaPLN, brak próbki
+  receipt/imagePLN/readjobs, ledger0violations. To expected no-backfill/future-only, niebug.
+  HelperSELECT najpierw pomylił jobstate/status; poprawiony helper, baza niezmieniona.
+- Browser375/1440 publiclogin/protectedredirectsPASS/nomutations/foreign/pageerrors/overflow,
+  health200. Nie testowano zalogowanych ekranów, realnego4B lub mutujących zatwierdzeń.
+- Źródłowy reviewer ses_e52caa2afffexS6ifUm3gZfWK1:3uwagi. Zweryfikowano tekstwalidacji
+  groszevsPLN, brakemptyeligibleimageexplanation, paginacjęsource/history. PierwotneMedium
+  „unrecoverable” obniżone doLow: historia i źródła mają osobne paginacje; po zmianiepage
+  możnawybraćpróbęponownie. Nie dowiedziono utraty danych/blokady. Bez poprawek produktu.
+- Raport `docs/audits/2026-11-05-finance-readonly-review.md`; prywatnyOUT
+  `/tmp/opencode/finance-readonly-review-20261105/`, tylko agregaty, publicscreenshots;
+  brak nowych APIcallsmodelu/DBwrites/policy/grants/deploy. ZastaneVelo/Q7dirty zachowane.
+- Następnie: świadoma konfiguracja kategorii technicznej/zgodyAI w panelu użytkownika,
+  ewentualne osobnozaakceptowane drobne UIpoprawki, prawdziwyparagon4B z osobną zgodą.
+
 ## 2026-11-05 — ZAKOŃCZONE: produkcja8121512, finanse1–4B i serwerowe AI aktywne
 
 - Po pytaniu o konkretną8121512/scope/hostFF/serverAI/nohistory user „tak”. Host/opt/finanse

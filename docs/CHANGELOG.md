@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Audyt read-only] — 2026-11-05 — Użyteczność po wdrożeniu
+
+### Added
+- Po zgodzie i jawnym wyborze konta: izolowane właścicielem odczyty READ ONLY/rollback,
+  publiczny browser375/1440 oraz przegląd źródeł UI. Brak zmian danych, AI lub autoryzacji.
+- Potwierdzono: obecne transakcje z Actual, brak konfiguracji kategorii technicznej/zgody
+  AI i próbki paragonu, invariant księgi bez naruszeń. Nie są to błędy migracji.
+- Trzy drobne uwagi źródłowe: komunikat grosze/PLN, pusty stan źródeł, ponowny wybór
+  próby po stronicowaniu. Bez napraw i bez twierdzenia o teście zalogowanej produkcji.
+  Raport `docs/audits/2026-11-05-finance-readonly-review.md`.
+
 ## [Production 8121512] — 2026-11-05 — Etapy finansów 1–4B aktywne
 
 ### Added
