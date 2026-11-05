@@ -2,6 +2,16 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Wydanie requested, preflight blocked] — 2026-11-05 — Gotowe etapy finansów
+
+- User polecił wdrożyć i włączyć gotowe funkcje. Kandydat exact8121512, etapy1–4B,
+  sześć migracji2f→7b57, zachowane zgody i brak historii batch. Wymagana finalna zgoda
+  exactrewizji/scope według/deploy. Liveproduction8106532/schema2f odczytane bez mutacji.
+- Backup świeży7e2c0b91/exit0; wymagany restore drill zablokowany: hostcheckout1865d90
+  nie zna już produkcyjnej migracji2f. Nie wykonano migracji lub wymiany usług/aktywacji.
+- Pakiet wersjonowany przygotowany, stare runtimeimages zachowane; raport
+  `docs/audits/2026-11-05-finance-all-production-preflight.md`. Nie omijać restoregate.
+
 ## [Dobór pilota, bez eksportu] — 2026-11-05
 
 - Po zgodzie na użycie wcześniej przekazanego zdjęcia stwierdzono lokalnie, że JPEG

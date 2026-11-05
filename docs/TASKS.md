@@ -35,6 +35,12 @@ Backlog zadań ze statusami.
    User dopuścił wcześniejsze zdjęcia; odnaleziony JPEG to faktura, a readonly query
    istniejących aktywnych źródeł receipt/imagePLN zwróciło0. Nie wysłano niczego doAI;
    prywatny test produktów pozostaje niewykonany, nie zastępować go eksportem faktury.
+- [~] User2026-11-05 polecił wdrożyć i włączyć wszystkie gotowe funkcje. Preflight exact8121512
+   obejmuje etapy1–4B,3serwisy/6migracji, serverAI z zachowaniem indywidualnych zgód.
+   Snapshot7e2c0b91backupsuccess; restoredrillBLOCKED: host1865d90 nie zawiera produkcyjnej
+   migracji2f. Potrzebna akceptacja exact8121512/scope/hostFF, naprawa checkoutdrift i PASS
+   restore przed migracją/apply. Produkcja nadal8106532, AI nowych etapów nieaktywowane.
+   Raport `2026-11-05-finance-all-production-preflight.md`; nie deklarować udanego deployu.
 
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,

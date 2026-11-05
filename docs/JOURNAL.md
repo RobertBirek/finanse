@@ -2,6 +2,35 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-05 — W TOKU/BLOCKED: user chce deploy i aktywację gotowych etapów
+
+- User „jak masz gotowe to wdróż i włącz wszystko, najwyżej będziemy poprawiać na bieżąco”.
+  Zakresgotowe1–4B/serverAI, niehistoriabatch/obejście usergrantów/manualapproval.
+  Przeczytano/deploy ioperationsbackuprestore. Exact8121512 do finalapproval przed apply.
+- Ustalono rzeczywistyactive8106532/schema2f/visionepoch4, nie starszy45c8c2d. Activeoverride
+  `/opt/finanse/webapp/releases/8106532/compose.active.yaml`; dataserviceIDs/imageIDs
+  prywatnie zapisane w OUT `/tmp/opencode/finance-all-release-20261105/`.
+- Candidate8121512descendslive, dependenciesunchanged; retainedexactsource1628/493/141+1skip
+  verifycommitsPASS. Wersjonowany forwardpackage wreleases8121512 przygotowany przez
+  ops/prepare_release.py; runtimeimage tagi zachowane, buildnetworknone uruchomiony,
+  bez zmiany działających kontenerów/config/policy/schema. Nie powtarzaćprepare na tej ścieżce.
+- Wszystkie3candidateimagebuildPASS. Runtimeofflinecheckimport/OpenAPI/read-start/head7b57
+  PASS wread-only/networknone kontenerze. Pierwszy smokehelper zakładał app.routes.path,
+  runtimeFastAPI ma IncludedRouter; helper poprawiono na publiczneapp.openapi(), nieprodukt.
+- Backup systemdsuccess17:48CET snapshot7e2c0b91. Installedrestore serviceFAIL2:
+  Can'tlocaterevision2f4b2c2a527c. Przyczyna potwierdzona: wrapper używa hostcheckoutu
+  `/opt/finanse`1865d90, który nie zawiera migracji livearchiwum. Nie błąd danych/checksum.
+  Własnyrestoretarget posprzątanyprzezwrapper; systemctlstop zakończył delayedrestart,
+  timer nadal aktywny. Bez hacków/bramkipominięcia. Produkcyjnychmigracji0/apply0.
+- Następnie exact8121512/scopeapproval wraz z kontrolowanym hostFF (webapp zachować),
+  restoreprzezinstalledwrapper i rehearsal2f→7b57, renderedfullCompose/hardening/queues/
+  schemaaware rollback, wąski operationsreview i dopiero apply/activation/smoke/obserwacja.
+  Nie uruchamiać starych helperów assumeslive45c8c2d/no-migration. Nowe policies3B/4B
+  aktywacjaoperatorska; indywidualne zgody3A/3B/4B nadal wymagane, nie grantować cudzychuserów.
+- Readonlyexplore ses_e53656e3bffeAe5fhzYY3fj5zF wykazał brak3BCLI (internalsetpolicy),
+  4BCLIistnieje. Agentzakładałoldprod45c8c2d; aktualny baseline nadrzędny to8106532/2f.
+  Raport `docs/audits/2026-11-05-finance-all-production-preflight.md`; Velo/Q7dirty bez zmian.
+
 ## 2026-11-05 — Dobór istniejącego zdjęcia do prywatnego pilota: brak paragonu
 
 - User zgodził się na jeden rzeczywisty paragon, ale ma tylko wcześniej przekazane zdjęcia.
