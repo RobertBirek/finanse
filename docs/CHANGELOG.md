@@ -2,6 +2,16 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Propozycja próby, bez wykonania] — 2026-11-05 — Syntetyczny test API4B
+
+- Po „co proponujesz teraz?” user zatwierdził wyłącznie przygotowanie zakresu/limitów,
+  nie wywołanie API. Dokument `docs/audits/2026-11-05-receipt-read-api-probe-scope.md`.
+- Propozycja:1syntetyk/1request Terra,2048edge/1MiB/2048outputtokens/retry0,
+  bez DB/Redis/uploadu/importu/aktywacji/produkcji. Próg2PLN dopiero po wiarygodnym
+  sprawdzeniu taryfy/obrazu i przeliczenia; bez tych danych STOP, nie obietnica hard capu.
+- Tylko dokumentacja; retained exactsource4B1628/493/141+1skip potwierdzony,
+  bez nowego kodu, obrazu, użycia klucza, API lub ponownego godzinnego gate.
+
 ## [Unreleased, local] — 2026-11-05 — Odczyt pozycji paragonu 4B odebrany lokalnie
 
 ### Added

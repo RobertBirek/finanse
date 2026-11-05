@@ -27,6 +27,10 @@ Backlog zadań ze statusami.
 - [ ] Po osobnej zgodzie: kontrolowany test rzeczywistego API/konfiguracji celu i ewentualne
    wydanie/aktywacja4B. To nie zostało wykonane w lokalnym odbiorze. PDF/multipage/batch
    oraz etap5 dopasowania płatności pozostają poza zakresem; brak merge/push/produkcji.
+   User zatwierdził przygotowanie zakresu, nie wykonanie. Propozycja gotowa w
+   `2026-11-05-receipt-read-api-probe-scope.md`:1request/1syntetyk, Terra, limity techniczne
+   i warunkowy próg2PLN; aktualny cennik/tokenizacja obrazu jeszcze niepotwierdzone.
+   Wymagana osobna zgoda na płatny request; bez wiarygodnej wyceny nie uruchamiać.
 
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,

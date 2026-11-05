@@ -2,6 +2,26 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-05 — Przygotowany zakres pierwszej próby API4B; bez zgody na wykonanie
+
+- User po odbiorze4B spytał „co proponujesz teraz?”. Zaproponowano najpierw syntetyczny
+  test realnegoAPI, później osobno prywatny paragon i dopiero przygotowanie wydania.
+  „Tak” odpowiada wyłącznie na „Przygotować zakres i limity… jeszcze bez wywoływania API?”.
+- Krótki zakres operatorskiej próby w `docs/audits/2026-11-05-receipt-read-api-probe-scope.md`,
+  nie nowy projekt/program ani zgoda na implementację harnessu/eksport/aktywację.
+- Rekomendacja autora: istniejący klient4B, OpenAI/gpt-6.1-terra (ID z dawnego raportu,
+  nie z dzisiejszego APIcheck),1syntetyk/1request/retry0; edge2048/1MiB/output2048/
+  response256KiB/timeout60s+75soverall, bez DB/Redis/uploadu/importu/workerów.
+- Próg2PLN jest propozycją zgody, NIE istniejącym hard capem API. Bieżąca taryfa,
+  tokenizacja obrazu i przeliczenieUSD→PLN niepotwierdzone; przed requestem wiarygodna
+  górna wycena całego wejścia+outputlimit albo STOP/nowe pytanie. Brak wymyślonej ceny.
+- Kryterium: dwa produkty8000/2000, osobny rabat1000 z wydrukowanymi udziałami800/200,
+  total9000, lokalny kalkulatornet7200/1800. Test jednej próbki/kontraktu, nie jakości
+  wszystkich paragonów ani live end-to-end workera/UI. Timeout może kosztować; nie ponawiać.
+- Bez harnessu, generowania obrazu, użycia/pobrania klucza, modelGET/callu lub produkcji.
+  Retained verify-final.py commits4B PASS1628backend/493frontend/141E2E+1expectedskip;
+  źródła produktu bez zmian. W aktualizacji wyłącznie docs, nie powtarzać pełnego gate.
+
 ## 2026-11-05 — ZAKOŃCZONE: 4B odebrane lokalnie, cel AI nadal OFF
 
 - Końcowy6gate sh_1aa84d529001cdKcFHxB2pQwKx zakończony **1628backend/493frontend/
