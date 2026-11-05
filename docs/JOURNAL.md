@@ -2,6 +2,48 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-05 — ZAKOŃCZONE: produkcja8121512, finanse1–4B i serwerowe AI aktywne
+
+- Po pytaniu o konkretną8121512/scope/hostFF/serverAI/nohistory user „tak”. Host/opt/finanse
+  kontrolowanyFF1865d90→8121512, webapp i unrelatedVeloQ7dirty zachowane. Nowydeploy nie
+  wymagał zmiany produktu lub dependencies; retainedexactsource1628/493/141+1skipPASS.
+- Installedrestore poFFPASS; potemmaintenance503/drain/stopstareAPIworker, świeży zaszyfrowany
+  snapshot a4ca11f6 i kolejnyinstalledrestorePASS: checksumy/6migracji/ledger. Start-limit po
+  dawnych autorestartach skasowany tylkoreset-failed, bez zmiany timerów/konfiguracji.
+- Jednooperationsreview ses_e53187274ffexGclPZJrmi6GEs; poprawiono kandydatfence/metadane
+  przedotwarciem/poststopdrain/auditoperator/backendisolation. 4RED→7GREEN. ARQfinishedcron
+  dedupmarkery odróżnione od faktycznejpracy(2RED→2GREEN); prawdziwepozostawione1cronjob
+  zakończone boundedOLDworkerburst zcron_jobs=[], bez kasowaniazleceń/nowegoharmonogramu.
+- FaktycznyedgeCaddy, nieNPM; backendinternalonly/nohostports, Caddynobackendnetwork,
+  domain→frontend. RenderCompose/security/dataservicesPASS; Stirlingexplicitvolumesoverride
+  uniknął odziedziczonego staregotrainingData. Zero recreatePostgres/Redis/Stirling.
+- Produkcyjne6migracji2f→7b57PASS, retention32starychtabel/projekcjistarychkolumn/liczności/
+  hashy i originalfilesPASS. TrzyruntimeimageIDs/revision8121512, nohost/appmount,
+  backendworkerreadonly. Serwerpolicies3B/4Benabledatomowoepoch1, auditoperator-cli/noowner;
+  optin0/newjobs0 przedotwarciem. Headerpolicyepoch4/fingerprint bez zmian.
+- Nowyfrontendstworzonyup--no-start--no-deps, fenceconfigcopyprzedstartem; prywatnyrandom
+  header do readonlyHTTPSsmoke, public503. Health/assets/auth401/routecontract/readpolicies/
+  browser375/1440/logsPASS. OpenAPIhelper poprawiony: /openapi.json jestSPAfallback,
+  kontrakt sprawdzany w runningbackend; bez zmiany routingu. Metadaneatomiccandidate przed
+  przywróceniemdefaultnginx/reload; po publicznymotwarciuHTTPS200/auth401/ledger0violations/
+  schema7b57/logs0/restarts0PASS. Active-release.json ma verified-active8121512.
+- Ruling: schema-awareSTOProllback zamiast automatycznego cofnięcia utracającego dowody;
+  kosztawarii=maintenance/fixforward, stareobrazy+backup zachowane. Ruling: prywatnyheader
+  tylkodozamkniętegosmoke; kosztbłędu=przedwczesnydostęp, guardtest i usunięciefence poPASS.
+  Brakdeferredminors. Niepowtarzaćmigration/policyactivation bez odczytu aktualnychmarkerów.
+- Raport `docs/audits/2026-11-05-finance-production-release.md`, versionedoverride
+  `/opt/finanse/webapp/releases/8121512/compose.active.yaml`; prywatnyOUT
+  `/tmp/opencode/finance-all-release-20261105/`. Genericrollback.sh celowoSTOP; zachować7b57,
+  archived_at/category/receipt/AI evidence, żadnegodowngrade/restoreprod/DELETE. Allreadyscope
+  udostępniony, useroptin/marker/reguły nadalwymagane; niegrantowaćzgódwimieniuużytkownika.
+- PowtórnaobserwacjapublicznaPASS i9operationsunittestsPASS; skrypty/proofs/manifestSHA256
+  zachowaneprivatewrelease/finance-operations-evidence. Roboczypliksekretów i probeheader
+  usunięte, nginxdefault. Staryverify-final.py wypisujehistoryczneLOCAL/OFF lokalnegogate;
+  nieużywaćtego jakoźródłaprawdyaktywacji: produkcjaactualpolicy/metadata=ACTIVE.
+- Nie wysyłano kolejnej próbkiAI/prywatnychzdjęć, nie importowano historii i nie wykonano
+  mutacji finansowej jako smoke. Prywatny pilot4B nadalbrakodpowiedniegozdjęcia; nieudawać
+  qualityacceptance. Następnie normalne użycie wUI i zgłaszanie konkretnychproblemów.
+
 ## 2026-11-05 — W TOKU/BLOCKED: user chce deploy i aktywację gotowych etapów
 
 - User „jak masz gotowe to wdróż i włącz wszystko, najwyżej będziemy poprawiać na bieżąco”.

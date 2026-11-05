@@ -1,5 +1,31 @@
 # Gotowe etapy finansów — preflight wydania produkcyjnego
 
+## Kontynuacja po zgodzie na konkretną rewizję
+
+**Wynik końcowy: WDROŻONO / ACTIVE.** Raport:
+`docs/audits/2026-11-05-finance-production-release.md`. Dalsze sekcje STOP opisują historię,
+nie aktualną blokadę; exact8121512 i schema7b57 są już na produkcji.
+
+Poniższy preflight opisuje stan historyczny przed potwierdzeniem. Użytkownik odpowiedział
+„tak” na `8121512`/pełny zakres/host fast-forward/serwerowe AI bez historii. Host checkout
+zaktualizowany kontrolowanym FF do tej rewizji; zainstalowany restore drill zakończył się
+PASS (sześć migracji, checksumy i invariant księgi). Wdrożenie jest wykonywane etapami;
+wynik końcowy należy odczytać z osobnego raportu wydania, nie z historycznej sekcji STOP.
+
+Jedno niezależne review procedury operacyjnej wskazało pięć braków: blokada dostępu
+do końca smoke, metadane przed jej zdjęciem, drain po zatrzymaniu procesów, oznaczenie
+audytu operatora oraz dowód izolacji backendu. Poprawione w procedurze; testy operacyjne
+4RED→7GREEN. Rzeczywisty reverse proxy to Caddy, nie dawny NPMplus; backend tylko internal,
+bez publikowanych portów, Caddy nie ma sieci backendu i kieruje domenę do frontendu.
+
+Podczas maintenance wykryto dodatkowo markery deduplikacji zakończonych zadań cron ARQ.
+Nie są aktywną pracą: `finish_job` zachowuje klucz in-progress, usuwając payload i wpis
+kolejki. Osobny probe rozróżnia je od faktycznych zadań (2RED→2GREEN). Kontrola po
+zatrzymaniu wykryła również jedno rzeczywiście pozostawione zadanie dispatchera;
+bramka odmówiła przejścia dalej. Zaplanowano ograniczony drain starym runtime bez
+harmonogramowania nowych cronów, a dopiero po zerowych kolejkach świeży backup/restore.
+Nie pominięto bramki i nie kasowano kluczy Redis ani zadań domenowych.
+
 ## Zgoda i precyzyjny kandydat
 
 User polecił „jak masz gotowe to wdróż i włącz wszystko, najwyżej będziemy poprawiać

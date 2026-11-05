@@ -2,7 +2,14 @@
 
 Backlog zadań ze statusami.
 
-## Inteligentna kategoryzacja i daty zakupów (2026-11-03, lokalnie)
+## Inteligentna kategoryzacja i daty zakupów (2026-11-03; wydanie 2026-11-05)
+
+- [x] Wdrożenie i serwerowa aktywacja gotowych etapów1–4B po jawnym „tak” na exact8121512.
+  Spójne3serwisy, sześćmigracji/schema7b57, backup a4ca11f6 + installedrestore/ledgerPASS.
+  Zachowane dane32tabel/originalfiles/dataserviceIDs; aktywneAI3B/4Bepoch1, headersepoch4
+  bez zmian, wymagane opt-in i ręczne zatwierdzenia nadal obowiązują. Brak historii/importu/
+  mutacji finansowej w smoke. HTTPS/assets/auth/browser375/1440/logs/publicobservationPASS.
+  Raport `2026-11-05-finance-production-release.md`; metadaneverified-active8121512.
 
 - [x] Wykonać4A po akceptacji planu3be47c9: ręczne produkty, udziały rabatów,
   własne sklepy, bounded historia exact/prefix, wyszukiwarka wszystkich kategorii,
@@ -29,18 +36,20 @@ Backlog zadań ze statusami.
    Raport `2026-11-05-receipt-read-api-result.md`. Najpierw scopec6d687d i preflightSTOP
    przy braku reguły imagebilling; później user jawnie uchylił próg kosztu dla1call.
    10offlineguardtests/readonlyreviewPASS; aplikacja pozostajeOFF. Nie ponawiać tej próby.
-- [ ] Po osobnej zgodzie: prywatny pilot oraz ewentualne wydanie/aktywacja4B.
+- [ ] Prywatny pilot4B na właściwym zdjęciu paragonu (wydanie/serwerowa aktywacja już wykonane).
    To nie zostało wykonane w syntetycznej próbie. PDF/multipage/batch i etap5 dopasowania
    płatności nadal poza zakresem. Bez zmian produkcji, merge lub push.
    User dopuścił wcześniejsze zdjęcia; odnaleziony JPEG to faktura, a readonly query
    istniejących aktywnych źródeł receipt/imagePLN zwróciło0. Nie wysłano niczego doAI;
    prywatny test produktów pozostaje niewykonany, nie zastępować go eksportem faktury.
-- [~] User2026-11-05 polecił wdrożyć i włączyć wszystkie gotowe funkcje. Preflight exact8121512
+- [x] User2026-11-05 polecił wdrożyć i włączyć wszystkie gotowe funkcje. Preflight exact8121512
    obejmuje etapy1–4B,3serwisy/6migracji, serverAI z zachowaniem indywidualnych zgód.
    Snapshot7e2c0b91backupsuccess; restoredrillBLOCKED: host1865d90 nie zawiera produkcyjnej
    migracji2f. Potrzebna akceptacja exact8121512/scope/hostFF, naprawa checkoutdrift i PASS
    restore przed migracją/apply. Produkcja nadal8106532, AI nowych etapów nieaktywowane.
    Raport `2026-11-05-finance-all-production-preflight.md`; nie deklarować udanego deployu.
+   Powyższy STOP historyczny: user zatwierdził exactSHA/scope/hostFF; restore naprawiony,
+   wydanie8121512/schema7b57 wdrożone i odebrane. Aktualny raport produkcyjny wskazany wyżej.
 
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,

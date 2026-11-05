@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production 8121512] — 2026-11-05 — Etapy finansów 1–4B aktywne
+
+### Added
+- Po jawnej zgodzie na rewizję wdrożono spójne backend/worker/frontend: daty zakupów,
+  zatwierdzane kategorie/splity, reguły3A, propozycjeAI3B, produkty/rabaty4A i odczyt4B.
+- Serwerowe cele AI3B/4B włączone, oba epoch1; zachowano wymagane indywidualne zgody,
+  osobny eksport zdjęcia, ręczne zatwierdzenia, limity i brak historii batch.
+
+### Changed
+- Sześć migracji2f→7b57, zachowane stare dane32tabel i oryginalne uploady. Zaszyfrowany
+  backup a4ca11f6 z izolowanym restore/migracjami/invariantem księgi PASS.
+- HTTPS/health/assets/auth401, browser375/1440, obrazy i logi PASS; aktywne metadane8121512.
+  Zachowano usługi danych, poprzednie obrazy i schema-aware STOP zamiast utraty nowych danych.
+
+### Fixed
+- Host checkout fast-forward do zatwierdzonej8121512 naprawił rozjazd migracji restore.
+  Raport `docs/audits/2026-11-05-finance-production-release.md`; prywatny pilot nadal niewykonany.
+
 ## [Wydanie requested, preflight blocked] — 2026-11-05 — Gotowe etapy finansów
 
 - User polecił wdrożyć i włączyć gotowe funkcje. Kandydat exact8121512, etapy1–4B,
