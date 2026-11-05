@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Live syntetyk PASS, aplikacja OFF] — 2026-11-05 — Jedna próba API4B
+
+- User uchylił bramkę2PLN, zachowano1request/1syntetyk i pozostałe limity.
+  Istniejący klient4B z `gpt-6.1-terra`:dokładnie1request/HTTP200/strictpayloadPASS,
+  lokalny kalkulator7200/1800,total9000,difference0. Input2075/output221; koszt naliczony
+  USD/PLN niepotwierdzony, cachewriteusage jawnie zachowane.
+- Tymczasowy harness:10offline testów i jeden wąski readonly reviewPASS; marker przedHTTP
+  blokuje ponowienie. Zero zmian produktu, DB/Redis/ledgeru lub aktywacji aplikacji.
+- Raport `docs/audits/2026-11-05-receipt-read-api-result.md`; bez prywatnych zdjęć,
+  dodatkowego calla, wdrożenia, merge lub push. Retainedexactsource4B bez zmian.
+
 ## [Preflight STOP, bez requestu] — 2026-11-05 — Próba API4B
 
 - User zatwierdził jedną syntetyczną próbę na warunkach c6d687d, z wiarygodną wyceną≤2PLN.

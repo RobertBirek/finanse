@@ -1,5 +1,10 @@
 # 4B — preflight pierwszej próby API: STOP przed wysyłką
 
+**Wpis historyczny.** Po tym STOP user wyraźnie uchylił warunek kosztu („ok, działaj
+dalej, bez względu na koszty”). Następnie wykonano dokładnie1syntetyczny request:
+HTTP200/PASS. Nie uznano reguły taryfy za potwierdzoną i nie podano fikcyjnego kosztu.
+Patrz `2026-11-05-receipt-read-api-result.md`. Poniższe0requestów dotyczy samego preflight.
+
 ## Zgoda i wynik
 
 2026-11-05 user odpowiedział „tak” na pytanie „Czy zatwierdzasz wykonanie jednej próby

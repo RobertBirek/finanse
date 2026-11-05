@@ -24,17 +24,14 @@ Backlog zadań ze statusami.
    intencji po reload. Pełny1628backend/493frontend/lint/types/freshbuild/141E2E+1expectedskip
    PASS; exactsource/dist/migrationproof oraz commitybackendf9fe4c8/UI527e92a zgodne zgate.
    Raport `2026-11-04-receipt-read-local.md`. LOCAL/OFF; branch/worktree i Velo/Q7 zachowane.
-- [ ] Po osobnej zgodzie: kontrolowany test rzeczywistego API/konfiguracji celu i ewentualne
-   wydanie/aktywacja4B. To nie zostało wykonane w lokalnym odbiorze. PDF/multipage/batch
-   oraz etap5 dopasowania płatności pozostają poza zakresem; brak merge/push/produkcji.
-   User zatwierdził przygotowanie zakresu, nie wykonanie. Propozycja gotowa w
-   `2026-11-05-receipt-read-api-probe-scope.md`:1request/1syntetyk, Terra, limity techniczne
-   i warunkowy próg2PLN; aktualny cennik/tokenizacja obrazu jeszcze niepotwierdzone.
-   Wymagana osobna zgoda na płatny request; bez wiarygodnej wyceny nie uruchamiać.
-   Update: user zatwierdził jedną próbę warunkowo≤2PLN. PreflightSTOP: oficjalne stawki
-   exactmodel potwierdzone, reguła tokenizacji/naliczania obrazu dla6.1Terra niepotwierdzona.
-   0requestów/bez odczytu klucza. Raport `2026-11-05-receipt-read-api-preflight.md`.
-   Do wznowienia potrzebna wiarygodna pełna wycena; model/limit nie zostały zmienione.
+- [x] Jedna syntetyczna próba rzeczywistego API4B: gpt-6.1-terra/HTTP200/1request,
+   input2075/output221, net7200/1800,total9000,difference0,strictpayload i warnings0.
+   Raport `2026-11-05-receipt-read-api-result.md`. Najpierw scopec6d687d i preflightSTOP
+   przy braku reguły imagebilling; później user jawnie uchylił próg kosztu dla1call.
+   10offlineguardtests/readonlyreviewPASS; aplikacja pozostajeOFF. Nie ponawiać tej próby.
+- [ ] Po osobnej zgodzie: prywatny pilot oraz ewentualne wydanie/aktywacja4B.
+   To nie zostało wykonane w syntetycznej próbie. PDF/multipage/batch i etap5 dopasowania
+   płatności nadal poza zakresem. Bez zmian produkcji, merge lub push.
 
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,

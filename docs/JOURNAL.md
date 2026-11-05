@@ -2,6 +2,31 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-05 — ZAKOŃCZONE: jeden live syntetyk4B PASS; aplikacja nadal OFF
+
+- User po STOPpricing polecił „ok, działaj dalej, bez względu na koszty”. Uchylenie
+  progu2PLN tylko dla tej jednej wcześniej uzgodnionej próby; nie zgoda na serię calli,
+  prywatne zdjęcia/aktywację/wdrożenie/merge/push. Poprzedni preflight0requestówhistoryczny.
+- Tymczasowy OUT `/tmp/opencode/receipt-read-api-20261105/`, productcode bez zmian.
+  TDD10REDmissingharness→GREEN10(4,38s); zwykły JPEG Pillow nie ma n_frames, użyto
+  getattr1 jak w istniejącej normalizacji. Wąski readonlyharnessreview
+  ses_e54e8ed90ffeFtlvcK3ebZVh3c Approved/no blockers. Minor(deferred): operatorinterrupt
+  klasyfikowany konserwatywnie stopped/no-retry, error_typezachowany, bez wpływu naPASS.
+- Istniejąca normalizacja syntetycznego JPEG1080²→76763B/noEXIF, hash w raporcie.
+  Guard EXACT model/body/httpsPOSTpath/storefalse/no tools/output2048; retry0/proxiesoff/
+  redirectsfalse. O_EXCL/fsync attempt.json przedHTTP, nowainstancja też nie może ponowić.
+- **Jedno rzeczywiste wywołanie**2026-11-05T09:45:27Z: gpt-6.1-terra HTTP200/completed,
+  input2075/output221/total2296, cache_write2072/cached0/reasoning0. Zwalidowanypayload
+  receiptPLN,2produkty8000/2000, kupon1000/udziały800/200, printedtotal9000,warnings0.
+  Istniejący kalkulator4A tylko w pamięci:net7200/1800,total9000,diff0,problems0.
+- Koszt faktycznie naliczonyUSD/PLN unknown, nie0; zachowano usagecachewrites, bez fikcyjnej
+  dokładnej ceny. KluczOPENAI_API_KEY tylko pamięć, bezsekretów; LLMDeepSeekkey nieużyty.
+  Kod źródłowy aplikacji i proof1628/493/141+1skip niezmienione, żadnych aktywacji ani DB/
+  Redis/uploadu/importu/księgowania/produkcji. To nie liveworker/UI end-to-end lub dowód
+  jakości prywatnych zdjęć. Raport `docs/audits/2026-11-05-receipt-read-api-result.md`.
+- **Nie uruchamiać ponownie probe.py live**: zużyta zgoda1call, attempt.json iresult.json
+  istnieją, marker jest blokadąoperatorską. Dalszy prywatny pilot/wydanie wymagają zgody.
+
 ## 2026-11-05 — Próba API4B ma zgodę warunkową; preflight STOP, zero wysyłek
 
 - Po zakresie c6d687d i konkretnym pytaniu o wykonanie1próby user „tak”. Warunek≤2PLN

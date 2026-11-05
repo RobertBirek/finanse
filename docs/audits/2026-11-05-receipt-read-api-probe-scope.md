@@ -2,6 +2,12 @@
 
 ## Status i zgoda
 
+**Wynik końcowy:** user uchylił próg kosztu poleceniem „ok, działaj dalej, bez względu
+na koszty”, zachowując zakres jednej syntetycznej próby.1request/HTTP200/PASS,
+input2075/output221, lokalny net7200/1800 i total9000; bez dodatkowych wysyłek lub
+aktywacji aplikacji. Raport `2026-11-05-receipt-read-api-result.md`; koszt pieniężny
+niepotwierdzony. Historyczna blokada i wcześniejsze granice zgód poniżej.
+
 **Update:** po c6d687d user zatwierdził wykonanie jednej próby warunkowo≤2PLN. Preflight
 zatrzymany przed requestem: potwierdzone stawki exactmodel1/5USD, niepotwierdzone
 naliczanie obrazu dla6.1Terra.0requestów próby/0odczytówklucza; nie podnoszono limitu
