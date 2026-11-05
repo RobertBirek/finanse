@@ -10,15 +10,23 @@ Backlog zadań ze statusami.
   Odebrane lokalnie: backend09a624d/UI5ea6454; jeden whole-review, poprawka statusu
   aktualności dowodu4RED→5GREEN;1506backend/476frontend/static/freshbuild/131E2E+1skipPASS,
   exactsource/dist/migrationproofPASS. Raport `2026-11-04-receipt-items-local.md`.
-- [~] Odrębne4B: user „tak” na przygotowanie projektu po rekomendacji następnego kroku.
+- [x] Odrębne4B: user „tak” na przygotowanie projektu po rekomendacji następnego kroku.
   `2026-11-04-receipt-item-extraction-design.md`: odczyt wybranego obrazu na żądanie,
   jednorazowy dispatch/zgoda/limity, immutablepropozycja i jawny import do szkicu4A.
   Buildercheck zakończony: jawne anulowanie tylko przeddispatch i osobna zgoda nowejgeneracji
   pounknown. Po przekazaniu c147b85 user zatwierdził CAŁY projekt kolejnym„tak”.
   Plan `2026-11-04-receipt-item-extraction.md` gotowy:7zadań native/TDD, osobnyreadpurpose,
   contentkey/dispatchmarker/usage/cancel/worker/importlineage/UI, jeden końcowy review.
-  Self-review względemspec i5ReviewFocus zakończony; teraz czeka na akceptację TEGO planu.
-  Nie kodować/migrować ani uruchamiać realnegoAI/aktywacji/produkcji przed kolejnymi zgodami.
+   User zatwierdził plan4a41000 kolejnym „tak”; nativeinline/TDD, implementacja1–6 lokalnie.
+   Osobny cel defaultOFF, siedem tabel/migracja7b57f2f0bde6 tylko ownedtestschema,
+   bounded adapter, durable start/cancel/quota/worker/recovery, immutable wynik/import/lineage,
+   warning review i UI. Jeden whole-review1Important→2RED/GREEN: zachowanie niepewnej
+   intencji po reload. Pełny1628backend/493frontend/lint/types/freshbuild/141E2E+1expectedskip
+   PASS; exactsource/dist/migrationproof oraz commitybackendf9fe4c8/UI527e92a zgodne zgate.
+   Raport `2026-11-04-receipt-read-local.md`. LOCAL/OFF; branch/worktree i Velo/Q7 zachowane.
+- [ ] Po osobnej zgodzie: kontrolowany test rzeczywistego API/konfiguracji celu i ewentualne
+   wydanie/aktywacja4B. To nie zostało wykonane w lokalnym odbiorze. PDF/multipage/batch
+   oraz etap5 dopasowania płatności pozostają poza zakresem; brak merge/push/produkcji.
 
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,

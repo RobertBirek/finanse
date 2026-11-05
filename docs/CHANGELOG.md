@@ -2,6 +2,30 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Unreleased, local] — 2026-11-05 — Odczyt pozycji paragonu 4B odebrany lokalnie
+
+### Added
+- Po „tak” na plan4a41000: osobny domyślnie wyłączony cel odczytu jednego zdjęcia,
+  podgląd eksportu i zgoda na cały obraz/dodatkowy koszt, trwałe próby z rezerwacją
+  przed wysyłką, brak automatycznego retry po dispatch, cancel tylko przed nim.
+- Immutable wynik i jawny import do nowego szkicu4A, pochodzenie wierszy/poprawki,
+  potwierdzenia niejasności wiązane z wersją wpisów. Oba zatwierdzenia finansowe bez zmian.
+- Migracja7b57f2f0bde6: siedem nowych tabel, retencja starego schematu/danych/indeksów,
+  empty rollback/reupgrade i odmowa cofnięcia po dodaniu dowodów sprawdzone tylko
+  w izolowanym schemacie finanse_test; bez backfillu lub zmian produkcji.
+- Jeden niezależny whole-review:1Important (utrata niepewnej intencji po reload), jeden
+  fixpass2RED→GREEN; recovery owner/bill/tab przed POST, bez autoPOST, czyszczenie po
+  sessionreplacement/jawnym porzuceniu. Brak Critical, deferred minors i declined behaviors.
+- Pełny gate **1628backend/493frontend/lint/types/freshbuild/141E2E+1expectedskip PASS**,
+  exactsource/dist/migrationproof i zgodność commitów z zamrożonymi bajtami PASS.
+  Backend `f9fe4c8`, frontend `527e92a`; raport `docs/audits/2026-11-04-receipt-read-local.md`.
+- Odbiór wyłącznie LOCAL/OFF. Zachowano branch/worktree/Velo/Q7 dirty. Bez aktywacji,
+  prawdziwego API, prywatnych zdjęć, mainmerge/push lub wdrożenia produkcyjnego.
+
+### Fixed
+- Zachowany replay dawnych komend ręcznego szkicu bez nowego opcjonalnego pola zgody.
+- Nieprawidłowe obiekty w kursorze odczytów dają kontrolowane422 zamiast błędu500.
+
 ## [Plan] — 2026-11-04 — Odczyt pozycji paragonu 4B
 
 ### Added

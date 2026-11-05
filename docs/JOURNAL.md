@@ -2,6 +2,64 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-05 — ZAKOŃCZONE: 4B odebrane lokalnie, cel AI nadal OFF
+
+- Końcowy6gate sh_1aa84d529001cdKcFHxB2pQwKx zakończony **1628backend/493frontend/
+  lint/types PASS**; backend8deselected według istniejącej polityki testów, zero DBskip.
+  Freshbuild/141E2E+1expecteddesktopskip agendy PASS. Frozen source/dist/migration SHA
+  i każdy plik HEAD potwierdzone przez `/tmp/opencode/receipt-read-20261104/verify-final.py`.
+- Komity po pełnym gate: backendf9fe4c87b54066093a23826348bdc212e9e3cf7a,
+  frontend527e92a0637735af965cecf6ff19045ecf52c3f2. Docs-only finalizacja nie zmienia
+  zweryfikowanych źródeł; nie powtarzać godzinnego gate/migracji/seedów bez zmianybajtów.
+- Jeden review ses_e5583dc59ffeXrFOCGtD1DE5Ir:0Critical/1Important/0Minor/0Declined,
+  jeden fixpass i testy remount/reload/sessionreplacement/storagefail. Nie tworzyć re-review.
+  Raport `docs/audits/2026-11-04-receipt-read-local.md` zawiera granice, decyzje i dowody.
+- Stan końcowy: LOCAL/OFF, bez prawdziwych providerów/prywatnych obrazów/aktywacji,
+  bez produkcji/mainmerge/push. Zachowano gałąź feat/financial-document-workflow,
+  istniejący host-managedworktree i oba zastane Velo/Q7dirty. Kolejny liveAPItest/wydanie
+  wymaga osobnej zgody; nie utożsamiać testów transportu z rzeczywistym odczytem paragonu.
+- Poniżej chronologia realizacji; dawne „w toku” są wpisami historycznymi, nie nową pracą.
+
+- User „tak” po planie4a41000 uprawnia do lokalnej realizacji. Nativeinline/executing-plans,
+  TDD, istniejący linkedworktree/branch zachowany. Bez produkcji, liveAPI, aktywacji,
+  prywatnych zdjęć, mainmerge lub push. Velo/Q7 dirty pozostają nietknięte.
+- Jednostki1–6 mają kod i focused testy: oddzielny receipt_items purpose/policy, config,
+  siedem modeli/migracja7b57f2f0bde6, strict transcription + exact integer mapping,
+  content stream/generacje/zgoda/cancel, durable claim→prepare→reserve→HTTP→finish,
+  conservative unknown bez retry/refund, jawny import/lineage i UI.
+- Stare headerjobs/revisions i ledger bez nowej ścieżki mutacji. Nowe FK-bearing INSERTy
+  dopiero po Financegates; Document zawsze przed ownerallocation/tree/bill. Po imporcie
+  stare4Aapproval nie bierze Documentlock. Ostrzeżenia nie znikają po zgodności sumy;
+  body/header/extraction hash wiążą potwierdzenia, edycja resetuje zgodę.
+- Guard/proofy: `/tmp/opencode/receipt-read-20261104/`. Migracja wygenerowana raz,
+  usunięty unrelated autogendrift starych indeksów; retained proof SHA45bb5d20d7be…
+  schema receipt_read_stage4b_test, siedem nowych pustych tabel, stare wiersze/kolumny/
+  indeksy/header/4A/origins/allocations/receipts bez zmian; emptyrollback i populatedrefusal.
+  Nie powtarzać niezmienionej migracji/seedów. Pierwszy syntetyczny4Aseed z jedną kategorią
+  rollbacknął własną transakcję; dodano drugą własną kategorię, wznowiono bez duplikacji.
+- Selekcje: foundation21, adapter+regresje112, admission39, worker+regresje65,
+  import+regresje50 PASS; najnowsze42 obejmują legacy replay/cursor/globalquota barriers.
+  Frontend489/lint/types PASS;14focusedbrowser375/1440 PASS z Axe/overflow. Nie są jeszcze
+  pełnym końcowym gate nowej zmiany. Baseline4A retained proof odczytano przed edycjami,
+  bez ponownego godzinnego gate; jego źródła zostały teraz celowo rozszerzone przez4B.
+- Legacy request replay RED409→pominięcie nieobecnego extraction_review w hash; cursor
+  object REDAttributeError→kontrola stringów/422. ResultDTO rozszerzono o już zapisany
+  bounded immutable payload, bo UI wymaga printed_total/tekstu źródłowego; to nie nowy eksport.
+- Jeden whole-review readonly uruchomiony: ses_e5583dc59ffeXrFOCGtD1DE5Ir, pakiet
+  `/tmp/opencode/receipt-read-20261104/review-package.md`. Cały kod jeszcze tracked+untracked,
+  HEAD4a41000; plan wymaga pełnego gate przed produktcommitami, więc native review-package
+  odrzucił empty commitrange. Reviewer ma jawny workingtree scope, spec/plan i rulings.
+- Dalej: odebrać review, re-grade, jeden fixpass Critical/Important RED→GREEN; potem freeze,
+  pełny guarded gate, freshbuild/fullE2E, verify-final.py, whitelistedcommity backend/UI/docs.
+  Nie deklarować ukończenia4B przed tym dowodem; nie tworzyć drugiego review.
+- Update: review zakończony0Critical/1Important/0Minor/0Declined. Utrataunknownintent po
+  reload/remount naprawiona2RED→GREEN, owner/bill/tab sessionStorage metadata BEFOREPOST,
+  czyszczenie po sessionreplacement i explicitabandon, bez autoPOST. Kanoniczne odzyskanie
+  zamiast instalacji starej odpowiedzi; brakstorage blokujepolecenie. OsobnybrowserreloadPASS.
+  Full freshbuild/assets i141E2E+1expecteddesktopskipPASS. Pełny6gate na zamrożonym źródle
+  działa jako sh_1aa84d529001cdKcFHxB2pQwKx; nie pollować i nie uruchamiać równoległegopytest.
+  Zmiany produktu zamrożone, nie edytować przed wynikiem. Produktcommity nadal po gate.
+
 ## 2026-11-04 — PLAN4B gotowy; projekt zatwierdzony, wykonanie czeka
 
 - User po c147b85 i przekazaniu5decyzji (jednozdjęcie/on-demand/additionalcall/cancelbefore/

@@ -2,7 +2,13 @@
 
 ## Status, zgody i źródła wymagań
 
-**Projekt zatwierdzony; implementacja czeka na osobny plan i jego akceptację.** User najpierw
+**Projekt i późniejszy plan zatwierdzone; implementacja4B odebrana LOCAL/OFF (2026-11-05).**
+Backendf9fe4c8/UI527e92a;1628backend/493frontend/static/build/141E2E+1expectedskip PASS,
+onewhole-review i Importantfix2RED→GREEN, exactsource/dist/migrationproof potwierdzone.
+Raport `docs/audits/2026-11-04-receipt-read-local.md`. Nie wykonano realnegoAPI,
+aktywacji celu, zmian produkcji, prywatnych zdjęć, mainmerge lub push.
+
+Historyczna granica zgód na etapie projektu: user najpierw
 odpowiedział „tak” na przygotowanie projektu, a po przekazaniu c147b85 i pięciu decyzji zakresu
 zatwierdził CAŁY projekt kolejnym „tak”. Akceptacja obejmuje opisany wariant na żądanie,
 dodatkowycall, anulowanie przeddispatch i nową zgodę na ponowną płatną próbę. Nie uprawnia
