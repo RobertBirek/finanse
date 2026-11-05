@@ -32,6 +32,9 @@ Backlog zadań ze statusami.
 - [ ] Po osobnej zgodzie: prywatny pilot oraz ewentualne wydanie/aktywacja4B.
    To nie zostało wykonane w syntetycznej próbie. PDF/multipage/batch i etap5 dopasowania
    płatności nadal poza zakresem. Bez zmian produkcji, merge lub push.
+   User dopuścił wcześniejsze zdjęcia; odnaleziony JPEG to faktura, a readonly query
+   istniejących aktywnych źródeł receipt/imagePLN zwróciło0. Nie wysłano niczego doAI;
+   prywatny test produktów pozostaje niewykonany, nie zastępować go eksportem faktury.
 
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,

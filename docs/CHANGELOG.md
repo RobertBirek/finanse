@@ -2,6 +2,13 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Dobór pilota, bez eksportu] — 2026-11-05
+
+- Po zgodzie na użycie wcześniej przekazanego zdjęcia stwierdzono lokalnie, że JPEG
+  diagnostyczny przedstawia fakturę, nie paragon. Read-only metadane aplikacji nie
+  wykazały aktywnych źródeł receipt/imagePLN. Nie wykonano nowego requestuAI,
+  importu/księgowania/aktywacji ani zmian produkcji; prywatny pilot4B niewykonany.
+
 ## [Live syntetyk PASS, aplikacja OFF] — 2026-11-05 — Jedna próba API4B
 
 - User uchylił bramkę2PLN, zachowano1request/1syntetyk i pozostałe limity.

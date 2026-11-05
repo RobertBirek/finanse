@@ -2,6 +2,23 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-05 — Dobór istniejącego zdjęcia do prywatnego pilota: brak paragonu
+
+- User zgodził się na jeden rzeczywisty paragon, ale ma tylko wcześniej przekazane zdjęcia.
+  Sprawdzono lokalnie wcześniejszy JPEG i wyłącznie read-only metadane już dołączonych
+  aktywnych paragonówPLN w aplikacji (SELECT/LIMIT5, SET TRANSACTION READ ONLY/rollback).
+  Zapytanie o źródła receipt/image zwróciło0; nie oznacza braku wszystkich dokumentów.
+- Poprzedni JPEG diagnostyczny jest fakturą za media, nie paragonem zakupowym; nie wysłano
+  go providerowi w próbie4B ani nie udawano testu produktów. Bez nowych requestów AI,
+  importów/księgowania/aktywacji lub modyfikacji produkcji. Prywatny pilot niewykonany.
+- Lokalna normalizacja starszego HEIF w hostvenv zwróciła ImageNormalizationError;
+  bez zmian walidacji/kodu i bez twierdzenia, że oryginał jest uszkodzony (dawny proof
+  dotyczył innego runtime). Nie podejmowano naprawy ani nie wysyłano fallbacku doAI.
+- Nie publikować prywatnych obrazów/treści w repo; podglądJPEG tylko privateOUT
+  `/tmp/opencode/receipt-read-private-20261105/`. Rekomendacja: nie wykonywać zbędnego
+  płatnego eksportu faktury dla testu obsługi paragonów; ewentualne przygotowanie wydania
+  z celem4B nadalOFF osobno do decyzji użytkownika.
+
 ## 2026-11-05 — ZAKOŃCZONE: jeden live syntetyk4B PASS; aplikacja nadal OFF
 
 - User po STOPpricing polecił „ok, działaj dalej, bez względu na koszty”. Uchylenie
