@@ -2,6 +2,12 @@
 
 ## Status i zgoda
 
+**Update:** po c6d687d user zatwierdził wykonanie jednej próby warunkowo≤2PLN. Preflight
+zatrzymany przed requestem: potwierdzone stawki exactmodel1/5USD, niepotwierdzone
+naliczanie obrazu dla6.1Terra.0requestów próby/0odczytówklucza; nie podnoszono limitu
+ani nie zmieniano modelu. Szczegóły `2026-11-05-receipt-read-api-preflight.md`.
+Poniższy opis granicy zgody na przygotowanie jest historyczny.
+
 2026-11-05: user zatwierdził wyłącznie **przygotowanie zakresu i limitów**, odpowiadając
 „tak” na pytanie „Przygotować zakres i limity tej pierwszej próby, jeszcze bez wywoływania API?”.
 Nie jest to zgoda na request, użycie klucza, aktywację aplikacji lub produkcję.

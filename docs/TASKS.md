@@ -31,6 +31,10 @@ Backlog zadań ze statusami.
    `2026-11-05-receipt-read-api-probe-scope.md`:1request/1syntetyk, Terra, limity techniczne
    i warunkowy próg2PLN; aktualny cennik/tokenizacja obrazu jeszcze niepotwierdzone.
    Wymagana osobna zgoda na płatny request; bez wiarygodnej wyceny nie uruchamiać.
+   Update: user zatwierdził jedną próbę warunkowo≤2PLN. PreflightSTOP: oficjalne stawki
+   exactmodel potwierdzone, reguła tokenizacji/naliczania obrazu dla6.1Terra niepotwierdzona.
+   0requestów/bez odczytu klucza. Raport `2026-11-05-receipt-read-api-preflight.md`.
+   Do wznowienia potrzebna wiarygodna pełna wycena; model/limit nie zostały zmienione.
 
 - [x] Uzgodnić zakres w rozmowie: dokumenty/wyciągi, nowe kategorie do zatwierdzenia,
   split pozycji zawsze zatwierdzany, historia tylko nieskategoryzowana partiami,

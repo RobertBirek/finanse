@@ -2,6 +2,24 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-05 — Próba API4B ma zgodę warunkową; preflight STOP, zero wysyłek
+
+- Po zakresie c6d687d i konkretnym pytaniu o wykonanie1próby user „tak”. Warunek≤2PLN
+  po wiarygodnej wycenie obowiązuje; nie oznacza zgody na nieznany koszt lub inny model.
+- Executing-plans zastosowane do preflight; nie rozpoczęto implementacji harnessu,
+  generowania obrazu, dostępu do klucza, DB lub runtime. Publiczny research Exa bez auth.
+- Modelcard/detailedpricing/blog potwierdzają exactgpt-6.1-terra, StructuredOutputs,
+  imageinput, reasoningnone i Standard1USD input/5USD output za1M. Ogólna marketingpricing
+  pokazywała5.6; nie mieszano taryf. Visionguide opisujeauto/patches, ale tabela nie podaje
+  6.1Terra sizing/multiplier; latest-modelguide/blog/searchexactID nie uzupełniły reguły.
+- STOP przed requestem zgodnie ze scope. Nie stosować1,2× z5.6/Astry przez analogię,
+  nie liczyć kosztu tylko zoutputlimit, nie wysyłać „żeby poznać usage”.0requestów próby
+  doOpenAI/0odczytówklucza, brak naliczenia z tej niewykonanej próby. Nie twierdzić,
+  że model nie obsługuje obrazów albo że odczyt się nie udał — nie został uruchomiony.
+- Raport `docs/audits/2026-11-05-receipt-read-api-preflight.md`; wznowienie po potwierdzeniu
+  taryfy/tokenizacji/pełnej wycenyUSD→PLN≤2PLN. Inny model lub limit wymaga kolejnej zgody.
+  Aplikacja4B nadalOFF, kod/proofy1628/493/141+1skip nietknięte; tylko docs/preflight.
+
 ## 2026-11-05 — Przygotowany zakres pierwszej próby API4B; bez zgody na wykonanie
 
 - User po odbiorze4B spytał „co proponujesz teraz?”. Zaproponowano najpierw syntetyczny

@@ -2,6 +2,15 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Preflight STOP, bez requestu] — 2026-11-05 — Próba API4B
+
+- User zatwierdził jedną syntetyczną próbę na warunkach c6d687d, z wiarygodną wyceną≤2PLN.
+- Potwierdzono oficjalne stawki exactmodel `gpt-6.1-terra`:1USD input/5USD output za1M.
+  Sprawdzona dokumentacja vision nie potwierdziła sizing/multiplier dla tego exactID;
+  brak podstaw do górnej wyceny obrazu. Zgodnie z warunkiem zgody zatrzymano przed wysyłką.
+- 0requestów próby doOpenAI, bez odczytu klucza, harnessu/obrazu lub zmian aplikacji.
+  Raport `docs/audits/2026-11-05-receipt-read-api-preflight.md`; cel nadal OFF.
+
 ## [Propozycja próby, bez wykonania] — 2026-11-05 — Syntetyczny test API4B
 
 - Po „co proponujesz teraz?” user zatwierdził wyłącznie przygotowanie zakresu/limitów,
