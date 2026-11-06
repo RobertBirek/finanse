@@ -8,7 +8,6 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
-from pydantic import Field
 from sqlalchemy import Table, case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,23 +16,11 @@ from app.main import app as _app  # noqa: F401 - full metadata, never start life
 from scripts.category_tree_manifest import (
     CategoryBefore,
     CategoryTreeError,
-    Frozen,
+    GuardReport,
     NewRef,
     PreparedTree,
     tree_fingerprint,
 )
-
-
-class GuardReport(Frozen):
-    owner_id: UUID
-    before_fingerprint: str
-    reference_fingerprints: dict[str, str]
-    reference_counts: dict[str, int]
-    blockers: tuple[str, ...]
-    actual_migration_closed: bool
-    schema_revision: str
-    control_ids: dict[str, tuple[UUID, ...]] = Field(default_factory=dict)
-
 
 _CATEGORY_REFS = frozenset(
     {

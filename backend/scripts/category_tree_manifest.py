@@ -32,6 +32,19 @@ class Frozen(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
+class GuardReport(Frozen):
+    """Pure preflight contract, usable before any application/database import."""
+
+    owner_id: UUID
+    before_fingerprint: str
+    reference_fingerprints: dict[str, str]
+    reference_counts: dict[str, int]
+    blockers: tuple[str, ...]
+    actual_migration_closed: bool
+    schema_revision: str
+    control_ids: dict[str, tuple[UUID, ...]] = Field(default_factory=dict)
+
+
 class CategoryBefore(Frozen):
     id: UUID
     parent_id: UUID | None
