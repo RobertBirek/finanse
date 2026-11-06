@@ -2,6 +2,22 @@
 
 Backlog zadań ze statusami.
 
+## Kolory kont i kategorii (2026-11-06, lokalnie)
+
+- [x] Po „działaj”: wybór palety/dowolnego HEX, automatyczny kolor konta,
+  dziedziczenie najbliższego rodzica z nadpisaniem/resetem podkategorii; PostgreSQL,
+  owner-scoped API, walidacjaHEX i addytywna migracja bez zmiany dawnych danych.
+- [x] Spójne akcenty dashboardu, wykresy/słupki kategorii i budżetów, legendy;
+  zachowane kwoty i semantyczne ostrzeżenia o przekroczeniu limitu. Frontend507testów/
+  145browser+1expectedskip/lint/types/freshbuildPASS; źródła i testowanydist zahashowane.
+  BackendownerAPI i addytywna migracja gotowe;1Importantreview downgraderetention
+  poprawiony2RED→guard, bezdrugiegoreview. Końcowy pełny1734backendPASS/sourcefreeze,
+  56starychtabelretain/newcolorsnull/downgraderetentionPASS. Bez wdrożenia na produkcję.
+- [x] Końcowy lokalny odbiór testów/migracji/review:
+  `docs/audits/2026-11-06-finance-colors-local.md`,1734/507/145+1skip/static/buildPASS.
+- [ ] Osobna zgoda na spójne wydanie i migrację kolorów na produkcji; wcześniejsza
+  zgoda reorganizacji drzewa nie obejmuje tej nowej funkcji ani kolejnego APPLY.
+
 ## Drzewo kategorii (2026-11-06)
 
 - [x] Przygotować pełny projekt/mapowanie do zatwierdzenia: wszystkie65kategorii i14nowych

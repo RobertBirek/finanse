@@ -2,6 +2,84 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-06 — ZAKOŃCZONE lokalnie: kolory kont/kategorii; bez wdrożenia
+
+- FINAL:1734backendPASS/8deselectedproxy/10znanychwarnings,4080.72s; sourceprzed/po
+  identyczny. Frontend507/145E2E+1expectedskip/lint/types/freshbuildPASS. Offlineverifier
+  potwierdził bieżące bajty/testowanydist i migrację56tabelretention/newcolorsnull.
+  Jedenwhole-review1Important fixed2RED→GREEN (downgradeprefs),0Critical/minor/declined.
+  Własne guardedDBfixture5RED→GREEN. Raport `2026-11-06-finance-colors-local.md`.
+- Odbiór tylkoLOCAL. Produkcja8121512/schema7b57/79kategorii pozostaje bez zmian,
+  żadnej migracji/deploy lub ponownego category-treeAPPLY. Wydanie f3a9colors wymaga
+  osobnejzgody i aktualnejbackuprestore/rehearsal/spójnychtrzechserwisów, bez nowych
+  zależności/grantów/zmianAI/historii/kont. Zachować branch/worktree/Velo/Q7dirty.
+- Finalne źródła są zamrożone, nie uruchamiać ponownie godzinnego testu bez zmiany
+  kodu. Dowody `/tmp/opencode/finance-colors-20261106/`, verify-final.py i source/distSHA.
+  Dokumentację i codecommity domknąć bez staging niezwiązanychVelo/Q7plików.
+
+Przebieg sesji (starsze statusy poniżej historyczne):
+
+- Backendagent oddał4focusedPASS/ruff/mypy146/oneheadf3a9d17c2e4b; main przeczytał
+  całość. CustomDBfixture nie odrzucała unsafeURL→5REDfactoryattempt→guard
+  is_safe_test_database_url przedengine, ownedschema connectionsearchpath i createdflagcleanup;
+  combined9PASS/staticPASS. Nie wykonywać tych testów zproductioncredentials.
+- Jeden niezależnywhole-review ses_e4de5d721ffeuPA3RG6KrV63Qo:0Critical/1Important/
+  0Minor/Declinedempty. Downgrade bezguarda traciłkolory→2RED(DIDNOTRAISE przykolorze
+  account/category)→ACCESS EXCLUSIVE obutabel/EXISTSnonnull/RuntimeError przedDROP.
+  Emptydowngrade/reupgrade zachowuje legacysyntheticrows. Rerun12focused/static/migration
+  i FULLfinal-full-backend uruchomione; źródła zamrożone, NIE edytować ażzakończygate.
+- FullactualAlembicchain0→7b57 wnowym ownedschema localfinanse_test, rawlegacyseed+
+  2postings→upgradeheadf3a9:56tablesrowprojectionretained/newcolorsnull/schemaheadPASS.
+  Proofrerun po downgradefix. Prywatnygate wOUT hashuje backend/app/tests/migrations+
+  frontend/src/e2e przedipo, blokuje mixedsourceevidence. Żadnychproductionmigrate/deploy.
+- Następnykrok poautomatycznymfullgateresult: sprawdzićwynik iexactsource/dist/proof,
+  archiwizowaćREADMEreview i finalne docs/commity; tylko popełnymPASS proponować
+  osobne wydanie. Nie dispatchować kolejnereview, nie ponawiać poprawnejprodukcji
+  category-tree. Wszystkie inne dane/AI/import/auth wzakresie poprzednich decyzji.
+- Finalfocused12PASS/ruffapp+tests+newmigrationPASS/mypy146PASS; ponowny pełnyAlembic
+  chain/upgradetest56oldtablesretain/colorsnull/schemaheadPASS po guardeddownfix.
+  Fullbackendtest nadal wtoku; offlineverify-final.py wprivateOUT wymaga końcowego
+  exit0/sourceunchanged iidentycznychbajtówfront507/145browser+1skip/dist-frozen.
+  Nie uruchamiać kolejnego godzinnegogate przy niezmienionych źródłach.
+
+- Finalny frozenfrontend507vitest/145E2E+1expectedskip/eslint/tsc/freshbuildPASS.
+  Dodatkowy regression1RED→GREEN: coloronlysave nie przycina spacji zastanych w nazwie
+  importowanej kategorii. Light/dark375/1440/axe serious-critical0; screenshotdarkmobile
+  obejrzany, picker czytelny i bezoverflow. frontend-acceptance.json w privateOUT wiąże
+  dokładne frontend/src+e2e i testowanydist-frozen. Bez późniejszych zmian źródeł.
+  Oczekiwanie na backendagentintegration, końcowyreview/fullbackendgate; nie utożsamiać
+  frontPASS z pełnym odbiorem, nie powielać testów/edycji należących do backendagenta.
+
+- User poprosił o kolory kont/kategorii wykorzystane na dashboardzie/wykresach,
+  po przełączeniu zPlan powiedział „działaj” zamiast odpowiadać o dziedziczenie.
+  Przyjęto jawnie: własnykolorkonta, podkategoria dziedziczy najbliższegorodzica,
+  może nadpisać/resetować; brak automatycznego productiondeploy. Cztery wymagane
+  hostdocs przeczytane w kolejności; worktreedocs aktualniejsze od hostcheckoutu.
+- Backendonly agent ses_e4e24747cffeRXOPDGSvFpFgRL: nullable accounts/categories.color,
+  canonical#RRGGBB/null, walidacjaAPI/DB, addytywnamigracja od7b57, TDDtests.
+  Nie uruchamiać konkurencyjnych backendDBsuite zanim odda task; głównyagent zajmuje
+  frontend. Brak commitówagenta, providerów lub produkcyjnych migracji.
+- Frontend: stableIDfallback i guardedfiniteancestorresolver, wspólnypicker/nativecolor/
+  namedpalette/reset; nullinherit nieprzepisujedzieci. MinimalcoloronlyPATCH bez
+  name/type/parent/currency/budgetflags. Cachedcatalog+iTanStackinvalidation, bez
+  lokalnychJSON/localstoragepreferences/nowychdependencies. Uwzględnione settings,
+  dashboardaccountchips/recentmarkers/budgetprogress i report/budgetcategorybars.
+  Nie kolorowaćłącznejsaldo/prognozy arbitralnymkoloremjednegokonta; sign/warnings
+  niezależne, accountinitialWCAGforeground. Wykres nie sumuje rollups; ujemnekwoty
+  zachowująznak, długośćwartośćbezwzględna skalowana względem wszystkichwęzłów.
+- TDDpuredom/form/chart/minimalPATCHRED→GREEN; pełny506vitest/84files/eslint/tsc/
+  freshbuildPASS, istniejącywarningchunk>500k.143E2E/1expectedskipPASS na in-memoryAPI
+  i świeżymdist, desktop/mobile. Powtórnybrowser z light/dark iaxe/scrollpicker w toku.
+  Pierwszy równoległy fullfront testraun trafił zmodyfikowany test minimalPATCH
+  (1expectedred); świeży full506PASS jest właściwymdowodem, nie ukrywać staregorunu.
+- Ledger `.superpowers/finance-colors-progress.md`, prywatnelogi/podglądy
+  `/tmp/opencode/finance-colors-20261106/`, backendagentosobnyOUT.
+  Gate.py przygotowany do wyłącznie localfinanse_test/blankAPIkeys/worktreecwd,
+  sourcehashprzed/po. Integracja→jedenwholefeatureReadonlyreview→TDDfixes→freeze→
+  pełnybackendgate; NIE zmieniaćźródeł podczasfullgate, NIE odpalać/zmieniać starych
+  operatorówcategory-tree/productionapprovals/restoreclones. Produkcjanadal8121512
+  z zakończonym79categoryAPPLY, bezponawiania. Zachowaćbranch/worktree/Velo/Q7dirty.
+
 ## 2026-11-06 — ZAKOŃCZONE: produkcyjne drzewo kategorii, jeden APPLY
 
 - User „tak” na osobne pytanie o dokładną produkcyjną operację30updates+14creates

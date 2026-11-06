@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, odebrane] — 2026-11-06 — Kolory kont i kategorii
+
+### Added
+- Po „działaj”: wspólny wybór koloru (paleta + dowolny HEX), tryb automatyczny konta,
+  dziedziczenie najbliższego rodzica i własne nadpisanie/reset podkategorii.
+- Kolory w ustawieniach, kontach/ostatnich transakcjach/budżecie dashboardu oraz
+  słupkach kategorii i budżetów. Etykiety i kwoty pozostają czytelne, ostrzeżenia
+  przekroczenia budżetu nadal czerwone. Zapis samego koloru wysyła minimalny PATCH.
+- Finalny frontend507testów/lint/types/freshbuild oraz145browser+1expectedskipPASS,
+  w tym light/dark375/1440 i axe serious/critical0 dla pickera; source/distfreeze zachowany.
+- Backend: nullablecolor waccounts/categories, canonical#RRGGBB/null, ownerAPI i minimalnyPATCH.
+  Migracjaf3a9 od7b57 addytywna; isolatedAlembicupgrade zachował wszystkie projekcje56tabel.
+  Jedenwhole-review:1Important (downgrade traciłzapisane kolory)→2RED→guardrefusal przed
+  DROP, emptydowngrade/reupgrade zachowane. TestfixtureDBguard5RED→GREEN.
+  Końcowy pełny **1734backend/507frontend/145E2E+1expectedskip/lint/types/build PASS**,
+  dokładne źródła/testowanydist i migrationproof zgodne. Raport
+  `docs/audits/2026-11-06-finance-colors-local.md`; **nie wdrożono na produkcję**.
+
 ## [Production, data operation] — 2026-11-06 — Drzewo kategorii uporządkowane
 
 ### Changed
