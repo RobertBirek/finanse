@@ -65,7 +65,13 @@ def prepare_release(
     )
     with tarfile.open(fileobj=io.BytesIO(archive)) as bundle:
         bundle.extractall(output / "source", filter="data")
-    shutil.copytree(frontend_dist, output / "frontend-dist")
+    copied_dist = output / "frontend-dist"
+    shutil.copytree(frontend_dist, copied_dist)
+    # Private acceptance archives deliberately use 0600/0700. Docker COPY retains
+    # those modes: normalize only this disposable public copy, never the input.
+    copied_dist.chmod(0o755)
+    for path in copied_dist.rglob("*"):
+        path.chmod(0o755 if path.is_dir() else 0o644)
     images = {service: f"local/finanse-{service}:{sha}" for service in runtimes}
     for service in ("backend", "worker"):
         (output / f"Dockerfile.{service}").write_text(
@@ -82,6 +88,10 @@ def prepare_release(
         "RUN rm -rf /usr/share/nginx/html/*\n"
         "COPY frontend-dist/ /usr/share/nginx/html/\n"
         "COPY source/frontend/nginx.conf /etc/nginx/conf.d/default.conf\n"
+        # Fail before deployment if nginx cannot read the index OR nested assets.
+        # su preserves the inherited runtime USER instead of overriding it.
+        "RUN su -s /bin/sh nginx -c 'test -r /usr/share/nginx/html/index.html && "
+        "find /usr/share/nginx/html -type f -exec cat {} + > /dev/null'\n"
     )
     lines = [
         "# Apply with the original Compose files; --no-deps protects data services.",

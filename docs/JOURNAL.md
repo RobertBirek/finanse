@@ -2,6 +2,45 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-06 — ZAKOŃCZONE lokalnie: trwała ochrona uprawnień release
+
+- FINAL1737backendPASS/10proxy-deselected/10znanychdeprecationwarnings/3720.82s;
+  w tym29opsPASS. Dwa nowe kontraktyDocker uruchomione osobno2PASS (9.77s),
+  dlatego nie są pominięte bez testu. Frontend507/ESLint/tscPASS, Ruff/mypy147PASS.
+  Źródła (w tymops) przed/po i finalverifier zgodne. Jeden review bez blokad.
+  Aktywny95f8380/f3a9 i SHAactive/siedem containerIDs+images dokładnie bez zmian.
+  Nie wykonywano deploy/migrate/produkcyjnych żądań API lub wywołań providerów.
+
+- User „tak, działaj” po rekomendacji zabezpieczenia narzędzia przed kolejną
+  kopią prywatnych0600/0700 do nginx. Zakres tylko helper/testy/runbook/docs;
+  brak zgody lub potrzeby kolejnego wdrożenia/migracji. Produkcja95f8380/f3a9.
+- Z rootcausecopytree/COPY modepreservation:3unitRED→GREEN i2rzeczywisteDockerRED→GREEN.
+  Zmiana tylko copiedpublicdist755/644, źródło/treść nietknięte, pakietroot700.
+  GeneratedDockerfile RUN su nginx test-r index && find cat ALLnestedregularassets
+  >/devnull. Brak zmiany runtimeUSER. Negatywny600 na jednymcopiednestedasset
+  odrzucany podczas build. Runtimeprovides su/nginx/find/cat, opisane wrunbook.
+-29ops/2DockerPASS, Ruff app/tests/helperPASS,mypy app/helper147PASS. Lint2styleflag
+  poprawione i gatespowtórzone. Docker testy: networknone/read-only/uuid-ownedtags,
+  usunięte tylko własne obrazy, żadnych zmian kontenerów lub tagów produkcyjnych.
+- Jeden readonlyreview ses_e4d681cb3ffeHQr4HcBvt198d6 bez blokad. Frozen fullbackendgate
+  sh_1b298b5bb001wshSM2cQ4NX1bV +frontend sh_1b298c7ee001vCeOxG9LQaWcdc zakończone
+  PASS, bez zmian testowanych źródeł. Edycja końcowa wyłącznie docs.
+  Lokalny finanse_test55432, klucze providerówpuste, celeAIoff; źródłaSHA inclops.
+- Privateproof `/tmp/opencode/release-permissions-20261106/`, trwała kopia w
+  `/opt/finanse/webapp/feature-acceptance/release-permissions-20261106/`.
+  BaselineactiveSHA+7container/imageIDs odczytane i końcowo zgodne. Następnykrok:
+  korzystać z poprawionego helpera przy następnym osobno zatwierdzonym wydaniu.
+  Końcowy commit bez Velo/Q7, branch/worktree zachowane. Nie ponawiaćkolormigracji,
+  nie wykonywać /deploy, nie zmieniać hostcheckoutu/active metadata/evidence.
+- Frontend gate507PASS/84files/44.41s, ESLint/tscPASS; backendfullgate exit0.
+  Weryfikator potwierdził zgodność SHA i brak zmianyactive/7liveIDs.
+- Jeden readonlyreview zakończony:0Critical/0Important/brak wymaganychMinor.
+  Opcjonalna uwaga o lokalizacji komunikatu Permissiondenied rozważona: aktualny
+  obsługiwany nginx/busybox ma znany tekst, asercja odróżnia permissions od innej
+  awariiDocker. Bez zmiany zamrożonych źródeł. Reviewer nie oceniał wdrożenia
+  (nie jest żądane), nie uruchamiałDockera/pytest;29ops/2Docker uruchomioneprzezmain
+  jużPASS. Nie zlecać kolejnego review ani powtarzać niezmienionego godzinnego gate.
+
 ## 2026-11-06 — WDROŻONE: kolory kont i kategorii95f8380/f3a9
 
 - User dwukrotnie „tak”: funkcja oraz dokładna rewizja95f8380/migracja7b57→f3a9/

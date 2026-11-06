@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, odebrane] — 2026-11-06 — Uprawnienia plików pakietu release
+
+### Fixed
+- `prepare_release.py` normalizuje wyłącznie skopiowany publiczny dist:
+  katalogi0755/pliki0644, bez zmiany wejściowego archiwum, treści lub prywatnego
+  katalogu pakietu0700. Prywatne0600/0700 nie przechodzą już bezpośrednio do nginx.
+- Wygenerowany Dockerfile frontendu odczytuje index i wszystkie zagnieżdżone
+  zasoby jako nginx przed zakończeniem budowy, bez zmiany odziedziczonego USER.
+- Regresje3unit +2 rzeczywiste Docker RED→GREEN;29ops/2Docker/Ruff/mypy147 PASS.
+  Pełny gate1737backend/507frontend/ESLint/tsc PASS, źródła przed/po identyczne.
+  Jeden read-only review bez blokad. Runbook opisuje bramkę i osobny test `proxy`.
+  Bez ponownego wdrożenia, migracji lub zmian działającej aplikacji95f8380/f3a9.
+
 ## [Production, 95f8380] — 2026-11-06 — Kolory kont i kategorii
 
 ### Added

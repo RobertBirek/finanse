@@ -160,6 +160,29 @@ base Compose files plus the release override. The override uses `!override` to
 remove host code mounts while keeping `/app/uploads`; database, Redis, ingress,
 secrets and network configuration remain in the original Compose files.
 
+Frontend build permissions are checked before any deployment. The release preparer
+normalizes only the copied public `frontend-dist` to directories0755/files0644;
+the verified input archive remains untouched and the package root stays0700.
+The generated frontend Dockerfile reads `index.html` and every nested regular asset
+as the `nginx` user. An unreadable file or untraversable directory fails the build;
+do not remove this gate or compensate by changing permissions on private archives.
+The frontend runtime must provide `nginx`, `/bin/sh`, `su`, `find` and `cat`, with
+build privileges sufficient to switch to `nginx` (the current root-built nginx
+runtime does). The gate does not change the image's inherited runtime `USER`.
+
+Regression checks use a synthetic dist, an existing local runtime and disposable
+uniquely tagged images; they neither start an HTTP server nor apply Compose:
+
+```bash
+cd backend
+TEST_RELEASE_FRONTEND_RUNTIME=local/verified-nginx:explicit-tag \
+  .venv/bin/pytest -m proxy tests/test_ops/test_prepare_release.py
+```
+
+Run this explicitly in addition to ordinary tests (`proxy` is excluded by default).
+It proves a private0600/0700 input builds successfully, while changing one copied
+nested asset back to0600 is rejected by the generated Dockerfile itself.
+
 Apply an approved package with the full Compose file list, for example:
 
 ```bash

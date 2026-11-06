@@ -22,8 +22,12 @@ Backlog zadań ze statusami.
   zdjęty, publiczne200/health200/auth401/assets/browser375/1440/logi/dataIDs PASS.
   Prywatne pliki dist poprawiono na publicznie czytelne wyłącznie w obrazie; te same
   zaakceptowane bajty. Raport `docs/audits/2026-11-06-finance-colors-production.md`.
-- [ ] Osobne usprawnienie narzędzia release: normalizacja trybów publicznych plików
+- [x] Osobne usprawnienie narzędzia release: normalizacja trybów publicznych plików
   dist po kopiowaniu prywatnego archiwum oraz gate odczytu jako użytkownik nginx.
+  Po „tak, działaj”: copieddist755/644, source bez zmian, release root700; buildgate
+  jako nginx dla index i wszystkich nestedassets.3unit/2Docker RED→GREEN,29ops/2Docker/
+  Ruff/mypy147 PASS. Pełny1737backend/507frontend/static PASS, jeden read-only
+  review bez blokad; źródła/hash active i siedem kontenerów/obrazów bez zmian.
   Obecny obraz naprawiony i odebrany; nie zmieniać ponownie działającej aplikacji.
 
 ## Drzewo kategorii (2026-11-06)
