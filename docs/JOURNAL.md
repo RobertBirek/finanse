@@ -2,6 +2,48 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-06 — ZAKOŃCZONE: produkcyjne drzewo kategorii, jeden APPLY
+
+- User „tak” na osobne pytanie o dokładną produkcyjną operację30updates+14creates
+  wraz zmaintenance/finalbackuprestore. RequestSHA34e530680ff529126de628a5e4201cf4f10840576278db19651c8954136febaa.
+  Prywatne dane/owner/opUUID pozaGit. Cztery hostdocs odczytane w wymaganej kolejności;
+  aktualne docs w tymworktree nowsze od hostcheckoutu. Zachowano branch/worktree/Velo/Q7dirty.
+- Operatorfad69aba (4scripts, kod/testy identyczne z1722/493/staticgate), immutable
+  backend8121512, schema7b57. Baselineowner/ref/target/runtime/ID/configSHA zgodne
+  z zaakceptowaną realną próbą, brak drift. Brak zmian app/**/UI/migracji/importera.
+- Izolowany test nginx503PASS. Publiczny503 i brak bezpośredniego publishedbackend;
+  admitted/DB/document/receipt/suggestion/ruleswork0, Redisqueue/inprogress0; dedupcron
+  bezpayload/queue nietknięty. Gracefulstop worker/backend pełnymbase+prod+activeoverride,
+  po stopie0work; żaden drain lub kasowanie/reset jobów nie były potrzebne.
+- Fresh fenced encrypted backup0c121fec, guardedrestore do własnej nowej loopbackDB
+  category_tree_prod_20261106_restore: checksum/schema/migrationhead/ledgerPASS.
+  Global/crossowner finance/ref/AIpolicy SHA256 i oryginalne uploadhashes przed/APPLY
+  identyczne. Nie czytano haseł/tokenów sesji. Produkcyjna baza nie była odtwarzana.
+- Oddzielna productionapply_v1 approval wiąże dokładnątożsamość, preflightSHA, operator,
+  runtime/schema/target i świeże backuprestore/fence/rehearsalcompatibilityproofs.
+  **Dokładnie1APPLY dispatch/1COMMIT**, exit0, READONLYverifyapplied. NiezależnyDBproof:
+  79total/73expense/6income/65oldIDs/35untouched/14new/30updates/45operatoraudits+1receipt,
+  exactpaths/HOLD/KEEP/source/type/active/ref/ledgerPASS. Nie było produkcyjnego replayAPPLY.
+- Samebackend/workercontainers start, bez frontend recreate; internal200/auth401,
+  readonlyreceiptapplied przed otwarciem. Savednginxbytes przywrócone/nginx-t/reload.
+  Pierwszy publicprobe trafił w503 podczas reload (log503→200), świeży odczyt bez
+  dodatkowej zmiany config/restart/APPLY potwierdził200/health200/anonymous401.
+  FinalREADONLYreceiptapplied, jobs0/queue0/errors0; wszystkie app/dataID/images/config/
+  mounts i active-releasebytes bez zmian. Aplikacja nadalverified-active8121512.
+- Prywatnybootstrap bezpiecznie zatrzymał się przedmaintenance na błędnie założonej
+  nazwieStirling; odkryta nazwaComposefinanse-stirling. Privatehelper globalretention
+  miał quoting/formatterSyntaxError po fence; poprawiony i skompilowany outer+inner
+  przed backup/APPLY. Te poprawki nie dotknęły 4testowanych modułów operatora lub produktu.
+- Dowody: `/opt/finanse/webapp/category-operations/2026-11-06/production-execution/`;
+  DBreceipt jest źródłem wyniku, production-outcome.json tylko podsumowaniem.
+  Stare request/acceptance zfalse zachowane historycznie, nie nadpisywać ich dla
+  udawanejzgody. Raport `docs/audits/2026-11-06-category-tree-production.md`.
+- Nie tworzyć kont/markerów/reguł/zgódAI, nie uruchamiaćhistorii/importu/modelu.
+  Actualmigrationclosed, guard/mappings zachowane, stary reimport może odmówićkonfliktu.
+  Raporty historyczne mają nowe grupowanie przy niezmiennych kwotach/saldach.
+  Dalej: prawdziwy użytkownik może odświeżyć UI i odebrać drzewo; bez forgedsession.
+  Historyczne FX/BO/lokaty/odsetki/Inne/duplikat pozostająHOLD do osobnej decyzji.
+
 ## 2026-11-06 — ZAKOŃCZONE Native planu kategorii; produkcyjny APPLY NIE
 
 - FINAL:1722backend/493frontend/ruffapp+tests+4scripts/mypy150/eslint/tscPASS.

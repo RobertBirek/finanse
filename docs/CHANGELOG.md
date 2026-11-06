@@ -2,6 +2,21 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, data operation] — 2026-11-06 — Drzewo kategorii uporządkowane
+
+### Changed
+- Po osobnym „tak” na dokładną operację i maintenance: jeden produkcyjny APPLY,
+  30 minimalnych aktualizacji +14nowych, 79kategorii (73expense/6income), zachowane
+  65oryginalnychID/35nietkniętychwierszy/HOLD/KEEP.45audytówoperatora+1trwałyreceipt.
+- READONLYverify, niezależne kontrole DB/global/foreignowner/ledger/ref/AIpolicy i plików PASS.
+  Kwoty, salda, postings, FX, daty, źródło Actual i mappings bez zmian; brak markerów,
+  reguł, zgód AI, nowych kont lub przetwarzania historii. Importer Actual bez zmian.
+- Fresh fenced encrypted backup0c121fec + guarded isolatedrestore/schema/ledgerPASS;
+  te same kontenery/obrazy/config, oryginalnynginx przywrócony. PublicHTTPS200/health200/
+  anonymous401/jobs0/queue0/errors0PASS. Aplikacja nadal8121512, bez release/deploy.
+- Raport `docs/audits/2026-11-06-category-tree-production.md`; bez prywatnych etykiet/UUID
+  w Git. Pierwszy probe podczas nginxreload503, późniejszy200 potwierdzony bez nowegoAPPLY.
+
 ## [Local, odebrane] — 2026-11-06 — Operator drzewa kategorii
 
 ### Added

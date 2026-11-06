@@ -1,6 +1,10 @@
 # Kontrolowana reorganizacja drzewa kategorii
 
 Status: narzędzie operatorskie; **nie jest zgodą na produkcyjny APPLY**.
+Operacja z 2026-11-06 została wykonana po osobnej zgodzie: jeden APPLY,
+79 kategorii i zachowany ledger/ref, aplikacja otwarta. Raport:
+`docs/audits/2026-11-06-category-tree-production.md`. Ten wynik nie upoważnia
+do kolejnej operacji; nie ponawiać produkcyjnego APPLY ani nie tworzyć nowego UUID.
 Projekt i plan: `docs/superpowers/{specs,plans}/2026-11-06-category-tree*.md`.
 Zgoda na wykonanie planu obejmuje implementację, testy, próbę na kopii i odczyt
 produkcji. Nie obejmuje maintenance, zatrzymania aplikacji ani zmian jej danych.

@@ -23,8 +23,13 @@ Backlog zadań ze statusami.
   **1722backend/493frontend/lint/types PASS** (8proxy wyłączonych projektowym markerem).
   Powtórna próba zmienionego digestu i świeży READONLYprodpreflightPASS; sourcefreeze
   i wszystkie referencje zgodne z kopią. Operator odebrany lokalnie, nie wykonany na produkcji.
-- [ ] Osobna zgoda na dokładne produkcyjne APPLY po testach/próbie/backupie/preflight.
-  Akceptacja projektu/tego planu nie obejmuje APPLY, reguł/markerów/zgód AI lub nowych kont.
+- [x] Osobna zgoda na dokładne produkcyjne APPLY po testach/próbie/backupie/preflight:
+  user „tak” na30updates+14creates zmaintenance/finalbackuprestore. JedenAPPLY/receipt,
+  79total/65oldIDs/35untouched/45audits, frozenref/ledger/HOLD/KEEP/global/filesPASS.
+  Backup0c121fec+isolatedrestorePASS; samecontainers/images/config/active8121512,
+  originalnginx/public200/health200/anonymous401/readonlyverifyapplied/jobs0/errors0PASS.
+  Raport `2026-11-06-category-tree-production.md`. Marker/reguły/zgodyAI/konta/historia
+  pozostają osobnymi decyzjami, nie skutkiem porządkowania drzewa.
 - [ ] Osobno rozstrzygnąć historyczne FX, odsetki, bilans otwarcia/lokaty, niejasne Inne
   i duplikat podatku; nie naprawiać ich pod pozorem porządkowania drzewa.
 
