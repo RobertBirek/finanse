@@ -1,5 +1,25 @@
 # Uporządkowanie drzewa kategorii — projekt do zatwierdzenia
 
+## Aktualizacja po zatwierdzeniu projektu — 2026-11-06
+
+Użytkownik odpowiedział „tak” na akceptację CAŁEGO drzewa i mapowania jako podstawy
+odrębnego planu. Zaakceptowana propozycja SHA256:
+`c41d1c57b9bc48b7e3fa5f8b7117b1c2ee0f8065cdc4b051bf3280baa5db8c79`;
+mapowanie `e585810542033f7a24d211989ca4420aae712a99f044a941e34c0f651a36646e`.
+Zgoda nie obejmuje wykonania planu lub APPLY na produkcji. Starsze sekcje „do zatwierdzenia”
+opisują etap przekazania dokumentu, nie cofnięcie tej akceptacji.
+
+Przy planowaniu wykryto istotną zależność: `migrate_actual.migrate_entities()` sprawdza
+zgodność rodziców kategorii z oryginalnymi grupami i po reparentingu odrzuciłby ponowny
+import. Użytkownik jawnie potwierdził **„Nie, migracja zakończona”** na pytanie o kolejne
+importy. Plan może zatem zakładać zamknięty import dla tego właściciela, ale nie może
+zmieniać/usuwać mapowań, wyłączać zabezpieczenia importera lub po cichu akceptować konfliktu.
+Powrót do Actual/reimport po zmianie drzewa wymaga osobnej analizy i zgody.
+
+Prywatny zapis akceptacji: `design-approval-private.json` w katalogu projektu. Nie zmieniono
+zatwierdzonego prywatnego dokumentu ani jego manifestu; oddzielny zapis utrwala decyzję
+podjętą po zamrożeniu propozycji, nie jest grantem aplikacji lub źródłem stanu kategorii.
+
 ## Status i zakres obecnej zgody
 
 Użytkownik zaakceptował przygotowanie pełnego drzewa i mapowania obecnych kategorii

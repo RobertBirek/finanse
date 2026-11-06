@@ -9,8 +9,14 @@ Backlog zadań ze statusami.
   Spec `docs/superpowers/specs/2026-11-06-category-tree-design.md`; szczegóły prywatne
   w `/opt/finanse/webapp/category-designs/2026-11-06/`, nie publikować imion/ID w Git.
   Buildercheck: nothing important left; generator i niezależna rekonstrukcja parentIDPASS.
-- [ ] Uzyskać akceptację pełnego projektu, dopiero potem osobny plan operacyjny.
-  Obecna zgoda nie obejmuje produkcyjnego APPLY, reguł/markerów/zgód AI lub nowych kont.
+- [x] Uzyskać akceptację pełnego projektu. User „tak” na całość jako podstawę planu.
+  Potwierdził też zakończenie migracji Actual; guard/mappings nie są zmieniane.
+- [x] Przygotować odrębny plan operacyjny: `docs/superpowers/plans/2026-11-06-category-tree.md`.
+  4zadania, testyTDD, źródłowe65→79, faktycznie30aktualizacji+14nowych, read-onlypreflight,
+  atomowyreceipt/audit i próba na kopii. Self-review względem spec zakończony.
+- [ ] Uzyskać akceptację planu i metody jego realizacji, dopiero potem budowa/testy narzędzia.
+- [ ] Osobna zgoda na dokładne produkcyjne APPLY po testach/próbie/backupie/preflight.
+  Akceptacja projektu/tego planu nie obejmuje APPLY, reguł/markerów/zgód AI lub nowych kont.
 - [ ] Osobno rozstrzygnąć historyczne FX, odsetki, bilans otwarcia/lokaty, niejasne Inne
   i duplikat podatku; nie naprawiać ich pod pozorem porządkowania drzewa.
 

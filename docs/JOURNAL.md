@@ -2,6 +2,38 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-06 — ZAKOŃCZONE przygotowanie planu kategorii, bez implementacji/APPLY
+
+- User „tak” na CAŁY projekt jako podstawę planu. Prywatne zatwierdzone artefakty niezmienione:
+  propozycjaSHA c41d1c57b9bc48b7e3fa5f8b7117b1c2ee0f8065cdc4b051bf3280baa5db8c79;
+  mappingSHA e585810542033f7a24d211989ca4420aae712a99f044a941e34c0f651a36646e.
+  Zapis `design-approval-private.json` obok nich zawiera zgodę tylko na projekt/plan,
+  `plan_execution_approved=false`, `production_apply_approved=false`.
+- Read-only code review podczas planning ujawnił: migrate_actual.migrate_entities bierze
+  actual-import:{owner}, waliduje category.parent_id względem groupmapping, potem serwisy
+  biorą category-tree:{owner}. Reparenting spowoduje bezpieczną odmowę starego reimportu.
+  Pytanie zadane użytkownikowi; odpowiedź „Nie, migracja zakończona”. Nie zmieniamyguardu
+  lub ActualImportMapping. Powrót do importów wymaga odrębnej analizy/zgody.
+- Offline rekonstrukcja diff pokazała38EDITpaths, ale30fizycznychwierszy(19name/21parent/
+  10both); 8dziedziczy tylkozmianęrootname. Nowych14, wszystkich79. Wszystkie35pozostałych
+  starychwierszy bezmutacji. Dołożono tę różnicę do testów i planu, nie generować38PATCHy.
+- Plan `docs/superpowers/plans/2026-11-06-category-tree.md`:4operator-onlyzadania,
+  czystymodel/kompilator, właścicielskiREADONLYpreflight/ref/grantguard, atomowyAPPLY
+  przezcreate/update_category, auditoperator-cli i istniejącyFinanceCommandReceipt
+  `(user_id,action,key)` actioncategory_tree_reorganize_v1, bez nowychmodeli/migracji/API/UI.
+- CLImaosobnepreflight/verify/apply. OdpowiedźutraconapoCOMMIT→DBreceipt, niezgadywanie
+  zpliku. VerifyREADCOMMITTEDREADONLY bierzenonblockinglockiactual→tree, dopieropotemświeży
+  SELECTreceipt/tree: busy/conflict niejestnot_applied. Żadnegoblindretry/nowegooperationID.
+- OdrębnyzapisAPPLY musiwiązać owner/operation/bundle/runtime/schema/source/rehearsal/
+  fencedbackuprestoreproof; zgoda na projekt niepasuje. Fencedpróba/backup/read-onlyprodpref
+  poprzedzają osobnązgodęprodukcyjną; role/AI/history/konta bez zmian. Operatorbundle na
+  /release-ops przy istniejącym kompatybilnym runtime, żadnego mountu host/app/redeploy.
+- Self-reviewwriting-plans:coverage/stepgranularity/interfaces/5reviewfocus/proportionPASS;
+  istotnaniejasnośćActual wyjaśniona. RekomendowanyNative+1whole-review, alternatywaagenci.
+  Czekamy na zgodęplan/metodę; nieuruchamiaćexecuting-plans/TDD/produkcji przednią.
+- Tylkoplan/docs/offlinecalculations; nowychkodunarzędzia/testów/DBqueries/writes/modelcalls/
+  migracji/deploy0. ZastaneVelo/Q7dirty bez zmian, gałąź/worktree zachowane.
+
 ## 2026-11-06 — Projekt drzewa i kompletnego mapowania kategorii, bez APPLY
 
 - User po iteracyjnym ustaleniu znaczenia kategorii powiedział „tak, działaj” na

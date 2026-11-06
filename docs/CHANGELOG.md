@@ -2,6 +2,22 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Plan do zatwierdzenia] — 2026-11-06 — Kontrolowana zmiana kategorii
+
+### Added
+- Użytkownik zatwierdził pełny projekt drzewa jako podstawę odrębnego planu, bez APPLY.
+  Plan `docs/superpowers/plans/2026-11-06-category-tree.md`: walidator, read-only preflight,
+  atomowe serwisy/audyt/receipt, próba na kopii i osobna zgoda przed produkcją.
+- Wyliczono rzeczywiste operacje: 38 zmienionych ścieżek oznacza30aktualizacji istniejących
+  kategorii i14nowych węzłów; 8zmian ścieżki wynika tylko ze zmiany nazwy rodzica.
+
+### Changed
+- Wyjaśniono z użytkownikiem zależność Actual: migracja zakończona, kolejnych importów
+  nie planuje. Guard hierarchii i mapowania pozostają bez zmian; reimport po przeniesieniu
+  grup może odmówić. Zapis zgody prywatny; nie zmieniono zaakceptowanych artefaktów.
+- W tej sesji tylko plan/dokumentacja i obliczenia offline; bez kodu narzędzia, zapisów
+  do DB, zgód aplikacji, nowych kont, migracji lub wdrożenia.
+
 ## [Projekt do zatwierdzenia] — 2026-11-06 — Pełne drzewo kategorii
 
 ### Added
