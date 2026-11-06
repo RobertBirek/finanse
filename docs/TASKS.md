@@ -14,7 +14,15 @@ Backlog zadań ze statusami.
 - [x] Przygotować odrębny plan operacyjny: `docs/superpowers/plans/2026-11-06-category-tree.md`.
   4zadania, testyTDD, źródłowe65→79, faktycznie30aktualizacji+14nowych, read-onlypreflight,
   atomowyreceipt/audit i próba na kopii. Self-review względem spec zakończony.
-- [ ] Uzyskać akceptację planu i metody jego realizacji, dopiero potem budowa/testy narzędzia.
+- [x] Uzyskać akceptację planu9f51686 i metody Native — user „tak”; osobny prywatny
+  execution-approval, bez zmiany dawnego design-approval lub zgody produkcyjnej.
+- [x] Wykonać plan: kompilator/guard/atomowyAPPLY/CLI i94operatorPASS; świeży encrypted
+  backup/restore do własnej loopbackDB, realnemapowanie30updates+14creates/verify/replayPASS;
+  produkcyjny READONLYpreflight65/no blockersPASS. Runbook gotowy. Whole-review1Important
+  naprawiony7RED→GREEN (engine dopiero po walidacji); bez drugiego review. Pełny końcowy
+  **1722backend/493frontend/lint/types PASS** (8proxy wyłączonych projektowym markerem).
+  Powtórna próba zmienionego digestu i świeży READONLYprodpreflightPASS; sourcefreeze
+  i wszystkie referencje zgodne z kopią. Operator odebrany lokalnie, nie wykonany na produkcji.
 - [ ] Osobna zgoda na dokładne produkcyjne APPLY po testach/próbie/backupie/preflight.
   Akceptacja projektu/tego planu nie obejmuje APPLY, reguł/markerów/zgód AI lub nowych kont.
 - [ ] Osobno rozstrzygnąć historyczne FX, odsetki, bilans otwarcia/lokaty, niejasne Inne

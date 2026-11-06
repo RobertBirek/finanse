@@ -2,6 +2,31 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, odebrane] — 2026-11-06 — Operator drzewa kategorii
+
+### Added
+- Po zatwierdzeniu planu9f51686 i wykonania Native: cztery moduły operator-only,
+  anonimowa fixture65→79, weryfikacja wejścia, read-only guard i atomowe serwisy/
+  audyt/receipt. Bez endpointów, UI, modeli, migracji lub zmian importera Actual.
+- 94testy operatora PASS, w tym rollback po trzech punktach awarii, utrata odpowiedzi,
+  replay bez dodatkowych zapisów, konkurencyjny verify i prawdziwa ścieżka CLI na testDB.
+- Próba rzeczywistego zatwierdzonego mapowania na świeżo odtworzonej kopii PASS:
+  30minimalnychupdates+14creates, 65oldIDs/79total, verify/replay i niezmienione referencje/
+  ledger/HOLD/KEEP. Produkcyjny READ ONLY preflight:65kategorii, brak blokerów.
+- Runbook `docs/operations/category-tree.md`: immutable runtime, prywatne dowody,
+  osobna zgoda na produkcyjny APPLY/maintenance i recovery przez DBreceipt.
+
+### Changed
+- Produkcja pozostajeverified-active8121512; **nie wykonano produkcyjnego APPLY**,
+  stopu aplikacji, aktywacji markerów/zgód AI, push/merge/deploy lub napraw historii.
+- Pełny finalny gate **1722backend/493frontend/lint/types PASS**; osiem testów proxy
+  wyłączonych zgodnie z projektowym `-m 'not proxy'`, brak nieoczekiwanych skipów.
+  Sourcefreeze zgodny z testowanym pakietem i runtime kopii. Jeden whole-review wskazał
+  eagerimport globalnego engine przed walidacją CLI; poprawiono7RED→GREEN przez pure
+  kontrakt i lazyimport po autoryzacji, bez zmiany app/**. Brak Critical/minor/declined.
+  Powtórzona próba nowego digestu i świeży READONLYpreflight produkcji PASS; także wszystkie
+  fingerprinty referencji zgodne z odtworzoną kopią. **Produkcja nadal bez reorganizacji**.
+
 ## [Plan do zatwierdzenia] — 2026-11-06 — Kontrolowana zmiana kategorii
 
 ### Added

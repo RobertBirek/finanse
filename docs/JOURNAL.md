@@ -2,6 +2,89 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-06 — ZAKOŃCZONE Native planu kategorii; produkcyjny APPLY NIE
+
+- FINAL:1722backend/493frontend/ruffapp+tests+4scripts/mypy150/eslint/tscPASS.
+  Backend4079s,8deselectedproxy zgodnie z pyproject,10znanych deprecationwarnings,
+  brak skipów lub wymagania prywatnych fixtures. Sourcefreeze każdego pliku operatora/
+  testów zgodny z bajtami pełnego gate i realnego immutableclonebundle. Pełny gate
+  po fixpass jest zielony; stary przerwany mieszany run nie jest jego substytutem.
+- Powtórzona realna próba finalnego digestu:65oldIDs/35untouched/14new/30updates/79total,
+  45operatoraudits+1receipt, verify/replay/ref/ledger/HOLD/KEEP/ActualPASS. Świeży produkcyjny
+  READONLYpreflight po gate:65/no blockers; drzewo, liczniki i KAŻDY fingerprint referencji
+  identyczne z odtworzoną kopią, brak drift. Nowa oddzielna zgoda APPLY nadal NIEudzielona.
+  Prywatne dowodyfinalne: `/tmp/opencode/category-tree-execution-20261106/reviewfix/`;
+  wynik i zakres utrwalone w `/opt/finanse/webapp/category-operations/2026-11-06/`,
+  `production-request-private.md` SHA256
+  34e530680ff529126de628a5e4201cf4f10840576278db19651c8954136febaa.
+  Ten plik to REQUEST ONLY, nie approval; nie publikowaćUUID/nazw w Git/stdout.
+- Plan implementacyjny zakończony, następny krok to jawna decyzja o dokładnej operacji
+  produkcyjnej wraz z maintenance/finalbackuprestore. Żadnego domniemanego APPLY po
+  samym PASS. Zachować branch/worktree, zastaneVelo/Q7dirty i verified-active8121512;
+  brak merge/push/deploy, tworzenia markerów/reguł/zgód AI/kont lub napraw historii.
+
+Przebieg sesji (starsze statusy poniżej są historyczne):
+
+- Aktualizacja po jednym review:1Important (CLI eagerimport tworzy app.database.engine
+  przed walidacją),0Critical/Minor/Declined. Świeży childprocess podmienia SQLAlchemy
+  factory PRZEDimportCLI:7przypadkówRED(markerengine)→GREEN. PureGuardReport w manifest,
+  guard reexportuje, CLI lazyimportuje serwisy/metadata po walidacji/autoryzacji.
+  94operatorPASS/ruffapp+tests+4scripts/mypy150PASS. Bez zmian app/** lub nowego review.
+- Stary pełny gate przerwany celowoSIGINT po29m34/972PASS/22fail/8deselectedproxy:
+  proces miał oldmanifest w pamięci, nowepliki na dysku (21ImportErrorGuardReport i1CLI
+  replaydigest). Nie jest dowodemPASS. Fresh final-backend-reviewfix uruchomiony dopiero
+   po zakończeniu cleanup starego joba; kod/testy odtąd zamrożone, zakończony1722PASS.
+  8deselected wynika z projektowego addopts `-m 'not proxy'`, nie braku bazy.
+- Nowa własna category_tree_20261106_final_restore odtworzona z tego samego rzeczywistego
+  encrypted snapshot/checksum/schema/migration/ledgerPASS. Odrębne testonlyapproval i
+  evidence w `/tmp/opencode/category-tree-execution-20261106/reviewfix/`; starej zgody/
+  digestu nie używać jako finalnych. Powtórne rehearsalAPPLY/verify/replay i READONLY
+  prodpreflight65/no blockersPASS na finaldigescie
+  fad69aba5550c98c82bb57f2fc1f67deb85a9b7089f43b1e4e781c2b927e7326.
+  Final-source-freeze.json wiąże4scripts+tests/fixture; bajty zgodne z immutableclonebundle.
+  Pozostał pełny backend gate, archiwizacja dowodów i finalne commity/docs/task-done.
+
+- User „tak” na plan9f51686 i wykonanie Native. Osobny execution-approval-private.json:
+  implementation/tests/rehearsal/readonlypreflight=true, production_apply=false.
+  Dawny design-approval jest historyczny i niezmieniony. Cztery docs/opt odczytane w kolejności.
+- Izolowany dotychczasowy worktree/branch zachowany. T1commit400b1cf, T2commit2045ec4.
+  ZastaneVelo/Q7dirty nie są częścią zmiany. Brak push/merge/deploy/produkcyjnych zapisów.
+- TDD:26missingmoduleRED→26GREEN+schema1RED→27GREEN; guard18RED→18GREEN;
+  ochrona metadata3RED→GREEN plus poprawnyafterfixture. 49combinedPASS.
+  Task3:14integrationRED+21pureCLIRED; finalnie87operatorPASS (27manifest/22guard/
+  17apply+realCLI/21pureCLI). Serwisy domenowe bezpośrednio testowane, minimalnePATCHy,
+  3faultpointsrollback, receipt/replay/drift/verifyrace/Actualrefusal. Żadnych prywatnych
+  etykiet/UUID/liczników w fixture. Nie zmieniono app/**/frontend/requirements/Alembic/importera.
+- Backendbaseline1628PASS/8deselected z istniejącego środowiska testów;493frontend/
+  ruffapp+tests+4scripts/mypy150/eslint/tscPASS. Końcowy pełny backend gate nadal działa;
+  nie polluj. Błędny frontendredirect początkowego combinedrunnera nie był błędem testów;
+  frontend uruchomiono osobno poprawnie. Nie nadpisywać dowodów innych planów.
+- Installed encrypted backupfreshPASS. Własna nowa category_tree_20261106_restore na
+  loopback, restore przez istniejący guardedverifier: checksum/schema7b57/migrationhead/
+  ledgerPASS. Restic--latest1 zwracał14latestPERPATH, nie jeden globalny: guardSTOP,
+  wybór najnowszego potwierdzonego backup-prefix; wznowiono tylko własną pustą oznaczonąDB.
+  Bez DROP lub zastąpienia cudzej kopii. Snapshot/runtime i prywatne dowody w
+  `/tmp/opencode/category-tree-execution-20261106/` (root-only).
+- Dokładny aktywny immutablebackend przetestowany offline i na realnej kopii, bundle
+  z czterechscripts read-only /release-ops, bez host/app, workera/lifespan/API/AI.
+  TESTONLYapproval wiążący loopbacktarget:65original+14new/30updates/79total, samekeyreplay
+  bez zapisów, verifyapplied, HOLD/KEEP/ref/ledger/salda/ActualretentionPASS. Produkcyjny
+  readonlypreflight:65categories/no blockers/schema7b57; nie jest to zgoda na maintenance.
+- Jeden whole-review ses_e4f4c2837ffelMWzt1ypHWO8zs czyta frozenwholechange i5reviewfocus;
+  końcowy pełny gate w tle. Task3/runbook jeszcze niecommitowane, aby zaczekać na odbiór.
+  Następnie findingsCritical/Important: jeden TDDfixpass+pełnygate+rehearsal na nowymdigescie;
+  minor odroczyć/jawnie przekazać. Nie dispatchować drugiego review.
+- Decyzje wykonawcze: reuse istniejącego linkedworktree/deps zamiast zagnieżdżania
+  (koszt błędu: baselineSTOP); PreparedTree przenosi także source/schema do guardów
+  (koszt: odmowa przy niezgodnym schemacie); testy operatora używają własnych per-test
+  schemas w lokalnymfinanse_test zamiast sharedpublic (koszt: setupSTOP); pureCLIboundary
+  w osobnym pliku bezintegration (koszt: dodatkowy plik testu); finalreview równolegle
+  z pełnymgate na zamrożonych bajtach (koszt: po poprawce powtórzyć gate/próbę).
+- Runbook opisuje osobną przyszłą zgodę productionapply_v1 z owner/op/input/operator/
+  runtime/schema/backuprestore/rehearsal/fence. Production approval NIE utworzono,
+  productionapply/ingress503/appstop/zmianyAI/accounts/history0. Aktywna aplikacja8121512
+  i Compose/obrazy pozostają bez zmian. Ostateczny wynik review/gate dopisać po zakończeniu.
+
 ## 2026-11-06 — ZAKOŃCZONE przygotowanie planu kategorii, bez implementacji/APPLY
 
 - User „tak” na CAŁY projekt jako podstawę planu. Prywatne zatwierdzone artefakty niezmienione:
