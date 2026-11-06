@@ -2,6 +2,18 @@
 
 Backlog zadań ze statusami.
 
+## Drzewo kategorii (2026-11-06)
+
+- [x] Przygotować pełny projekt/mapowanie do zatwierdzenia: wszystkie65kategorii i14nowych
+  węzłów, dwa poziomy, zachowane ID/type/source i niejasne gałęzie historyczne HOLD.
+  Spec `docs/superpowers/specs/2026-11-06-category-tree-design.md`; szczegóły prywatne
+  w `/opt/finanse/webapp/category-designs/2026-11-06/`, nie publikować imion/ID w Git.
+  Buildercheck: nothing important left; generator i niezależna rekonstrukcja parentIDPASS.
+- [ ] Uzyskać akceptację pełnego projektu, dopiero potem osobny plan operacyjny.
+  Obecna zgoda nie obejmuje produkcyjnego APPLY, reguł/markerów/zgód AI lub nowych kont.
+- [ ] Osobno rozstrzygnąć historyczne FX, odsetki, bilans otwarcia/lokaty, niejasne Inne
+  i duplikat podatku; nie naprawiać ich pod pozorem porządkowania drzewa.
+
 ## Powdrożeniowy przegląd finansów (2026-11-05)
 
 - [x] Po zgodzie użytkownika i potwierdzeniu konta wykonać właścicielskie agregaty

@@ -2,6 +2,37 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-06 — Projekt drzewa i kompletnego mapowania kategorii, bez APPLY
+
+- User po iteracyjnym ustaleniu znaczenia kategorii powiedział „tak, działaj” na
+  zebranie CAŁEGO drzewa/mapowania DO ZATWIERDZENIA, nie wykonanie w bazie.
+- Ponownie odczytano cztery wymagane docs/opt po kolei; host nadal8121512, docs w worktree
+  nowsze po2ce50f1. ZastaneVelo/Q7dirty zachowane. Właściciel potwierdzony w poprzedniej
+  rozmowie; SELECT po parametryzowanym email ograniczony do tego samego konta, żadnych sesji.
+- Snapshot READONLY/REPEATABLEREAD/timeout/rollback:65(59expense/6income), drzewo identyczne
+  względem poprzedniego odczytu. SHAe813a3e41211ecbdf9782c9804a46c784db6a23692690ea1b79e1190cb51eda2.
+- Ustalenia: AI/hosting do własnych projektów, nie automatycznie firma; ogólne AI to inne
+  narzędzia. FX to historyczne PLN→EUR/USD, nie prowizje; osobny audyt. Firma zawieszona
+  ponosi tylko obsługę konta. Apple to abonamenty. Rodzina wspólne+5osób bez dalszego
+  podziału; pożyczki i kapitałowe spłaty na osobnych kontach tworzonych przez użytkownika.
+- Spec `docs/superpowers/specs/2026-11-06-category-tree-design.md`, prywatne źródło/pełna
+  propozycja i65wierszymapowania w `/opt/finanse/webapp/category-designs/2026-11-06/` root-only;
+  roboczyOUT `/tmp/opencode/category-tree-20261106/`. Nie wstawiać prywatnych nazw/UUID doGit.
+- Wariant:16KEEP/38EDIT/11HOLD,14nowych expense,79węzłów(73expense/6income) z grupami,
+  bez scalania/delete/dezaktywacji/typechanges/rewritetransactions. HOLD oraz ich rodzice
+  zostajądosłownie na miejscu; nowy rodzic dla narzędzi zamiast renameparent zatrzymanegoFX.
+  Kategorie rodzinne nie obejmują kapitału pożyczek; techniczny koszyk nie jest grantemAI.
+- Niezależna offline rekonstrukcja parentID/nazw wszystkich79węzłówPASS, pokrycie65/65,
+  Markdown65wierszy, brak cykli/sierot/zmianytype, HOLD/KEEPname+parentIDidentyczne;
+  manifestprywatnychplikówPASS. Retainedexactsourceprodukt1628/493/141+1skipPASS bez zmian.
+- Zmiana ścieżek wpłynie na historyczne grupy/etykiety raportów; kwoty/salda/IDs nie mogą
+  się zmienić. EDIT jest zmianą ścieżki, nie zawsze osobną mutacją dziecka. Przed przyszłym
+  wykonaniem osobny preflight wszystkichref/imports/budgets/rules/fingerprints, backup,
+  audyt/domenoweoperacje i osobna zgoda. Nie obiecywać niezmienionych sum per grupa.
+- Buildercheck ses_e502984d3ffei4SwGTpx09Tu78 na publicznej spec i CAŁYM prywatnym projekcie:
+  nothing important left. Projekt gotowy do akceptacji użytkownika; nie jest zatwierdzony
+  do wykonania. Bez produkcyjnych zapisów, AI, zgód, kont, migracji/deploy.
+
 ## 2026-11-05 — ZAKOŃCZONY ograniczony read-only przegląd finansów po wdrożeniu
 
 - User zatwierdził przegląd UI/danych bez zmian/AI/importu/księgowania. Production nadal

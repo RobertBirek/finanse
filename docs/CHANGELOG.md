@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Projekt do zatwierdzenia] — 2026-11-06 — Pełne drzewo kategorii
+
+### Added
+- Po zgodzie na przygotowanie: projekt drzewa i kompletna tabela65→65 istniejących ID,
+  z16KEEP/38EDIT/11HOLD oraz14nowymi węzłami expense. Wariant bez scaleń, usunięć,
+  dezaktywacji, zmiany typu lub przepisywania postings; 79 węzłów łącznie z grupami.
+- Uwzględniono ustalenia o własnych projektach AI, opłacie bankowej zawieszonej firmy,
+  subskrypcjach Apple i prostych kategoriach rodzinnych. Kont pożyczek nie tworzy agent.
+- Prywatne nazwy/ID i pełne mapowanie pozostają poza Git w root-only katalogu operatora;
+  spec `docs/superpowers/specs/2026-11-06-category-tree-design.md`. Tylko właścicielski
+  READ ONLY/rollback i walidacja dokumentu; żadnych zmian produktu, danych lub polityk.
+
 ## [Audyt read-only] — 2026-11-05 — Użyteczność po wdrożeniu
 
 ### Added
