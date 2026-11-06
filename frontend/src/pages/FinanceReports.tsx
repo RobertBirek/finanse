@@ -1,4 +1,8 @@
-import { useCategorySummary, useFinancialSummary } from "../api/finance";
+import {
+  useCategories,
+  useCategorySummary,
+  useFinancialSummary,
+} from "../api/finance";
 import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { SummaryCard } from "../components/finance/SummaryCard";
@@ -10,6 +14,7 @@ export function FinanceReports() {
   const [period, setPeriod] = useFinancePeriod();
   const summary = useFinancialSummary(period);
   const categorySummary = useCategorySummary(period);
+  const categories = useCategories();
 
   return (
     <div className="max-w-5xl">
@@ -57,6 +62,7 @@ export function FinanceReports() {
         summary={categorySummary.data}
         loading={categorySummary.isLoading}
         error={categorySummary.isError}
+        categories={categories.data}
       />
     </div>
   );

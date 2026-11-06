@@ -11,6 +11,8 @@ import {
 import { AccountRow } from "../components/finance/AccountSettingsRow";
 import { CategoryTreeEditor } from "../components/finance/CategoryTreeEditor";
 import { categoryPath } from "../lib/categories";
+import { categoryColorMap, entityColor } from "../lib/financeColors";
+import { FinanceColorPicker } from "../components/finance/FinanceColorPicker";
 import {
   ACCOUNT_TYPES,
   apiErrorDetail,
@@ -39,6 +41,7 @@ export function FinanceAccounts({
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
 
   const [accountName, setAccountName] = useState("");
+  const [accountColor, setAccountColor] = useState<string | null>(null);
   const [accountType, setAccountType] = useState("checking");
   const [accountCurrency, setAccountCurrency] = useState("PLN");
   const [accountBudget, setAccountBudget] = useState(true);
@@ -49,11 +52,13 @@ export function FinanceAccounts({
   const [notes, setNotes] = useState("");
 
   const [categoryName, setCategoryName] = useState("");
+  const [categoryColor, setCategoryColor] = useState<string | null>(null);
   const [categoryType, setCategoryType] = useState<Category["type"]>("expense");
   const [categoryParentId, setCategoryParentId] = useState("");
 
   const accounts = accountsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
+  const colors = categoryColorMap(categories);
 
   const createAccountError = apiErrorDetail(createAccount.error);
   const createCategoryError = apiErrorDetail(createCategory.error);
@@ -63,6 +68,7 @@ export function FinanceAccounts({
     createAccount.mutate(
       {
         name: accountName.trim(),
+        ...(accountColor ? { color: accountColor } : {}),
         type: accountType,
         currency: accountCurrency,
         ...(!accountBudget ? { is_budget_account: false } : {}),
@@ -83,6 +89,7 @@ export function FinanceAccounts({
       {
         onSuccess: () => {
           setAccountName("");
+          setAccountColor(null);
           setAccountType("checking");
           setAccountCurrency("PLN");
           setAccountBudget(true);
@@ -101,12 +108,14 @@ export function FinanceAccounts({
     createCategory.mutate(
       {
         name: categoryName.trim(),
+        ...(categoryColor ? { color: categoryColor } : {}),
         type: categoryType,
         ...(categoryParentId ? { parent_id: categoryParentId } : {}),
       },
       {
         onSuccess: () => {
           setCategoryName("");
+          setCategoryColor(null);
           setCategoryType("expense");
           setCategoryParentId("");
         },
@@ -161,6 +170,15 @@ export function FinanceAccounts({
             <h2 className="mb-4 text-lg font-semibold text-white">
               Nowe konto
             </h2>
+            <div className="mb-4">
+              <FinanceColorPicker
+                label="Kolor konta"
+                value={accountColor}
+                previewColor={entityColor("new-account")}
+                onChange={setAccountColor}
+                disabled={createAccount.isPending}
+              />
+            </div>
             <div className="flex flex-wrap items-end gap-4">
               <div>
                 <label
@@ -327,6 +345,20 @@ export function FinanceAccounts({
             <h2 className="mb-4 text-lg font-semibold text-white">
               Nowa kategoria
             </h2>
+            <div className="mb-4">
+              <FinanceColorPicker
+                label="Kolor kategorii"
+                value={categoryColor}
+                previewColor={
+                  colors.get(categoryParentId) ?? entityColor("new-category")
+                }
+                onChange={setCategoryColor}
+                automaticLabel={
+                  categoryParentId ? "Dziedzicz kolor" : "Automatycznie"
+                }
+                disabled={createCategory.isPending}
+              />
+            </div>
             <div className="flex flex-wrap items-end gap-4">
               <div>
                 <label

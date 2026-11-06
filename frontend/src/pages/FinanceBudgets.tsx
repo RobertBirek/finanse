@@ -13,6 +13,7 @@ import {
   useUpdateBudget,
 } from "../api/finance";
 import { formatPLN } from "../lib/format";
+import { categoryColorMap, entityColor } from "../lib/financeColors";
 import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
@@ -38,6 +39,7 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
   const budgetsQuery = useBudgets();
   const statusQuery = useBudgetStatus(period);
   const categoriesQuery = useCategories();
+  const colors = categoryColorMap(categoriesQuery.data ?? []);
   const categorySummary = useCategorySummary(period);
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
@@ -179,7 +181,18 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
                   className="border-b border-gray-800 pb-4 last:border-0 last:pb-0"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
-                    <h3 className="font-medium text-white">{item.name}</h3>
+                    <h3 className="font-medium text-white">
+                      <span
+                        aria-hidden="true"
+                        className="mr-2 inline-block h-3 w-3 rounded-full border border-gray-500/40"
+                        style={{
+                          backgroundColor:
+                            colors.get(item.category_id) ??
+                            entityColor(item.category_id),
+                        }}
+                      />
+                      {item.name}
+                    </h3>
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
                       <div>
                         <p className="mb-1 text-xs text-gray-500">Limit</p>
@@ -283,7 +296,16 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
                       className={`h-full rounded-full ${
                         progress.over ? "bg-red-500" : "bg-advisor-500"
                       }`}
-                      style={{ width: `${progress.percent}%` }}
+                      style={{
+                        width: `${progress.percent}%`,
+                        ...(!progress.over
+                          ? {
+                              backgroundColor:
+                                colors.get(item.category_id) ??
+                                entityColor(item.category_id),
+                            }
+                          : {}),
+                      }}
                     />
                   </div>
                   {item.remaining_pln < 0 ? (
@@ -348,6 +370,7 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
       ) : null}
 
       <CategorySpendTree
+        categories={categoriesQuery.data}
         title="Wydatki według kategorii"
         summary={categorySummary.data}
         loading={categorySummary.isLoading}

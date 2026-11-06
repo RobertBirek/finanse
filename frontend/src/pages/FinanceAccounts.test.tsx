@@ -131,6 +131,71 @@ describe("FinanceAccounts", () => {
     vi.restoreAllMocks();
   });
 
+  it("sends selected colors on creation and preserves null automatic defaults without extra writes", () => {
+    render(<FinanceAccounts />);
+    fireEvent.change(createAccountForm().getByLabelText("Nazwa"), {
+      target: { value: "Nowe konto" },
+    });
+    fireEvent.change(createAccountForm().getByLabelText("Kolor konta"), {
+      target: { value: "#123abc" },
+    });
+    fireEvent.click(
+      createAccountForm().getByRole("button", { name: "Dodaj konto" }),
+    );
+    expect(hooks.useCreateAccount().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Nowe konto", color: "#123ABC" }),
+      expect.anything(),
+    );
+    fireEvent.change(createCategoryForm().getByLabelText("Nazwa"), {
+      target: { value: "Nowa" },
+    });
+    fireEvent.change(createCategoryForm().getByLabelText("Kolor kategorii"), {
+      target: { value: "#aabbcc" },
+    });
+    fireEvent.click(
+      createCategoryForm().getByRole("button", { name: "Dodaj kategorię" }),
+    );
+    expect(hooks.useCreateCategory().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ color: "#AABBCC" }),
+      expect.anything(),
+    );
+  });
+
+  it("saves account color and resets it explicitly without modifying its currency or history", () => {
+    hooks.useAccounts.mockReturnValue({
+      data: [{ ...accounts[0], color: "#123ABC" }],
+      isLoading: false,
+      isError: false,
+    });
+    render(<FinanceAccounts section="accounts" />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj konto Rachunek główny" }),
+    );
+    fireEvent.change(screen.getByLabelText("Kolor konta Rachunek główny"), {
+      target: { value: "#112233" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz konto Rachunek główny" }),
+    );
+    expect(hooks.useUpdateAccount().mutate).toHaveBeenLastCalledWith(
+      { id: "a1", color: "#112233" },
+      expect.anything(),
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Automatycznie" })[0],
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz konto Rachunek główny" }),
+    );
+    expect(hooks.useUpdateAccount().mutate).toHaveBeenLastCalledWith(
+      { id: "a1", color: null },
+      expect.anything(),
+    );
+    expect(
+      hooks.useUpdateAccount().mutate.mock.calls.at(-1)[0],
+    ).not.toHaveProperty("currency");
+  });
+
   it("renderuje sekcje Konta i Kategorie z pozycjami", () => {
     render(<FinanceAccounts />);
 

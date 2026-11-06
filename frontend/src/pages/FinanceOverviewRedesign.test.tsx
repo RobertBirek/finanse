@@ -5,6 +5,7 @@ import { Finances } from "./Finances";
 
 const hooks = vi.hoisted(() => ({
   useAccounts: vi.fn(),
+  useCategories: vi.fn(),
   useFinancialSummary: vi.fn(),
   useCashflowForecast: vi.fn(),
   useTransactions: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock("../api/finance", async (original) => ({
 
 beforeEach(() => {
   const ready = { isLoading: false, isError: false, refetch: vi.fn() };
+  hooks.useCategories.mockReturnValue({ ...ready, data: [] });
   hooks.useAccounts.mockReturnValue({
     ...ready,
     data: [
@@ -83,6 +85,47 @@ beforeEach(() => {
 });
 
 describe("Approved finance overview", () => {
+  it("uses saved account and inherited category colors without changing amounts or summary semantics", () => {
+    const accountData = hooks.useAccounts().data;
+    hooks.useAccounts.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [{ ...accountData[0], color: "#000000" }],
+    });
+    hooks.useCategories.mockReturnValue({
+      data: [
+        { id: "home", parent_id: null, color: "#123ABC" },
+        { id: "power", parent_id: "home", color: null },
+      ],
+    });
+    hooks.useBudgetStatus.mockReturnValue({
+      data: {
+        items: [
+          {
+            category_id: "power",
+            name: "Prąd",
+            spent_pln: 1000,
+            budget_amount_pln: 2000,
+          },
+        ],
+      },
+    });
+    render(
+      <MemoryRouter>
+        <Finances />
+      </MemoryRouter>,
+    );
+    const account = screen.getByRole("link", { name: /Bank EUR · Eurokonto/ });
+    expect(account.querySelector(".finance-bank-mark")).toHaveStyle({
+      backgroundColor: "#000000",
+      color: "#FFFFFF",
+    });
+    expect(screen.getByLabelText("Wykorzystanie budżetu Prąd")).toHaveStyle({
+      "--finance-color": "#123ABC",
+    });
+    expect(screen.getByText("100,00 EUR")).toBeInTheDocument();
+    expect(screen.getByText("10,00 PLN")).toBeInTheDocument();
+  });
   it("shows owned active book-value balance and lets user select budget accounts", () => {
     render(
       <MemoryRouter>

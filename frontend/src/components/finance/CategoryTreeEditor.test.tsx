@@ -13,6 +13,89 @@ vi.mock("../../api/finance", () => ({
 }));
 
 describe("CategoryTreeEditor", () => {
+  it("does not normalize an untouched imported category name when saving only its color", () => {
+    const mutate = vi.fn();
+    updateCategory.mockReturnValue({ mutate, isPending: false });
+    deleteCategory.mockReturnValue({ isPending: false });
+    render(
+      <CategoryTreeEditor
+        onAddChild={vi.fn()}
+        categories={[
+          {
+            id: "imported",
+            name: "  Dawna nazwa  ",
+            type: "expense",
+            parent_id: null,
+            is_active: true,
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Edytuj kategorię/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Kolor kategorii.*Niebieski/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Zapisz kategorię/ }));
+    expect(mutate).toHaveBeenCalledWith(
+      { id: "imported", color: "#2563EB" },
+      expect.anything(),
+    );
+  });
+  it("saves a child override and can reset to inherited color without rewriting parent", () => {
+    const mutate = vi.fn();
+    updateCategory.mockReturnValue({ mutate, isPending: false });
+    deleteCategory.mockReturnValue({ isPending: false });
+    render(
+      <CategoryTreeEditor
+        onAddChild={vi.fn()}
+        categories={[
+          {
+            id: "root",
+            name: "Dom",
+            type: "expense",
+            parent_id: null,
+            color: "#123ABC",
+            is_active: true,
+          },
+          {
+            id: "child",
+            name: "Prąd",
+            type: "expense",
+            parent_id: "root",
+            color: "#AABBCC",
+            is_active: true,
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj kategorię Prąd" }),
+    );
+    expect(screen.getByLabelText("Kolor kategorii Prąd")).toHaveValue(
+      "#aabbcc",
+    );
+    fireEvent.change(screen.getByLabelText("Kolor kategorii Prąd"), {
+      target: { value: "#fedcba" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz kategorię Prąd" }),
+    );
+    expect(mutate).toHaveBeenLastCalledWith(
+      { id: "child", color: "#FEDCBA" },
+      expect.anything(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Dziedzicz kolor" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz kategorię Prąd" }),
+    );
+    expect(mutate).toHaveBeenLastCalledWith(
+      { id: "child", color: null },
+      expect.anything(),
+    );
+    expect(mutate.mock.calls.every(([request]) => request.id === "child")).toBe(
+      true,
+    );
+  });
   it("labels add-child independently and keeps active descendants under an archived ancestor", () => {
     updateCategory.mockReturnValue({ isPending: false });
     deleteCategory.mockReturnValue({ isPending: false });

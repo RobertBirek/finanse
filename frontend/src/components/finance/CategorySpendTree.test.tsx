@@ -3,6 +3,143 @@ import { describe, expect, it } from "vitest";
 import { CategorySpendTree } from "./CategorySpendTree";
 
 describe("CategorySpendTree", () => {
+  it("keeps negative category amounts signed and scales against every shown amount even when a root nets to zero", () => {
+    render(
+      <CategorySpendTree
+        title="Wydatki"
+        loading={false}
+        error={false}
+        summary={{
+          month: 11,
+          year: 2026,
+          groups: [],
+          categories: [],
+          tree: [
+            {
+              category_id: "root",
+              name: "Grupa",
+              parent_id: null,
+              total_pln: 0,
+              direct_total_pln: -3000,
+              is_active: true,
+              children: [
+                {
+                  category_id: "positive",
+                  name: "Zakupy",
+                  parent_id: "root",
+                  total_pln: 5000,
+                  direct_total_pln: 5000,
+                  is_active: true,
+                  children: [],
+                },
+                {
+                  category_id: "negative",
+                  name: "Zwrot",
+                  parent_id: "root",
+                  total_pln: -2000,
+                  direct_total_pln: -2000,
+                  is_active: true,
+                  children: [],
+                },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByRole("img", { name: "Wydatki: Zakupy" })).toHaveStyle({
+      width: "100%",
+    });
+    expect(screen.getByRole("img", { name: "Wydatki: Zwrot" })).toHaveStyle({
+      width: "40%",
+    });
+    expect(screen.getByText("-20,00 PLN")).toBeInTheDocument();
+  });
+  it("uses persisted and inherited colors in tree chart bars and legends without summing rollups twice", () => {
+    render(
+      <CategorySpendTree
+        title="Wydatki"
+        loading={false}
+        error={false}
+        categories={[
+          {
+            id: "home",
+            name: "Dom",
+            parent_id: null,
+            type: "expense",
+            is_active: true,
+            color: "#123ABC",
+          },
+          {
+            id: "power",
+            name: "Prąd",
+            parent_id: "home",
+            type: "expense",
+            is_active: true,
+            color: null,
+          },
+          {
+            id: "net",
+            name: "Sieć",
+            parent_id: "home",
+            type: "expense",
+            is_active: true,
+            color: "#FFAA00",
+          },
+        ]}
+        summary={{
+          month: 11,
+          year: 2026,
+          groups: [],
+          categories: [],
+          tree: [
+            {
+              category_id: "home",
+              name: "Dom",
+              parent_id: null,
+              is_active: true,
+              total_pln: 5000,
+              direct_total_pln: 0,
+              children: [
+                {
+                  category_id: "power",
+                  name: "Prąd",
+                  parent_id: "home",
+                  is_active: true,
+                  total_pln: 3000,
+                  direct_total_pln: 3000,
+                  children: [],
+                },
+                {
+                  category_id: "net",
+                  name: "Sieć",
+                  parent_id: "home",
+                  is_active: true,
+                  total_pln: 2000,
+                  direct_total_pln: 2000,
+                  children: [],
+                },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByRole("img", { name: "Wydatki: Dom" })).toHaveStyle({
+      backgroundColor: "#123ABC",
+      width: "100%",
+    });
+    expect(screen.getByRole("img", { name: "Wydatki: Prąd" })).toHaveStyle({
+      backgroundColor: "#123ABC",
+      width: "60%",
+    });
+    expect(screen.getByRole("img", { name: "Wydatki: Sieć" })).toHaveStyle({
+      backgroundColor: "#FFAA00",
+      width: "40%",
+    });
+    expect(screen.getByText("50,00 PLN")).toBeInTheDocument();
+    expect(screen.queryByText("100,00 PLN")).not.toBeInTheDocument();
+  });
   it("renders the selected month and category hierarchy with PLN totals", () => {
     render(
       <CategorySpendTree

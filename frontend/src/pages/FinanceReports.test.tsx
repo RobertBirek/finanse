@@ -9,6 +9,7 @@ const { useCategorySummary, useFinancialSummary } = vi.hoisted(() => ({
 }));
 
 vi.mock("../api/finance", () => ({
+  useCategories: () => ({ data: [] }),
   useCategorySummary,
   useFinancialSummary,
 }));

@@ -9,6 +9,7 @@ import { useAuthStore } from "../stores/authStore";
 import type { AssignmentOrigin } from "./categorization";
 
 export interface Account {
+  color?: string | null;
   id: string;
   name: string;
   type: string;
@@ -30,6 +31,7 @@ export interface Account {
 }
 
 export interface Category {
+  color?: string | null;
   id: string;
   name: string;
   parent_id: string | null;
@@ -38,6 +40,7 @@ export interface Category {
 }
 
 export interface AccountUpdateInput {
+  color?: string | null;
   name?: string;
   currency?: string;
   type?: string;
@@ -52,6 +55,7 @@ export interface AccountUpdateInput {
 }
 
 export interface CategoryUpdateInput {
+  color?: string | null;
   name?: string;
   parent_id?: string | null;
   type?: "income" | "expense" | "transfer";
@@ -462,6 +466,7 @@ export function useCreateAccount() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (account: {
+      color?: string | null;
       name: string;
       type: string;
       currency?: string;
@@ -535,6 +540,7 @@ export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (category: {
+      color?: string | null;
       name: string;
       parent_id?: string | null;
       type: string;

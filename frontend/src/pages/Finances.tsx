@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   useAccounts,
+  useCategories,
   useBudgetStatus,
   useCashflowForecast,
   useFinancialSummary,
@@ -9,6 +10,7 @@ import {
   type Account,
 } from "../api/finance";
 import { formatPLN } from "../lib/format";
+import { categoryColorMap, colorInk, entityColor } from "../lib/financeColors";
 import { formatCalendarDate } from "../lib/date";
 import { TRANSACTION_TYPES } from "../lib/transactionSearch";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
@@ -29,6 +31,8 @@ export function Finances() {
   const navigate = useNavigate();
   const periodSearch = financePeriodSearch(period);
   const accounts = useAccounts();
+  const categories = useCategories();
+  const colors = categoryColorMap(categories.data ?? []);
   const summary = useFinancialSummary(period);
   const cashflow = useCashflowForecast();
   const latest = useTransactions({ limit: 5 });
@@ -200,8 +204,16 @@ export function Finances() {
                 key={a.id}
                 to={`/finances/transactions${periodSearch}&account_id=${encodeURIComponent(a.id)}`}
                 className="finance-account-chip"
+                style={{ borderColor: entityColor(a.id, a.color) }}
               >
-                <span className="finance-bank-mark" aria-hidden="true">
+                <span
+                  className="finance-bank-mark"
+                  aria-hidden="true"
+                  style={{
+                    backgroundColor: entityColor(a.id, a.color),
+                    color: colorInk(entityColor(a.id, a.color)),
+                  }}
+                >
                   {(a.bank_name || a.name).slice(0, 1).toUpperCase()}
                 </span>
                 <span>
@@ -254,6 +266,9 @@ export function Finances() {
                         <span
                           className="finance-transaction-mark"
                           aria-hidden="true"
+                          style={{
+                            borderInlineStart: `4px solid ${colors.get(t.postings.find((p) => p.category_id)?.category_id ?? "") ?? entityColor(leg?.account_id ?? t.id, accounts.data?.find((a) => a.id === leg?.account_id)?.color)}`,
+                          }}
                         >
                           {t.type === "transfer" || t.type === "exchange"
                             ? "⇄"
@@ -312,6 +327,12 @@ export function Finances() {
                   aria-label={`Wykorzystanie budżetu ${b.name}`}
                   value={Math.max(0, b.spent_pln)}
                   max={Math.max(1, b.budget_amount_pln)}
+                  style={
+                    {
+                      "--finance-color":
+                        colors.get(b.category_id) ?? entityColor(b.category_id),
+                    } as CSSProperties
+                  }
                 />
                 <small>z {formatPLN(b.budget_amount_pln)} PLN</small>
               </Link>

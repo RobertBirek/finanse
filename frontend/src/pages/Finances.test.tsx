@@ -29,6 +29,7 @@ function LocationDisplay() {
 }
 
 vi.mock("../api/finance", () => ({
+  useCategories: () => ({ data: [] }),
   splitAccounts: (accounts: Array<{ is_budget_account: boolean }>) => ({
     budget: accounts.filter((account) => account.is_budget_account),
     informational: accounts.filter((account) => !account.is_budget_account),

@@ -64,6 +64,36 @@ describe("FinanceBudgets", () => {
   const updateMutate = vi.fn();
   const deleteMutate = vi.fn();
 
+  it("uses category color for budget bars but retains red overspend warnings", () => {
+    hooks.useCategories.mockReturnValue({
+      data: [{ ...categories[0], color: "#123ABC" }],
+    });
+    const view = render(<FinanceBudgets />);
+    expect(screen.getByTestId("budget-progress-c-food")).toHaveStyle({
+      backgroundColor: "#123ABC",
+    });
+    hooks.useBudgetStatus.mockReturnValue(
+      statusItems([
+        {
+          category_id: "c-food",
+          name: "Jedzenie",
+          budget_amount_pln: 100000,
+          spent_pln: 120000,
+          remaining_pln: -20000,
+        },
+      ]),
+    );
+    view.rerender(
+      <MemoryRouter>
+        <FinanceBudgets />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("budget-progress-c-food")).toHaveClass(
+      "bg-red-500",
+    );
+    expect(screen.getByText(/Przekroczono o/)).toBeInTheDocument();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     hooks.useBudgetStatus.mockReturnValue(

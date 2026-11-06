@@ -452,15 +452,18 @@ body {
   border: none;
   border-radius: 5px;
   overflow: hidden;
-  accent-color: #245bea;
+  accent-color: var(--finance-color, #245bea);
   background: var(--ui-canvas);
 }
 .finance-budget-preview progress::-webkit-progress-bar {
   background: var(--ui-canvas);
 }
 .finance-budget-preview progress::-webkit-progress-value {
-  background: #245bea;
+  background: var(--finance-color, #245bea);
   border-radius: 5px;
+}
+.finance-budget-preview progress::-moz-progress-bar {
+  background: var(--finance-color, #245bea);
 }
 .finance-budget-preview small {
   grid-column: 1/-1;

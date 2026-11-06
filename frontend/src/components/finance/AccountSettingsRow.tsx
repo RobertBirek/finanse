@@ -2,6 +2,8 @@ import { useRef, useState } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { Account, AccountUpdateInput } from "../../api/finance";
 import { ACCOUNT_TYPES, apiErrorDetail, isConflict } from "./accountSettings";
+import { entityColor } from "../../lib/financeColors";
+import { FinanceColorPicker } from "./FinanceColorPicker";
 
 const ACCOUNT_DELETE_CONFLICT_MESSAGE =
   "Konto ma zapisy — zdezaktywuj je zamiast usuwać";
@@ -32,6 +34,7 @@ export function AccountRow({
   onCancelEdit,
 }: AccountRowProps) {
   const [draftName, setDraftName] = useState(account.name);
+  const [draftColor, setDraftColor] = useState(account.color ?? null);
   const [draftType, setDraftType] = useState(account.type);
   const [draftCurrency, setDraftCurrency] = useState(account.currency);
   const currencyEditable = account.can_change_currency === true;
@@ -67,6 +70,7 @@ export function AccountRow({
 
   function startEdit() {
     setDraftName(account.name);
+    setDraftColor(account.color ?? null);
     setDraftType(account.type);
     setDraftCurrency(account.currency);
     setDraftBudget(account.is_budget_account);
@@ -79,15 +83,25 @@ export function AccountRow({
   }
 
   function save() {
+    const colorChanged = draftColor !== (account.color ?? null);
     updateMutation.mutate(
       {
         id: account.id,
-        name: draftName,
-        type: draftType,
+        ...(!colorChanged || draftName !== account.name
+          ? { name: draftName }
+          : {}),
+        ...(draftColor !== (account.color ?? null)
+          ? { color: draftColor }
+          : {}),
+        ...(!colorChanged || draftType !== account.type
+          ? { type: draftType }
+          : {}),
         ...(currencyEditable && draftCurrency !== account.currency
           ? { currency: draftCurrency }
           : {}),
-        is_budget_account: draftBudget,
+        ...(!colorChanged || draftBudget !== account.is_budget_account
+          ? { is_budget_account: draftBudget }
+          : {}),
         ...(draftIban !== (account.iban ?? "")
           ? { iban: draftIban.trim() || null }
           : {}),
@@ -153,6 +167,13 @@ export function AccountRow({
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="h-3 w-3 shrink-0 rounded-full border border-gray-500/40"
+              style={{
+                backgroundColor: entityColor(account.id, account.color),
+              }}
+            />
             <p className="min-w-0 break-words text-sm font-medium text-white [overflow-wrap:anywhere]">
               {account.name}
             </p>
@@ -272,6 +293,13 @@ export function AccountRow({
       </div>
       {editing ? (
         <div className="mt-3 space-y-3">
+          <FinanceColorPicker
+            label={`Kolor konta ${account.name}`}
+            value={draftColor}
+            previewColor={entityColor(account.id)}
+            onChange={setDraftColor}
+            disabled={rowPending}
+          />
           <div>
             <label
               htmlFor="account-edit-name"

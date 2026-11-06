@@ -6,6 +6,8 @@ import {
 } from "../../api/finance";
 import { categoryPath, eligibleCategoryParents } from "../../lib/categories";
 import { apiErrorDetail, isConflict } from "./accountSettings";
+import { categoryColorMap, entityColor } from "../../lib/financeColors";
+import { FinanceColorPicker } from "./FinanceColorPicker";
 
 const DELETE_CONFLICT_MESSAGE =
   "Kategoria ma zapisy — zdezaktywuj ją zamiast usuwać";
@@ -32,6 +34,8 @@ export function CategoryTreeEditor({
   const [parentId, setParentId] = useState("");
   const [name, setName] = useState("");
   const [type, setType] = useState<Category["type"]>("expense");
+  const [color, setColor] = useState<string | null>(null);
+  const colors = categoryColorMap(categories);
   const byId = new Map(categories.map((category) => [category.id, category]));
   const childrenByParent = new Map<string, Category[]>();
   for (const category of categories) {
@@ -46,6 +50,7 @@ export function CategoryTreeEditor({
     setParentId(category.parent_id ?? "");
     setName(category.name);
     setType(category.type);
+    setColor(category.color ?? null);
   }
 
   function isPending(categoryId: string) {
@@ -110,7 +115,12 @@ export function CategoryTreeEditor({
               <span className="inline-block w-11" aria-hidden="true" />
             )}
             <div className="min-w-0 flex-1">
-              <p className="break-words text-sm font-medium text-white [overflow-wrap:anywhere]">
+              <p className="flex items-center gap-2 break-words text-sm font-medium text-white [overflow-wrap:anywhere]">
+                <span
+                  aria-hidden="true"
+                  className="h-3 w-3 shrink-0 rounded-full border border-gray-500/40"
+                  style={{ backgroundColor: colors.get(category.id) }}
+                />
                 {category.name}
               </p>
               <p className="text-xs text-gray-500">
@@ -169,6 +179,16 @@ export function CategoryTreeEditor({
         </div>
         {editing === category.id ? (
           <div className="grid gap-3 border-b border-gray-800 bg-gray-800/30 p-3 sm:grid-cols-3">
+            <div className="sm:col-span-3">
+              <FinanceColorPicker
+                label={`Kolor kategorii ${category.name}`}
+                value={color}
+                previewColor={colors.get(parentId) ?? entityColor(category.id)}
+                onChange={setColor}
+                automaticLabel={parentId ? "Dziedzicz kolor" : "Automatycznie"}
+                disabled={pending}
+              />
+            </div>
             <label className="text-sm text-gray-300">
               Nazwa
               <input
@@ -222,9 +242,19 @@ export function CategoryTreeEditor({
                   update.mutate(
                     {
                       id: category.id,
-                      name: name.trim(),
-                      type,
-                      parent_id: parentId || null,
+                      ...(color === (category.color ?? null) ||
+                      name !== category.name
+                        ? { name: name.trim() }
+                        : {}),
+                      ...(color === (category.color ?? null) ||
+                      type !== category.type
+                        ? { type }
+                        : {}),
+                      ...(color === (category.color ?? null) ||
+                      (parentId || null) !== category.parent_id
+                        ? { parent_id: parentId || null }
+                        : {}),
+                      ...(color !== (category.color ?? null) ? { color } : {}),
                     },
                     { onSuccess: () => setEditing(null) },
                   )
