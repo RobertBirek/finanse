@@ -8,6 +8,12 @@ from app.finance.account_validation import normalize_bic, normalize_iban
 from app.finance.rule_schemas import AssignmentOrigin
 
 
+def normalize_color(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return value.upper()
+
+
 class AccountCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     type: str = Field(pattern=r"^(checking|savings|cash|credit|investment)$")
@@ -19,9 +25,11 @@ class AccountCreate(BaseModel):
     iban: str | None = Field(default=None, max_length=64)
     bic: str | None = Field(default=None, max_length=11)
     notes: str | None = None
+    color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
 
     _normalize_iban = field_validator("iban")(normalize_iban)
     _normalize_bic = field_validator("bic")(normalize_bic)
+    _normalize_color = field_validator("color")(normalize_color)
 
 
 class AccountUpdate(BaseModel):
@@ -36,9 +44,11 @@ class AccountUpdate(BaseModel):
     iban: str | None = Field(default=None, max_length=64)
     bic: str | None = Field(default=None, max_length=11)
     notes: str | None = None
+    color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
 
     _normalize_iban = field_validator("iban")(normalize_iban)
     _normalize_bic = field_validator("bic")(normalize_bic)
+    _normalize_color = field_validator("color")(normalize_color)
 
     @field_validator("currency")
     @classmethod
@@ -73,6 +83,7 @@ class AccountResponse(BaseModel):
     iban: str | None
     bic: str | None
     notes: str | None
+    color: str | None
     opened_at: dt.date
     closed_at: dt.date | None
     created_at: dt.datetime
@@ -85,6 +96,9 @@ class CategoryCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     parent_id: uuid.UUID | None = None
     type: str = Field(pattern=r"^(income|expense|transfer)$")
+    color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+
+    _normalize_color = field_validator("color")(normalize_color)
 
 
 class CategoryUpdate(BaseModel):
@@ -92,6 +106,9 @@ class CategoryUpdate(BaseModel):
     parent_id: uuid.UUID | None = None
     type: str | None = Field(default=None, pattern=r"^(income|expense|transfer)$")
     is_active: bool | None = None
+    color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+
+    _normalize_color = field_validator("color")(normalize_color)
 
 
 class CategoryResponse(BaseModel):
@@ -101,6 +118,7 @@ class CategoryResponse(BaseModel):
     parent_id: uuid.UUID | None
     type: str
     is_active: bool
+    color: str | None
     created_at: dt.datetime
     updated_at: dt.datetime
 

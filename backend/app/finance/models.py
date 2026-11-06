@@ -25,6 +25,12 @@ from app.finance import receipt_read_models as _receipt_read_models  # noqa: F40
 
 class Account(Base):
     __tablename__ = "accounts"
+    __table_args__ = (
+        CheckConstraint(
+            "color IS NULL OR color ~ '^#[0-9A-F]{6}$'",
+            name="ck_accounts_color_hex",
+        ),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -42,6 +48,7 @@ class Account(Base):
     iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
     bic: Mapped[str | None] = mapped_column(String(11), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)
 
     postings: Mapped[list["Posting"]] = relationship(
         "Posting", back_populates="account", cascade="all, delete-orphan"
@@ -66,6 +73,12 @@ class Account(Base):
 
 class Category(Base):
     __tablename__ = "categories"
+    __table_args__ = (
+        CheckConstraint(
+            "color IS NULL OR color ~ '^#[0-9A-F]{6}$'",
+            name="ck_categories_color_hex",
+        ),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -75,6 +88,7 @@ class Category(Base):
     type: Mapped[str] = mapped_column(String(20), nullable=False)
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)
 
     parent: Mapped["Category | None"] = relationship(
         "Category", remote_side="Category.id", backref="children"
