@@ -2,6 +2,25 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, 95f8380] — 2026-11-06 — Kolory kont i kategorii
+
+### Added
+- Wdrożono wybór koloru kont/kategorii, dziedziczenie/reset oraz spójne akcenty
+  dashboardu, raportów i budżetów. Ustawienia: Finanse → Konta i kategorie.
+
+### Changed
+- Po osobnym zatwierdzeniu dokładnej rewizji: trzy zgodne obrazy i jedna migracja
+  `7b57 → f3a9`, świeże backupy/odtworzenia i próba na kopii. Stare wiersze56 tabel,
+  ledger, salda, pliki, drzewo kategorii i polityki AI zachowane. Maintenance zdjęty.
+- Publiczne HTTPS/health200, auth401, dokładne zasoby, browser375/1440, odczyty
+  domenowe, logi i identyfikatory usług danych PASS.5 testów operatora PASS.
+
+### Fixed
+- Pod blokadą wykryto i poprawiono uprawnienia publicznych plików w obrazie
+  frontendu (bez zmiany bajtów dist) oraz fałszywe alarmy weryfikatora dotyczące
+  kolejności ENV i prawidłowych wpisów audytu401. Nie powtarzano migracji.
+- Raport: `docs/audits/2026-11-06-finance-colors-production.md`.
+
 ## [Local, odebrane] — 2026-11-06 — Kolory kont i kategorii
 
 ### Added

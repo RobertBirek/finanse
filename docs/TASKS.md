@@ -2,7 +2,7 @@
 
 Backlog zadań ze statusami.
 
-## Kolory kont i kategorii (2026-11-06, lokalnie)
+## Kolory kont i kategorii (2026-11-06, wdrożone95f8380)
 
 - [x] Po „działaj”: wybór palety/dowolnego HEX, automatyczny kolor konta,
   dziedziczenie najbliższego rodzica z nadpisaniem/resetem podkategorii; PostgreSQL,
@@ -12,11 +12,19 @@ Backlog zadań ze statusami.
   145browser+1expectedskip/lint/types/freshbuildPASS; źródła i testowanydist zahashowane.
   BackendownerAPI i addytywna migracja gotowe;1Importantreview downgraderetention
   poprawiony2RED→guard, bezdrugiegoreview. Końcowy pełny1734backendPASS/sourcefreeze,
-  56starychtabelretain/newcolorsnull/downgraderetentionPASS. Bez wdrożenia na produkcję.
+  56starychtabelretain/newcolorsnull/downgraderetentionPASS. Poniżej osobny odbiór produkcji.
 - [x] Końcowy lokalny odbiór testów/migracji/review:
   `docs/audits/2026-11-06-finance-colors-local.md`,1734/507/145+1skip/static/buildPASS.
-- [ ] Osobna zgoda na spójne wydanie i migrację kolorów na produkcji; wcześniejsza
-  zgoda reorganizacji drzewa nie obejmuje tej nowej funkcji ani kolejnego APPLY.
+- [x] Osobna zgoda użytkownika na dokładną rewizję `95f8380`, migrację
+  `7b57 → f3a9`, maintenance i zweryfikowany backup. Bez kolejnego tree APPLY.
+- [x] Wydanie produkcyjne95f8380/f3a9: trzy zgodne obrazy, jedna migracja, świeży
+  fenced backup/restore, retencja56 tabel, ledger/uploads/polityki PASS. Maintenance
+  zdjęty, publiczne200/health200/auth401/assets/browser375/1440/logi/dataIDs PASS.
+  Prywatne pliki dist poprawiono na publicznie czytelne wyłącznie w obrazie; te same
+  zaakceptowane bajty. Raport `docs/audits/2026-11-06-finance-colors-production.md`.
+- [ ] Osobne usprawnienie narzędzia release: normalizacja trybów publicznych plików
+  dist po kopiowaniu prywatnego archiwum oraz gate odczytu jako użytkownik nginx.
+  Obecny obraz naprawiony i odebrany; nie zmieniać ponownie działającej aplikacji.
 
 ## Drzewo kategorii (2026-11-06)
 

@@ -2,7 +2,38 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
-## 2026-11-06 — ZAKOŃCZONE lokalnie: kolory kont/kategorii; bez wdrożenia
+## 2026-11-06 — WDROŻONE: kolory kont i kategorii95f8380/f3a9
+
+- User dwukrotnie „tak”: funkcja oraz dokładna rewizja95f8380/migracja7b57→f3a9/
+  maintenance/zweryfikowany backup. Nie ponawiano wcześniejszej reorganizacji drzewa.
+- Zachowane stare obrazy8121512 i fullCompose; nowe3 obrazy offline, bez zmiany
+  zależności/zaakceptowanych źródeł/dist/ustawień. Próba na świeżo odtworzonej kopii,
+  new+old runtime odczytują nowy schemat. Fresh encrypted backup/restore PASS.
+- Public503 → DB/Redisactive0 → oldbackend/workerSTOP → recheck0 → osobny świeży
+  fenced backup/restore i dokładne porównanie ze stanem produkcji → jedna migracja.
+  Stare wiersze56 tabel identyczne,34 konta/125 kategorii globalnie (79 to scopedtree),
+  nowe koloryNULL, ledgerbad0, pliki/polityki/zgody/historia bez zmian.
+- Problemy operatora wykryte pod blokadą: cloneENVdevelopmentSQLecho; ENVlistorder
+  zamiast map; archiwumprivate600 kopiowane do nginx (403) → chmodpublicassetswobrazie
+  na644/dirs755, dokładnie te same bajty; expected401audits dopisująsession_rejected
+  → kontrola wszystkich starych audytów + wyłącznie anonimowy systemowy przyrost.
+  Zachowano REDlogi/testy i proof finalne. Migracji nie powtarzano. Backend/worker
+  niezmienione podczas wymiany poprawionego opakowania frontendu.
+- Osobny operatorreview2 findings unpinned/external executable source→standalone
+  vendoredqueue/browser + SHA przed wykonaniem.5 operator tests PASS. Nie było
+  kolejnego review odebranej funkcji, testów z fake sesją lub wywołań providerów.
+- Fenced3services/ENV/security/health200/assets/401/owner-domainreads/rows/logs PASS;
+  browser375/1440/layout/routeprotection/errors0/mutations0, screenshoty obejrzane.
+  Postbrowser wszystkie stare wiersze zachowane, tylkoexpectedsecurityauditappend.
+  Atomowy active-release → normalnynginx/open → public LIVE95f8380/f3a9 PASS.
+- Raport `docs/audits/2026-11-06-finance-colors-production.md`; privateevidence
+  `/opt/finanse/webapp/releases/95f8380/evidence/`, active metadata wskazuje właściwy
+  inheritedfullCompose. Nie używać baseonlyCompose ani hostcheckoutu jako livecode.
+- Następna sesja: normalne korzystanie/obserwacja, nie powtarzać migracji/treeAPPLY.
+  Rollback tylko operator-managed po fence/drain, zostawić f3a9/kolory/dane; bez
+  automatycznego downgrade/restore. Zachowano branch/worktree/Velo/Q7dirty, bezpush.
+
+## 2026-11-06 — ZAKOŃCZONE lokalnie: kolory kont/kategorii; bez wdrożenia (stan przed osobną zgodą)
 
 - FINAL:1734backendPASS/8deselectedproxy/10znanychwarnings,4080.72s; sourceprzed/po
   identyczny. Frontend507/145E2E+1expectedskip/lint/types/freshbuildPASS. Offlineverifier
