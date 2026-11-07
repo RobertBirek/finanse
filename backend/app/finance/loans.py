@@ -5,7 +5,9 @@ import uuid
 from sqlalchemy import case, false, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.finance.credit_card_models import CreditCard
 from app.finance.dates import _local_today
+from app.finance.document_guards import lock_document_mutations
 from app.finance.loan_schemas import (
     LoanCreate,
     LoanDetailResponse,
@@ -46,7 +48,17 @@ async def _owned_loan(
 async def create_loan(db: AsyncSession, user_id: uuid.UUID, data: LoanCreate) -> LoanAgreement:
     if data.account_id == data.payment_account_id:
         raise ValueError("Loan accounts must be different")
+    await lock_document_mutations(db, user_id)
     accounts = await lock_accounts(db, user_id, {data.account_id, data.payment_account_id})
+    if await db.scalar(
+        select(CreditCard.id)
+        .where(
+            CreditCard.user_id == user_id,
+            CreditCard.account_id.in_({data.account_id, data.payment_account_id}),
+        )
+        .limit(1)
+    ):
+        raise ValueError("Configured card accounts cannot be used by a separate loan agreement")
     debt = accounts.get(data.account_id)
     payer = accounts.get(data.payment_account_id)
     if debt is None or payer is None:

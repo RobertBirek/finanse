@@ -12,6 +12,8 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.finance.bills_router import router as bills_router
 from app.finance.categorization_router import router as categorization_router
+from app.finance.credit_card_router import router as credit_card_router
+from app.finance.credit_cards import CardConflict
 from app.finance.loan_router import router as loan_router
 from app.finance.models import FinancialTransaction, Posting
 from app.finance.proposals_router import router as proposals_router
@@ -85,6 +87,7 @@ from app.identity.models import User
 from app.identity.router import get_current_user
 
 router = APIRouter()
+router.include_router(credit_card_router)
 router.include_router(loan_router)
 router.include_router(bills_router)
 router.include_router(categorization_router)
@@ -353,7 +356,8 @@ async def update_transaction_endpoint(
     except ValueError as e:
         code = (
             status.HTTP_409_CONFLICT
-            if isinstance(e, TransactionDateError) or "linked loan payment" in str(e)
+            if isinstance(e, (TransactionDateError, CardConflict))
+            or "linked loan payment" in str(e)
             else status.HTTP_422_UNPROCESSABLE_ENTITY
         )
         raise HTTPException(status_code=code, detail=str(e))

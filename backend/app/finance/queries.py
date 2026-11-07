@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.finance.credit_card_models import CreditCard
 from app.finance.models import (
     Account,
     ActualImportMapping,
@@ -58,6 +59,7 @@ def _account_rows(user_id: uuid.UUID):
                 | (LoanAgreement.payment_account_id == Account.id)
             )
             .exists()
+            & ~select(CreditCard.id).where(CreditCard.account_id == Account.id).exists()
             & ~select(ActualImportMapping.id)
             .where(
                 ActualImportMapping.user_id == Account.user_id,

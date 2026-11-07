@@ -49,6 +49,14 @@ async def update_account(
     account = await get_account(db, user_id, account_id)
     if account is None:
         return None
+    from app.finance.credit_card_models import CreditCard
+
+    configured = await db.scalar(select(CreditCard.id).where(CreditCard.account_id == account_id))
+    if configured and (
+        ("currency" in update_data and update_data["currency"] != "PLN")
+        or ("type" in update_data and update_data["type"] != "credit")
+    ):
+        raise ValueError("Configured credit card currency/type is locked")
     if (
         "currency" in update_data
         and update_data["currency"] != account.currency
@@ -67,6 +75,10 @@ async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.
     account = await get_account(db, user_id, account_id)
     if account is None:
         return False
+    from app.finance.credit_card_models import CreditCard
+
+    if await db.scalar(select(CreditCard.id).where(CreditCard.account_id == account_id)):
+        raise ValueError("Configured credit card has records; deactivate it instead")
     posting = await db.execute(select(Posting.id).where(Posting.account_id == account_id).limit(1))
     scheduled = await db.execute(
         select(ScheduledFinanceItem.id)

@@ -80,6 +80,12 @@ async def set_transaction_dates(
     )
     if txn is None:
         return None
+    from app.finance.credit_cards import guard_transaction
+
+    try:
+        await guard_transaction(db, user_id, transaction_id)
+    except ValueError as error:
+        raise TransactionDateError("date_protected", str(error)) from error
     mapped = await db.scalar(
         select(ActualImportMapping.id)
         .where(

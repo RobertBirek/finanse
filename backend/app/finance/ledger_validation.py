@@ -41,6 +41,7 @@ async def _validate_transaction_postings(
     *,
     allow_category_reversal: bool = False,
     allow_inactive_accounts: bool = False,
+    allow_card_refund: bool = False,
 ) -> None:
     account_ids = {posting.account_id for posting in postings if posting.account_id is not None}
     accounts: dict[uuid.UUID, Account] = {}
@@ -124,7 +125,7 @@ async def _validate_transaction_postings(
         raise ValueError("Income/expense transactions require exactly one account-side posting")
 
     account_posting = account_side_postings[0]
-    expected_direction = "credit" if txn_type == "income" else "debit"
+    expected_direction = "credit" if txn_type == "income" or allow_card_refund else "debit"
     if account_posting.direction != expected_direction:
         raise ValueError("Account posting direction does not match transaction type")
     account = accounts[account_posting.account_id]

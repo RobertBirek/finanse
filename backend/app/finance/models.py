@@ -19,6 +19,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.finance import credit_card_models as _credit_card_models  # noqa: F401
 from app.finance import receipt_models as _receipt_models  # noqa: F401
 from app.finance import receipt_read_models as _receipt_read_models  # noqa: F401
 

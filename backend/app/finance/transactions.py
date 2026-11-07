@@ -26,10 +26,40 @@ async def create_transaction(
     allow_category_reversal: bool = False,
     allow_inactive_accounts: bool = False,
 ) -> FinancialTransaction:
+    """Stable public entrypoint for manual, import and existing integrations."""
+    return await _create_transaction(
+        db,
+        user_id,
+        data,
+        allow_category_reversal=allow_category_reversal,
+        allow_inactive_accounts=allow_inactive_accounts,
+    )
+
+
+async def create_card_refund_transaction(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    data: TransactionCreate,
+) -> FinancialTransaction:
+    """Trusted card-service entrypoint; not a client-controlled ledger option."""
+    return await _create_transaction(db, user_id, data, allow_card_refund=True)
+
+
+async def _create_transaction(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    data: TransactionCreate,
+    *,
+    allow_category_reversal: bool = False,
+    allow_inactive_accounts: bool = False,
+    allow_card_refund: bool = False,
+) -> FinancialTransaction:
     # Only trusted import code explicitly opts into preserving source-category
     # reversals. Client-controlled `source` never disables validation.
     if allow_category_reversal and data.source != "actual":
         raise ValueError("Category reversals require the explicit Actual import path")
+    if allow_card_refund and (data.source != "credit_card" or data.type != "expense"):
+        raise ValueError("Card refunds require the trusted expense correction path")
     if allow_inactive_accounts and data.source != "actual":
         raise ValueError("Inactive account history requires the explicit Actual import path")
     _validate_posting_sum(data.postings, data.type)
@@ -40,6 +70,7 @@ async def create_transaction(
         data.type,
         allow_category_reversal=allow_category_reversal,
         allow_inactive_accounts=allow_inactive_accounts,
+        allow_card_refund=allow_card_refund,
     )
     await validate_project_reference(db, user_id, data.project_id)
 
@@ -207,6 +238,9 @@ async def update_transaction(
     if ("transaction_date" in update_data and update_data["transaction_date"] != txn.date) or (
         "is_pending" in update_data and update_data["is_pending"] != txn.is_pending
     ):
+        from app.finance.credit_cards import guard_transaction
+
+        await guard_transaction(db, user_id, transaction_id)
         linked = await db.scalar(
             select(LoanPaymentLink.id)
             .where(LoanPaymentLink.transaction_id == transaction_id)
@@ -247,6 +281,9 @@ async def delete_transaction(
     ).scalar_one_or_none()
     if txn is None:
         return False
+    from app.finance.credit_cards import guard_transaction
+
+    await guard_transaction(db, user_id, transaction_id)
     if (
         await db.scalar(
             select(LoanPaymentLink.id)
