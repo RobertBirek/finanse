@@ -21,6 +21,7 @@ export function Settings() {
                 ["budgets", "Limity budżetu"],
                 ["schedules", "Harmonogramy"],
                 ["forecast", "Prognoza"],
+                ["cards", "Karty kredytowe"],
               ] as const
             ).map(([path, label]) => (
               <Link

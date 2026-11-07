@@ -20,6 +20,7 @@ describe("Settings navigation", () => {
       ["Limity budżetu", "budgets"],
       ["Harmonogramy", "schedules"],
       ["Prognoza", "forecast"],
+      ["Karty kredytowe", "cards"],
     ]) {
       expect(screen.getByRole("link", { name })).toHaveAttribute(
         "href",

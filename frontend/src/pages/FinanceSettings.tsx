@@ -8,6 +8,7 @@ const financeSettings = [
   ["schedules", "Harmonogramy"],
   ["forecast", "Prognoza"],
   ["loans", "Kredyty i pożyczki"],
+  ["cards", "Karty kredytowe"],
 ] as const;
 
 export function FinanceSettings() {

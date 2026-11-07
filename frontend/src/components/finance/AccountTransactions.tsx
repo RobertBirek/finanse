@@ -12,6 +12,7 @@ import { formatPLN } from "../../lib/format";
 import { TransactionDateLabel } from "./TransactionDateLabel";
 import { TransactionDatesDialog } from "./TransactionDatesDialog";
 import { TransactionCategorizationDialog } from "./TransactionCategorizationDialog";
+import { CardAccountSummary } from "./CardAccountSummary";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -84,6 +85,9 @@ export function AccountTransactions({ accounts }: AccountTransactionsProps) {
                 {formatPLN(selected.balance_pln)} PLN
               </p>
             </div>
+            {selected.type === "credit" && selected.currency === "PLN" ? (
+              <CardAccountSummary accountId={selected.id} />
+            ) : null}
             <h3 className="mb-3 text-sm font-medium text-gray-400">
               Transakcje
             </h3>
