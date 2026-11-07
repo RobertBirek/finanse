@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, frontend ebe441e] — 2026-11-07 — Edytowalny HEX
+
+### Fixed
+- Po zgodzie na dokładne `ebe441e`: wdrożono wyłącznie frontend z ręcznym
+  wpisywaniem/wklejaniem koloru `#RRGGBB`, także `#000000`, walidacją i resetem.
+- Pakiet odpowiada odebranym518unit/145E2E+1expectedskip/static/build; rzeczywista
+  bramka odczytu nginx podczas budowy i SHA wszystkich zasobów PASS.
+- Świeży backup odtworzono na własnej bazie loopback: checksum/schemaf3a9/ledger PASS,
+  bez Alembic. Publiczne HTTPS/health200/auth401/assets/browser375/1440/logi PASS.
+- Backend i worker pozostają95f8380; nie zmieniono ich kontenerów, obrazów, ustawień
+  lub schematu `f3a9d17c2e4b`. Nie wykonano migracji ani zapisów danych użytkownika.
+
 ## [Local, odebrane] — 2026-11-07 — Ręczne wpisywanie koloru HEX
 
 - Operator zgłosił brak możliwości edycji wyświetlanego kodu koloru. Potwierdzona

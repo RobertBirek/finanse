@@ -12,8 +12,10 @@ Backlog zadań ze statusami.
   czterech ścieżek tworzenia/edycji, minimalny uppercasePATCH. Jeden review2Minor
   poprawione (16pxmobile/clipboardtest), końcowy518unit/145E2E+1expectedskip/
   lint/types/build/sourceSHA PASS. Dziedziczenie/reset/reload/black/paste sprawdzone.
-- [ ] Osobna zgoda przed wdrożeniem poprawki HEX (sam frontend, bez migracji);
-  backend/ops i metadane aktywnej produkcji bez zmian.
+- [x] Osobna zgoda użytkownika i wdrożenie dokładnego `ebe441e`: sam frontend,
+  bez migracji. Backup/restore/schema/ledger/actualnginxreadgate/assets/browser/
+  public200/health200/auth401/logi PASS. Backend/worker95f8380 i usługi danych bez
+  zmian; active metadata wskazuje per-service rewizje i inheritedfullCompose.
 
 ## Kolory kont i kategorii (2026-11-06, wdrożone95f8380)
 

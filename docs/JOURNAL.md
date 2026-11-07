@@ -2,6 +2,39 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-07 — WDROŻONE: edytowalny HEX, frontend ebe441e
+
+- User „tak” na dokładneebe441e/samfrontend/bezmigracji. Wykonano tylkoFrontend
+  przez fullbase+prod+inheritedactiveCompose, --no-deps --no-build. Backend/worker
+  pozostają95f8380, schematf3a9; ichIDs/images/ustawienia i usługi danych zachowane.
+- Retained518unit/145E2E+1expectedskip/ESLint/tsc/build/source+distSHA potwierdzone.
+  Fixedprepare_release normalizuje copiedprivate0600/0700, rzeczywistanginxreadgate
+  PASS wofflinebuildzie; wszystkiepliki jaktestowanydist-final. Backendapp/API/
+  migracje/requirements gitdelta95f→ebe pusta. Brak nowych backendimages/aplikacji.
+- Świeży encryptedbackup przez istniejącą usługę; wyłącznie własna nowa
+  hex_input_20261107_restore na127.0.0.1:55431. Restore DB/uploads/checksums/
+  schemaf3a9/ledger0bad PASS. Nie użyto staregohostowego Alembic7b57 ani żadnej migracji.
+- Pierwszyreadonlypreflight zatrzymany na1queuedcron duein0.4s; nie ignorowano
+  payloadu, nie kasowano/ackjobów. Po naturalnym zakończeniu strictDBactive0/
+  queue0/inprogress0 PASS; wtedy dopiero krótki503 maintenance i frontendONLYswap.
+- Operatorreview oddzielny od productreview: wymaganie niezależnego consentreceipt
+  przyjęte, actualuserprompt/reply zapisane ręcznie+pinnedSHA, prepare nie generuje
+  autoryzacji. Validator approved/REV/frontendonly/noMigration/noBackendWorkerRestart
+  RED→GREEN z8tamperedcases. Exactrevisionbind proofów dodany. Minor o metadata
+  rozwiązany już istniejącym verified-maintenance przedotwarciem i verified-live
+  dopiero po publicPASS; nie deklarowano przedwcześnie ruchu publicznego.
+- Newfrontend startsFENCED, HTTPS/health/assets/401/env/logs PASS; anonymousGETonly
+  browser375/1440/login/routeprotection/font/layout/errors0/mutations0. Bez sesji
+  podszywających się pod usera i testowych zapisów kolorów na produkcji. Właściwe
+  wpisywanie/paste/black/reload/reset pokrywa zaakceptowany testowany frontend.
+- Atomowactive per-service map(backendworker95f/frontendebe), normalnginx/open,
+  publicobservation i independentfinalverify PASS. Retainedoldfrontend/config/
+  fulloldoverride pozwalają na rollbackfrontendONLY, bez downgrade/restoreDB.
+- Dowody `/tmp/opencode/hex-release-20261107/`, trwała kopia
+  `/opt/finanse/webapp/releases/ebe441e/evidence/`. Aktywne wersje określa
+  active-release.json, nie hostcheckout. Docs-onlycommit na obecnymbranchu,
+  worktree/VeloQ7dirty zachowane, bez merge/push. Nie powtarzać deploy/migrate.
+
 ## 2026-11-07 — ZAKOŃCZONE lokalnie: ręczna edycja HEX; bez wdrożenia
 
 - FINAL518unit/145E2E+1expectedskip/ESLint/tsc/freshbuild/sourceSHA PASS; brak zmian
