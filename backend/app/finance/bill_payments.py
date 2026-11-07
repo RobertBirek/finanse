@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.audit.service import log_event
 from app.config import settings
+from app.finance.bill_candidate_evidence import build_candidate_evidence, candidate_sort_key
 from app.finance.bills import _response, _run_bill_command
 from app.finance.bills_schemas import (
     AllocationCreate,
@@ -370,8 +371,23 @@ async def get_payment_candidates(
     )
     if bill is None:
         raise LookupError("bill_not_found")
+    unavailable = BillCandidatePage(items=[], total=0, limit=limit, offset=offset)
+    if bill.lifecycle != "active":
+        return unavailable.model_copy(update={"unavailable_reason": "document_inactive"})
+    if bill.review != "approved":
+        return unavailable.model_copy(update={"unavailable_reason": "document_unapproved"})
     if bill.currency != "PLN":
-        return BillCandidatePage(items=[], total=0, limit=limit, offset=offset)
+        return unavailable.model_copy(update={"unavailable_reason": "currency_unsupported"})
+    allocated = int(
+        await db.scalar(
+            select(func.coalesce(func.sum(DocumentPaymentAllocation.amount_minor), 0)).where(
+                DocumentPaymentAllocation.financial_document_id == bill.id
+            )
+        )
+        or 0
+    )
+    if (bill.total_minor or 0) <= allocated:
+        return unavailable.model_copy(update={"unavailable_reason": "document_reconciled"})
     legacy_targets = {
         target
         for target in (
@@ -400,7 +416,7 @@ async def get_payment_candidates(
             )
         ).scalars()
     )
-    reference_date = bill.due_date or bill.issue_date or _local_today()
+    today = _local_today()
     normalized_query = query.strip().lower() if query else None
     items: list[BillCandidate] = []
     for transaction in transactions:
@@ -424,10 +440,17 @@ async def get_payment_candidates(
                 f"{transaction.description} {account.name if account else ''}".lower()
             ):
                 continue
-            older_than_window = transaction.date < reference_date - timedelta(
-                days=settings.BILL_PAYMENT_CANDIDATE_DATE_WINDOW_DAYS
+            evidence = build_candidate_evidence(
+                bill,
+                transaction,
+                posting,
+                today=today,
+                window_days=settings.BILL_PAYMENT_CANDIDATE_DATE_WINDOW_DAYS,
             )
-            if older_than_window and not (include_older or normalized_query or legacy):
+            older_than_window = evidence.legacy_date_before_window
+            if older_than_window and not (
+                include_older or normalized_query or legacy or evidence.purchase_within_window
+            ):
                 continue
             reasons = [
                 "amount_exact"
@@ -438,6 +461,8 @@ async def get_payment_candidates(
             ]
             if legacy:
                 reasons.insert(0, "legacy_inbox_target")
+            if evidence.purchase_within_window:
+                reasons.append("purchase_date_within_window")
             conflicts, forecast_before, forecast_after = await _recurring_conflict_effects(
                 db, user_id, posting
             )
@@ -454,16 +479,10 @@ async def get_payment_candidates(
                     recurring_conflicts=conflicts,
                     recurring_forecast_before_pln=forecast_before,
                     recurring_forecast_after_pln=forecast_after,
+                    evidence=evidence,
                 )
             )
-    items.sort(
-        key=lambda item: (
-            0 if item.legacy_inbox_reference else 1,
-            abs(item.amount_minor - (bill.total_minor or 0)),
-            abs((item.date - (bill.due_date or item.date)).days),
-            str(item.transaction_id),
-        )
-    )
+    items.sort(key=lambda item: candidate_sort_key(item, bill.total_minor or 0))
     return BillCandidatePage(
         items=items[offset : offset + limit], total=len(items), limit=limit, offset=offset
     )
