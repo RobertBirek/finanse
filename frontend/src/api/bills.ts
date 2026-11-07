@@ -55,6 +55,28 @@ export type BillFilters = {
   limit?: number;
   offset?: number;
 };
+export type BillCandidateDateComparison = {
+  transaction_basis: "purchase" | "booking" | "legacy";
+  transaction_date: string;
+  document_basis: "sale" | "due" | "issue" | "today";
+  document_date: string;
+  delta_days: number;
+  within_window: boolean;
+};
+type BillDateSource = "manual" | "bank" | "document" | "import";
+export type BillCandidateEvidence = {
+  description: string;
+  currency: "PLN";
+  purchase_date: string | null;
+  booking_date: string | null;
+  purchase_date_source: BillDateSource | null;
+  booking_date_source: BillDateSource | null;
+  date_comparison: BillCandidateDateComparison;
+  supplier_name_in_description: boolean;
+  planned_account_matches: boolean | null;
+  legacy_date_before_window: boolean;
+  purchase_within_window: boolean;
+};
 export type BillCandidate = {
   transaction_id: string;
   posting_id: string;
@@ -67,12 +89,19 @@ export type BillCandidate = {
   recurring_conflicts: string[];
   recurring_forecast_before_pln: number | null;
   recurring_forecast_after_pln: number | null;
+  evidence?: BillCandidateEvidence | null;
 };
 export type BillCandidatePage = {
   items: BillCandidate[];
   total: number;
   limit: number;
   offset: number;
+  unavailable_reason?:
+    | "document_inactive"
+    | "document_unapproved"
+    | "currency_unsupported"
+    | "document_reconciled"
+    | null;
 };
 export type CoverageCandidate = {
   scheduled_item_id: string;

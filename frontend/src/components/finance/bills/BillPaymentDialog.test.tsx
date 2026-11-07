@@ -126,9 +126,19 @@ describe("BillPaymentDialog", () => {
     const firstKey = (
       post.mock.calls[0][2] as { headers: { "Idempotency-Key": string } }
     ).headers["Idempotency-Key"];
-    vi.spyOn(api, "get").mockResolvedValue({
-      data: { ...bill, version: 5, paid_minor: 4000, remaining_minor: 6000 },
-    } as never);
+    const previousGet = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation((url, options) =>
+      url === "/finance/bills/bill-1"
+        ? Promise.resolve({
+            data: {
+              ...bill,
+              version: 5,
+              paid_minor: 4000,
+              remaining_minor: 6000,
+            },
+          } as never)
+        : previousGet(url, options),
+    );
     fireEvent.click(
       screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
     );
@@ -136,6 +146,11 @@ describe("BillPaymentDialog", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /podejmuję nową decyzję/ }),
     );
+    expect(
+      screen.getByRole("button", { name: "Powiąż płatność" }),
+    ).toBeDisabled();
+    fireEvent.click(await screen.findByRole("radio"));
+    fireEvent.click(screen.getByLabelText(/Rozumiem wpływ/));
     fireEvent.click(screen.getByRole("button", { name: "Powiąż płatność" }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
     expect(
@@ -163,9 +178,12 @@ describe("BillPaymentDialog", () => {
       post.mock.calls[0][2] as { headers: { "Idempotency-Key": string } }
     ).headers["Idempotency-Key"];
 
-    vi.spyOn(api, "get").mockResolvedValue({
-      data: { ...bill, version: 5 },
-    } as never);
+    const previousGet = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation((url, options) =>
+      url === "/finance/bills/bill-1"
+        ? Promise.resolve({ data: { ...bill, version: 5 } } as never)
+        : previousGet(url, options),
+    );
     fireEvent.click(
       screen.getByRole("button", { name: /Odśwież aktualny dokument/ }),
     );
@@ -176,6 +194,11 @@ describe("BillPaymentDialog", () => {
     fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
       target: { value: "59.99" },
     });
+    expect(
+      screen.getByRole("button", { name: "Powiąż płatność" }),
+    ).toBeDisabled();
+    fireEvent.click(await screen.findByRole("radio"));
+    fireEvent.click(screen.getByLabelText(/Rozumiem wpływ/));
     fireEvent.click(screen.getByRole("button", { name: "Powiąż płatność" }));
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
 
