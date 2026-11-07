@@ -20,7 +20,10 @@ Backlog zadań ze statusami.
   niezależny review bez uwag. Raport `docs/audits/2026-11-07-release-nonroot-local.md`.
   DBintegrations nieuruchamiane; wczesne próby wyboru bezDB zatrzymane guardami,
   końcowy wybór wyłącza również6starych nieoznaczonych testów DB po nazwach.
-- [ ] Osobna zgoda na merge/push/deploy tej poprawki; produkcja nietknięta.
+- [x] Osobna zgoda „scal i wdróż”: FF+push main e8f6714 i aktywacja narzędzi na
+  serwerze;931backendunit/540frontend/6Docker/staticPASS po scaleniu. Weryfikator
+  sprawdzony z finalComposeusers/exactimages. Bez odtwarzania aplikacji lub migracji.
+  Raport `docs/audits/2026-11-07-release-nonroot-integration.md`.
 
 ## Dokumenty ↔ płatności, etap 5A (2026-11-07, wdrożone)
 
@@ -49,8 +52,8 @@ Backlog zadań ze statusami.
   Raport `docs/audits/2026-11-07-document-payment-matching-production.md`.
 - [x] Lokalna regresyjna poprawka prepare_release: normalizacja uprawnień skopiowanych
   katalogów backendu po gitarchive przyumask077 + bramka nonroot import przed rollout.
-  Lokalnie gotowa i odebrana, bez integracji/deploy. W wydaniu a68d9e4 naprawiono tylko
-  gotowy pakiet; pierwotną próbę wycofano bez zmian danych.
+  Odebrana i następnie zintegrowana/aktywowana jako narzędzia e8f6714 bez restartu
+  aplikacji. W wydaniu a68d9e4 naprawiono gotowy pakiet; próbę wycofano bez zmian danych.
 
 ## Edycja kodu koloru HEX (2026-11-07)
 

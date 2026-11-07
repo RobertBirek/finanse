@@ -2,6 +2,31 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-07 — AKTYWNE na main: narzędzia non-root release e8f6714
+
+- User „scal i wdróż” po wyjaśnieniu że toolsniepotrzebująapprestart. Requiredhostdocs
+  przeczytane w kolejności, deploycommanduwzględniający verifier. main/originmaina1cc6b8
+  ancestor e8f6714, FFbezkonfliktów. Odebrany sourcebyteidentical, nowyapplicationdiff0.
+- Świeże testy na `/opt/finanse` po scaleniu:931unit/888deselectedDBproxy/2knownwarnings
+  41.71s,540frontend86files45s, Ruff/mypy149/ESLint/tscPASS;6DockerPASS66.98s w synthetic
+  offlineimages. Żadnej zgody/operacji na testDB innych zadań lub productionDB.
+- Z rzeczywistego pełnegoCompose wyrenderowano users (envwartości tylko rootprivatefile),
+  porównano zrunningconfig. Nowyhostverify uruchomiony z tymiUID:GID i aktywnymreleaseJSON:
+  exactimageID/OCIrev/nonrootreadimportsPASS w nowychnetworknone/readonly/no-mount
+  probecontainers, cleared/syntheticenv; bez lifespan/ARQstart/DB/providerów.
+- Po tychgate pushmaina1cc→e8 i lsremotePASS. Poprawka „wdrożona” jako scripts/docs
+  na hostmain, NIEjako zmiana obrazów aplikacji. activeapplicationmetadata bez zmian,
+  backend/worker/frontend nadala68d9e4, schemaf3a9. SześćcontainerID/imageID/starttime/
+  restarts/user identyczne i running. PublicGET health/login200/bills401.
+- Bez Composeup/restarts/migrate/backups/restore/writes; nic do przywracania w danych.
+  Toolrollback tylko osobnareviewedGitopschange, approllback/obrazy zachowane.
+- Raport `docs/audits/2026-11-07-release-nonroot-integration.md`; trwałe dowody/proof
+  `/opt/finanse/webapp/releases/operator-tools-e8f6714/evidence/`, lokale
+  `/tmp/opencode/release-nonroot-integration-20261107/`. Bez wycieku renderedsecretów.
+  OtherdirtyVeloQ7/hostwebapp zachowane. Docs-onlyfollowup na main nie zmienia apprev.
+- Następny krok to userfeedback na funkcji dokument↔płatność lub kolejny uzgodniony
+  slice; nie uruchamiać ponownie wdrożenia a68/kolorów/HEX/migracji/treeAPPLY.
+
 ## 2026-11-07 — Lokalny fix prepare_release i bramka verify_release
 
 - User „tak” na pełny mały zakres wchat, nie merge/push/deploy. Wykonanie native

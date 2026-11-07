@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Operator tools, e8f6714] — 2026-11-07 — Zabezpieczenie przyszłych wdrożeń
+
+### Changed
+- Po „scal i wdróż”: FF do main i push e8f6714, aktywacja poprawionego prepare_release,
+  verify_release oraz obowiązkowej bramki w instrukcji /deploy na serwerze.
+- Świeże931backendunit/540frontend/6Docker/lint/types PASS na scalonym checkout;
+  nowy verifier z rzeczywistymi users finalnegoCompose i exactcurrentimageIDs PASS.
+- Nie odtwarzano usług: aplikacja nadal a68d9e4;6containerIDs/images/starttime/restarts
+  i active metadata bez zmian, health/login200/auth401. Bez migracji lub zapisów danych.
+- Raport `docs/audits/2026-11-07-release-nonroot-integration.md`.
+
 ## [Local, odbiór] — 2026-11-07 — Non-root bramka pakietów backend/worker
 
 ### Fixed
