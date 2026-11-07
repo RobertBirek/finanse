@@ -2,6 +2,32 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, odbiór] — 2026-11-07 — Non-root bramka pakietów backend/worker
+
+### Fixed
+- Normalizacja uprawnień tylko kopii backendu po ekstrakcji archiwum Git przyumask077:
+  dirs0755/files0644/executables0755, zachowane bajty/oryginały/private root0700.
+  Odrzucenie archive links przed ekstrakcją zabezpiecza normalizację poza drzewem kopii.
+
+### Added
+- `ops/verify_release.py`: offline kontrola gotowych imageIDs/OCIrevision jako jawny
+  docelowy UID:GID, odczyt źródeł i importentrypointów bez sieci/hostmount/envfile/DB.
+  Nonzero przy błędzie/timeout; obowiązkowy krok /deploy i runbook przed Composeup.
+- 46opsunit i6realDocker PASS, odbiór niezależnego review bez uwag. Bez zmian
+  applicationcode, DB, main/push/deploy lub aktywnej produkcji. Końcowy unit/static
+  gate931backendunit/540frontend/lint/types PASS; integracjeDB nieuruchamiane.
+  Wyniki, początkowe guardfailures przy wyborze testów bezDB i ograniczenia w raporcie
+  `docs/audits/2026-11-07-release-nonroot-local.md`.
+
+## [Zakres, do zatwierdzenia] — 2026-11-07 — Uprawnienia kodu pakietu i import non-root
+
+### Added
+- Po zgodzie na przygotowanie krótkiego zakresu: normalizacja wyłącznie skopiowanego
+  backendu, zachowanie hashów/executable/private root oraz offline bramka importu
+  gotowych obrazów jako docelowy non-root użytkownik, przed przełączeniem usług.
+- Rozpoznano istniejące testy prepare_release: frontend ma normalizację/nginxgate,
+  backend/worker nie mają analogicznej kontroli. Bez zmian kodu/testów/produkcji.
+
 ## [Production, a68d9e4] — 2026-11-07 — Dopasowanie dokumentów i płatności 5A
 
 ### Changed

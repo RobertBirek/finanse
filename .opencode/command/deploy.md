@@ -14,6 +14,13 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
    `ops/prepare_release.py` i skontroluj wynikowy Compose. Zmiana
    `backend/requirements.txt` wymaga nowego, zweryfikowanego runtime; nie obchodź
    zabezpieczenia przez podanie fałszywej rewizji starego obrazu.
+   Po zbudowaniu backendu/workera obowiązkowo uruchom `ops/verify_release.py`
+   dla gotowego pakietu i numerycznych non-root UID:GID obu usług z finalnego
+   wyrenderowanego Compose (nie z domyślnego USER obrazu). Zachowaj JSON dowodu
+   dla dokładnych image IDs. Błąd/timeout/import/read-access oznacza STOP przed
+   `compose up`; nie obchodź go przez root lub podłączenie produkcyjnego env/DB.
+   Jeśli obrazy przebudowano/przetagowano lub zmieniono docelowego użytkownika,
+   bramkę uruchom ponownie i porównaj IDs dowodu z obrazami wdrożenia.
 4. Wykonaj i zweryfikuj kopię bezpieczeństwa według procedury. Zachowaj obrazy
    rollbacku oraz identyfikatory usług danych. Nie uruchamiaj importów, migracji
    ani napraw historycznych transakcji jako niejawnego kroku deployu.

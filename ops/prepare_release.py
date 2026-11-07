@@ -64,7 +64,18 @@ def prepare_release(
         repository, "archive", "--format=tar", sha, "backend", "frontend/nginx.conf"
     )
     with tarfile.open(fileobj=io.BytesIO(archive)) as bundle:
+        # Normalization must never follow a link into another subtree or input.
+        if any(member.issym() or member.islnk() for member in bundle.getmembers()):
+            raise ValueError("Release source archive links are not supported")
         bundle.extractall(output / "source", filter="data")
+    copied_backend = output / "source" / "backend"
+    # extractall can create implicit parent dirs as 0700 under a private umask.
+    # COPY preserves them, breaking the target Compose non-root user's imports.
+    # Only normalize this public, disposable code copy; keep package root private.
+    copied_backend.chmod(0o755)
+    for path in copied_backend.rglob("*"):
+        mode = 0o755 if path.is_dir() or path.stat().st_mode & 0o111 else 0o644
+        path.chmod(mode)
     copied_dist = output / "frontend-dist"
     shutil.copytree(frontend_dist, copied_dist)
     # Private acceptance archives deliberately use 0600/0700. Docker COPY retains

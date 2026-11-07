@@ -2,6 +2,61 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-07 — Lokalny fix prepare_release i bramka verify_release
+
+- User „tak” na pełny mały zakres wchat, nie merge/push/deploy. Wykonanie native
+  w istniejącym linkedworktree; basea1cc6b8. Produkcja/aplikacja/schema bez zmian.
+- Testfirst:3permissionsRED→11preparePASS,14verifierRED→25combinedPASS;
+  wszystkieops46PASS. Backendcopynormalization dirs755/files644/executable755,
+  rejectarchive links przedextract/chmod, inputbytes/privatepackageroot niezmienione.
+- Newops/verify_release.py zexplicitnonrootUID:GID, inspectOCIrevision+resolveimageIDs,
+  networknone/read-only/capdropALL/no-new-privileges, brakmount/envfile, clearedimageenv,
+  syntheticssettings/cwd/avoidapp.env, readsource+importmain/workerentrypoints bezstartup.
+  Timeoutcleanup tylkoownedrandomname, JSONproofexactIDs. /deploy/runbook mandatory
+  step; nie twierdzić że skrypt blokuje wszystkie możliwe ręczne poleceniaDocker.
+- RealDocker6PASS:2nginxregression +4backendvalid/privatepackage/UID10001and20002,
+  unreadabledir/brokenworker/missingWorkerSettingsrejected. CachedCOPY ukrył pierwszy
+  nested700tamper (obrazstat755), więc syntheticbuild ma --no-cache; po diagnozie
+  poprawnytest6PASS. Kopii produkcyjnychplików/images nie zmieniano.
+- Nowe izolowaneprobes też na immutablea68images:main/workerPASS/147filesread z
+  syntheticenv, bez uruchamiania lifespan, DB/Redis/providers lub liveusług.
+- FullpytestbezDB nie może być oznaczonyPASS: unsafeport1 zatrzymał45owned-schema
+  fixtures (931PASS/829skip), potem nonintegrationselection odsłoniło6unmarked
+  entitycolorsDBcases. Nie zmieniono cudzychtestów/guards/portów. Końcowyunitgate
+  jawnie wyłącza DBmarkers/proxy oraz6DBcases po nazwach; logi początkowychbłędów
+  zachowane. Brak zgody na nowąDB i brak nowego pełnego odbioru integracyjnego.
+- Independentreadonlyreview ses_e497f13f7ffeATXTdL0Av6fQeo Approve bezC/I/Minor.
+  Reviewer nie uruchamiałtestów/nie oceniałactualComposeUID/deploy/liveDB/providers;
+  testproofyodczyt wykonawcy, rzeczywisteUID musząpochodzić z przyszłegorenderedCompose.
+- Logi `/tmp/opencode/release-nonroot-20261107/`, decyzje+ograniczenia i status finalgate
+  w `docs/audits/2026-11-07-release-nonroot-local.md`. PozostałeVeloQ7dirty zachowane.
+  Następnygate po lokalnymodbiorze: osobna decyzja o integracji, nieautopush/deploy.
+- Końcowy wybór unit931PASS/888deselected/2knownwarnings34.98s i frontend540PASS
+  86plików44.72s; Ruff/mypy149/ESLint/tscPASS, offlineDocker6PASS. Cleanup własnych
+  testkontenerów/images potwierdzony. Zero app/schema/frontend/productiondiff.
+  Dokończono lokalnie; commit wyłącznie ops/tests/deploydocs/raport/trzygłówneDocs.
+
+## 2026-11-07 — Krótki zakres zabezpieczenia prepare_release do akceptacji
+
+- User „ok,działaj” odpowiedział na „Przygotować krótki zakres tej poprawki?”;
+  to zgoda na rozpoznanie/przedstawienie zakresu, nie nowy deploy/merge lub kod.
+- Loaded brainstorming/session-workflow/systematic-debugging. Requiredhostdocs
+  przeczytane w kolejności; HEADa1cc6b8, worktree tylko wcześniejsze dirtyVelo/Q7.
+- Read całego ops/prepare_release.py i backend/tests/test_ops/test_prepare_release.py.
+  Distcopynormalization/nginxreadgate już istnieją. Backendarchiveextract nie ustawia
+  trybów katalogów, DockerCOPY przenosi700; RCA poprzedniego rollout potwierdzone
+  offline i porównaniemold755/new700. Nie odtwarzać na produkcji ani w działającympakiecie.
+- Mały zakres wchat: copiedbackend755/644+exec755, bajty/źródła/private root700bez zmian;
+  bramka gotowych obrazów actualruntimeUID/GID/networknone/syntheticenv, readallsources+
+  importmain/worker, failclosed beforeComposeup. Nie przenosić root/defaultUSER na10001
+  na stałe; użyć rzeczywistego docelowego użytkownika, bez fallbacku do root.
+- Testy po akceptacji: umask077/nested/executable/hashretention i kontenerowe good/
+  tamperedfail, plusfrontendregressions. Testy syntetyczne bez DB/providerów/sekretów/
+  hostmounts/produkcji. Zakres guardu importu jest pre-rollout, nie importmain z realnym
+  środowiskiem podczas samego prepare; prepare nadal generuje pakiet bez deployu.
+- Dziś nie edytowano source/test i nie uruchamiano build/DB/HTTP/Docker. Zmiany tylko
+  docs, oczekiwanie na akceptację krótkiego pełnego zakresu przed implementacją.
+
 ## 2026-11-07 — WDROŻONE: dopasowanie dokumentów ↔ płatności 5A, a68d9e4
 
 - User „scal, push do main i wdróż” po localacceptance. main8121512 ancestor a68d9e4,

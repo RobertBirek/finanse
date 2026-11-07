@@ -2,6 +2,26 @@
 
 Backlog zadań ze statusami.
 
+## Bezpieczeństwo pakietów backend/worker (2026-11-07, implementacja lokalna)
+
+- [x] Po „ok,działaj” przygotować krótki zakres, nie implementację ani deploy.
+  Przeczytano wymagane docs, aktualny prepare_release i jego testy; RCA z poprzedniego
+  wdrożenia: archive extraction przyumask077→copieddirs0700→UID10001 import failure.
+- [x] Zatwierdzić małą zmianę: user „tak”; copiedbackend dirs0755/files0644, zachowane wykonywalne
+ 0755, bez zmian bajtów/źródeł/prywatnego release root0700. Bramka gotowych obrazów
+  przed rollout: rzeczywisty docelowy non-root UID/GID, networknone, syntetyczne env,
+  import app.main/app.worker + odczyt źródeł; błąd blokuje przełączenie, bez fallbackroot.
+- [x] TDD: umask077, nestedsource, executable, niezmienione hashe;
+  syntetyczny obraz goodPASS/tamperedpermissionsFAIL, istniejące frontendguards nadalPASS.
+  Sam test build/import offline, bez DB/Composeup/secrets/mounts/API/providerów.
+- [x] Lokalnie przygotowane prepare_release + verify_release i obowiązkowa bramka
+  w /deploy/runbook.46opsunit i6DockerPASS; realne obrazy tylko jako nowe offlineprobes.
+- [x] Końcowy unit/static gate:931backendunit/540frontend/6Docker i lint/types PASS;
+  niezależny review bez uwag. Raport `docs/audits/2026-11-07-release-nonroot-local.md`.
+  DBintegrations nieuruchamiane; wczesne próby wyboru bezDB zatrzymane guardami,
+  końcowy wybór wyłącza również6starych nieoznaczonych testów DB po nazwach.
+- [ ] Osobna zgoda na merge/push/deploy tej poprawki; produkcja nietknięta.
+
 ## Dokumenty ↔ płatności, etap 5A (2026-11-07, wdrożone)
 
 - [x] Zgoda na przygotowanie najmniejszego zakresu po przeglądzie: user „ok, działaj”.
@@ -27,9 +47,10 @@ Backlog zadań ze statusami.
 - [x] User „scal, push do main i wdróż”: FF+pushmaina68d9e4 i wdrożenie trzech usług;
   freshbackup/restore, no-migration, HTTP/auth/assets/browser/logi/schema/ledger PASS.
   Raport `docs/audits/2026-11-07-document-payment-matching-production.md`.
-- [ ] Osobna regresyjna poprawka prepare_release: normalizacja uprawnień skopiowanych
+- [x] Lokalna regresyjna poprawka prepare_release: normalizacja uprawnień skopiowanych
   katalogów backendu po gitarchive przyumask077 + bramka nonroot import przed rollout.
-  W tym wydaniu poprawiono tylko gotowy pakiet; pierwotną próbę wycofano bez zmian danych.
+  Lokalnie gotowa i odebrana, bez integracji/deploy. W wydaniu a68d9e4 naprawiono tylko
+  gotowy pakiet; pierwotną próbę wycofano bez zmian danych.
 
 ## Edycja kodu koloru HEX (2026-11-07)
 

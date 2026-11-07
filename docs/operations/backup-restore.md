@@ -183,6 +183,62 @@ Run this explicitly in addition to ordinary tests (`proxy` is excluded by defaul
 It proves a private0600/0700 input builds successfully, while changing one copied
 nested asset back to0600 is rejected by the generated Dockerfile itself.
 
+### Backend/worker source permissions and mandatory offline import gate
+
+`prepare_release.py` normalizes only the extracted public backend code copy:
+directories0755, regular files0644, already executable scripts0755. It keeps the
+private release root0700 and preserves file contents and original inputs. Archive
+links are rejected before extraction/normalization, so chmod cannot follow a link
+outside the copied tree. No permissions of uploads, secrets or running services
+are changed. This prevents implicit parent directories created0700 underumask077
+from breaking a non-root runtime after Docker COPY.
+
+After building the application images, **before any Compose apply**, run:
+
+```bash
+python3 ops/verify_release.py \
+  --release /opt/finanse/webapp/releases/RELEASE \
+  --backend-user "$TARGET_BACKEND_UID:$TARGET_BACKEND_GID" \
+  --worker-user "$TARGET_WORKER_UID:$TARGET_WORKER_GID" \
+  --timeout 60 > /private/evidence/offline-import-proof.json
+```
+
+Set these user values from the final rendered Compose (including hardening/active
+overlays), never assume that the image's default USER is the deployed user. Both
+UID and GID must be explicit positive numbers; root/named users are rejected.
+The timeout is configurable. The verifier inspects local images, checks their OCI
+revision against release.json and runs the **resolved image IDs**, not mutable tags.
+It starts only uniquely named disposable containers: no mounts, no envfile/host
+secrets, no network, read-only filesystem, all capabilities dropped, no-new-privileges.
+The probe clears inherited image settings, avoids `/app/.env` by changing cwd, uses
+synthetic test settings, reads all application sources and imports the appropriate
+entrypoint (`app.main:app`, `app.worker.WorkerSettings`). It does not start lifespan,
+an ASGI server or a worker, connect a database, apply migrations or call a provider.
+
+An import/read-access failure, invalid revision/user, or timeout returns nonzero:
+**STOP, do not run Compose up**. Check that the JSON says passed and that image IDs
+and users still match the intended rollout. Rebuild/retag/user changes invalidate
+the old proof: rerun the verifier. The verifier never deploys automatically, and
+cannot prevent someone manually bypassing this required operator step.
+
+Do not compensate with root, privileged mode, production credentials or a code
+mount. A cached COPY may hide a directory-mode-only change; if necessary rebuild
+without cache and rerun the gate, rather than accepting an earlier proof.
+
+Offline Docker regression checks use only a local Python application runtime and
+synthetic source files, with fresh uniquely tagged images and no existing services:
+
+```bash
+cd backend
+TEST_RELEASE_BACKEND_RUNTIME=local/verified-python:explicit-tag \
+TEST_RELEASE_FRONTEND_RUNTIME=local/verified-nginx:explicit-tag \
+  .venv/bin/pytest -m proxy tests/test_ops/test_prepare_release.py
+```
+
+They verify privateumask077 preparation, real non-root users, unchanged content,
+and rejection of unreadable nested source, broken imports and missing entrypoints;
+the existing real-nginx access regressions remain part of the same gate.
+
 Apply an approved package with the full Compose file list, for example:
 
 ```bash
