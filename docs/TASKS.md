@@ -2,6 +2,17 @@
 
 Backlog zadań ze statusami.
 
+## Dokumenty ↔ płatności, etap 5A (2026-11-07, projekt)
+
+- [x] Zgoda na przygotowanie najmniejszego zakresu po przeglądzie: user „ok, działaj”.
+- [x] Read-only backend/frontend recon: obecne kwalifikacje, alokacje i replay,
+  daty/ranking, kontrakty/UI, testy i luki; bez nowych uruchomień/testów produktu.
+- [x] Projekt `docs/superpowers/specs/2026-11-07-document-payment-matching-design.md`
+  po rozpoznaniu kodu; niezależny read-only builder check „nothing important left”.
+- [ ] Akceptacja pełnego zakresu; dopiero potem osobny szczegółowy plan i jego zgoda.
+- [ ] Lokalna implementacja po akceptacji planu. Brak zgody na produkcję/AI/historię;
+  poprzedni HEX i kolory pozostają bez zmian.
+
 ## Edycja kodu koloru HEX (2026-11-07)
 
 - [x] Zdiagnozować zgłoszenie: kod jest renderowany jako `span` we wspólnym pickerze;

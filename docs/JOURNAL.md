@@ -2,6 +2,35 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-07 — Projekt 5A gotowy do akceptacji: dokument ↔ płatność
+
+- User „ok, działaj” na przygotowanie zakresu po rekomendacji, NIE na implementację
+  lub wdrożenie. Requiredhostdocs przeczytane w kolejności; HEADc413f5b. Hostdocs są
+  historyczne; ostatni runtime frontendebe/backendworker95f/schemaf3a9 pozostaje
+  poza zakresem tej sesji, nie wykonywano nowego produkcyjnego sprawdzenia.
+- Readonlybackend recon ses_e4acc0d6dffeXTHtS6vGXySHHV i frontend
+  ses_e4acbefa8ffeG6Ccr8zlCTfshd zakończone. Istnieją `_eligible`, owner/capacity/
+  PLN/loan/pending/future guards, allocation locks/version/receipt/audit i jawne linki.
+  UI nie renderuje reasons/bazy dat/loading/error/empty; backend nie używa zakupu,
+  opisu sprzedawcy i sale_date w rankingu. Nie tworzyć mechanizmu od nowa.
+- Main zweryfikował bill_payments354-469/schema161+/date_metadata. Korekta szczegółu
+  recon: relacja date_metadata już lazyselectin, więc luka dotyczy wykorzystania
+  dat w matcherze, nie braku mechanizmu odczytu. Daty legacy nie są dowodem bankowym.
+- Projekt `docs/superpowers/specs/2026-11-07-document-payment-matching-design.md`:
+  read-side pola/wyjaśnienia, jawne datepair i kompatybilne okno/filtry, weak
+  fullsupplierphrase-in-description, stabilny ranking, stany UI/stale selection.
+  PLN-only/alokacje/ledger/receipt bez zmiany, zeroAI/deps/tabel/migracji/autolinków.
+  Kwota nadal porównywana do totaldocument, capacity/remaining pokazane osobno;
+  nie przebudowywać mimochodem partial/bulkpayments. Nie kopiować sale→purchase.
+- Niezależny buildercheck ses_e4ac3f43bffeZniSpFmVMzIllg: „nothing important left”.
+  Brak pytań do użytkownika poza akceptacją całego projektu. Autorskie wybory są
+  jawne w dokumencie (PLN-only, datepair/okno/ranking, pełnafraza nazwy zamiast AI).
+  Dopiero po akceptacji projektu invoke writing-plans i przygotować osobny plan.
+- Nie uruchamiano testów aplikacji/DB/HTTP/OCR/AI, nie czytano prywatnych dokumentów.
+  Zmiany wyłącznie docs/ignoredprogress, sprawdzić gitdiffcheck i pusty diff app/tests
+  przed docs-onlycommitem. Branch/worktree/VeloQ7dirty zachowane. Nie powtarzać
+  dawnych gate/deploy/migracji/categorytreeAPPLY podczas przygotowania zakresu.
+
 ## 2026-11-07 — WDROŻONE: edytowalny HEX, frontend ebe441e
 
 - User „tak” na dokładneebe441e/samfrontend/bezmigracji. Wykonano tylkoFrontend

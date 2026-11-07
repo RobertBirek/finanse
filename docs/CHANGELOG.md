@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Projekt, do zatwierdzenia] — 2026-11-07 — Dopasowanie dokumentów i płatności 5A
+
+- Po zgodzie na przygotowanie zakresu przejrzano obecny backend i frontend. Istnieją
+  już bezpieczne ręczne alokacje; główne luki to niewidoczne reasons, nieopisane daty,
+  niewykorzystana data zakupu, brak wskazówki nazwy i rozróżnienia błędu/pustej listy.
+- Propozycja `docs/superpowers/specs/2026-11-07-document-payment-matching-design.md`:
+  rozszerzenie istniejącego odczytu i dialogu, daty z proweniencją, ostrożna nazwa
+  w opisie, deterministyczna kolejność, zachowane ręczne linkowanie i PLN-only.
+- Niezależny read-only builder check: „nothing important left”. Projekt czeka na
+  akceptację całego zakresu, potem osobny plan. Bez kodu produktu, uruchamiania
+  testów, migracji, AI, prywatnych danych lub zmian produkcji.
+
 ## [Production, frontend ebe441e] — 2026-11-07 — Edytowalny HEX
 
 ### Fixed
