@@ -6,7 +6,11 @@ import {
 } from "../../api/finance";
 import { categoryPath, eligibleCategoryParents } from "../../lib/categories";
 import { apiErrorDetail, isConflict } from "./accountSettings";
-import { categoryColorMap, entityColor } from "../../lib/financeColors";
+import {
+  categoryColorMap,
+  entityColor,
+  isValidFinanceColor,
+} from "../../lib/financeColors";
 import { FinanceColorPicker } from "./FinanceColorPicker";
 
 const DELETE_CONFLICT_MESSAGE =
@@ -237,8 +241,11 @@ export function CategoryTreeEditor({
                 type="button"
                 aria-label={`Zapisz kategorię ${category.name}`}
                 className="btn-primary"
-                disabled={pending || !name.trim()}
-                onClick={() =>
+                disabled={
+                  pending || !name.trim() || !isValidFinanceColor(color)
+                }
+                onClick={() => {
+                  if (!isValidFinanceColor(color)) return;
                   update.mutate(
                     {
                       id: category.id,
@@ -254,11 +261,13 @@ export function CategoryTreeEditor({
                       (parentId || null) !== category.parent_id
                         ? { parent_id: parentId || null }
                         : {}),
-                      ...(color !== (category.color ?? null) ? { color } : {}),
+                      ...(color !== (category.color ?? null)
+                        ? { color: color?.toUpperCase() ?? null }
+                        : {}),
                     },
                     { onSuccess: () => setEditing(null) },
-                  )
-                }
+                  );
+                }}
               >
                 {pending ? "Zapisywanie…" : "Zapisz"}
               </button>

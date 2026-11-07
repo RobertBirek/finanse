@@ -11,7 +11,11 @@ import {
 import { AccountRow } from "../components/finance/AccountSettingsRow";
 import { CategoryTreeEditor } from "../components/finance/CategoryTreeEditor";
 import { categoryPath } from "../lib/categories";
-import { categoryColorMap, entityColor } from "../lib/financeColors";
+import {
+  categoryColorMap,
+  entityColor,
+  isValidFinanceColor,
+} from "../lib/financeColors";
 import { FinanceColorPicker } from "../components/finance/FinanceColorPicker";
 import {
   ACCOUNT_TYPES,
@@ -65,10 +69,11 @@ export function FinanceAccounts({
 
   function handleCreateAccount(event: FormEvent) {
     event.preventDefault();
+    if (!isValidFinanceColor(accountColor)) return;
     createAccount.mutate(
       {
         name: accountName.trim(),
-        ...(accountColor ? { color: accountColor } : {}),
+        ...(accountColor ? { color: accountColor.toUpperCase() } : {}),
         type: accountType,
         currency: accountCurrency,
         ...(!accountBudget ? { is_budget_account: false } : {}),
@@ -105,10 +110,11 @@ export function FinanceAccounts({
 
   function handleCreateCategory(event: FormEvent) {
     event.preventDefault();
+    if (!isValidFinanceColor(categoryColor)) return;
     createCategory.mutate(
       {
         name: categoryName.trim(),
-        ...(categoryColor ? { color: categoryColor } : {}),
+        ...(categoryColor ? { color: categoryColor.toUpperCase() } : {}),
         type: categoryType,
         ...(categoryParentId ? { parent_id: categoryParentId } : {}),
       },
@@ -244,7 +250,9 @@ export function FinanceAccounts({
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={createAccount.isPending}
+                disabled={
+                  createAccount.isPending || !isValidFinanceColor(accountColor)
+                }
               >
                 Dodaj konto
               </button>
@@ -418,7 +426,10 @@ export function FinanceAccounts({
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={createCategory.isPending}
+                disabled={
+                  createCategory.isPending ||
+                  !isValidFinanceColor(categoryColor)
+                }
               >
                 Dodaj kategorię
               </button>

@@ -12,10 +12,13 @@ export const FINANCE_PALETTE = [
   { name: "Grafitowy", hex: "#64748B" },
 ] as const;
 
+/** null means automatic/inherited; incomplete drafts must never be persisted. */
+export function isValidFinanceColor(color: string | null): boolean {
+  return color === null || (color.length === 7 && /^#[\da-f]{6}$/i.test(color));
+}
+
 function validColor(color: string | null | undefined): string | undefined {
-  return color && /^#[\da-f]{6}$/i.test(color)
-    ? color.toUpperCase()
-    : undefined;
+  return color && isValidFinanceColor(color) ? color.toUpperCase() : undefined;
 }
 
 export function entityColor(id: string, color?: string | null): string {

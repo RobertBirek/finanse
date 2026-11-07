@@ -2,6 +2,67 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-07 — ZAKOŃCZONE lokalnie: ręczna edycja HEX; bez wdrożenia
+
+- FINAL518unit/145E2E+1expectedskip/ESLint/tsc/freshbuild/sourceSHA PASS; brak zmian
+  kodu po zamrożeniu. Testowanydist-final w privateOUT. Blacktyping#000000 dla konta,
+  rzeczywisty clipboardCtrl+V#ea580c dla podkategorii→uppercasepayload; reload,
+  minimalPATCH, chart/inheritance/reset/invalidsaveblocked PASS light/dark375/1440.
+  Axe serious/critical0, mobilnydark i desktoplight screenshoty obejrzane.
+- Jeden readonlyreview:0Critical/0Important/2Minor i obapoprawione: fontmobile16px
+  (2REDactual14→GREEN), prawdziwyclipboardtest (nie tylko fill). Bez drugiego review,
+  backendtests lub godzinnego regate niezmienionego backendu. Zachowany baseline
+  backend/ops po cb5ecaf i hash active-release, brak produkcyjnych requestów/zapisów.
+- Odbiór LOCAL. Potrzebna osobna zgoda na wdrożenie tej poprawki, tylko frontend
+  i bez migracji. Nie powtarzać migracji kolorów lub operacji drzewa. Kontynuować
+  od zaakceptowanego nowego commitu i dokładnego dist-final, używać poprawionego
+  prepare_release z kontrolą uprawnień. Branch/worktree/VeloQ7dirty zachowane.
+- Dowody `/tmp/opencode/hex-input-20261107/`, trwała kopia
+  `/opt/finanse/webapp/feature-acceptance/hex-input-20261107/`; verify.py wymaga
+  identycznych źródeł oraz niezmienionychbackend/ops/active, brak żądań do sieci/DB.
+
+Przebieg (poniższe „w toku” to historia):
+
+- User zatwierdził krótki plan „tak”. TDD:12RED(braktextbox)/29oldPASS→41focusedPASS.
+  Zmieniono wyłącznie frontend: wspólnypickertekstHEX, rawdraft wparentstate bez
+  mirroredstate/effects, strict7chars/null validator, nativecolor zawszevalid,
+  erroraria-describedby, guarded4create/edit handlers+buttons, uppercasepayload.
+  Brak maxlengthtruncation; wpisanytekst/cursor nie jest przestawiany normalizacją.
+- E2E teraz wpisuje małeliterki dla konta/reload i#000000 dla podkategorii/wykres,
+  invalidsaveblocked, presetroot/reset/inheritance/minimalPATCH nadal sprawdzane.
+  Fullfrontend lint/types/unit/freshbuild/E2E sh_1b5082e38001LaxDdNlp44xYXw w toku;
+  readonlyreview ses_e4af76a76ffe37jBi6vWbGmabj. Sourcefrozen wprivateOUT
+  `/tmp/opencode/hex-input-20261107/`, nie edytować app/test/E2E dopóki runniezakończony.
+  Backend/ops diffHEAD pusty, żadnych backendtests/migracji/produkcji/providers.
+  Osobna zgoda na wdrożenie HEXfix nadal wymagana; zachować Velo/Q7dirty.
+- Review0Critical/0Important/2Minor: mobilne14px może powodować iOSfocuszoom;
+  pasteimplementowane, ale brak rzeczywistego clipboardtestu. Oba przyjęte jako
+  drobny fixpass (16pxmobile i Ctrl+Vlowercase→uppercasepayload), dopiero po końcu
+  bieżącego frozengate; nie mieszać dowodów ani uruchamiać kolejnego review.
+- Początkowyfullfrontendgate518unit/145E2E+1expectedskip/lint/types/buildPASS,
+  sourceverifierPASS; źródła/dowody zarchiwizowano jakoinitial-* /dist-initial.
+  MinorTDD:2mobileRED(expected16,actual14px),2desktopPASS z rzeczywistym
+  navigator.clipboard.writeText+Ctrl+V(lowercase→uppercasepayload). Potem tylko
+  fontclass na text-base sm:text-sm. Flowaccounttyping#000000, childpaste#ea580c,
+  rootpalette/reset/inheritance nadal sprawdzane. Końcowyfullgate
+  sh_1b50ee5e0001ykVpcFHDEw6G5T przeciw dist-final w toku, źródła zamrożone przed
+  startem. Bez kolejnego review, backendopschanges lub wdrożenia.
+
+Wcześniejsza diagnoza:
+
+- User wraca do kolorów: chce wpisać własny HEX `#000000`, wyświetlanego pola nie
+  można edytować. Rootcause potwierdzony w FinanceColorPicker.tsx29-31: `span`, nie
+  input tekstowy. Obecne onChange dotyczą tylko inputtype=color i palety. Wspólny
+  komponent obsługuje tworzenie/edycję kont i kategorii; DB/API już akceptują HEX/null.
+- Mały proponowany zakres: tekstowy HEX z wpisywaniem/wklejaniem, niepełny draft
+  podczas pisania, walidacja przed zapisem, synchronizacja native/preset/reset oraz
+  zachowanie dziedziczenia i minimalnego PATCH. Plan przedstawiany do akceptacji
+  przed kodem zgodnie z workflow. Nie wykonywano testów ani zmian produktu/produkcji.
+- Następny krok po zgodzie: TDD komponentu i formularzy (zapis kont to button,
+  nie form submit — sama walidacjaHTML nie blokuje handlera), focusedbrowser oraz
+  pełnyfrontendgate. Brak potrzeby migracji/backendchanges. Nie uruchamiać ponownie
+  dawnych migracji lub /deploy bez osobnej zgody. HEADcb5ecaf, Velo/Q7dirty zachowane.
+
 ## 2026-11-06 — ZAKOŃCZONE lokalnie: trwała ochrona uprawnień release
 
 - FINAL1737backendPASS/10proxy-deselected/10znanychdeprecationwarnings/3720.82s;

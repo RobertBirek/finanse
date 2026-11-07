@@ -112,22 +112,42 @@ for (const theme of ["light", "dark"]) {
     });
     await page.goto("/settings/finances/accounts");
     await page.getByRole("button", { name: "Edytuj konto Eurokonto" }).click();
-    await page
-      .getByRole("button", {
-        name: "Kolor konta Eurokonto: Fioletowy",
-        exact: true,
-      })
-      .click();
+    const accountHex = page.getByRole("textbox", {
+      name: "Kolor konta Eurokonto HEX",
+      exact: true,
+    });
+    await expect(accountHex).toHaveCSS(
+      "font-size",
+      testInfo.project.name === "mobile" ? "16px" : "14px",
+    );
+    await accountHex.fill("#12");
+    await expect(accountHex).toHaveAttribute("aria-invalid", "true");
+    await expect(
+      page.getByRole("button", { name: "Zapisz konto Eurokonto" }),
+    ).toBeDisabled();
+    expect(changes).toEqual([]);
+    await accountHex.fill("");
+    await accountHex.pressSequentially("#000000");
+    await expect(accountHex).toHaveValue("#000000");
+    await expect(accountHex).toHaveAttribute("aria-invalid", "false");
     await page.getByRole("button", { name: "Zapisz konto Eurokonto" }).click();
-    await expect.poll(() => accountColor).toBe("#7C3AED");
+    await expect.poll(() => accountColor).toBe("#000000");
     expect(changes[0]).toEqual({
       entity: "account",
-      data: { color: "#7C3AED" },
+      data: { color: "#000000" },
     });
+    await page.reload();
+    await page.getByRole("button", { name: "Edytuj konto Eurokonto" }).click();
+    await expect(
+      page.getByRole("textbox", {
+        name: "Kolor konta Eurokonto HEX",
+        exact: true,
+      }),
+    ).toHaveValue("#000000");
     await page.goto("/finances");
     await expect(page.locator(".finance-bank-mark")).toHaveCSS(
       "background-color",
-      "rgb(124, 58, 237)",
+      "rgb(0, 0, 0)",
     );
     await expect(page.getByLabel("Wykorzystanie budżetu Prąd")).toHaveCSS(
       "accent-color",
@@ -154,12 +174,24 @@ for (const theme of ["light", "dark"]) {
     await expect(
       page.getByLabel("Kolor kategorii Prąd", { exact: true }),
     ).toHaveValue("#2563eb");
+    const childHex = page.getByRole("textbox", {
+      name: "Kolor kategorii Prąd HEX",
+      exact: true,
+    });
+    await childHex.fill("#GGGGGG");
+    await expect(
+      page.getByRole("button", { name: "Zapisz kategorię Prąd", exact: true }),
+    ).toBeDisabled();
+    await childHex.fill("");
     await page
-      .getByRole("button", {
-        name: "Kolor kategorii Prąd: Pomarańczowy",
-        exact: true,
-      })
-      .click();
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"], {
+        origin: "https://ui.test.invalid",
+      });
+    await page.bringToFront();
+    await page.evaluate(() => navigator.clipboard.writeText("#ea580c"));
+    await childHex.press("ControlOrMeta+V");
+    await expect(childHex).toHaveValue("#ea580c");
     await page
       .getByRole("button", { name: "Zapisz kategorię Prąd", exact: true })
       .click();
@@ -194,7 +226,7 @@ for (const theme of ["light", "dark"]) {
       page.getByLabel("Kolor kategorii Prąd", { exact: true }),
     ).toHaveValue("#2563eb");
     await page
-      .getByLabel("Kolor kategorii Prąd", { exact: true })
+      .getByRole("textbox", { name: "Kolor kategorii Prąd HEX", exact: true })
       .scrollIntoViewIfNeeded();
     const accessibility = await new AxeBuilder({ page })
       .include("fieldset")
@@ -209,7 +241,7 @@ for (const theme of ["light", "dark"]) {
       fullPage: true,
     });
     expect(changes).toEqual([
-      { entity: "account", data: { color: "#7C3AED" } },
+      { entity: "account", data: { color: "#000000" } },
       { entity: "home", data: { color: "#2563EB" } },
       { entity: "power", data: { color: "#EA580C" } },
       { entity: "power", data: { color: null } },

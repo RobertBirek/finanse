@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { Account, AccountUpdateInput } from "../../api/finance";
 import { ACCOUNT_TYPES, apiErrorDetail, isConflict } from "./accountSettings";
-import { entityColor } from "../../lib/financeColors";
+import { entityColor, isValidFinanceColor } from "../../lib/financeColors";
 import { FinanceColorPicker } from "./FinanceColorPicker";
 
 const ACCOUNT_DELETE_CONFLICT_MESSAGE =
@@ -83,6 +83,7 @@ export function AccountRow({
   }
 
   function save() {
+    if (!isValidFinanceColor(draftColor)) return;
     const colorChanged = draftColor !== (account.color ?? null);
     updateMutation.mutate(
       {
@@ -91,7 +92,7 @@ export function AccountRow({
           ? { name: draftName }
           : {}),
         ...(draftColor !== (account.color ?? null)
-          ? { color: draftColor }
+          ? { color: draftColor?.toUpperCase() ?? null }
           : {}),
         ...(!colorChanged || draftType !== account.type
           ? { type: draftType }
@@ -242,7 +243,7 @@ export function AccountRow({
                 type="button"
                 aria-label={`Zapisz konto ${account.name}`}
                 className="btn-secondary px-3 py-1.5 text-sm"
-                disabled={rowPending}
+                disabled={rowPending || !isValidFinanceColor(draftColor)}
                 onClick={save}
               >
                 Zapisz

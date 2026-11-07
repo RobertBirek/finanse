@@ -13,6 +13,63 @@ vi.mock("../../api/finance", () => ({
 }));
 
 describe("CategoryTreeEditor", () => {
+  it("blocks invalid typed category HEX then saves only corrected black and can reset inheritance", () => {
+    const mutate = vi.fn();
+    updateCategory.mockReturnValue({ mutate, isPending: false });
+    deleteCategory.mockReturnValue({ isPending: false });
+    render(
+      <CategoryTreeEditor
+        onAddChild={vi.fn()}
+        categories={[
+          {
+            id: "root",
+            name: "Dom",
+            type: "expense",
+            parent_id: null,
+            color: "#123ABC",
+            is_active: true,
+          },
+          {
+            id: "child",
+            name: "Prąd",
+            type: "expense",
+            parent_id: "root",
+            color: null,
+            is_active: true,
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj kategorię Prąd" }),
+    );
+    const hex = screen.getByRole("textbox", {
+      name: "Kolor kategorii Prąd HEX",
+    });
+    expect(hex).toHaveValue("#123ABC");
+    fireEvent.change(hex, { target: { value: "#12" } });
+    expect(
+      screen.getByRole("button", { name: "Zapisz kategorię Prąd" }),
+    ).toBeDisabled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz kategorię Prąd" }),
+    );
+    expect(mutate).not.toHaveBeenCalled();
+    fireEvent.change(hex, { target: { value: "#000000" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz kategorię Prąd" }),
+    );
+    expect(mutate).toHaveBeenLastCalledWith(
+      { id: "child", color: "#000000" },
+      expect.anything(),
+    );
+    fireEvent.change(hex, { target: { value: "invalid" } });
+    fireEvent.click(screen.getByRole("button", { name: "Dziedzicz kolor" }));
+    expect(hex).toHaveValue("#123ABC");
+    expect(
+      screen.getByRole("button", { name: "Zapisz kategorię Prąd" }),
+    ).toBeEnabled();
+  });
   it("does not normalize an untouched imported category name when saving only its color", () => {
     const mutate = vi.fn();
     updateCategory.mockReturnValue({ mutate, isPending: false });

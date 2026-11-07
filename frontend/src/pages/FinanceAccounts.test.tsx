@@ -131,6 +131,110 @@ describe("FinanceAccounts", () => {
     vi.restoreAllMocks();
   });
 
+  it.each(["", "#123", "#GGGGGG", "123456", "#12345678", "#123456 "])(
+    "blocks invalid HEX %j for both creation forms, including direct submit",
+    (value) => {
+      render(<FinanceAccounts />);
+      for (const [form, label, button, mutation] of [
+        [
+          screen.getByRole("form", { name: "Nowe konto" }),
+          "Kolor konta HEX",
+          "Dodaj konto",
+          hooks.useCreateAccount().mutate,
+        ],
+        [
+          screen.getByRole("form", { name: "Nowa kategoria" }),
+          "Kolor kategorii HEX",
+          "Dodaj kategorię",
+          hooks.useCreateCategory().mutate,
+        ],
+      ] as const) {
+        fireEvent.change(within(form).getByLabelText("Nazwa"), {
+          target: { value: "Nowa nazwa" },
+        });
+        fireEvent.change(within(form).getByRole("textbox", { name: label }), {
+          target: { value },
+        });
+        expect(
+          within(form).getByRole("button", { name: button }),
+        ).toBeDisabled();
+        fireEvent.submit(form);
+        expect(mutation).not.toHaveBeenCalled();
+      }
+    },
+  );
+
+  it("creates account and category from typed HEX with uppercase payloads", () => {
+    render(<FinanceAccounts />);
+    fireEvent.change(createAccountForm().getByLabelText("Nazwa"), {
+      target: { value: "Nowe konto" },
+    });
+    fireEvent.change(
+      createAccountForm().getByRole("textbox", { name: "Kolor konta HEX" }),
+      { target: { value: "#000000" } },
+    );
+    fireEvent.click(
+      createAccountForm().getByRole("button", { name: "Dodaj konto" }),
+    );
+    expect(hooks.useCreateAccount().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ color: "#000000" }),
+      expect.anything(),
+    );
+    fireEvent.change(createCategoryForm().getByLabelText("Nazwa"), {
+      target: { value: "Nowa kategoria" },
+    });
+    fireEvent.change(
+      createCategoryForm().getByRole("textbox", {
+        name: "Kolor kategorii HEX",
+      }),
+      { target: { value: "#a1b2c3" } },
+    );
+    fireEvent.click(
+      createCategoryForm().getByRole("button", { name: "Dodaj kategorię" }),
+    );
+    expect(hooks.useCreateCategory().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ color: "#A1B2C3" }),
+      expect.anything(),
+    );
+  });
+
+  it("blocks invalid account edit and saves only the typed color after correction or cancel", () => {
+    render(<FinanceAccounts section="accounts" />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj konto Rachunek główny" }),
+    );
+    const hex = screen.getByRole("textbox", {
+      name: "Kolor konta Rachunek główny HEX",
+    });
+    fireEvent.change(hex, { target: { value: "#12" } });
+    const save = screen.getByRole("button", {
+      name: "Zapisz konto Rachunek główny",
+    });
+    expect(save).toBeDisabled();
+    fireEvent.click(save);
+    expect(hooks.useUpdateAccount().mutate).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Anuluj edycję konta Rachunek główny",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj konto Rachunek główny" }),
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Kolor konta Rachunek główny HEX" }),
+      { target: { value: "#a1b2c3" } },
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz konto Rachunek główny" }),
+    );
+    expect(hooks.useUpdateAccount().mutate).toHaveBeenLastCalledWith(
+      { id: "a1", color: "#A1B2C3" },
+      expect.anything(),
+    );
+  });
+
   it("sends selected colors on creation and preserves null automatic defaults without extra writes", () => {
     render(<FinanceAccounts />);
     fireEvent.change(createAccountForm().getByLabelText("Nazwa"), {

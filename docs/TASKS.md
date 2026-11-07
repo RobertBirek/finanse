@@ -2,6 +2,19 @@
 
 Backlog zadań ze statusami.
 
+## Edycja kodu koloru HEX (2026-11-07)
+
+- [x] Zdiagnozować zgłoszenie: kod jest renderowany jako `span` we wspólnym pickerze;
+  natywny wybór koloru/paleta działają, ale nie istnieje tekstowe pole HEX.
+- [x] Zatwierdzić krótki plan: user „tak”; własny `#RRGGBB` (w tym czarny), wpisywanie/wklejanie,
+  walidacja i synchronizacja palety/resetu w kontach/kategoriach; bez zmian danych.
+- [x] Implementacja TDD:12RED/29oldPASS→41focusedPASS; tekstowy HEX i walidacja
+  czterech ścieżek tworzenia/edycji, minimalny uppercasePATCH. Jeden review2Minor
+  poprawione (16pxmobile/clipboardtest), końcowy518unit/145E2E+1expectedskip/
+  lint/types/build/sourceSHA PASS. Dziedziczenie/reset/reload/black/paste sprawdzone.
+- [ ] Osobna zgoda przed wdrożeniem poprawki HEX (sam frontend, bez migracji);
+  backend/ops i metadane aktywnej produkcji bez zmian.
+
 ## Kolory kont i kategorii (2026-11-06, wdrożone95f8380)
 
 - [x] Po „działaj”: wybór palety/dowolnego HEX, automatyczny kolor konta,

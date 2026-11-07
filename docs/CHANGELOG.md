@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, odebrane] — 2026-11-07 — Ręczne wpisywanie koloru HEX
+
+- Operator zgłosił brak możliwości edycji wyświetlanego kodu koloru. Potwierdzona
+  przyczyna: wspólny `FinanceColorPicker` renderuje kod jako tekst `span`, nie input.
+- Po zatwierdzeniu „tak”: edytowalny `#RRGGBB`, wpisywanie/wklejanie, walidacja i
+  synchronizacja z paletą/resetem dla tworzenia/edycji kont i kategorii. Niepełny
+  draft pozostaje widoczny; zapis zablokowany również w handlerach, payload uppercase.
+- TDD12RED→41focusedPASS; początkowy pełny518frontend/145E2E+1skip/static/buildPASS.
+  Jeden review0Critical/0Important/2Minor poprawione: mobilne16px (2browserRED14px→GREEN)
+  oraz rzeczywisty clipboardCtrl+V dla małych liter z uppercase payloadem.
+  Końcowy518frontend/145E2E+1expectedskip/ESLint/tsc/freshbuild/sourceSHA PASS;
+  mobile375/desktop1440/light/dark, axe serious/critical0. Screenshoty obejrzane.
+  Bez zmian backendu, schematu lub produkcji; poprawka nie jest jeszcze wdrożona.
+
 ## [Local, odebrane] — 2026-11-06 — Uprawnienia plików pakietu release
 
 ### Fixed
