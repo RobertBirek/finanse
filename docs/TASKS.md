@@ -2,6 +2,31 @@
 
 Backlog zadań ze statusami.
 
+## Karty kredytowe i plany ratalne (2026-11-07)
+
+- [x] Uzgodniony zakres dla istniejącej karty Velo: limit33600PLN, APR14.50%,
+  max57dni warunkowo, cykl18–17, domyślnie12, pierwszeństwo dat wyciągu.
+  Stare plany zamknięte; nowe mają własne stopy i bankowy/szacunkowy harmonogram.
+- [x] Po Plan→Build zgoda „ok, działaj” i osobna zgoda na własny offlinePG bez
+  publikacji portów, używania wcześniejszych baz lub produkcji.
+- [x] Lokalna implementacja ledger-backed limitów, wyciągów, planów, kosztów/korekt,
+  spłat i ochrony powiązań; istniejące konto bez tworzenia drugiego zadłużenia.
+- [x] Addytywna migracja sześciu tabel z guardem retencji; próba na własnej bazie:
+  56 starych tabel i dane/kolumny/indeksy zachowane, pusty downgrade/reupgrade PASS.
+- [x] UI/API/TDD, baseline1805 i backend przed review1841, frontend555 PASS.
+  Jeden niezależny review; naprawy Important: klasyfikacja zwrotów i rozdzielenie
+  kont kart/kredytów,3RED→4PASS. Pełny final gate ponowiony po naprawach.
+- [x] Końcowy pełny backend1847PASS/555frontend/159E2E+1expectedskip, lint/types/build,
+  źródła zgodne z manifestem. Naprawione również zachowanie publicznego kontraktu,
+  późny retry po odpięciu kosztu i prywatność cudzego identyfikatora wyciągu.
+- [x] Dokumentacja/instrukcja/raport, backend09d1d79/frontend7aa1629 lokalnie;
+  cleanup wyłącznie dwóch własnych efemerycznych kontenerów i ich wolumenów.
+- [ ] Osobny odbiór i zgoda na merge/push/deploy/migrację produkcyjną oraz świadomą
+  konfigurację istniejącego konta. Brak automatycznego przepisywania historii.
+
+Raport `docs/audits/2026-11-07-credit-cards-local.md`,
+instrukcja `docs/operations/credit-cards.md`.
+
 ## Bezpieczeństwo pakietów backend/worker (2026-11-07, implementacja lokalna)
 
 - [x] Po „ok,działaj” przygotować krótki zakres, nie implementację ani deploy.

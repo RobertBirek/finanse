@@ -2,6 +2,77 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-07 — Karty kredytowe: ODEBRANE LOKALNIE, bez deploy
+
+- Zatwierdzony chat zakres i „ok, działaj” po Build; osobna zgoda przez question
+  na własny efemeryczny offlinePG. Base3479aca, obecny linkedworktree; dwie stare
+  zmiany raportów Velo/Q7 zachowane. Required docs przeczytane w kolejności.
+- FINAL:1847backendPASS (1042+805 disjoint wholefile, naturalny porządek, zero
+  runtime-skips/errors/failures; kolekcja1861minus14proxy),555frontend/159E2E+1skip,
+  lint/mypy152/tsc/freshbuildPASS. Source569fileshash pre/post zgodne. Base3479aca;
+  produktbackend09d1d79/frontend7aa1629. Jedynie docscommit domyka te wyniki.
+- Cleanup po gate: obie nowePGids sprawdzone, usunięte tylko własne kontenery
+  finanse-credit-card[-feature]-test-20261107 i anonimowevolumes; potwierdzony brak.
+  Środowiska innych zadań/main/produkcja i stareVeloQ7dirty pozostały nietknięte.
+  Pełny raport i chronologia (w tym wszystkie wcześniejszeFAIL/timeouts) w audycie;
+  finalproof acceptance-final/final-suite-proof.json. Nie ma aktywnychtestjobs.
+- Nowe moduły credit_card_{models,math,schemas,router} i credit_cards, integracja
+  istniejącego finance ledger/guards. PostgreSQL źródłem salda; ujemny postedPLN,
+  pendingdebity rezerwują, pendingkredyty nie uwalniają limitu. Plan klasyfikuje
+  kapitał istniejącego obciążenia, nie dodaje długu. Osie alokacji wyciąg/plan
+  opisują ten sam transfer, ale każda ma osobny limit. Mutex zmian → lock konta
+  → transakcja; retry klucz+payload i audyt, cudze/oczekujące źródła odrzucone.
+- Wyciąg to fakt historyczny, daty bankowe nad nominalnym12. Brak taryfy/kolejności
+  bankowej: max57dni warunkowo; harmonogram APR/12 równokapitałowy i ACT/365 tylko
+  oznaczone szacunki. Bankowy harmonogram zastępuje szacunek przed płatnościami.
+  Pozostały kapitał zamyka plan, nie księgujemy przyszłych szacowanych kosztów.
+- Dane konkretnej karty nie są hardkodowane ani seedowane po nazwie. Stare plany
+  user potwierdził jako zamknięte; nie odtwarzamy/nie korygujemy historii samoczynnie.
+  Granica pełnego kapitału w ledger vs osobny niewymagalny bankkapitał opisana
+  w instrukcji. W przyszłym imporcie wymaga uzgodnienia, nie sumowania nagłówków.
+- Migracja00a9 po f3a9 tworzy6tabel, guard odmawia utraty zapisanych danych.
+  Autogenerate tylko na własnymDB; usunięto niezwiązany drift starych indeksów.
+  Rawretentionproof56oldtables/rows/columns/indexesPASS + emptydowngrade/reupgrade.
+- Baseline1805PASS4250.19s; prereview1841PASS3434.97s; frontend555PASS57.65s,
+  lint/tsc i backendmypy152PASS. Pełny końcowy backend jest ponowiony po fixach.
+- Reviewer ses_e490e7f92ffeTtwAqL0GiDaGcT: Important refundtypeincome mimo netcost
+  poprawnego oraz możliwe loan/cardwspólnekonto. Fixsinglepass3RED→4PASS: refund
+  expense z kontrolowaną zmianą kierunku (sam source klienta nie daje uprawnień),
+  exactexpense przy istniejącymkoszcie, wzajemne guards createcard/createloan
+  pod tym samym mutexem. Minorclassification włączony do tego samego Important.
+- UI karty w ustawieniach i przy transakcjach: niezależneAPR planów, bankrows,
+  alokacje/earlypay, explicitnew/linkcostmode, retry zachowuje wpisy. JedenE2E
+  AxeFAIL jasnego green300 naprawiony przez istniejący semantic green400; świeży
+  build i pełneE2E w toku. Przerwany focusedbackend32testy/120s nie oznaczonyPASS.
+- Dwa własnePG (baseline i feature) networknone/noports/nohostmount, nsenter tylko
+  sieciowo; inne bazy/prod nietknięte. Logi `/tmp/opencode/credit-cards-20261107/`.
+  Plan/spec w `docs/superpowers/plans/2026-11-07-credit-cards.md`, ledger w ignored
+  `.superpowers/credit-cards-progress.md`, raport/instrukcja w docs/audits i operations.
+- Do dokończenia: zakończone finalbackend/E2E, ewentualne naprawy regresji z TDD,
+  docs lokalny commit i usuń TYLKO dwa własne kontenery po zapisaniu dowodów.
+  Brak zgody na merge/push/deploy lub konfigurację konta produkcyjnego w tej sesji.
+  Ten historyczny punkt został domknięty wynikami FINAL powyżej.
+- Aktualizacja UI gate: final555unitPASS55.51s, całość159E2EPASS+1expectedskip5.1min,
+  lint/tsc/freshbuildPASS, tokencontrastfix potwierdzony Axe w obu motywach.
+  Screenshot desktoplight/mobile dark obejrzane. Testowany frontend to dokładny
+  prywatny dist-final, UI API wyłącznie fixtures, nie livebackend. Finalbackend trwa.
+- Pierwszy full postreview1844PASS/1FAIL3297.89s: zachowany test publicznej sygnatury
+  create_transaction wykrył nowy keyword. Nie zmieniać starego testu. RED→wrapper
+  publiczny z dawną sygnaturą + prywatny core i osobny trustedcardrefundentrypoint;
+  23contract/cardPASS61.59s, Ruff/mypyPASS. Sourcefreeze tylko2pliki zaktualizowany.
+  Końcowe pełne pokrycie ponowione dwoma disjoint wholefile partition na dwóch
+  WŁASNYCHPG; manifestkolekcji+JUnit wymaga wszystkichnodeIDs i zeraskips/errors.
+  Nie oznaczać tego jako1845PASS przed zakończeniem obu grup i weryfikacją proof.
+- Pierwszy splitcostorder:804PASS oraz1040PASS/1staryOCRloopFAIL. Nie zmieniano OCR.
+  Samotnyplik5setupERROR (brakpełnejrejestracjimodeli); z rejestracjąmain6PASS37.27s.
+  Przywrócono naturalną kolejność w każdej grupie. Niedokończony group0retry
+  przerwany SIGINT, bo odbiór wykrył jeszcze2konkretne safetyregresje własnego kodu:
+  retry starego klucza po usunięciu metadanej kosztu mógł ponownieksięgować;
+  istniejącycreateaudit teraz blokuje takieklucze (niepurge'ować bez receiptów).
+  ForeignstatementID nie ujawnia alokacji przez409 — ownercheck przedlinkcheck.
+  ObieRED→GREEN,19cardsPASS76.07s, staticPASS. Pełny odbiór obydwu grup odnowa,
+  kolejnośćnaturalna, nowy manifestsource; `acceptance-final/`, bezstaregoFALSEPASS.
+
 ## 2026-11-07 — AKTYWNE na main: narzędzia non-root release e8f6714
 
 - User „scal i wdróż” po wyjaśnieniu że toolsniepotrzebująapprestart. Requiredhostdocs

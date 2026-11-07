@@ -2,6 +2,33 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, odebrane] — 2026-11-07 — Karty kredytowe i plany ratalne
+
+### Added
+- Konfiguracja istniejącego konta PLN jako karty: limit, zaksięgowane zadłużenie,
+  rezerwacje, dostępny limit, nadpłata i przekroczenie. Wyciągi z rzeczywistym
+  terminem/minimum oraz jawną różnicą uzgodnienia z księgą.
+- Wiele planów na karcie, każdy z własną stopą/prowizją; szacunkowy harmonogram
+  zastępowany bankowym, powiązania częściowych i wcześniejszych spłat bez
+  ponownego księgowania kapitału lub wydatku. Rozliczona historia chroniona.
+- Odsetki/opłaty/korekty jako dwustronne zapisy lub powiązanie istniejącego kosztu;
+  zwrot pozostaje korektą expense, nie przychodem. Kalkulator ACT/365 tylko szacuje.
+- Addytywna migracja `00a9ccb532b9`: sześć tabel, ochrona danych przy downgrade;
+  próba zachowania 56 starych tabel/wierszy/kolumn/indeksów i pusty roundtrip PASS.
+- Ekran kart w ustawieniach, podsumowanie przy transakcjach, oddzielne warunki
+  planów, formularze kosztów/wyciągów/spłat i bezpieczne ponowienia żądań.
+
+### Verification
+- Końcowy pełny backend1847PASS (dwa izolowane rozłączne przebiegi, zero pominiętych
+  integracjiDB), frontend555PASS, E2E159PASS/1expectedskip, lint/types/build PASS.
+  Important z review oraz regresje kontraktu/klucza po odpięciu/prywatności
+  odtworzone i naprawione przed finalnym gate. Wczesne błędy i przerwania opisane
+  w raporcie, nie zastępują świeżego PASS. Dwie własne bazy testowe usunięte.
+- Commity backend09d1d79/frontend7aa1629. Bez scalenia/push, konfiguracji konta,
+  migracji produkcyjnej lub deploy. Szacunki nie są bankowymi odsetkami ani postingami.
+- Raport: `docs/audits/2026-11-07-credit-cards-local.md`;
+  instrukcja i ograniczenia: `docs/operations/credit-cards.md`.
+
 ## [Operator tools, e8f6714] — 2026-11-07 — Zabezpieczenie przyszłych wdrożeń
 
 ### Changed
