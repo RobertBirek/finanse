@@ -22,7 +22,7 @@ Backlog zadań ze statusami.
   Pierwszą próbę przerwał limit; wznowiony reviewer ukończył pełny scope bez zmian kodu.
 - [x] Ostateczny lokalny odbiór i raport z decyzjami/ograniczeniami; commity lokalne.
   Dodatkowy stary DocumentList.test flake:539PASS/1FAIL→1isolatedPASS→540fullPASS,
-  bez napraw niezwiązanego zakresu. Własny kontener testowy sprzątany przy zamknięciu.
+  bez napraw niezwiązanego zakresu. Własny kontener testowy usunięty i brak potwierdzony.
   Bez zgody na produkcję/AI/historię; stare testDB i produkcja nietknięte.
 
 ## Edycja kodu koloru HEX (2026-11-07)

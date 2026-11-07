@@ -92,5 +92,13 @@ stary test są ograniczeniami środowiska/odbioru, nie nowymi ukrytymi poprawkam
 Nie wdrożono, nie scalono ani nie wypchnięto kodu. Bez migracji, backfillu, nowego
 schematu, zapisów historii, realnych dokumentów/dostawców. Mutatory, modele i guards
 niezmienione. Viewport mobile nie certyfikuje fizycznych Android/iPhone.
-Wynik całościowego E2E i review zapisano powyżej. Własny kontener testDB zostaje
-usunięty przy zamknięciu; istniejących kontenerów/testDB nie usuwać ani restartować.
+Wynik całościowego E2E i review zapisano powyżej. Własny kontener testDB **usunięto**
+po ponownym focused24E2E PASS43.8s i49backend PASS165.09s oraz35frontendfocusedPASS.
+Zweryfikowano brak kontenera i pozostawienie obu wcześniejszych testDB (Up2weeks).
+Nie usuwano ani nie restartowano innych kontenerów, nie dotykano produkcji.
+
+Commity funkcji: `8493abe`, `b23133a`, `93bffeb`; odbiór i E2E/docs: `79bb907`.
+Po zamknięciu HEAD ma dodatkowy docs-only wpis sprzątania. Sprawdzono zgodność SHA
+backendu, wszystkich frontend src/e2e i assetów build względem odebranych runów.
+Pozostałe dirty wyłącznie wcześniejsze dwa pliki Velo/Q7, niewłączone do commitów.
+Pełne logi, manifesty i kopia ledger/reviewpackage: `/tmp/opencode/payment-matching-5a/`.

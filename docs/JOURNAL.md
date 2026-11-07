@@ -24,7 +24,8 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Własny PG16 networknone/tmpfs/noports w namespace localhost5432, guardsfinanse_test
   zachowane, innetestDB nieużywane. Użyto existingfinancial-document-venv zamiast
   obsoletehostvenvmissingResponses; nikomu nie zmieniano dependencies. TestDB usuwany
-  wyłącznie po wszystkich task-done; potwierdzenie cleanup dopisać do raportu.
+  wyłącznie po wszystkich task-done; cleanup wykonany i brak kontenera potwierdzony,
+  oba wcześniejsze testDB nadalUp2weeks. Źródła/buildSHA zgodne, Velo/Q7dirty pozostałe.
 - Decyzje techniczne i granice review wyliczone w audicie
   `docs/audits/2026-11-07-document-payment-matching-local.md`. Jeden backendfullrun po
   zamrożeniu źródeł równolegle z frontendem (koszt~50min); źródła/buildSHA sprawdzone.
@@ -32,6 +33,9 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Następny krok: wybór integracji przez usera; zostawić worktree/branch i VeloQ7dirty.
   Wydanie wymaga osobnej zgody na dokładną rewizję backend/frontend i normalnej bramki
   produkcyjnej; nie wdrażać samodzielnie ani nie ponawiać migracji kolorów/HEX/treeAPPLY.
+- Finalne commity:8493abe/b23133a/93bffeb/79bb907 plus docs-onlycleanup. Ledger i pakiet
+  review skopiowane do `/tmp/opencode/payment-matching-5a/` przed usunięciem scratch
+  tylko tego planu. Brak automatycznego merge/push/PR/deploy.
 
 ## 2026-11-07 — Plan 5A zaakceptowany natywnie; bramka bezpiecznej bazy testowej
 

@@ -21,6 +21,8 @@ Wszystkie istotne zmiany w projekcie.
   istniejącego DocumentList.test.tsx; izolowany i pełny rerun540PASS bez zmian kodu.
 - Raport `docs/audits/2026-11-07-document-payment-matching-local.md` opisuje wyniki,
   decyzje i ograniczenia. Bez migracji, AI/OCR, pracy na historii lub wdrożenia.
+- Usunięto wyłącznie własny efemeryczny testDB po odbiorze; istniejące bazy i produkcja
+  nietknięte. Kod i build zgodne z manifestami testowanego pakietu; commity lokalne.
 
 ## [Implementacja, przygotowanie] — 2026-11-07 — Dopasowanie płatności 5A
 
