@@ -2,6 +2,46 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, odebrane] — 2026-11-07 — Czytelne dopasowanie dokumentów do płatności 5A
+
+### Added
+- Dowody dopasowania PLN: jawne daty zakupu/księgowania i źródła, opis płatności,
+  kwota pierwotna/wolna, ostrożna wskazówka nazwy w opisie, zgodność planowanego konta.
+- Deterministyczna kolejność legacy/kwota/nazwa/data/IDs; zakup rozszerza okno wyników
+  bez zawężania starego zakresu. Osobne powody niedostępności dokumentu i stany listy.
+
+### Fixed
+- Nieaktualny wybór nie pozwala wysłać alokacji po zmianie filtrów/strony/refetch,
+  także dla identycznej odpowiedzi i przed rerenderem. 409 wymaga ponownego wyboru;
+  identyczny retry zachowuje klucz idempotencji. Brak automatycznej nowej transakcji.
+
+### Changed
+- Lokalny odbiór:1788backend/540frontend/153E2E+1oczekiwanyskip, lint/types/build PASS;
+  niezależny końcowy review bez uwag. Dodatkowy frontend run wykazał niestabilność
+  istniejącego DocumentList.test.tsx; izolowany i pełny rerun540PASS bez zmian kodu.
+- Raport `docs/audits/2026-11-07-document-payment-matching-local.md` opisuje wyniki,
+  decyzje i ograniczenia. Bez migracji, AI/OCR, pracy na historii lub wdrożenia.
+
+## [Implementacja, przygotowanie] — 2026-11-07 — Dopasowanie płatności 5A
+
+### Changed
+- Użytkownik zatwierdził plan i wykonanie natywne. Zweryfikowano izolację worktree
+  i interfejsy zadań. Przed testami/kodem blokada bezpieczeństwa: oba dopuszczone
+  porty testowej bazy zajęte przez wcześniejsze kontenery. Oczekiwanie na zgodę na
+  własny efemeryczny PostgreSQL bez publikacji portów; żadnych zmian produktu/baz.
+
+## [Plan, do zatwierdzenia] — 2026-11-07 — Dopasowanie dokumentów i płatności 5A
+
+### Added
+- Plan `docs/superpowers/plans/2026-11-07-document-payment-matching.md`: cztery
+  sekwencyjne zadania TDD, dokładny kontrakt dowodów, integracja GET, stany dialogu
+  i aktualność wyboru, testy/regresje oraz końcowy review. Bez implementacji produktu.
+
+### Changed
+- Użytkownik zatwierdził zakres odpowiedzią „tak”; spec oznaczony jako zaakceptowany.
+  Plan czeka na akceptację i wybór native/subagent-driven. Bez zgody na deploy,
+  migracje, AI/OCR i operacje na historii. Testów aplikacji w tej sesji nie uruchamiano.
+
 ## [Projekt, do zatwierdzenia] — 2026-11-07 — Dopasowanie dokumentów i płatności 5A
 
 - Po zgodzie na przygotowanie zakresu przejrzano obecny backend i frontend. Istnieją

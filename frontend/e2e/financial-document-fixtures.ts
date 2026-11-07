@@ -14,7 +14,11 @@ export const ids = {
 /** Stateful synthetic API: it records real UI contracts and never accepts an unregistered write. */
 export async function financialDocumentFixtures(
   page: Page,
-  options: { reviewError?: boolean; invoiceTotalMinor?: number } = {},
+  options: {
+    reviewError?: boolean;
+    invoiceTotalMinor?: number;
+    candidateEvidence?: boolean;
+  } = {},
 ) {
   const base = await fixtures(page);
   const mutations: Array<{
@@ -38,7 +42,7 @@ export async function financialDocumentFixtures(
     supplier_tax_id: null,
     number: "FV-100",
     issue_date: "2026-10-20",
-    sale_date: null,
+    sale_date: options.candidateEvidence ? "2026-10-30" : null,
     due_date: "2026-11-09",
     payee_iban: null,
     description: "Usługa testowa",
@@ -369,11 +373,37 @@ export async function financialDocumentFixtures(
                 {
                   transaction_id: "t40",
                   posting_id: ids.posting40,
-                  date: "2026-10-20",
+                  date: options.candidateEvidence ? "2026-11-02" : "2026-10-20",
                   account: "Konto testowe",
-                  amount_minor: 4000,
-                  unallocated_minor: 4000,
-                  reasons: [],
+                  amount_minor: options.candidateEvidence ? 10000 : 4000,
+                  unallocated_minor: options.candidateEvidence ? 10000 : 4000,
+                  reasons: options.candidateEvidence
+                    ? ["amount_exact", "purchase_date_within_window"]
+                    : [],
+                  ...(options.candidateEvidence
+                    ? {
+                        evidence: {
+                          description: "Stary dostawca — zakup testowy",
+                          currency: "PLN",
+                          purchase_date: "2026-10-30",
+                          purchase_date_source: "manual",
+                          booking_date: "2026-11-02",
+                          booking_date_source: "bank",
+                          date_comparison: {
+                            transaction_basis: "purchase",
+                            transaction_date: "2026-10-30",
+                            document_basis: "sale",
+                            document_date: "2026-10-30",
+                            delta_days: 0,
+                            within_window: true,
+                          },
+                          supplier_name_in_description: true,
+                          planned_account_matches: true,
+                          legacy_date_before_window: false,
+                          purchase_within_window: true,
+                        },
+                      }
+                    : {}),
                   legacy_inbox_reference: null,
                   recurring_conflicts: [],
                   recurring_forecast_before_pln: null,

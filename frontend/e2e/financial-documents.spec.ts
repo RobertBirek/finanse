@@ -2,6 +2,103 @@ import { expect, test } from "@playwright/test";
 import { financialDocumentFixtures, ids } from "./financial-document-fixtures";
 
 for (const viewport of [375, 1440]) {
+  test(`matching evidence and stale selection never creates a transaction at ${viewport}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport, height: 900 });
+    const api = await financialDocumentFixtures(page, {
+      candidateEvidence: true,
+    });
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/finance/bills/*/candidates**", async (route) => {
+      if (new URL(route.request().url()).searchParams.has("query")) await held;
+      await route.fallback();
+    });
+    await page.goto(`/finances/documents?bill=${ids.bill}`);
+    await page
+      .getByRole("button", { name: "Powiąż płatność", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Rozlicz płatność" });
+    await expect(dialog.getByText(/Zakup: 2026-10-30.*ręcznie/)).toBeVisible();
+    await expect(
+      dialog.getByText(/Księgowanie: 2026-11-02.*bank/),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText(
+        "Nazwa sprzedawcy z dokumentu występuje w opisie płatności",
+      ),
+    ).toBeVisible();
+    await expect(dialog.getByRole("radio")).not.toBeChecked();
+    await dialog.getByRole("radio").check();
+    await dialog.getByLabel("Szukaj istniejącej płatności").fill("dostawca");
+    await expect(dialog.getByRole("status")).toHaveText(/Pobieranie/);
+    await expect(
+      dialog.getByRole("button", { name: "Powiąż płatność", exact: true }),
+    ).toBeDisabled();
+    expect(api.mutations).toHaveLength(0);
+    release();
+    await expect(dialog.getByRole("radio")).not.toBeChecked();
+    await dialog.getByRole("radio").check();
+    await dialog.getByLabel("Kwota (PLN)").fill("40.00");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await dialog
+      .getByRole("button", { name: "Powiąż płatność", exact: true })
+      .click();
+    await expect(dialog).toHaveCount(0);
+    expect(
+      api.mutations.map(({ method, path, body }) => ({ method, path, body })),
+    ).toEqual([
+      {
+        method: "POST",
+        path: `/api/finance/bills/${ids.bill}/allocations`,
+        body: { version: 2, posting_id: ids.posting40, amount_minor: 4000 },
+      },
+    ]);
+    api.assertClean();
+  });
+
+  test(`candidate error and empty are distinct and never become a new expense at ${viewport}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport, height: 900 });
+    const api = await financialDocumentFixtures(page);
+    let fail = true;
+    await page.route("**/api/finance/bills/*/candidates**", (route) =>
+      fail
+        ? route.fulfill({ status: 500, json: { detail: "synthetic_failure" } })
+        : route.fulfill({
+            json: { items: [], total: 0, limit: 20, offset: 0 },
+          }),
+    );
+    await page.goto(`/finances/documents?bill=${ids.bill}`);
+    await page
+      .getByRole("button", { name: "Powiąż płatność", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Rozlicz płatność" });
+    await expect(dialog.getByRole("alert")).toHaveText(
+      /Nie udało się pobrać płatności/,
+    );
+    fail = false;
+    await dialog.getByRole("button", { name: "Spróbuj ponownie" }).click();
+    await expect(
+      dialog.getByText("Brak płatności w wybranych filtrach."),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Powiąż płatność", exact: true }),
+    ).toBeDisabled();
+    expect(api.mutations).toHaveLength(0);
+    api.assertClean();
+  });
+}
+
+for (const viewport of [375, 1440]) {
   test(`financial-document allocation and explicit forecast replacement at ${viewport}px`, async ({
     page,
   }) => {

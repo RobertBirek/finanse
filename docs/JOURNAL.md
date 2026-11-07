@@ -2,6 +2,79 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-07 — ODEBRANE lokalnie: dopasowanie dokumentów i płatności 5A
+
+- User zatwierdził scope→plan/native→osobnytestDB→„dokończ”. Implementacja lokalna,
+  bez zgody na merge/push/deploy/migrację/AI/OCR/importhistorii. Baza diffu69d53c3.
+- Task1 commit8493abe: opcjonalne evidence, czyste helpery dat/tekstu i sortkey;
+  Task2 b23133a: tylko GETcandidates+testy; Task3 93bffeb: prezentacja+freshness UI.
+  Mutatory, schema/models/guards/providers i produkcyjny checkout pozostają bez zmian.
+- Unit27RED→GREEN; Task2 RED16/8oldPASS (3fixturebugs naprawione w nowych testach)
+  →49focusedPASS z concurrency/guards; UI35focusedPASS, nowe E2E acceptance24PASS.
+- Pełny finalgate1788backend/10proxyDeselected/10knownwarnings2993.13s,
+  540frontend86files, Ruff/mypy147files/ESLint/tscPASS; buildPASSknownchunkwarning.
+  FullE2E153PASS+1expectedskip5.5min. Nie importować poprzednich wyników518/145.
+- Dodatkowy closingVitest:539PASS/1FAIL w starym DocumentList.test „opens a toast-linked
+  review even when the document is outside the current list page”; immediateassert
+  sprzedawcy trafił przed asyncinicjalizacją. Bez zmian source/test, isolated1PASS
+  i kolejny full540PASS46.25s. To flakeudokumentowany, nie ukryty ani „naprawiony”.
+- Świeży niezależny readonlyreview ses_e4a244217ffec2upN42pzty0O6 PASS bezC/I/Minor.
+  Pierwszy dispatch przerwanyusagequota, nie liczyć go jako review. Końcowy reviewer
+  czytał workingtree+untrackedfeaturefiles, nie tylkoHEAD. Bez kodowych poprawek po review.
+- Własny PG16 networknone/tmpfs/noports w namespace localhost5432, guardsfinanse_test
+  zachowane, innetestDB nieużywane. Użyto existingfinancial-document-venv zamiast
+  obsoletehostvenvmissingResponses; nikomu nie zmieniano dependencies. TestDB usuwany
+  wyłącznie po wszystkich task-done; potwierdzenie cleanup dopisać do raportu.
+- Decyzje techniczne i granice review wyliczone w audicie
+  `docs/audits/2026-11-07-document-payment-matching-local.md`. Jeden backendfullrun po
+  zamrożeniu źródeł równolegle z frontendem (koszt~50min); źródła/buildSHA sprawdzone.
+  Osobny matching.test dla macierzyfreshness. Nie ma odłożonych Minor z review.
+- Następny krok: wybór integracji przez usera; zostawić worktree/branch i VeloQ7dirty.
+  Wydanie wymaga osobnej zgody na dokładną rewizję backend/frontend i normalnej bramki
+  produkcyjnej; nie wdrażać samodzielnie ani nie ponawiać migracji kolorów/HEX/treeAPPLY.
+
+## 2026-11-07 — Plan 5A zaakceptowany natywnie; bramka bezpiecznej bazy testowej
+
+- User „tak, natywnie” zatwierdza plan i native implementation z jednym końcowym
+  reviewerem. Loaded executing-plans/session-workflow/using-git-worktrees/TDD,
+  przeczytano requiredhostdocs w kolejności oraz plan/spec/test-writing reference.
+- Potwierdzono linkedworktree na feat/financial-document-workflow. Ledger:
+  `.superpowers/sdd/2026-11-07-document-payment-matching/progress.md`, base69d53c3.
+  Pre-flight kontraktów 1→2/1→3/2→3/3→4 bez konfliktów, żadne zadanie nieukończone.
+- READ-ONLY ss/dockerps: localhost5432 zajmuje finanse-document-safety-testdb,
+  localhost55432 finanse-refactor-testdb. To istniejące kontenery innych zadań,
+  nie można uznać ich za własną jednorazową bazę. Fixture wykonuje create/drop schema.
+- BLOCKED przed baseline/kodem: potrzebna osobna zgoda na efemeryczny postgres16,
+  tmpfs, bez publikacji portów; pytest w jego izolowanej namespace na localhost5432.
+  Bez zmiany guards conftest, bez dotykania istniejących baz/kontenerów. Usunięcie
+  wyłącznie nowego testowego kontenera po odbiorze. Nie podłączano się do żadnej DB,
+  nie uruchamiano testów ani kodu produktu. Istniejące dirtyVelo/Q7 zachowane.
+
+## 2026-11-07 — Zakres 5A zatwierdzony; plan gotowy do przeglądu
+
+- User „tak” zatwierdza pełny zakres jako podstawę planu, nie uruchamia implementacji.
+  Użyto writing-plans; requiredhostdocs przeczytane w kolejności. Baza pracy69d53c3,
+  istniejące dirtyVelo/Q7 nietknięte. Nie ponawiano dawnych gate/produkcji/AI/OCR.
+- Plan `docs/superpowers/plans/2026-11-07-document-payment-matching.md` ma cztery
+  sekwencyjne jednostki: pureevidence+addytywnyschema → GETcandidates → UI+staleguards
+  → odbiórE2E/regresje/docs/review. Interfejs `BillCandidate.evidence` jest opcjonalnym
+  obiektem, stara odpowiedź bez dowodów nadal działa; page.unavailable_reason jest
+  osobne od pustych filtrów. Żadnej nowej mutacji/tabeli/migracji/runtime dependency.
+- Read-only source check doprecyzował jednostronne stare okno, nullable sourcepairs,
+  istniejący selectin oraz receiptkey od serializedintent. Nowe ±W zakupu tylko dodaje
+  widoczność, nie zawęża legacy; explicit bounds nadal po txn.date. Selectionepoch
+  jest wyłącznie lokalne, nie trafia do intent/payload i nie resetuje klucza retry.
+- Self-review planu: pokrycie spec§1–10, zgodność typów między zadaniami i pięć klas
+  ryzyk przypisanych do testów. Są jawne guardy na obcemetadata, prefixactual,
+  stale/refetch identicalresponse, timeoutretry i dwie strony ledgeru/splitamount.
+- Testy aplikacji/DB/E2E nieuruchomione: tylko plan i dokumentacja, żadnej nowej
+  deklaracji PASS aplikacji. Plan ostrzega o destructivefixture finanse_test i o slash
+  commands wskazujących /opt: przyszły wykonawca musi użyć swojego worktree/testDB.
+- Następny gate: użytkownik przegląda plan i wybiera native albo subagent-driven.
+  Rekomendacja native z jednym świeżym reviewerem na końcu, bo zadania współdzielą
+  mały kontrakt i nie modyfikują mutatorów. Po zgodzie invoke executing-plans (native)
+  lub subagent-driven-development; TDD/izolacja przed kodem. Bez deploy/migracji.
+
 ## 2026-11-07 — Projekt 5A gotowy do akceptacji: dokument ↔ płatność
 
 - User „ok, działaj” na przygotowanie zakresu po rekomendacji, NIE na implementację

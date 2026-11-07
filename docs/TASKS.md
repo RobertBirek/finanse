@@ -9,9 +9,21 @@ Backlog zadań ze statusami.
   daty/ranking, kontrakty/UI, testy i luki; bez nowych uruchomień/testów produktu.
 - [x] Projekt `docs/superpowers/specs/2026-11-07-document-payment-matching-design.md`
   po rozpoznaniu kodu; niezależny read-only builder check „nothing important left”.
-- [ ] Akceptacja pełnego zakresu; dopiero potem osobny szczegółowy plan i jego zgoda.
-- [ ] Lokalna implementacja po akceptacji planu. Brak zgody na produkcję/AI/historię;
-  poprzedni HEX i kolory pozostają bez zmian.
+- [x] Akceptacja pełnego zakresu: user „tak” 2026-11-07.
+- [x] Szczegółowy plan `docs/superpowers/plans/2026-11-07-document-payment-matching.md`:
+  cztery zadania TDD, dokładne interfejsy, scenariusze regresji i self-review pokrycia spec.
+- [x] Akceptacja planu i wykonanie natywne: user „tak, natywnie”.
+- [x] Zgoda na własny efemeryczny PostgreSQL bez publikacji portów: user „ok”.
+- [x] Lokalny kod: addytywne evidence, daty/proweniencja, ostrożna nazwa-w-opisie,
+  ranking i okno zakupu bez zawężania legacy, stany UI i ochrona aktualności wyboru.
+- [x] TDD/regresje: 27 unit dowodów, 49 backend focused i 35 UI/API/detail focused;
+  pełne1788backend/540frontend oraz lint/types PASS; build i focused24E2E PASS.
+- [x] Całościowe153E2E PASS+1expectedskip i niezależny końcowy review bez uwag.
+  Pierwszą próbę przerwał limit; wznowiony reviewer ukończył pełny scope bez zmian kodu.
+- [x] Ostateczny lokalny odbiór i raport z decyzjami/ograniczeniami; commity lokalne.
+  Dodatkowy stary DocumentList.test flake:539PASS/1FAIL→1isolatedPASS→540fullPASS,
+  bez napraw niezwiązanego zakresu. Własny kontener testowy sprzątany przy zamknięciu.
+  Bez zgody na produkcję/AI/historię; stare testDB i produkcja nietknięte.
 
 ## Edycja kodu koloru HEX (2026-11-07)
 

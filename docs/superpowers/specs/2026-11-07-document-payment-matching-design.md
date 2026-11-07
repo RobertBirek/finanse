@@ -1,14 +1,20 @@
 # Dopasowanie dokumentu do istniejącej płatności — etap 5A
 
-Data: 2026-11-07. Status: **propozycja zakresu do zatwierdzenia**, nie plan wykonania.
+Data: 2026-11-07. Status: **zakres i plan zatwierdzone**, wykonanie natywne.
+
+Lokalny odbiór implementacji PASS 2026-11-07: raport
+`docs/audits/2026-11-07-document-payment-matching-local.md`. Nie wdrożono.
 
 ## 1. Intencja i granica zgody
 
 Użytkownik zaakceptował przygotowanie zakresu po przeglądzie istniejącego mechanizmu
 („ok, działaj” po pytaniu „Przygotować taki zakres?”). Kierunek: kwota, waluta,
 kontrahent, różnica dat zakupu/księgowania, zrozumiałe powody i ręczna decyzja,
-bez tworzenia drugiej transakcji. Szczegóły poniżej są **rekomendacją autora**.
-Wymagają akceptacji całego zakresu, następnie osobnego planu, przed kodem produktu.
+bez tworzenia drugiej transakcji. Szczegóły poniżej były rekomendacją autora i zostały
+zatwierdzone odpowiedzią użytkownika **„tak”** na pytanie o przyjęcie pełnego zakresu
+jako podstawy planu implementacji. Powstał osobny plan:
+`docs/superpowers/plans/2026-11-07-document-payment-matching.md`.
+Plan i natywny sposób wykonania zatwierdzono następnie odpowiedzią „tak, natywnie”.
 Nie ma zgody na produkcyjne operacje, AI/OCR, przetwarzanie historii lub wdrożenie.
 
 Cel pierwszej jednostki: łatwiej rozpoznać właściwą istniejącą płatność w obecnym
@@ -220,8 +226,9 @@ dokładną rewizję i spójny backend/frontend; worker zależnie od rzeczywisteg
 
 Read-only builder check zakończony: **„nothing important left”**
 (`ses_e4ac3f43bffeZniSpFmVMzIllg`). Nie zgłoszono pytań blokujących plan ani potrzeby
-rozszerzenia zakresu. Projekt nadal czeka na akceptację użytkownika; review nie jest
-zgodą na kod, migrację lub wdrożenie.
+rozszerzenia zakresu. Następnie użytkownik zatwierdził zakres odpowiedzią „tak”.
+Po akceptacji planu i wyborze native wykonano lokalną implementację i niezależny
+końcowy review bez uwag. Nie oznacza to zgody na migrację lub wdrożenie.
 
 Wykonawca wybiera nazwy nowych pól/enumów, lokalną strukturę helperów i komponentów,
 bezpieczne skracanie długich opisów i szczegóły batch query w istniejącym stacku.
