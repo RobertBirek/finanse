@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, a68d9e4] — 2026-11-07 — Dopasowanie dokumentów i płatności 5A
+
+### Changed
+- Po zgodzie użytkownika: fast-forward i push do main oraz spójne wdrożenie
+  backend/worker/frontend a68d9e4. Bez migracji; schematf3a9 i usługi danych bez zmian.
+- Świeży backup/restore/checksums/ledger PASS, HTTPShealth200/APIauth401/assets/browser
+  375/1440 i errorlogs0/restart0 PASS; active metadata i trwałe dowody zapisane.
+
+### Fixed
+- Pierwszą próbę wycofano pod osłoną503: katalogi kodu pakietu0700 blokowały non-root
+  import. Poprawiono wyłącznie uprawnienia kopii kodu w pakiecie (bez zmian treści),
+  potwierdzono offline imports UID10001/networknone i skutecznie wdrożono ponownie.
+- Pełny raport: `docs/audits/2026-11-07-document-payment-matching-production.md`.
+
 ## [Local, odebrane] — 2026-11-07 — Czytelne dopasowanie dokumentów do płatności 5A
 
 ### Added

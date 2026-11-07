@@ -2,6 +2,37 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-07 — WDROŻONE: dopasowanie dokumentów ↔ płatności 5A, a68d9e4
+
+- User „scal, push do main i wdróż” po localacceptance. main8121512 ancestor a68d9e4,
+  FFbezkonfliktów i push79cfa78→a68d9e4, exactlsremotePASS. Kod nie zmienił się po
+  pełnym1788/540/153E2E+1skip/review; świeże lint/types/buildPASS/hashmanifestmatch.
+- Read deploycommand/backupoperations/active metadata; runtime95fbackendworker/ebeHEX.
+  Prepareimmutableallthreeoffline, runtime requirementsidentical, candidateconfig
+  identyczny ze starym pozaimage/build. Env/policies/networks/mounts zachowane.
+- Freshencryptedbackup plus własnyloopbackrestore payment_matching5a_20261107_restore:
+  checksum/schemaf3a9/ledger0badPASS, bezAlembic, własna baza kontrolna po odbiorze usunięta.
+- INCIDENT firstattempt: public503fence, backend/workerrestart ModuleNotFoundError.
+  Natychmiastowy rollback poprzednioodebranegopakietu, publichealth/login200.
+  RCAoffline: prepareextract umask077 dirs0700 copiedtoapp, composeuser10001 cannot
+  traverse. Starysource dirs0755. Naprawa tylko copiedreleasebackend permissions,
+  unchangedcontentallfilesGitSHA. Failedimages zachowane, dwaobrazy przebudowane.
+  Offlineuser10001/networknone readallsources/importmain+worker/evidenceschemaPASS.
+- Ponowny rollout trzechusług FENCED, internalhealth/env/exactimages/appmountabsence/
+  unchangeddataIDsPASS, potemnormalnginx/publichealth200/bills+candidates401/assetsPASS.
+  BrowserGETonly375/1440/errors0/mutations0/egress0/login+protectedredirectsPASS.
+  Runningall3/restarts0/logerrors0, productionreadonlyschemaf3a9/ledger0badPASS.
+- Active metadata atomowo dopiero po weryfikacji. forwardoverride:
+  `/opt/finanse/webapp/releases/a68d9e4/compose.active.yaml`; rollbackebe441eoverride
+  (95fbackendworker/ebeHEXfrontend) zachowany. Bez migracji/importów/policytransition/
+  historybatch/realAI lub prawdziwego powiązania płatności w smoke.
+- Trwałe dowody `/opt/finanse/webapp/releases/a68d9e4/evidence/`, lokale
+  `/tmp/opencode/payment-matching-5a-release/`; raport produkcyjny w docs/audits.
+  Nie drukować sekretów/privatebaseline. Hostuntrackedwebapp i dirtyVeloQ7 zachowane.
+- Następny zakres: user feedback i osobny TDD fix prepare_release sourcepermissions+
+  offlineimportgate. Nie wdrażać samodzielnie poprawki automatyzacji ani ponawiać
+  migracji kolorów/drzewakategorii/oldHEX. Obecny feature działa na exacta68d9e4.
+
 ## 2026-11-07 — ODEBRANE lokalnie: dopasowanie dokumentów i płatności 5A
 
 - User zatwierdził scope→plan/native→osobnytestDB→„dokończ”. Implementacja lokalna,

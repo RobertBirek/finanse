@@ -2,7 +2,7 @@
 
 Backlog zadań ze statusami.
 
-## Dokumenty ↔ płatności, etap 5A (2026-11-07, projekt)
+## Dokumenty ↔ płatności, etap 5A (2026-11-07, wdrożone)
 
 - [x] Zgoda na przygotowanie najmniejszego zakresu po przeglądzie: user „ok, działaj”.
 - [x] Read-only backend/frontend recon: obecne kwalifikacje, alokacje i replay,
@@ -23,7 +23,13 @@ Backlog zadań ze statusami.
 - [x] Ostateczny lokalny odbiór i raport z decyzjami/ograniczeniami; commity lokalne.
   Dodatkowy stary DocumentList.test flake:539PASS/1FAIL→1isolatedPASS→540fullPASS,
   bez napraw niezwiązanego zakresu. Własny kontener testowy usunięty i brak potwierdzony.
-  Bez zgody na produkcję/AI/historię; stare testDB i produkcja nietknięte.
+  Na tym etapie bez produkcji; następnie osobna zgoda na merge/push/deploy poniżej.
+- [x] User „scal, push do main i wdróż”: FF+pushmaina68d9e4 i wdrożenie trzech usług;
+  freshbackup/restore, no-migration, HTTP/auth/assets/browser/logi/schema/ledger PASS.
+  Raport `docs/audits/2026-11-07-document-payment-matching-production.md`.
+- [ ] Osobna regresyjna poprawka prepare_release: normalizacja uprawnień skopiowanych
+  katalogów backendu po gitarchive przyumask077 + bramka nonroot import przed rollout.
+  W tym wydaniu poprawiono tylko gotowy pakiet; pierwotną próbę wycofano bez zmian danych.
 
 ## Edycja kodu koloru HEX (2026-11-07)
 
