@@ -158,6 +158,32 @@ class BillResponse(BaseModel):
     forecast_exclusion_reasons: list[str]
 
 
+BillDateSource = Literal["manual", "bank", "document", "import"]
+
+
+class BillCandidateDateComparison(BaseModel):
+    transaction_basis: Literal["purchase", "booking", "legacy"]
+    transaction_date: dt.date
+    document_basis: Literal["sale", "due", "issue", "today"]
+    document_date: dt.date
+    delta_days: int
+    within_window: bool
+
+
+class BillCandidateEvidence(BaseModel):
+    description: str
+    currency: Literal["PLN"]
+    purchase_date: dt.date | None = None
+    booking_date: dt.date | None = None
+    purchase_date_source: BillDateSource | None = None
+    booking_date_source: BillDateSource | None = None
+    date_comparison: BillCandidateDateComparison
+    supplier_name_in_description: bool
+    planned_account_matches: bool | None = None
+    legacy_date_before_window: bool
+    purchase_within_window: bool
+
+
 class BillCandidate(BaseModel):
     transaction_id: uuid.UUID
     posting_id: uuid.UUID
@@ -170,6 +196,7 @@ class BillCandidate(BaseModel):
     recurring_conflicts: list[str]
     recurring_forecast_before_pln: int | None = None
     recurring_forecast_after_pln: int | None = None
+    evidence: BillCandidateEvidence | None = None
 
 
 class BillPage(BaseModel):
@@ -184,6 +211,15 @@ class BillCandidatePage(BaseModel):
     total: int
     limit: int
     offset: int
+    unavailable_reason: (
+        Literal[
+            "document_inactive",
+            "document_unapproved",
+            "currency_unsupported",
+            "document_reconciled",
+        ]
+        | None
+    ) = None
 
 
 class BillFilters(BaseModel):
