@@ -5,7 +5,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.finance.credit_card_math import MAX_MONEY
 
@@ -25,6 +25,36 @@ class CardConfig(CardInput):
     due_day: int = Field(ge=1, le=31, strict=True)
     grace_days: int = Field(ge=0, le=366, strict=True)
     expected_version: int = Field(ge=0, strict=True)
+
+
+class CardSettings(BaseModel):
+    """Small account-edit view; no ledger totals or child histories."""
+
+    model_config = ConfigDict(from_attributes=True)
+    limit_pln: int
+    apr: Decimal
+    cycle_close_day: int
+    due_day: int
+    grace_days: int
+    version: int
+
+    @field_serializer("apr")
+    def serialize_apr(self, value: Decimal) -> str:
+        return format(value, ".4f")
+
+
+class CardSummary(BaseModel):
+    account_id: uuid.UUID
+    name: str
+    is_active: bool
+    color: str | None
+    configured: bool
+    limit_pln: int | None
+    debt_pln: int
+    available_pln: int | None
+    pending_debits_pln: int
+    overpayment_pln: int
+    overlimit_pln: int | None
 
 
 class StatementCreate(CardInput):

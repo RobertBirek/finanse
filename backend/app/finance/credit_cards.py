@@ -31,13 +31,14 @@ from app.finance.credit_card_schemas import (
     BankSchedule,
     CardConfig,
     CardInput,
+    CardSummary,
     ChargeCreate,
     PlanCreate,
     StatementCreate,
 )
 from app.finance.dates import _local_today
 from app.finance.document_guards import lock_document_mutations
-from app.finance.models import Category, FinancialTransaction, LoanAgreement, Posting
+from app.finance.models import Account, Category, FinancialTransaction, LoanAgreement, Posting
 from app.finance.queries import lock_accounts
 from app.finance.schemas import PostingCreate, TransactionCreate
 from app.finance.transactions import create_card_refund_transaction, create_transaction
@@ -72,6 +73,14 @@ async def _card(
 async def configure(
     db: AsyncSession, owner: uuid.UUID, account_id: uuid.UUID, data: CardConfig
 ) -> dict:
+    await save_config(db, owner, account_id, data)
+    return await detail(db, owner, account_id)
+
+
+async def save_config(
+    db: AsyncSession, owner: uuid.UUID, account_id: uuid.UUID, data: CardConfig
+) -> CreditCard:
+    """Shared profile write, without loading statement/plan history for account editing."""
     await lock_document_mutations(db, owner)
     accounts = await lock_accounts(db, owner, {account_id}, exclusive=True)
     account = accounts.get(account_id)
@@ -103,7 +112,9 @@ async def configure(
     for name, value in data.model_dump(exclude={"expected_version"}).items():
         setattr(item, name, value)
     # Keep the same account/ledger; classification is not a balance migration.
-    account.type = "credit"
+    account.type = "credit_card"
+    account.credit_card = item
+    account.can_change_currency = False
     await db.flush()
     await log_event(
         db,
@@ -114,7 +125,85 @@ async def configure(
         old_state=before,
         new_state=_audit_data(data),
     )
-    return await detail(db, owner, account_id)
+    return item
+
+
+async def list_summaries(db: AsyncSession, owner: uuid.UUID) -> list[CardSummary]:
+    rows = (
+        await db.execute(
+            select(Account, CreditCard)
+            .outerjoin(
+                CreditCard, (CreditCard.account_id == Account.id) & (CreditCard.user_id == owner)
+            )
+            .where(Account.user_id == owner, Account.type == "credit_card")
+            .order_by(Account.name, Account.id)
+        )
+    ).all()
+    if not rows:
+        return []
+    amounts = (
+        await db.execute(
+            select(
+                Posting.account_id,
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                FinancialTransaction.is_pending.is_(False),
+                                case(
+                                    (Posting.direction == "credit", Posting.source_amount),
+                                    else_=-Posting.source_amount,
+                                ),
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                FinancialTransaction.is_pending.is_(True)
+                                & (Posting.direction == "debit"),
+                                Posting.source_amount,
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ),
+            )
+            .join(FinancialTransaction, FinancialTransaction.id == Posting.transaction_id)
+            .where(
+                FinancialTransaction.user_id == owner,
+                FinancialTransaction.date <= _local_today(),
+                Posting.account_id.in_([a.id for a, _ in rows]),
+            )
+            .group_by(Posting.account_id)
+        )
+    ).all()
+    balances = {account_id: (int(balance), int(holds)) for account_id, balance, holds in amounts}
+    result = []
+    for account, card in rows:
+        balance, holds = balances.get(account.id, (0, 0))
+        position = card_position(card.limit_pln if card else 0, balance, holds)
+        result.append(
+            CardSummary(
+                account_id=account.id,
+                name=account.name,
+                is_active=account.is_active,
+                color=account.color,
+                configured=card is not None,
+                limit_pln=card.limit_pln if card else None,
+                debt_pln=position["debt_pln"],
+                pending_debits_pln=holds,
+                available_pln=position["available_pln"] if card else None,
+                overpayment_pln=position["overpayment_pln"],
+                overlimit_pln=position["overlimit_pln"] if card else None,
+            )
+        )
+    return result
 
 
 def _audit_data(data: CardInput) -> dict[str, Any]:

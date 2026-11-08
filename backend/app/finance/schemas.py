@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.finance.account_validation import normalize_bic, normalize_iban
+from app.finance.credit_card_schemas import CardConfig, CardSettings
 from app.finance.rule_schemas import AssignmentOrigin
 
 
@@ -16,7 +17,7 @@ def normalize_color(value: str | None) -> str | None:
 
 class AccountCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    type: str = Field(pattern=r"^(checking|savings|cash|credit|investment)$")
+    type: str = Field(pattern=r"^(checking|savings|cash|credit|credit_card|investment)$")
     currency: str = Field(default="PLN", min_length=3, max_length=3)
     is_active: bool = True
     is_budget_account: bool = True
@@ -26,16 +27,32 @@ class AccountCreate(BaseModel):
     bic: str | None = Field(default=None, max_length=11)
     notes: str | None = None
     color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    credit_card: CardConfig | None = None
 
     _normalize_iban = field_validator("iban")(normalize_iban)
     _normalize_bic = field_validator("bic")(normalize_bic)
     _normalize_color = field_validator("color")(normalize_color)
 
+    @model_validator(mode="after")
+    def validate_card_configuration(self) -> "AccountCreate":
+        if self.type == "credit_card":
+            if self.credit_card is None:
+                raise ValueError("Credit card settings are required")
+            if self.currency.upper() != "PLN" or not self.is_active:
+                raise ValueError("An active PLN account is required for a new card")
+            if self.credit_card.expected_version != 0:
+                raise ValueError("A new card must use version zero")
+        elif self.credit_card is not None:
+            raise ValueError("Card settings require the credit_card account type")
+        return self
+
 
 class AccountUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     currency: str | None = Field(default=None, min_length=3, max_length=3)
-    type: str | None = Field(default=None, pattern=r"^(checking|savings|cash|credit|investment)$")
+    type: str | None = Field(
+        default=None, pattern=r"^(checking|savings|cash|credit|credit_card|investment)$"
+    )
     is_active: bool | None = None
     is_budget_account: bool | None = None
     closed_at: dt.date | None = None
@@ -45,6 +62,14 @@ class AccountUpdate(BaseModel):
     bic: str | None = Field(default=None, max_length=11)
     notes: str | None = None
     color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    credit_card: CardConfig | None = None
+
+    @field_validator("credit_card")
+    @classmethod
+    def reject_null_card(cls, value: CardConfig | None) -> CardConfig:
+        if value is None:
+            raise ValueError("Card settings cannot be removed; deactivate the account instead")
+        return value
 
     _normalize_iban = field_validator("iban")(normalize_iban)
     _normalize_bic = field_validator("bic")(normalize_bic)
@@ -88,6 +113,7 @@ class AccountResponse(BaseModel):
     closed_at: dt.date | None
     created_at: dt.datetime
     updated_at: dt.datetime
+    credit_card: CardSettings | None = None
 
     model_config = {"from_attributes": True}
 

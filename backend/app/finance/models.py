@@ -19,7 +19,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.finance import credit_card_models as _credit_card_models  # noqa: F401
+from app.finance import credit_card_models as _credit_card_models
 from app.finance import receipt_models as _receipt_models  # noqa: F401
 from app.finance import receipt_read_models as _receipt_read_models  # noqa: F401
 
@@ -70,6 +70,15 @@ class Account(Base):
     @can_change_currency.setter
     def can_change_currency(self, value: bool) -> None:
         self._can_change_currency = value
+
+    @property
+    def credit_card(self) -> _credit_card_models.CreditCard | None:
+        # Attached by the account query/write, never a lazy query during serialization.
+        return getattr(self, "_card_profile", None)
+
+    @credit_card.setter
+    def credit_card(self, value: _credit_card_models.CreditCard | None) -> None:
+        self._card_profile = value
 
 
 class Category(Base):

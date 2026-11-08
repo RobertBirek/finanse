@@ -24,7 +24,18 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCrea
     currency = data.currency.upper()
     if currency not in SUPPORTED_CURRENCIES:
         raise ValueError("Unsupported currency")
-    account = Account(user_id=user_id, **data.model_dump(exclude={"currency"}), currency=currency)
+    account = Account(
+        user_id=user_id, **data.model_dump(exclude={"currency", "credit_card"}), currency=currency
+    )
+    if data.credit_card is not None:
+        from app.finance.credit_cards import save_config
+
+        await lock_document_mutations(db, user_id)
+        async with db.begin_nested():
+            db.add(account)
+            await db.flush()
+            await save_config(db, user_id, account.id, data.credit_card)
+        return account
     db.add(account)
     await db.flush()
     account.can_change_currency = True
@@ -34,17 +45,26 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCrea
 async def update_account(
     db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID, data: AccountUpdate
 ) -> Account | None:
+    if data.credit_card is not None:
+        async with db.begin_nested():
+            return await _update_account(db, user_id, account_id, data)
+    return await _update_account(db, user_id, account_id, data)
+
+
+async def _update_account(
+    db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID, data: AccountUpdate
+) -> Account | None:
     # Categorization approves a snapshot of this account's full mapped state.
     # Serialize all account edits with it before any account/ledger row locks.
     await lock_document_mutations(db, user_id)
-    update_data = data.model_dump(exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True, exclude={"credit_card"})
     if "currency" in update_data:
         existing = await get_account(db, user_id, account_id)
         if existing is not None and update_data["currency"] != existing.currency:
             await guard_bill_account_change(
                 db, user_id, account_id, {"currency": update_data["currency"]}
             )
-    if data.currency is not None:
+    if data.currency is not None or data.credit_card is not None or data.type == "credit_card":
         await lock_accounts(db, user_id, {account_id}, exclusive=True)
     account = await get_account(db, user_id, account_id)
     if account is None:
@@ -54,9 +74,14 @@ async def update_account(
     configured = await db.scalar(select(CreditCard.id).where(CreditCard.account_id == account_id))
     if configured and (
         ("currency" in update_data and update_data["currency"] != "PLN")
-        or ("type" in update_data and update_data["type"] != "credit")
+        or ("type" in update_data and update_data["type"] != "credit_card")
     ):
         raise ValueError("Configured credit card currency/type is locked")
+    target_type = update_data.get("type", account.type)
+    if data.credit_card is not None and target_type != "credit_card":
+        raise ValueError("Card settings require the credit_card account type")
+    if target_type == "credit_card" and not configured and data.credit_card is None:
+        raise ValueError("Credit card settings are required")
     if (
         "currency" in update_data
         and update_data["currency"] != account.currency
@@ -66,6 +91,10 @@ async def update_account(
     for key, value in update_data.items():
         setattr(account, key, value)
     await db.flush()
+    if data.credit_card is not None:
+        from app.finance.credit_cards import save_config
+
+        await save_config(db, user_id, account_id, data.credit_card)
     return account
 
 

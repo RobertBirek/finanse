@@ -46,6 +46,7 @@ def _account_rows(user_id: uuid.UUID):
     return (
         select(
             Account,
+            CreditCard,
             func.coalesce(balances.c.balance, 0),
             func.coalesce(balances.c.balance_source, 0),
             (Account.source == "manual")
@@ -59,7 +60,10 @@ def _account_rows(user_id: uuid.UUID):
                 | (LoanAgreement.payment_account_id == Account.id)
             )
             .exists()
-            & ~select(CreditCard.id).where(CreditCard.account_id == Account.id).exists()
+            & ~select(CreditCard.id)
+            .where(CreditCard.account_id == Account.id)
+            .correlate(Account)
+            .exists()
             & ~select(ActualImportMapping.id)
             .where(
                 ActualImportMapping.user_id == Account.user_id,
@@ -69,6 +73,10 @@ def _account_rows(user_id: uuid.UUID):
             .exists(),
         )
         .outerjoin(balances, balances.c.account_id == Account.id)
+        .outerjoin(
+            CreditCard,
+            (CreditCard.account_id == Account.id) & (CreditCard.user_id == Account.user_id),
+        )
         .where(Account.user_id == user_id)
     )
 
@@ -76,7 +84,8 @@ def _account_rows(user_id: uuid.UUID):
 async def get_accounts(db: AsyncSession, user_id: uuid.UUID) -> list[Account]:
     result = await db.execute(_account_rows(user_id).order_by(Account.name, Account.id))
     accounts = []
-    for account, balance, balance_source, can_change_currency in result.all():
+    for account, card, balance, balance_source, can_change_currency in result.all():
+        account.credit_card = card
         account._balance = int(balance)
         account._balance_source = int(balance_source)
         account.can_change_currency = bool(can_change_currency)
@@ -91,7 +100,8 @@ async def get_account(
     row = result.one_or_none()
     if row is None:
         return None
-    account, balance, balance_source, can_change_currency = row
+    account, card, balance, balance_source, can_change_currency = row
+    account.credit_card = card
     account._balance = int(balance)
     account._balance_source = int(balance_source)
     account.can_change_currency = bool(can_change_currency)

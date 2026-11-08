@@ -97,6 +97,16 @@ router.include_router(receipt_router)
 router.include_router(receipt_read_router)
 
 
+@router.get("/credit-cards")
+async def list_credit_cards(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from app.finance.credit_cards import list_summaries
+
+    return await list_summaries(db, current_user.id)
+
+
 @router.post("/accounts", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
 async def create_account_endpoint(
     data: AccountCreate,
