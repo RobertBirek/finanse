@@ -26,8 +26,9 @@ Backlog zadań ze statusami.
 - [x] Końcowy browser375/1440 i obserwacja316s/31checks, health200/restarty0/błędy0/
   ledger0naruszeń/Redisready PASS; atomowe active metadata, trwałe dowody i cleanup
   wyłącznie dwóch własnych restoreDB po kontroli OID/braku połączeń, bez force.
-- [ ] Świadomie skonfigurować istniejące konto Velo: produkcja miała zero profili;
-  wdrożenie nie zmieniło typu żadnego rachunku i nie utworzyło automatycznie karty.
+- [x] Po odrębnej zgodzie „masz dane skonfiguruj od razu” i wyborze „Robert” zapisano
+  zgodne warunki na istniejącym profilu Velo: due17→12/grace56→57/version1→2;
+  limit33600/APR14.50/cykl17 bez zmian. Retencja/pozycja/odczyt po commit PASS.
 
 Raport `docs/audits/2026-11-08-credit-card-accounts-local.md`;
 produkcja `docs/audits/2026-11-08-credit-card-accounts-production.md`;
@@ -58,8 +59,10 @@ plan `docs/superpowers/plans/2026-11-08-credit-card-accounts.md`.
 - [x] Końcowa obserwacja312s/31kontroli, logi/restarty0/health/Redis/ledger PASS;
   atomowe active metadata, trwałe dowody i dokumentacja wdrożenia. Cleanup tylko
   dwóch własnych restoreDB z kontrolą OID i braku połączeń, bez force.
-- [ ] Świadoma konfiguracja istniejącego konta karty i uzgodnienie z wyciągiem.
-  Brak automatycznego przepisywania historii, sald lub odtwarzania starych planów.
+- [x] Świadoma konfiguracja istniejącej karty, odrębna zgoda i wybór właściciela:
+  `docs/audits/2026-11-08-velo-card-configuration.md`; bez przepisywania sald/historii.
+- [ ] Uzgodnienie aktualnego zadłużenia z najnowszym wyciągiem, jeśli wymagane;
+  nie utożsamiać zapisu warunków z takim uzgodnieniem. Starych planów nie odtwarzano.
 
 Raport `docs/audits/2026-11-07-credit-cards-local.md`,
 wdrożenie `docs/audits/2026-11-08-credit-cards-production.md`,

@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, konfiguracja] — 2026-11-08 — Warunki istniejącej karty Velo
+
+### Changed
+- Po „masz dane skonfiguruj od razu” i wskazaniu właściciela „Robert” zapisano
+  warunki istniejącego profilu „VELOBANK - karta”: limit33600PLN, APR14.50%,
+  zamknięcie cyklu17, domyślna spłata12, maksymalnie57dni bezodsetkowych.
+- Limit/APR/cykl były już zgodne; zmieniono wyłącznie dzień spłaty17→12 i okres56→57,
+  wersja1→2. Zapis przez kontrolowany serwis domenowy, z audytem i dodatkowym śladem
+  operacji agenta po jawnej zgodzie. Odczyt po commit i przegląd kart potwierdzone.
+- Bez tworzenia kont, sesji, transakcji lub planów; wszystkie pozostałe wiersze,
+  warunki innych kart i bieżące pozycje finansowe zachowane. Świeży backup PASS.
+  Raport `docs/audits/2026-11-08-velo-card-configuration.md`.
+
 ## [Production, 7801ba5] — 2026-11-08 — Konta kart i przegląd
 
 ### Changed

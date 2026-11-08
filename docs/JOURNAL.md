@@ -2,6 +2,33 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-08 — Velo skonfigurowane po osobnej zgodzie właściciela
+
+- User „masz dane skonfiguruj od razu”; przedstawione konkretne warunki33600PLN/
+  APR14.50/cykl18–17/due12/maxgrace57, bez sald/historii/closedplans.
+  Required4hostdocs readinorder. Dokładna nazwa zwróciła2konta różnych właścicieli,
+  więc pierwszy readonly discovery celowoSTOP bez mutacji. Question wybór „Robert”
+  jednoznacznie zatwierdził konto; drugi profil „Test” pozostał nietknięty.
+- Robert miał już credit_card/profileversion1/limit3360000/APR14.5000/close17,
+  ale due17/grace56. Pinnedowner/accountUUIDs storedprivate, UIusernotimpersonated,
+  żadnej sesji/tokenów. FreshencryptedbackupservicePASS przed zapisem.
+- Jednorazowe configure() w istniejącym7801ba5backendzie przez domenowyserwis:
+  mutexmutations→exclusiveaccountlock, REPEATABLEREADtransaction, expectedversion1
+  i exactprofilebeforeguard. Ustawiono due12/grace57/version2; resztatermsunchanged.
+  Domainaudit configure +operator_configuration performed_byagent z uzasadnieniem
+  jawnej zgody, bez nadpisywania wcześniejszych auditów.
+- SHA256JSONsnapshot wszystkich pozostałych tabel (w tym accounts/ledger/schedules/
+  documents/users/sessions) i innych profili przed/po zgodne. Plans/statements/
+  charges/allocations/positiondebt/available/pending/overpayment/overlimit unchanged.
+  Dodatkowy readonlypostcommit detail+list_summaries potwierdził trwałość i listę.
+- Dowody `/tmp/opencode/velo-card-config-20261108/`:authorization.json,
+  configuration-proof.json, backup-status.log; UUIDs/rozpoznanie/logiprivate.
+  Raport `docs/audits/2026-11-08-velo-card-configuration.md`. Brak zmian kodu,
+  migracji, obrazów lub restartów; środowisko nadal7801ba5/schema739.
+- Konfiguracja NIEoznacza uzgodnienia aktualnego zadłużenia z bankiem. Najnowszy
+  wyciąg i rzeczywisty termin mają pierwszeństwo, grace57 warunkowo. Nieodtwarzać
+  zamkniętychplanów. Usernieprosił o zmiany na drugim koncie o tej samej nazwie.
+
 ## 2026-11-08 — Konta kart7801ba5 wdrożone i zweryfikowane
 
 - Jawne „scal, wypchnij do main i wdróż”, question „Tak, migracja i wdrożenie”

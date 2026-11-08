@@ -1,7 +1,8 @@
 # Karty kredytowe i plany ratalne
 
 > Podział ekranów wdrożony w release `7801ba5` (2026-11-08), schemat `739144d5eaef`.
-> Samo wdrożenie nie skonfigurowało konta Velo — należy edytować istniejący rachunek.
+> Samo wdrożenie nie konfigurowało Velo. Po osobnej zgodzie użytkownika warunki
+> istniejącego profilu zapisano 2026-11-08; nie utworzono kolejnego rachunku.
 
 ## Konfiguracja istniejącego konta
 
