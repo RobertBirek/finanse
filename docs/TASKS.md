@@ -20,9 +20,17 @@ Backlog zadań ze statusami.
   JUnit/kolekcja/manifest źródeł, dokumentacja i końcowy odbiór lokalny PASS.
 - [x] Cleanup tylko własnego PG i jego wolumenu po kontroli ID/nazwy/etykiety/mountów;
   potwierdzony brak, bez force/prune i zmian innych środowisk.
-- [ ] Osobny merge/push/deploy i wykonanie migracji produkcyjnej wymagają nowej zgody.
+- [x] User „scal, wypchnij do main i wdróż”; osobne zatwierdzenie rewizji7801ba5,
+  migracji00a9→739, backup/restore/maintenance i klasyfikacyjnego rollbacku739→00a9.
+  FF/pushmain i trzy aplikacje wdrożone; retencja62tabel/ledger/summary/HTTPS/auth PASS.
+- [x] Końcowy browser375/1440 i obserwacja316s/31checks, health200/restarty0/błędy0/
+  ledger0naruszeń/Redisready PASS; atomowe active metadata, trwałe dowody i cleanup
+  wyłącznie dwóch własnych restoreDB po kontroli OID/braku połączeń, bez force.
+- [ ] Świadomie skonfigurować istniejące konto Velo: produkcja miała zero profili;
+  wdrożenie nie zmieniło typu żadnego rachunku i nie utworzyło automatycznie karty.
 
 Raport `docs/audits/2026-11-08-credit-card-accounts-local.md`;
+produkcja `docs/audits/2026-11-08-credit-card-accounts-production.md`;
 plan `docs/superpowers/plans/2026-11-08-credit-card-accounts.md`.
 
 ## Karty kredytowe i plany ratalne (2026-11-07)

@@ -2,6 +2,43 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-08 — Konta kart7801ba5 wdrożone i zweryfikowane
+
+- Jawne „scal, wypchnij do main i wdróż”, question „Tak, migracja i wdrożenie”
+  dla7801ba5/00a9→739/3apps/backup+restoreDBcleanup/maintenance. Osobno „Tak, tylko ten
+  rollback” na odwrotną klasyfikację739→00a9 przed oldimages; old020nieobsługuje
+  newcredit_card, więc zwykłyapprollbackniewystarczający. Brak zgody na earlierDOWN,
+  DBrestore/history/saldoedits/configVelo. Required4hostdocs readinorder +/deployrunbook.
+- FFmain775e875→7801ba591223c213c1fcd69a0c3ace19c81ef9db/pushremoteverified.
+  Fresh952unit/568frontend/static/buildPASS, publicdistbytesmatchacceptedE2Eartifact;
+  exact574sourcehashesonhostmatch1863backend/568frontend/165E2E+1skipaccepted.
+- Immutablepackage `/opt/finanse/webapp/releases/7801ba5/`,3imagesofflinebuilt,
+  mandatorynonrootverifierexactComposeUIDGID/imageID/nginxreadPASS; fullinherited
+  settings/env/users/mounts/network/resourcesunchanged. Old020images/overridepreserved.
+- Freshencryptedrehearsal+fencedbackups restoredonlyownloopback_restoreDB,
+  checksumdump/uploads/schema/ledgerPASS, cloneUP/DOWN/UP62tablerowsretainedexcept
+  expectedtypes/newsummaryposition/oldruntimeafterDOWNPASS; fencedclone==source+uploads.
+  Firstsnapshot0profiles; no artificialuserprofileoruser-sessioncreated.
+- Operatorreview ses_e4519269cffesp87sxuZ4CeZTD2Importantfixedbeforefence:
+  stoppedfrontendmuststartfenced+verified503 beforeDOWN; rollbackmustre-renderfrozen
+  Compose and inspect deterministicretainedmigrationcontainerexactID/user/env/mounts/
+  exit0/stopped.4isolatedRED→GREEN; artifactsrefrozen; nosecondreview.
+- Successfulrollout503→gracefulstopidle→frozen→backupclone→ONEprodUP739→retention62
+  +summary→3newappsbehind503→internalenv/images/health/dataIDs→openhealth/login200,
+  newsummary/accounts/cardanon401/assetsidentical. No rollbackneededsofar.
+- FINALjobsh_1bb876ba7001442wH5VIYKXqlt PASS: browserGETonly375/1440/cardroutesauth/
+  login/fonts/overflow/errors/mutations/foreign0 (screenyviewed); observation316s/
+  31checks/max134ms/health200/exactimages/restarts0/logerrors0/schema739/ledger0bad/
+  Redisready/datacontainersunchanged. finish.pyEXECUTED atomicverified-live metadata
+  +durableevidence; cleanup.shremovedONLYowned2restoreDBsavedOIDs/0connections/noforce,
+  absenceconfirmed. No rollbackneeded. Report `docs/audits/2026-11-08-credit-card-accounts-production.md`.
+- Fencedproduction0profiles too: reclassified0accounts, noautoVeloconfig. All62tables
+  retainedwith0actualrowchangesasideAlembicversion; newtypeavailableincreate/edit.
+  UsermustconsciouslyconfigureexistingVelorachunek, notcreateadditionalbalance.
+  Finaldocspointercommit doesnotrebuildapproved780images. OldVeloQ7dirtyuntouched.
+- Operatorlogs `/tmp/opencode/card-account-release-7801ba5/`, ledgerignored
+  `.superpowers/card-account-release-progress.md`; oldVeloQ7dirtyuntouched/notstage.
+
 ## 2026-11-08 — Typ konta karty i lista wielu kart: ODEBRANE LOKALNIE
 
 - Approved chat6pointplan, usertak→Buildok,działaj; osobna question zgoda na własny

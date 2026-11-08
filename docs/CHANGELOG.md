@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, 7801ba5] — 2026-11-08 — Konta kart i przegląd
+
+### Changed
+- Po osobnej zgodzie FF/pushmain7801ba5, migracja00a9ccb532b9→739144d5eaef i spójne
+  nowe backend/worker/frontend. Typ karty i warunki dostępne w kontach, zakładka kart
+  to przegląd bieżącego stanu z odnośnikami do rozliczeń/edycji.
+- Dwa świeże backupy odtworzone w własnych bazach; UP/DOWN/UP i zachowanie danych62tabel
+  poza dozwoloną klasyfikacją kont PASS. Retencja oraz księga sprawdzone po produkcyjnym
+  UP i przed otwarciem. Brak automatycznej konfiguracji Velo lub zmian historii/sald.
+- Exactimages/nonrootimport/inheritedsettings/assets/auth/health PASS; świeże952unit/
+  568frontend/lint/types/build, identyczne odebrane źródła1863backend/165E2E+1skip.
+- Końcowy browser375/1440 i obserwacja316s/31checks PASS: restarty0/błędy0/health200,
+  ledger0naruszeń/Redisready, niezmienione usługi danych. Active metadata `verified-live`,
+  trwałe dowody i cleanup tylko dwóch własnych restoreDB po kontroli OID PASS.
+- Produkcja miała zero profili kart: nie przeklasyfikowano żadnego konta; Velo wymaga
+  świadomej konfiguracji istniejącego rachunku w nowym formularzu konta.
+  Raport `docs/audits/2026-11-08-credit-card-accounts-production.md`.
+
 ## [Local, odebrane] — 2026-11-08 — Typ konta karty i przegląd wielu kart
 
 ### Added

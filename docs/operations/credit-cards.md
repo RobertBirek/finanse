@@ -1,7 +1,7 @@
 # Karty kredytowe i plany ratalne
 
-> Poniższy podział ekranów dotyczy lokalnej zmiany z 2026-11-08 — wymaga osobnego
-> wdrożenia. Produkcyjny release020c229 ma jeszcze konfigurację w zakładce kart.
+> Podział ekranów wdrożony w release `7801ba5` (2026-11-08), schemat `739144d5eaef`.
+> Samo wdrożenie nie skonfigurowało konta Velo — należy edytować istniejący rachunek.
 
 ## Konfiguracja istniejącego konta
 
@@ -154,5 +154,8 @@ tylko wtedy, gdy wszystkie są puste; zapisane warunki lub rozliczenia blokują 
 Nowa migracja `739144d5eaef` jedynie nadaje typ `credit_card` kontom z istniejącym
 profilem tego samego właściciela. Nie rozpoznaje karty po nazwie ani po samym typie
 `credit`; nie tworzy profili, nie zmienia sald/postings i nie usuwa danych. Jej downgrade
-przywraca klasyfikację `credit`, zachowując profile i rozliczenia. Wymaga osobnej zgody
-na wykonanie na produkcji; nie jest automatycznym krokiem lokalnego odbioru.
+przywraca klasyfikację `credit`, zachowując profile i rozliczenia. Migrację produkcyjną
+wykonano po osobnej zgodzie: nie było istniejących profili, więc nie zmieniła żadnego
+rachunku. Kontrolowany rollback wyłącznie tej klasyfikacji do `00a9ccb532b9` przed
+starymi obrazami jest osobno zatwierdzony; nie był potrzebny. Nie cofać wcześniejszych
+migracji ani nie odtwarzać bazy jako niejawnego kroku rollbacku.
