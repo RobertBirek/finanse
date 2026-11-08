@@ -2,6 +2,26 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, odebrane] — 2026-11-08 — Typ konta karty i przegląd wielu kart
+
+### Added
+- Osobny typ „Karta kredytowa” z warunkami w tworzeniu/edycji konta i jednym
+  atomowym zapisem. Wiele niezależnych kart bez duplikowania sald lub kont.
+- Zbiorczy odczyt bieżących limitów/zadłużenia/dostępnych kwot, bez historii per karta;
+  lista wyłącznie kart, oznaczenie nieaktywnych, akcje „Wyciągi i raty”/„Edytuj konto”.
+
+### Changed
+- Konfiguracja wyłącznie w koncie, osobne szczegóły rozliczeń i zachowane stare linki.
+  Invalidacja cache po zmianach kont/księgi. Migracja739144d5eaef klasyfikuje tylko
+  konta z istniejącym profilem, nie zwykłe kredytowe. Roundtrip62tabele/retencja PASS.
+- Pełny backend1863PASS (zero runtime-skips), frontend568PASS,
+  pełne165E2EPASS+1expectedskip, lint/types/build PASS; końcowy review bez uwag.
+  Testy i migracja na własnym offlinePG; usunięto wyłącznie jego kontener/wolumen
+  po kontroli ID i mountów. Manifest źródeł i pełne pokrycie JUnit potwierdzone.
+  Commity0882d13/25a69ad wyłącznie lokalne.
+- Bez merge/push/deploy, produkcyjnej migracji lub konfiguracji Velo.
+  Raport `docs/audits/2026-11-08-credit-card-accounts-local.md`.
+
 ## [Production, 020c229] — 2026-11-08 — Karty kredytowe
 
 ### Changed

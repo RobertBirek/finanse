@@ -1,11 +1,40 @@
 # Karty kredytowe i plany ratalne
 
+> Poniższy podział ekranów dotyczy lokalnej zmiany z 2026-11-08 — wymaga osobnego
+> wdrożenia. Produkcyjny release020c229 ma jeszcze konfigurację w zakładce kart.
+
 ## Konfiguracja istniejącego konta
 
-W **Ustawienia → Finanse → Karty kredytowe** wybierz istniejące konto PLN.
-Zapis warunków nie tworzy nowego konta, nie ustawia salda i nie przepisuje historii.
-Konto otrzymuje typ `credit`; waluta i typ są następnie chronione. Kont powiązanych
-z oddzielną umową kredytową nie można równocześnie konfigurować jako kart.
+W **Ustawienia → Finanse → Konta i rachunki** edytuj istniejące konto i wybierz
+typ **Karta kredytowa** (`credit_card`). Wypełnij pojawiające się warunki i zapisz
+całe konto jednym przyciskiem. Nie twórz kolejnego rachunku dla istniejącej karty.
+Przy dodawaniu zupełnie nowej karty ten sam typ i pola są w formularzu nowego konta.
+
+Zapis konta i profilu jest atomowy: błędne warunki lub nieaktualna wersja nie zapiszą
+częściowej zmiany nazwy/typu. Nie ustawia salda i nie przepisuje historii. Każda karta
+ma odrębny profil, limit, oprocentowanie i cykl; można mieć wiele kart.
+Zmiana samej nazwy/koloru nie wymaga ponownego zapisu warunków.
+
+Waluta karty to PLN; po zapisaniu profilu waluta i typ są chronione. Konto można
+dezaktywować, nie usuwać wraz z historią; nieaktywne karty mają rozliczenia tylko
+do odczytu. Kont powiązanych z oddzielną umową kredytową nie można równocześnie
+konfigurować jako kart. Zwykły typ **Kredytowe** (`credit`) pozostaje odrębny.
+
+## Przegląd wielu kart
+
+**Ustawienia → Finanse → Karty kredytowe** to wyłącznie zbiorcza lista kart z bieżącym
+limitem, zadłużeniem i dostępną kwotą. Zwykłe rachunki nie są tu proponowane do wyboru.
+Nieaktywne karty są oznaczone; błąd odczytu nie jest przedstawiany jako zerowe saldo.
+Brak profilu ma komunikat o potrzebie uzupełnienia warunków, nie fikcyjny limit0.
+
+- **Wyciągi i raty** otwiera szczegóły wybranej karty: wyciągi, plany, spłaty i koszty.
+- **Edytuj konto** otwiera formularz dokładnie tego konta; tylko tam zmieniasz warunki.
+
+Nowe adresy: `/settings/finances/cards/:accountId` i
+`/settings/finances/accounts?edit=:accountId`. Dawne linki `cards?account=...`
+przekierowują do szczegółów właściwej karty.
+
+## Indywidualne warunki karty Velo
 
 Dla wskazanej przez użytkownika karty Velo uzgodniono:
 - limit **33 600 zł**;
@@ -119,5 +148,11 @@ Plan z rozliczeniami lub kosztami zachowuje historię. Powiązane transakcje są
 chronione przed usunięciem, zmianą daty i statusu oczekującego, również przez
 oddzielny edytor dat. Właściwe korekty bankowe zapisuj jako nowe rzeczywiste operacje.
 
-Migracja jest addytywna. Cofnięcie usuwa nowe tabele tylko wtedy, gdy wszystkie
-są puste; zapisane warunki lub rozliczenia blokują downgrade.
+Pierwotna migracja `00a9ccb532b9` jest addytywna. Jej cofnięcie usuwa nowe tabele
+tylko wtedy, gdy wszystkie są puste; zapisane warunki lub rozliczenia blokują downgrade.
+
+Nowa migracja `739144d5eaef` jedynie nadaje typ `credit_card` kontom z istniejącym
+profilem tego samego właściciela. Nie rozpoznaje karty po nazwie ani po samym typie
+`credit`; nie tworzy profili, nie zmienia sald/postings i nie usuwa danych. Jej downgrade
+przywraca klasyfikację `credit`, zachowując profile i rozliczenia. Wymaga osobnej zgody
+na wykonanie na produkcji; nie jest automatycznym krokiem lokalnego odbioru.

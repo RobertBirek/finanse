@@ -2,6 +2,29 @@
 
 Backlog zadań ze statusami.
 
+## Typ konta karty i przegląd wielu kart (2026-11-08)
+
+- [x] Zatwierdzony podział i plan w rozmowie, po Build „ok, działaj”; osobna zgoda
+  na własny efemeryczny PostgreSQL bez portów/produkcji i cleanup tylko własnych danych.
+- [x] Nowy typcredit_card odrębny odcredit, konto+profil atomowo, mały edit response,
+  zbiorczy owner-scoped/current-ledger summary, ochrona wersji/PLN/loanlinks.
+- [x] Migracja739144d5eaef tylko klasyfikuje istniejące profile; prawdziwy Alembic
+  upgrade/downgrade/reupgrade zachowuje dane62tabel i księgę, genericcredit bez zmian.
+- [x] Warunki w create/edit konta, lista wielu kart i przyciski; osobne rozliczenia,
+  linki/reload/back, brak drugiej konfiguracji; cache odświeżany po zmianach.
+- [x] Focused54backend/12E2E, pełne568frontend, lint/types/build PASS;
+  TDD regresji URL, cache, atomic save i migracji; screeny desktop/mobile obejrzane.
+- [x] Pełne165E2EPASS+1expectedskip,5.8min; oba viewporty i dotychczasowe moduły.
+- [x] Niezależny końcowy review całej zmiany: brak Critical/Important/Minor.
+- [x] Pełny backend1863PASS/zero runtime-skips,14standardowo wyłączonych proxy;
+  JUnit/kolekcja/manifest źródeł, dokumentacja i końcowy odbiór lokalny PASS.
+- [x] Cleanup tylko własnego PG i jego wolumenu po kontroli ID/nazwy/etykiety/mountów;
+  potwierdzony brak, bez force/prune i zmian innych środowisk.
+- [ ] Osobny merge/push/deploy i wykonanie migracji produkcyjnej wymagają nowej zgody.
+
+Raport `docs/audits/2026-11-08-credit-card-accounts-local.md`;
+plan `docs/superpowers/plans/2026-11-08-credit-card-accounts.md`.
+
 ## Karty kredytowe i plany ratalne (2026-11-07)
 
 - [x] Uzgodniony zakres dla istniejącej karty Velo: limit33600PLN, APR14.50%,

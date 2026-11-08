@@ -2,6 +2,49 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-08 — Typ konta karty i lista wielu kart: ODEBRANE LOKALNIE
+
+- Approved chat6pointplan, usertak→Buildok,działaj; osobna question zgoda na własny
+  efemerycznyPG/noports/networknone/cleanupown. Required4hostdocs readinorder.
+  Base775e875, istniejący linkedworktreefeat/financial-document-workflow, nie main.
+  Stare dwa Velo/Q7dirty nie stage'ować. Zakres bez merge/push/deploy/prod/configVelo.
+- Backend0882d13: credit_card distinctgenericcredit; AccountCreate/Update nestedCardConfig,
+  smallCardSettings response z wersją, atomic accountprofilewrite i rollback partial;
+  sharedsave_config keepsoldconfigure detail, publicfacade signaturespreserved.
+  Queriesattachprofile jednymouterjoin/correlate(Account), bez lazyserialization.
+  GETcredit-cards owner/typefiltered,2queriesallcards/currentpostedpendingledger,
+  missingprofileexplicitnull notzero, inactiveincluded. PLN/loan/versionsguards retained.
+- Migracja739144d5eaef po00a9: updateonlyownedprofileaccounts.type, noledgeredits;
+  downgradecredit preservesprofiles. Autogenerate onownPG, oldscheduledindexdrift
+  removedfromnewmigration; nooldmigrationchanges. RealCLIroundtrip62tablesrowsretained
+  exceptintendedtypechange, profiles/ledger0bad/genericcreditunchanged PASS.
+- Frontend25a69ad: CardFields shared controlleddraft/parser, create/edit1request,
+  expectedversioncapture andonlychangedsettings; newtypeoption/PLNlock, URLsoleeditid,
+  resetonentry/cancel. FinanceCreditCards summarylist only; FinanceCreditCardDetails
+  existingoperations/noProfile/readonlyinactive; /cards/:id andlegacyqueryredirect,
+  edit?edit=id, transactionsummarygate updated. Cardcache invalidatedonaccount/ledger.
+- Baseline41backend/555frontendPASS. Newaccounts7RED/5protectivePASS, migration1RED,
+  focused54GREEN200.84s; correlationerrorfixedexplicitcorrelate, APR4serialized.
+  Frontend5formRED→46focusedGREEN,list5RED, URL1RED/cache2RED→GREEN. Full568unit/93PASS;
+  lint2unusedfixtureversionerrors→versionvalidation→eslint/tsc/buildPASS.
+  Focused12E2E34.3sPASS desktop/mobile/light/dark/Axe/overflow, screenreviewdone.
+- Logs `/tmp/opencode/credit-card-accounts-20261108/`, ledgerignored
+  `.superpowers/credit-card-accounts-progress.md`; plan/docs/audit inrepo.
+  FINALfullbackend1863PASS/14deselectedproxy/0runtime-skips/10knownwarnings3705.09s,
+  fullfrontend568PASS/165E2EPASS+1expectedskip5.8min. Backend/frontendfrozenhashesmatch.
+  JUnit matchescollection1863; oneoldOCRgzipfixtureID volatileMTIME normalizedONLY
+  fourbytes preservingremainingpayload/name; initialproofmismatch nottestfailure.
+  Onefreshreview ses_e45620e54ffeXVNkWSyhxlNfP1 complete noCritical/Important/Minor,
+  nofixpassnecessary; coordinatorconfirmedallgatesreviewerdeclinedtoexecute.
+- Cleanup executedAFTERgates: onlyownfinanse-card-accounts-test-20261108 ID/name/label/
+  none/noports/mountsverified, dockerstop+rm-v noforce, container+volumeabsentPASS.
+  finanse_test andowncard_accounts_migration removedwithit; nootherDBuse.
+  acceptance-proof.json/cleanup-proof.json/migration-roundtrip-proof.json/review.json
+  andlogs/screens retainedprivate. InitialPGreadinessrace temporaryunixserver fixed
+  TCPready; notaproductfailure. No active test/review jobs or open findings.
+- Afterlocalacceptance askseparateintegration/deployapproval; currentproduction020c229
+  andschema00a9 remainunchanged; accountVelo stillnotconfiguredautomatically.
+
 ## 2026-11-08 — Karty: scalone, wdrożone i zweryfikowane020c229
 
 - Jawna zgoda „scal do main i wdróż”, następnie przez question potwierdzona dokładna
