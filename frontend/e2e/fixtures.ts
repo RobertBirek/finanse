@@ -162,6 +162,7 @@ export async function fixtures(
     else if (url.pathname === "/api/finance/categorization/proposals")
       body = { items: [], next_cursor: null, page_size: 20 };
     else if (url.pathname === "/api/finance/accounts") body = [account];
+    else if (url.pathname === "/api/finance/credit-cards") body = [];
     else if (url.pathname === "/api/finance/categories") body = [];
     else if (url.pathname === "/api/finance/transactions") body = [transaction];
     else if (url.pathname === "/api/finance/budgets") body = [];

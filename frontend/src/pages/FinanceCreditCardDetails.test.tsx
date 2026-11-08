@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { FinanceCreditCards } from "./FinanceCreditCards";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { FinanceCreditCardDetails } from "./FinanceCreditCardDetails";
 
 const hooks = vi.hoisted(() => ({
   useAccounts: vi.fn(),
@@ -96,10 +97,16 @@ beforeEach(() => {
 });
 
 function openCard() {
-  render(<FinanceCreditCards />);
-  fireEvent.change(screen.getByLabelText("Konto karty"), {
-    target: { value: "card" },
-  });
+  render(
+    <MemoryRouter initialEntries={["/settings/finances/cards/card"]}>
+      <Routes>
+        <Route
+          path="/settings/finances/cards/:accountId"
+          element={<FinanceCreditCardDetails />}
+        />
+      </Routes>
+    </MemoryRouter>,
+  );
 }
 
 it("shows current credit position separately from historical statement debt", () => {
@@ -133,32 +140,20 @@ it("does not render failure as an unconfigured card or a zero balance", () => {
   ).not.toBeInTheDocument();
 });
 
-it("configures an existing account without creating another account", async () => {
+it("directs an unconfigured card to account editing without a second configuration form", () => {
   hooks.useCreditCard.mockReturnValue({
     data: null,
     isLoading: false,
     isError: false,
   });
   openCard();
-  const form = screen.getByRole("form", { name: "Ustawienia karty" });
-  for (const [label, value] of [
-    ["Limit PLN", "33600"],
-    ["Oprocentowanie roczne %", "14.50"],
-    ["Dzień zamknięcia cyklu", "17"],
-    ["Domyślny dzień spłaty", "12"],
-    ["Maksymalny okres bezodsetkowy (dni)", "57"],
-  ])
-    fireEvent.change(within(form).getByLabelText(label), { target: { value } });
-  fireEvent.submit(form);
-  await vi.waitFor(() =>
-    expect(mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({
-        limit_pln: 3360000,
-        apr: "14.50",
-        expected_version: 0,
-      }),
-    ),
+  expect(screen.queryByRole("form")).not.toBeInTheDocument();
+  expect(screen.getByText(/Uzupełnij warunki/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Edytuj konto" })).toHaveAttribute(
+    "href",
+    "/settings/finances/accounts?edit=card",
   );
+  expect(mutateAsync).not.toHaveBeenCalled();
 });
 
 it("submits a plan with its own APR and existing purchase without posting another expense", async () => {

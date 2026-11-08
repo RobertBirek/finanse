@@ -85,7 +85,7 @@ export function AccountTransactions({ accounts }: AccountTransactionsProps) {
                 {formatPLN(selected.balance_pln)} PLN
               </p>
             </div>
-            {selected.type === "credit" && selected.currency === "PLN" ? (
+            {selected.type === "credit_card" && selected.currency === "PLN" ? (
               <CardAccountSummary accountId={selected.id} />
             ) : null}
             <h3 className="mb-3 text-sm font-medium text-gray-400">

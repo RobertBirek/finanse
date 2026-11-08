@@ -377,6 +377,52 @@ describe("transaction mutation hooks", () => {
 });
 
 describe("account mutation hooks", () => {
+  it("invalidates the multi-card overview after account creation", async () => {
+    const post = vi
+      .spyOn(api, "post")
+      .mockResolvedValue({
+        data: { id: "new-card" },
+      } as unknown as AxiosResponse);
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["finance", "credit-cards"], []);
+    const { result } = renderHook(() => useCreateAccount(), {
+      wrapper: queryClientWrapper(queryClient),
+    });
+    await result.current.mutateAsync({
+      name: "Card",
+      type: "credit_card",
+      credit_card: {
+        limit_pln: 1000000,
+        apr: "10",
+        cycle_close_day: 17,
+        due_day: 12,
+        grace_days: 57,
+        expected_version: 0,
+      },
+    });
+    expect(
+      queryClient.getQueryState(["finance", "credit-cards"])?.isInvalidated,
+    ).toBe(true);
+    expect(post.mock.calls[0][1]).toHaveProperty(
+      "credit_card.limit_pln",
+      1000000,
+    );
+    post.mockRestore();
+  });
+
+  it("invalidates both card overview and card detail when ledger or account data changes", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["finance", "credit-cards"], []);
+    queryClient.setQueryData(["finance", "credit-card", "card"], {});
+    invalidateFinanceLedger(queryClient);
+    expect(
+      queryClient.getQueryState(["finance", "credit-cards"])?.isInvalidated,
+    ).toBe(true);
+    expect(
+      queryClient.getQueryState(["finance", "credit-card", "card"])
+        ?.isInvalidated,
+    ).toBe(true);
+  });
   it("passes is_budget_account through when creating an account", async () => {
     const postSpy = vi.spyOn(api, "post").mockResolvedValue({
       data: { id: "acc-1" },

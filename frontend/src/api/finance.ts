@@ -7,8 +7,10 @@ import {
 import api from "../lib/api";
 import { useAuthStore } from "../stores/authStore";
 import type { AssignmentOrigin } from "./categorization";
+import type { CardConfig, CardSettings } from "./creditCards";
 
 export interface Account {
+  credit_card?: CardSettings | null;
   color?: string | null;
   id: string;
   name: string;
@@ -40,6 +42,7 @@ export interface Category {
 }
 
 export interface AccountUpdateInput {
+  credit_card?: CardConfig;
   color?: string | null;
   name?: string;
   currency?: string;
@@ -425,6 +428,8 @@ export function canConfirmSuggestion(
 }
 
 function invalidateCashflowMutationQueries(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["finance", "credit-card"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "credit-cards"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "budget-status"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "cashflow"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
@@ -466,6 +471,7 @@ export function useCreateAccount() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (account: {
+      credit_card?: CardConfig;
       color?: string | null;
       name: string;
       type: string;
@@ -482,6 +488,7 @@ export function useCreateAccount() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["finance", "credit-cards"] });
     },
   });
 }
@@ -669,6 +676,8 @@ export function useAccountTransactions(
 }
 
 export function invalidateFinanceLedger(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["finance", "credit-card"] });
+  queryClient.invalidateQueries({ queryKey: ["finance", "credit-cards"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "transactions"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
   queryClient.invalidateQueries({ queryKey: ["finance", "summary"] });

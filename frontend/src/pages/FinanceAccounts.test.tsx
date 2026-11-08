@@ -1,6 +1,17 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as baseRender,
+  screen,
+  within,
+} from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FinanceAccounts } from "./FinanceAccounts";
+
+function render(ui: React.ReactNode) {
+  return baseRender(ui, { wrapper: MemoryRouter });
+}
 
 const hooks = vi.hoisted(() => ({
   useAccounts: vi.fn(),

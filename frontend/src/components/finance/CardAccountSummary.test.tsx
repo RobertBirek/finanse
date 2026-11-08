@@ -13,7 +13,7 @@ it("shows server card limit/debt and links to the same account", () => {
   expect(screen.getByText(/32\s?572,04/)).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: /Rozliczenia karty/ }),
-  ).toHaveAttribute("href", "/settings/finances/cards?account=card");
+  ).toHaveAttribute("href", "/settings/finances/cards/card");
 });
 it("does not report a failed fetch as zero debt", () => {
   vi.mocked(useCreditCard).mockReturnValue({ isError: true } as ReturnType<

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   useAccounts,
   useCategories,
@@ -17,6 +18,12 @@ import {
   isValidFinanceColor,
 } from "../lib/financeColors";
 import { FinanceColorPicker } from "../components/finance/FinanceColorPicker";
+import { CreditCardFields } from "../components/finance/CreditCardFields";
+import {
+  cardDraft,
+  cardConfig,
+  CARD_SETTINGS_ERROR,
+} from "../components/finance/creditCardSettings";
 import {
   ACCOUNT_TYPES,
   apiErrorDetail,
@@ -42,7 +49,19 @@ export function FinanceAccounts({
   const deleteAccount = useDeleteAccount();
   const createCategory = useCreateCategory();
 
-  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const requestedEditId = new URLSearchParams(location.search).get("edit");
+  function cancelEdit() {
+    if (requestedEditId) {
+      const params = new URLSearchParams(location.search);
+      params.delete("edit");
+      navigate(
+        { pathname: location.pathname, search: params.toString() },
+        { replace: true },
+      );
+    }
+  }
 
   const [accountName, setAccountName] = useState("");
   const [accountColor, setAccountColor] = useState<string | null>(null);
@@ -54,6 +73,8 @@ export function FinanceAccounts({
   const [iban, setIban] = useState("");
   const [bic, setBic] = useState("");
   const [notes, setNotes] = useState("");
+  const [cardTerms, setCardTerms] = useState(() => cardDraft());
+  const [cardError, setCardError] = useState<string | null>(null);
 
   const [categoryName, setCategoryName] = useState("");
   const [categoryColor, setCategoryColor] = useState<string | null>(null);
@@ -70,12 +91,20 @@ export function FinanceAccounts({
   function handleCreateAccount(event: FormEvent) {
     event.preventDefault();
     if (!isValidFinanceColor(accountColor)) return;
+    const configuration =
+      accountType === "credit_card" ? cardConfig(cardTerms, 0) : null;
+    if (accountType === "credit_card" && !configuration) {
+      setCardError(CARD_SETTINGS_ERROR);
+      return;
+    }
+    setCardError(null);
     createAccount.mutate(
       {
         name: accountName.trim(),
         ...(accountColor ? { color: accountColor.toUpperCase() } : {}),
         type: accountType,
         currency: accountCurrency,
+        ...(configuration ? { credit_card: configuration } : {}),
         ...(!accountBudget ? { is_budget_account: false } : {}),
         ...(accountType !== "cash"
           ? {
@@ -103,6 +132,7 @@ export function FinanceAccounts({
           setIban("");
           setBic("");
           setNotes("");
+          setCardTerms(cardDraft());
         },
       },
     );
@@ -153,15 +183,20 @@ export function FinanceAccounts({
               <div className="space-y-2">
                 {accounts.map((account) => (
                   <AccountRow
-                    key={account.id}
+                    key={`${account.id}:${requestedEditId === account.id}`}
                     account={account}
                     updateMutation={updateAccount}
                     deleteMutation={deleteAccount}
-                    editing={editingAccountId === account.id}
+                    editing={requestedEditId === account.id}
                     onStartEdit={() => {
-                      setEditingAccountId(account.id);
+                      const params = new URLSearchParams(location.search);
+                      params.set("edit", account.id);
+                      navigate({
+                        pathname: location.pathname,
+                        search: params.toString(),
+                      });
                     }}
-                    onCancelEdit={() => setEditingAccountId(null)}
+                    onCancelEdit={cancelEdit}
                   />
                 ))}
               </div>
@@ -211,7 +246,12 @@ export function FinanceAccounts({
                   id="account-form-type"
                   className="input"
                   value={accountType}
-                  onChange={(event) => setAccountType(event.target.value)}
+                  onChange={(event) => {
+                    const type = event.target.value;
+                    setAccountType(type);
+                    if (type === "credit_card") setAccountCurrency("PLN");
+                    setCardError(null);
+                  }}
                 >
                   {ACCOUNT_TYPES.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -231,6 +271,9 @@ export function FinanceAccounts({
                   id="account-form-currency"
                   className="input"
                   value={accountCurrency}
+                  disabled={
+                    accountType === "credit_card" || createAccount.isPending
+                  }
                   onChange={(event) => setAccountCurrency(event.target.value)}
                 >
                   <option value="PLN">PLN</option>
@@ -257,6 +300,18 @@ export function FinanceAccounts({
                 Dodaj konto
               </button>
             </div>
+            {accountType === "credit_card" ? (
+              <CreditCardFields
+                value={cardTerms}
+                onChange={setCardTerms}
+                disabled={createAccount.isPending}
+              />
+            ) : null}
+            {cardError ? (
+              <p role="alert" className="mt-3 text-sm text-red-400">
+                {cardError}
+              </p>
+            ) : null}
             {accountType !== "cash" ? (
               <details className="mt-4 border-t border-gray-800 pt-3">
                 <summary className="cursor-pointer text-sm text-gray-400">

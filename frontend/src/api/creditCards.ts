@@ -51,14 +51,32 @@ export type CardAllocation = {
   plan_id: string | null;
   statement_id: string | null;
 };
-export type CreditCard = {
-  account_id: string;
+export type CardSettings = {
   limit_pln: number;
   apr: string;
   cycle_close_day: number;
   due_day: number;
   grace_days: number;
   version: number;
+};
+export type CardConfig = Omit<CardSettings, "version"> & {
+  expected_version: number;
+};
+export type CardSummary = {
+  account_id: string;
+  name: string;
+  is_active: boolean;
+  color: string | null;
+  configured: boolean;
+  limit_pln: number | null;
+  debt_pln: number;
+  available_pln: number | null;
+  pending_debits_pln: number;
+  overpayment_pln: number;
+  overlimit_pln: number | null;
+};
+export type CreditCard = CardSettings & {
+  account_id: string;
   debt_pln: number;
   available_pln: number;
   pending_debits_pln: number;
@@ -78,6 +96,14 @@ export type CardCandidate = {
 export type CandidateKind = "source" | "payment" | "charge";
 const base = (accountId: string) =>
   `/finance/accounts/${accountId}/credit-card`;
+
+export function useCreditCards() {
+  return useQuery({
+    queryKey: ["finance", "credit-cards"],
+    queryFn: async () =>
+      (await api.get<CardSummary[]>("/finance/credit-cards")).data,
+  });
+}
 
 export function useCreditCard(accountId: string | null) {
   return useQuery({

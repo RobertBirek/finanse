@@ -22,6 +22,7 @@ import { FinanceSettings } from "./pages/FinanceSettings";
 import { FinanceCategorizationSettings } from "./pages/FinanceCategorizationSettings";
 import { FinanceLoans } from "./pages/FinanceLoans";
 import { FinanceCreditCards } from "./pages/FinanceCreditCards";
+import { FinanceCreditCardDetails } from "./pages/FinanceCreditCardDetails";
 import { FinanceDocuments } from "./pages/FinanceDocuments";
 import { FinanceCategoryProposals } from "./pages/FinanceCategoryProposals";
 
@@ -95,6 +96,10 @@ export default function App() {
           />
           <Route path="loans" element={<FinanceLoans />} />
           <Route path="cards" element={<FinanceCreditCards />} />
+          <Route
+            path="cards/:accountId"
+            element={<FinanceCreditCardDetails />}
+          />
           <Route
             path="categorization"
             element={<FinanceCategorizationSettings />}

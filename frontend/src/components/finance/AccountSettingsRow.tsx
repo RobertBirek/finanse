@@ -4,6 +4,12 @@ import type { Account, AccountUpdateInput } from "../../api/finance";
 import { ACCOUNT_TYPES, apiErrorDetail, isConflict } from "./accountSettings";
 import { entityColor, isValidFinanceColor } from "../../lib/financeColors";
 import { FinanceColorPicker } from "./FinanceColorPicker";
+import { CreditCardFields } from "./CreditCardFields";
+import {
+  cardDraft,
+  cardConfig,
+  CARD_SETTINGS_ERROR,
+} from "./creditCardSettings";
 
 const ACCOUNT_DELETE_CONFLICT_MESSAGE =
   "Konto ma zapisy — zdezaktywuj je zamiast usuwać";
@@ -44,6 +50,16 @@ export function AccountRow({
   const [draftHolder, setDraftHolder] = useState(account.account_holder ?? "");
   const [draftBic, setDraftBic] = useState(account.bic ?? "");
   const [draftNotes, setDraftNotes] = useState(account.notes ?? "");
+  const [cardTerms, setCardTerms] = useState(() =>
+    cardDraft(account.credit_card),
+  );
+  const [originalCardTerms, setOriginalCardTerms] = useState(() =>
+    cardDraft(account.credit_card),
+  );
+  const [cardVersion, setCardVersion] = useState(
+    account.credit_card?.version ?? 0,
+  );
+  const [cardError, setCardError] = useState<string | null>(null);
   const [showIban, setShowIban] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"success" | "manual" | null>(
     null,
@@ -79,15 +95,33 @@ export function AccountRow({
     setDraftHolder(account.account_holder ?? "");
     setDraftBic(account.bic ?? "");
     setDraftNotes(account.notes ?? "");
+    setCardTerms(cardDraft(account.credit_card));
+    setOriginalCardTerms(cardDraft(account.credit_card));
+    setCardVersion(account.credit_card?.version ?? 0);
+    setCardError(null);
     onStartEdit();
   }
 
   function save() {
     if (!isValidFinanceColor(draftColor)) return;
     const colorChanged = draftColor !== (account.color ?? null);
+    const cardChanged =
+      draftType === "credit_card" &&
+      (account.type !== "credit_card" ||
+        !account.credit_card ||
+        JSON.stringify(cardTerms) !== JSON.stringify(originalCardTerms));
+    const configuration = cardChanged
+      ? cardConfig(cardTerms, cardVersion)
+      : null;
+    if (cardChanged && !configuration) {
+      setCardError(CARD_SETTINGS_ERROR);
+      return;
+    }
+    setCardError(null);
     updateMutation.mutate(
       {
         id: account.id,
+        ...(configuration ? { credit_card: configuration } : {}),
         ...(!colorChanged || draftName !== account.name
           ? { name: draftName }
           : {}),
@@ -327,7 +361,9 @@ export function AccountRow({
                 id={`account-edit-currency-${account.id}`}
                 className="input"
                 value={draftCurrency}
-                disabled={!currencyEditable || rowPending}
+                disabled={
+                  !currencyEditable || rowPending || draftType === "credit_card"
+                }
                 aria-describedby={`account-currency-help-${account.id}`}
                 onChange={(event) => setDraftCurrency(event.target.value)}
               >
@@ -347,10 +383,24 @@ export function AccountRow({
                 id="account-edit-type"
                 className="input"
                 value={draftType}
-                onChange={(event) => setDraftType(event.target.value)}
+                disabled={!!account.credit_card || rowPending}
+                onChange={(event) => {
+                  setDraftType(event.target.value);
+                  if (event.target.value === "credit_card")
+                    setDraftCurrency("PLN");
+                  setCardError(null);
+                }}
               >
                 {ACCOUNT_TYPES.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    disabled={
+                      option.value === "credit_card" &&
+                      account.currency !== "PLN" &&
+                      !currencyEditable
+                    }
+                  >
                     {option.label}
                   </option>
                 ))}
@@ -373,6 +423,18 @@ export function AccountRow({
             Walutę można zmienić tylko na ręcznym koncie bez historii,
             harmonogramów i powiązań importowych.
           </p>
+          {draftType === "credit_card" ? (
+            <CreditCardFields
+              value={cardTerms}
+              onChange={setCardTerms}
+              disabled={rowPending || !account.is_active}
+            />
+          ) : null}
+          {cardError ? (
+            <p role="alert" className="text-sm text-red-400">
+              {cardError}
+            </p>
+          ) : null}
           <div hidden={draftType === "cash"}>
             <div>
               <label

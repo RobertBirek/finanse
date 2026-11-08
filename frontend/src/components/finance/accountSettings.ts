@@ -22,5 +22,6 @@ export const ACCOUNT_TYPES = [
   { value: "savings", label: "Oszczędnościowe" },
   { value: "cash", label: "Gotówka" },
   { value: "credit", label: "Kredytowe" },
+  { value: "credit_card", label: "Karta kredytowa" },
   { value: "investment", label: "Inwestycyjne" },
 ] as const;

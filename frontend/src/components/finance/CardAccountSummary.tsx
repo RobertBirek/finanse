@@ -18,7 +18,7 @@ export function CardAccountSummary({ accountId }: { accountId: string }) {
       ) : null}
       <a
         className="text-advisor-400 underline"
-        href={`/settings/finances/cards?account=${encodeURIComponent(accountId)}`}
+        href={`/settings/finances/cards/${encodeURIComponent(accountId)}`}
       >
         Rozliczenia karty i plany ratalne
       </a>
