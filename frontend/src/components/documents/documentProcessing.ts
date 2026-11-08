@@ -18,7 +18,8 @@ export type ProcessingNotice = {
 export function getDocumentOperations(
   document: DocumentData,
 ): ProcessingOperation[] {
-  if (document.archived_at) return [];
+  if (document.archived_at || document.processing_method === "bank_import")
+    return [];
   const operations: ProcessingOperation[] = [];
   const review = document.review;
   if (review) {

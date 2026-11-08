@@ -7,6 +7,14 @@ import {
 } from "./documentProcessing";
 
 describe("document processing state", () => {
+  it("never labels an import-only original as AI or OCR work even with stale review fields", () => {
+    const document = processingDocument({
+      processing_method: "bank_import",
+      status: "done",
+      local_ocr_state: "pending",
+    });
+    expect(getDocumentOperations(document)).toEqual([]);
+  });
   it("does not show work for an archived document even with stale pending status", () => {
     expect(
       getDocumentOperations(

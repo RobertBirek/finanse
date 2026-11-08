@@ -22,6 +22,7 @@ from app.database import Base
 from app.finance import credit_card_models as _credit_card_models
 from app.finance import receipt_models as _receipt_models  # noqa: F401
 from app.finance import receipt_read_models as _receipt_read_models  # noqa: F401
+from app.finance.imports import models as _bank_import_models  # noqa: F401
 
 
 class Account(Base):

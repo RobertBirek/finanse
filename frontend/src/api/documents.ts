@@ -27,7 +27,7 @@ export interface DocumentData {
   last_error_code: string | null;
   created_at: string;
   updated_at: string;
-  processing_method: "legacy_ocr" | "vision";
+  processing_method: "legacy_ocr" | "vision" | "bank_import";
   review: ReviewSummary | null;
   has_extracted_text: boolean;
   local_ocr_state: string | null;

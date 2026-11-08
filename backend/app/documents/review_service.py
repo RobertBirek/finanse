@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import log_event
 from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
-from app.documents.lifecycle import require_document_unarchived
+from app.documents.lifecycle import require_document_processing_allowed
 from app.documents.models import Document, DocumentExtractionRevision, DocumentText
 from app.documents.review_schemas import ReviewResponse, ReviewSuggestion
 from app.documents.schemas import DocumentStatus
@@ -102,7 +102,7 @@ async def prepare_review(
             raise RuntimeError("review_receipt_missing_revision")
         return revision
 
-    require_document_unarchived(document)
+    await require_document_processing_allowed(db, document)
     if document.processing_method == "vision":
         raise ValueError("use_vision_action")
     latest = (
@@ -274,7 +274,7 @@ async def request_ocr_retry(
         if receipt.request_hash != request_hash:
             raise ValueError("idempotency_key_reused")
         return OCRRetryResult(document, receipt.response_json, is_new=False)
-    require_document_unarchived(document)
+    await require_document_processing_allowed(db, document)
     if document.processing_method == "vision":
         from app.documents.job_service import create_local_ocr_intent
 
@@ -365,7 +365,7 @@ async def prepare_vision_review(
         )
         assert job is not None
         return revision, job.id, False
-    require_document_unarchived(document)
+    await require_document_processing_allowed(db, document)
     active = await db.scalar(
         select(DocumentProcessingJob.id).where(
             DocumentProcessingJob.document_id == document_id,

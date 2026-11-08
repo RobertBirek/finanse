@@ -24,6 +24,30 @@ def require_document_unarchived(document: Document) -> None:
         raise DocumentLifecycleError("document_archived")
 
 
+async def document_has_import_source(db: AsyncSession, document: Document) -> bool:
+    from app.finance.imports.models import ImportSource
+
+    return (
+        await db.scalar(
+            select(ImportSource.id)
+            .where(
+                ImportSource.document_id == document.id,
+                ImportSource.user_id == document.user_id,
+            )
+            .limit(1)
+        )
+        is not None
+    )
+
+
+async def require_document_processing_allowed(db: AsyncSession, document: Document) -> None:
+    require_document_unarchived(document)
+    if document.processing_method == "bank_import" or await document_has_import_source(
+        db, document
+    ):
+        raise DocumentLifecycleError("document_import_source")
+
+
 async def _has_active_work(db: AsyncSession, document: Document) -> bool:
     if await db.scalar(
         select(ReceiptReadJob.id)
@@ -91,6 +115,8 @@ async def set_document_archived(
         raise LookupError("document_not_found")
     if (document.archived_at is not None) == archived:
         return document
+    if archived and await document_has_import_source(db, document):
+        raise DocumentLifecycleError("document_import_source")
     if archived and await _has_active_work(db, document):
         raise DocumentLifecycleError("document_processing_active")
     old_state = {"archived_at": document.archived_at.isoformat() if document.archived_at else None}

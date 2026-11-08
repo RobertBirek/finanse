@@ -1,7 +1,10 @@
 import hashlib
 import json
 import uuid
+from io import BytesIO
 
+from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +27,40 @@ HISTORY_TABLES = {
     "loan_payment_links",
     "credit_cards",
 }
+
+
+def text_pdf_bytes(*pages: str, encrypted: bool = False) -> bytes:
+    """Synthetic text PDF with real extractable content, never a mocked parser result."""
+    writer = PdfWriter()
+    font = writer._add_object(
+        DictionaryObject(
+            {
+                NameObject("/Type"): NameObject("/Font"),
+                NameObject("/Subtype"): NameObject("/Type1"),
+                NameObject("/BaseFont"): NameObject("/Helvetica"),
+            }
+        )
+    )
+    for content in pages:
+        page = writer.add_blank_page(width=595, height=842)
+        page[NameObject("/Resources")] = DictionaryObject(
+            {
+                NameObject("/Font"): DictionaryObject({NameObject("/F1"): font}),
+            }
+        )
+        lines = ["BT /F1 10 Tf 72 780 Td"]
+        for line in content.splitlines():
+            safe = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+            lines.append(f"({safe}) Tj 0 -14 Td")
+        lines.append("ET")
+        stream = DecodedStreamObject()
+        stream.set_data("\n".join(lines).encode("ascii"))
+        page[NameObject("/Contents")] = writer._add_object(stream)
+    if encrypted:
+        writer.encrypt("synthetic-test-password")
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
 
 
 async def ledger_snapshot(db: AsyncSession) -> dict[str, str]:

@@ -17,7 +17,7 @@ from app.documents.job_models import (
     DocumentVisionPolicy,
     DocumentVisionUsage,
 )
-from app.documents.lifecycle import require_document_unarchived
+from app.documents.lifecycle import require_document_processing_allowed
 from app.documents.models import Document, DocumentExtractionRevision
 from app.documents.review_schemas import ReviewSuggestion
 from app.documents.vision_config import VisionConfig, get_vision_config
@@ -91,7 +91,7 @@ async def create_vision_intent(
     ).scalar_one_or_none()
     if existing is not None:
         return existing
-    require_document_unarchived(document)
+    await require_document_processing_allowed(db, document)
     latest = (
         await db.execute(
             select(DocumentExtractionRevision)
@@ -152,7 +152,7 @@ async def create_local_ocr_intent(
     ).scalar_one_or_none()
     if existing is not None:
         return existing
-    require_document_unarchived(document)
+    await require_document_processing_allowed(db, document)
     active = await db.scalar(
         select(DocumentProcessingJob.id).where(
             DocumentProcessingJob.document_id == document_id,
