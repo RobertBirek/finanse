@@ -21,10 +21,17 @@ Backlog zadań ze statusami.
   późny retry po odpięciu kosztu i prywatność cudzego identyfikatora wyciągu.
 - [x] Dokumentacja/instrukcja/raport, backend09d1d79/frontend7aa1629 lokalnie;
   cleanup wyłącznie dwóch własnych efemerycznych kontenerów i ich wolumenów.
-- [ ] Osobny odbiór i zgoda na merge/push/deploy/migrację produkcyjną oraz świadomą
-  konfigurację istniejącego konta. Brak automatycznego przepisywania historii.
+- [x] Osobna zgoda „scal do main i wdróż” oraz „Tak, migracja i wdrożenie”:
+  FF/pushmain020c229, dwa backupy/restore/próby migracji, produkcyjny schemat00a9
+  i trzy nowe usługi. Retencja danych, ledger, public/auth/assets/browser PASS.
+- [x] Końcowa obserwacja312s/31kontroli, logi/restarty0/health/Redis/ledger PASS;
+  atomowe active metadata, trwałe dowody i dokumentacja wdrożenia. Cleanup tylko
+  dwóch własnych restoreDB z kontrolą OID i braku połączeń, bez force.
+- [ ] Świadoma konfiguracja istniejącego konta karty i uzgodnienie z wyciągiem.
+  Brak automatycznego przepisywania historii, sald lub odtwarzania starych planów.
 
 Raport `docs/audits/2026-11-07-credit-cards-local.md`,
+wdrożenie `docs/audits/2026-11-08-credit-cards-production.md`,
 instrukcja `docs/operations/credit-cards.md`.
 
 ## Bezpieczeństwo pakietów backend/worker (2026-11-07, implementacja lokalna)

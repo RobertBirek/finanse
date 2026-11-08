@@ -2,6 +2,48 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-08 — Karty: scalone, wdrożone i zweryfikowane020c229
+
+- Jawna zgoda „scal do main i wdróż”, następnie przez question potwierdzona dokładna
+  addytywna migracja f3a9→00a9/sześć tabel, maintenance/backup i wymiana trzech usług.
+  Konfiguracja Velo i historyczne dane poza zakresem. Required host docs w kolejności,
+  /deploy i runbook zastosowane. FF+pushmain3479aca→020c229 bez force.
+- Źródła produktu zgodne z569plikowym manifestem odebranym1847backend/555frontend/
+  159E2E+1skip. Fresh952backendunit/555frontend/lint/types/buildPASS po scaleniu,
+  publiczne bajty buildu identyczne. Pełnych integracji nie uruchamiano na produkcji.
+- Immutable package `/opt/finanse/webapp/releases/020c229/`, trzy obrazy offline,
+  mandatoryverify_release exactimageIDs/actualnonrootComposeUIDGIDPASS, nginxreadPASS.
+  Pełnebase+prod+activeoverride dziedziczą wszystkie dotychczasowe ustawienia;
+  starya68d9e4 i jego obrazy zachowane jako rollback. Brak hostmount/app.
+- Świeże zaszyfrowane backupy rehearsal/fenced odtworzone na dwóch wyłącznie własnych
+  loopback_restoreDB. Checksumy dump/uploads/schema/ledgerPASS; próby migracji
+  retain56oldtablesrows/columns +6newempty i old/newserviceaccounts/categoriesPASS.
+  Fencedrestore dane i uploads zgodne z zamrożoną produkcją przed APPLY.
+- Pierwsza próba STOPfrozen-idle przed migracją i automatycznyapprollbackPASS;
+  schema nadal f3a9, publichealth200. Worker graceful0ongoing, ale ARQ zatrzymało
+  przyszły cron:expire_category_proposals. Log restartu potwierdził delayedcron.
+  Poprawka tylko operatorcode: frozenmode dopuszcza zachowane znane noargcron,
+  nadal odmawia userjobs/unknown/args/active i wymaga idle trwałej kolejkiDB;
+  strictlivequeue0.7isolatedRED→GREEN, refrozenhashmanifest, productimagesunchanged.
+- Drugie podejście PASS:503→stopoldapp→freshbackuprestore→frozenrawretention→migrate
+  ONCE00a9→56oldretained/6empty/ledger0bad/oldnewreads→only3apps→internalverify→open.
+  Po otwarciu health/login200, assetbytes zgodne, newcard/candidates/billsanon401;
+  browserGETonly375/1440/font/overflow/JS/mutations/foreignPASS, screenshoty obejrzane.
+- Operatorreview ses_e45d8fb85ffeMFdp7quWbPJQAE:3Important guards naprawione przed
+  maintenance (rollbackmetadata, backupfencefreshness, exactmanifest). MD5retention
+  jawnie tylko accidental-change detection. Nie tworzono sesji ani userrecords.
+- Raport `docs/audits/2026-11-08-credit-cards-production.md`; prywatny operatorlogdir
+  `/tmp/opencode/credit-cards-release-020c229/`. FINALobservation312s/31checksPASS:
+  maxhealth61ms/HTTP200, exactimages/running/restarts0/logerrors0, schema00a9,
+  ledger0bad/Redisping, datacontainersIDs/images/starttimes/restartsunchanged.
+  finish.py wykonałatomicactivemetadata verified-live +durableevidence
+  `/opt/finanse/webapp/releases/020c229/evidence/`, SHA256manifest, noenvfiles.
+  CleanupONLYowned2restoreDB: savednames/OID/0connections→dropdbnoforce→absentPASS;
+  prooferetained. Docscommit/FFmainpush nie przebudowuje odebranych obrazów020c229.
+  StareVeloQ7dirty nie stage'ować. Brak otwartych błędów tego wdrożenia.
+- Następna sesja: świadoma konfiguracja istniejącej karty i uzgodnienie salda,
+  bez automatycznej historii lub starych planów. Szacunki nie zastępują danych banku.
+
 ## 2026-11-07 — Karty kredytowe: ODEBRANE LOKALNIE, bez deploy
 
 - Zatwierdzony chat zakres i „ok, działaj” po Build; osobna zgoda przez question

@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, 020c229] — 2026-11-08 — Karty kredytowe
+
+### Changed
+- Po jawnej zgodzie: FF i push `main` do `020c229`, wdrożone backend/worker/frontend
+  oraz osobno zatwierdzona migracja `f3a9d17c2e4b → 00a9ccb532b9`.
+- Dwa świeże backupy odtworzone w wyłącznie własnych bazach loopback; próby migracji
+  zachowują 56 starych tabel, sześć nowych pustych, księga zbilansowana. Retencja
+  ponownie potwierdzona na produkcji przed otwarciem ruchu; bez zmian historii/sald.
+- Dokładne odebrane źródła/obrazy, non-root import gate i świeże 952 backend unit,
+  555 frontend, lint/types/build PASS; HTTPS/assets/auth/browser 375/1440 PASS.
+- Pierwsza próba wycofana przed migracją: zaplanowany cron błędnie blokował kontrolę
+  bezczynności. Operatorowy fix RED→GREEN; kolejka zachowana, produkt bez zmian.
+- Obserwacja 312s/31kontroli PASS: health200, restarty0/błędy0, ledger0naruszeń,
+  Redisgotowy i niezmienione usługi danych. Active metadata atomowo `verified-live`,
+  dowody zarchiwizowane; usunięte wyłącznie dwie własne bazy restore po kontroli OID.
+- Bez konfiguracji samego konta Velo lub odtwarzania starych planów.
+- Raport: `docs/audits/2026-11-08-credit-cards-production.md`.
+
 ## [Local, odebrane] — 2026-11-07 — Karty kredytowe i plany ratalne
 
 ### Added
