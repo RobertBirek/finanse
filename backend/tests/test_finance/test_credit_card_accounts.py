@@ -241,6 +241,55 @@ async def test_card_list_denies_anonymous_access(async_client):
     assert (await async_client.get("/api/finance/credit-cards")).status_code == 401
 
 
+@pytest.mark.parametrize("as_payer", [False, True])
+async def test_combined_conversion_rejects_loan_links_without_partial_account_update(
+    db_session, as_payer
+):
+    from app.finance.loan_schemas import LoanCreate
+
+    owner, account, payer, _ = await setup(db_session)
+    account_id = account.id
+    await service.create_loan(
+        db_session,
+        owner,
+        LoanCreate(
+            name="Existing loan",
+            account_id=payer.id if as_payer else account_id,
+            payment_account_id=account_id if as_payer else payer.id,
+        ),
+    )
+    async with client_for(db_session, owner) as client:
+        response = await client.patch(
+            f"{ACCOUNTS}/{account_id}",
+            json={
+                "name": "Must not persist",
+                "type": "credit_card",
+                "credit_card": config(),
+            },
+        )
+        assert response.status_code == 409, response.text
+        current = (await client.get(f"{ACCOUNTS}/{account_id}")).json()
+        assert current["name"] == "VELOBANK - karta"
+        assert current["type"] == "checking"
+        assert current["credit_card"] is None
+
+
+async def test_orphan_card_type_is_visible_with_unknown_limit_not_a_fake_zero(db_session):
+    from sqlalchemy import text
+
+    owner, account, _, _ = await setup(db_session)
+    await db_session.execute(
+        text("UPDATE accounts SET type='credit_card' WHERE id=:id"), {"id": account.id}
+    )
+    async with client_for(db_session, owner) as client:
+        response = await client.get("/api/finance/credit-cards")
+        assert response.status_code == 200
+        [card] = response.json()
+        assert card["account_id"] == str(account.id)
+        assert card["configured"] is False
+        assert card["available_pln"] is None and card["limit_pln"] is None
+
+
 async def test_type_migration_only_reclassifies_owned_existing_profiles_and_preserves_rows(
     db_session,
 ):
