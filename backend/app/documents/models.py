@@ -24,8 +24,10 @@ from app.documents import receipt_read_models as _receipt_read_models  # noqa: F
 class Document(Base):
     __tablename__ = "documents"
     __table_args__ = (
+        UniqueConstraint("id", "user_id", name="uq_documents_id_user"),
         CheckConstraint(
-            "processing_method IN ('legacy_ocr', 'vision')", name="ck_document_processing_method"
+            "processing_method IN ('legacy_ocr', 'vision', 'bank_import')",
+            name="ck_document_processing_method",
         ),
         Index("ix_documents_status_next_attempt_at", "status", "next_attempt_at"),
     )

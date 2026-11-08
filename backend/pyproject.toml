@@ -49,6 +49,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 markers = [
+    "migration: real Alembic tests in an explicitly owned scratch PostgreSQL database",
     "integration: tests requiring a PostgreSQL test database",
     "proxy: disposable Docker Nginx contract test (run explicitly)",
 ]

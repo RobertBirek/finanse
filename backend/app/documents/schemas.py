@@ -65,7 +65,7 @@ class DocumentResponse(BaseModel):
     last_error_code: str | None = None
     created_at: dt.datetime
     updated_at: dt.datetime
-    processing_method: Literal["legacy_ocr", "vision"] = "legacy_ocr"
+    processing_method: Literal["legacy_ocr", "vision", "bank_import"] = "legacy_ocr"
     review: "ReviewSummary | None" = None
     has_extracted_text: bool = False
     local_ocr_state: str | None = None
