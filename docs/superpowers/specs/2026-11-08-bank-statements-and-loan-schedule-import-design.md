@@ -16,11 +16,15 @@ Użytkownik jawnie wskazał **Velo, ING i Revolut, bez Citi**. Zatwierdził form
 | Rodzina | Pierwsze obsługiwane źródła |
 | --- | --- |
 | Velo | oryginalny tekstowy PDF rachunku i karty |
-| ING | oryginalny tekstowy PDF rachunku bieżącego Direct i oszczędnościowego |
+| ING | oryginalny nieszyfrowany tekstowy PDF rachunku bieżącego Direct; oszczędnościowe odłożone decyzją użytkownika 2026-11-09 |
 | Revolut | CSV rachunków PLN, EUR i USD |
 | Harmonogram kredytu | tekstowy PDF z terminami, kapitałem, odsetkami i opłatami; pierwszy zweryfikowany układ Velo |
 
 CSV Velo/ING oraz PDF Revolut wymagają później próbek i odrębnego rozszerzenia.
+Zmiana zakresu 2026-11-09: po wykryciu szyfrowania wszystkich pięciu próbek ING
+oszczędnościowego użytkownik wybrał „Odłóż oszczędnościowe”. Pozostały importer
+powstaje dalej; oszczędnościowe jest jawnie nieobsługiwane do otrzymania odpowiedniej
+nieszyfrowanej próbki i osobnego rozszerzenia parsera. Nie odszyfrowujemy oryginałów.
 Zdjęcia, skany, Excel i dowolny nierozpoznany układ nie są importerem pierwszej wersji.
 Nie obiecujemy poprawnego odczytu każdego PDF tylko na podstawie rozszerzenia pliku.
 Nowy układ harmonogramu może być zapisany jako źródło, ale nie jest zatwierdzany

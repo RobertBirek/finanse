@@ -339,6 +339,14 @@ Test `test_bank_imports/test_velo_account.py`, `fixtures/velo_account_*.pdf`.
 
 ### Task 6: ING PDF Direct i oszczędnościowe (A6)
 
+**Zatwierdzona aktualizacja zakresu 2026-11-09:** użytkownik wybrał „Odłóż
+oszczędnościowe” po potwierdzeniu szyfrowania wszystkich dostarczonych próbek.
+Zadanie implementuje i odbiera wyłącznie `ing_direct_v1`; savings musi pozostać
+explicit unsupported (bez próby hasła/odszyfrowania lub zgadywania Direct-layout).
+Poniższe historyczne kroki dotyczące savings są odłożone, nie warunkują ukończenia
+zmniejszonego A6. Odbiór prywatny obejmuje nieszyfrowane próbki Direct, pozostałe
+zwracają `pdf_encrypted`. Pozostały zakres i bramki bez zmian.
+
 **Files:** Create `imports/parsers/ing.py`;
 Test `test_bank_imports/test_ing_pdf.py`, `fixtures/ing_{direct,savings}_*.pdf`.
 
