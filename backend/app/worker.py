@@ -31,6 +31,7 @@ from app.documents.receipt_read_worker import dispatch_receipt_reads, process_re
 from app.documents.retry import is_retryable_ocr_error, retry_delay_seconds
 from app.documents.review_service import pending_review_ids, process_review_revision
 from app.documents.schemas import DocumentStatus
+from app.finance.imports.worker import dispatch_import_jobs, process_import_job
 from app.finance.proposal_state import expire_proposal_items
 from app.finance.rule_worker import dispatch_rule_events, process_rule_event
 from app.finance.suggestion_worker import dispatch_suggestion_jobs, process_suggestion_job
@@ -335,6 +336,12 @@ class WorkerSettings:
         ),
         process_rule_event,
         func(
+            process_import_job,
+            name="process_import_job",
+            timeout=settings.FINANCE_IMPORT_LEASE_SECONDS,
+            max_tries=1,
+        ),
+        func(
             process_suggestion_job,
             name="process_suggestion_job",
             timeout=settings.FINANCE_SUGGESTIONS_JOB_TIMEOUT_SECONDS,
@@ -348,6 +355,7 @@ class WorkerSettings:
         cron(dispatch_document_jobs, second={5, 35}, run_at_startup=True),
         cron(dispatch_receipt_reads, second={7, 37}, run_at_startup=True),
         cron(dispatch_rule_events, second={10, 40}, run_at_startup=True),
+        cron(dispatch_import_jobs, second={12, 42}, run_at_startup=True),
         cron(dispatch_suggestion_jobs, second={20, 50}, run_at_startup=True),
         cron(expire_category_proposals, second={25, 55}, run_at_startup=True),
     ]
