@@ -304,12 +304,20 @@ export function FinanceCreditCardDetails() {
             Wyciągi i raty{account ? ` — ${account.name}` : ""}
           </h1>
         </div>
-        <Link
-          className="btn-secondary"
-          to={`/settings/finances/accounts?edit=${encodeURIComponent(accountId)}`}
-        >
-          Edytuj konto
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            className="btn-secondary"
+            to={`/finances/imports?account=${encodeURIComponent(accountId)}`}
+          >
+            Importuj wyciąg karty
+          </Link>
+          <Link
+            className="btn-secondary"
+            to={`/settings/finances/accounts?edit=${encodeURIComponent(accountId)}`}
+          >
+            Edytuj konto
+          </Link>
+        </div>
       </div>
       {query.isLoading || accounts.isLoading ? (
         <p role="status">Ładowanie karty…</p>

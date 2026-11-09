@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   useAccounts,
   useCategories,
@@ -182,22 +182,31 @@ export function FinanceAccounts({
             ) : (
               <div className="space-y-2">
                 {accounts.map((account) => (
-                  <AccountRow
-                    key={`${account.id}:${requestedEditId === account.id}`}
-                    account={account}
-                    updateMutation={updateAccount}
-                    deleteMutation={deleteAccount}
-                    editing={requestedEditId === account.id}
-                    onStartEdit={() => {
-                      const params = new URLSearchParams(location.search);
-                      params.set("edit", account.id);
-                      navigate({
-                        pathname: location.pathname,
-                        search: params.toString(),
-                      });
-                    }}
-                    onCancelEdit={cancelEdit}
-                  />
+                  <div key={account.id}>
+                    <AccountRow
+                      key={`${account.id}:${requestedEditId === account.id}`}
+                      account={account}
+                      updateMutation={updateAccount}
+                      deleteMutation={deleteAccount}
+                      editing={requestedEditId === account.id}
+                      onStartEdit={() => {
+                        const params = new URLSearchParams(location.search);
+                        params.set("edit", account.id);
+                        navigate({
+                          pathname: location.pathname,
+                          search: params.toString(),
+                        });
+                      }}
+                      onCancelEdit={cancelEdit}
+                    />
+                    <Link
+                      className="inline-block px-3 pb-2 text-sm underline"
+                      aria-label={`Importuj wyciąg: ${account.name}`}
+                      to={`/finances/imports?account=${encodeURIComponent(account.id)}`}
+                    >
+                      Importuj wyciąg
+                    </Link>
+                  </div>
                 ))}
               </div>
             )}

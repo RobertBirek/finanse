@@ -94,6 +94,12 @@ function createCategoryForm() {
 }
 
 describe("FinanceAccounts", () => {
+  it("links a source account to import as a suggestion rather than creating a payment", () => {
+    render(<FinanceAccounts section="accounts" />);
+    expect(
+      screen.getByRole("link", { name: "Importuj wyciąg: Rachunek główny" }),
+    ).toHaveAttribute("href", "/finances/imports?account=a1");
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     hooks.useAccounts.mockReturnValue({

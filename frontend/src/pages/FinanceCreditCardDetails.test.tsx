@@ -109,6 +109,14 @@ function openCard() {
   );
 }
 
+it("opens bank import for the current card without creating another card account", () => {
+  openCard();
+  expect(
+    screen.getByRole("link", { name: "Importuj wyciąg karty" }),
+  ).toHaveAttribute("href", "/finances/imports?account=card");
+  expect(mutateAsync).not.toHaveBeenCalled();
+});
+
 it("shows current credit position separately from historical statement debt", () => {
   openCard();
   expect(

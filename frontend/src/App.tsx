@@ -24,6 +24,8 @@ import { FinanceLoans } from "./pages/FinanceLoans";
 import { FinanceCreditCards } from "./pages/FinanceCreditCards";
 import { FinanceCreditCardDetails } from "./pages/FinanceCreditCardDetails";
 import { FinanceDocuments } from "./pages/FinanceDocuments";
+import { FinanceImports } from "./pages/FinanceImports";
+import { FinanceImportReview } from "./pages/FinanceImportReview";
 import { FinanceCategoryProposals } from "./pages/FinanceCategoryProposals";
 
 export default function App() {
@@ -68,6 +70,11 @@ export default function App() {
         />
         <Route path="/finances/reports" element={<FinanceReports />} />
         <Route path="/finances/documents" element={<FinanceDocuments />} />
+        <Route path="/finances/imports" element={<FinanceImports />} />
+        <Route
+          path="/finances/imports/:batchId"
+          element={<FinanceImportReview />}
+        />
         <Route
           path="/finances/proposals"
           element={<FinanceCategoryProposals />}

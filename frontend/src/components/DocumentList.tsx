@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   useDocuments,
   useArchiveDocument,
@@ -175,6 +175,16 @@ export function DocumentList() {
                       {formatFileSize(doc.size_bytes)} ·{" "}
                       {new Date(doc.created_at).toLocaleDateString("pl-PL")}
                     </span>
+                    {!archived &&
+                    doc.status === "done" &&
+                    doc.mime_type === "application/pdf" ? (
+                      <Link
+                        className="mt-1 inline-block text-sm underline"
+                        to={`/finances/imports?document=${encodeURIComponent(doc.id)}`}
+                      >
+                        Użyj do importu
+                      </Link>
+                    ) : null}
                     {doc.status === "pending" && doc.next_attempt_at && (
                       <span
                         id={`document-pending-${doc.id}`}

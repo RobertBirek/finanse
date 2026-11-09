@@ -63,6 +63,7 @@ export const navigationContexts: NavigationContext[] = [
     items: [
       { label: "Finanse", to: "/finances", end: true },
       { label: "Transakcje", to: "/finances/transactions" },
+      { label: "Import", to: "/finances/imports" },
       { label: "Płynność", to: "/finances/cashflow" },
       { label: "Budżet", to: "/finances/budgets" },
       { label: "Raporty", to: "/finances/reports" },
