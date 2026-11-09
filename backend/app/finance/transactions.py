@@ -1,6 +1,7 @@
 """Ledger mutations and FX conversion; transaction boundaries belong to callers."""
 
 import uuid
+from datetime import date
 from decimal import ROUND_HALF_EVEN, Decimal
 
 from sqlalchemy import select
@@ -14,7 +15,11 @@ from app.finance.models import FinancialTransaction, LoanPaymentLink, Posting
 from app.finance.nbp_rates import NbpRateProvider
 from app.finance.queries import get_accounts
 from app.finance.schemas import ExchangeCreate, PostingCreate, TransactionCreate, TransactionUpdate
-from app.finance.transaction_dates import TransactionDateError, add_manual_date_metadata
+from app.finance.transaction_dates import (
+    TransactionDateError,
+    add_import_date_metadata,
+    add_manual_date_metadata,
+)
 from app.work.service import validate_project_reference
 
 
@@ -53,6 +58,8 @@ async def _create_transaction(
     allow_category_reversal: bool = False,
     allow_inactive_accounts: bool = False,
     allow_card_refund: bool = False,
+    allow_bank_refund: bool = False,
+    import_dates: tuple[date | None, date] | None = None,
 ) -> FinancialTransaction:
     # Only trusted import code explicitly opts into preserving source-category
     # reversals. Client-controlled `source` never disables validation.
@@ -62,6 +69,14 @@ async def _create_transaction(
         raise ValueError("Card refunds require the trusted expense correction path")
     if allow_inactive_accounts and data.source != "actual":
         raise ValueError("Inactive account history requires the explicit Actual import path")
+    if allow_bank_refund and (
+        data.source != "bank_import" or data.type != "expense" or import_dates is None
+    ):
+        raise ValueError("Bank refunds require the trusted bank-import path")
+    if import_dates is not None and (
+        data.source != "bank_import" or data.is_pending or data.transaction_date != import_dates[1]
+    ):
+        raise ValueError("Bank date evidence requires a new posted bank transaction")
     _validate_posting_sum(data.postings, data.type)
     await _validate_transaction_postings(
         db,
@@ -71,6 +86,7 @@ async def _create_transaction(
         allow_category_reversal=allow_category_reversal,
         allow_inactive_accounts=allow_inactive_accounts,
         allow_card_refund=allow_card_refund,
+        allow_bank_refund=allow_bank_refund,
     )
     await validate_project_reference(db, user_id, data.project_id)
 
@@ -84,6 +100,9 @@ async def _create_transaction(
         source=data.source,
     )
     db.add(txn)
+    if import_dates is not None:
+        txn.id = uuid.uuid4()
+        await add_import_date_metadata(db, txn, *import_dates)
     await db.flush()
 
     if data.booking_date is not None:

@@ -22,6 +22,15 @@ async def guard_allocated_transaction_change(
     # Narrative edits do not alter the allocated payment's identity.
     if not changes or set(changes) <= {"description"}:
         return
+    from app.finance.imports.models import ImportEvidence
+
+    evidence = await db.scalar(
+        select(ImportEvidence.id)
+        .where(ImportEvidence.user_id == user_id, ImportEvidence.transaction_id == transaction_id)
+        .limit(1)
+    )
+    if evidence is not None:
+        raise ValueError("Bank import source evidence protects this payment identity")
     transaction = await db.scalar(
         select(FinancialTransaction).where(
             FinancialTransaction.id == transaction_id, FinancialTransaction.user_id == user_id

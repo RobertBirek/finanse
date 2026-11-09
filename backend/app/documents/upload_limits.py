@@ -1,3 +1,4 @@
+import re
 import shutil
 import uuid
 from pathlib import Path
@@ -26,7 +27,12 @@ class DocumentUploadBodyLimitMiddleware:
         self.max_bytes = max_bytes
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope.get("path", "").rstrip("/") != "/api/documents/upload":
+        path = scope.get("path", "").rstrip("/")
+        is_upload = (
+            path == "/api/documents/upload"
+            or re.fullmatch(r"/api/finance/imports/[^/]+/sources", path) is not None
+        )
+        if scope["type"] != "http" or not is_upload:
             await self.app(scope, receive, send)
             return
         limit = self.max_bytes or settings.DOCUMENT_MAX_BODY_BYTES

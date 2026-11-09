@@ -36,7 +36,13 @@ from app.finance.imports.models import (
 )
 from app.finance.imports.schemas import ImportDecisionInput, PreviewDTO, PreviewRequest
 from app.finance.imports.valuation import freeze_exchange, freeze_quote
-from app.finance.models import Account, Category, FinancialTransaction, Posting
+from app.finance.models import (
+    Account,
+    Category,
+    FinancialTransaction,
+    Posting,
+    TransactionDateMetadata,
+)
 
 
 def canonical(value: object) -> Any:
@@ -252,6 +258,21 @@ async def _snapshot(
         balances[str(posting.account_id)]["base"] += (
             -posting.base_amount_pln if posting.direction == "debit" else posting.base_amount_pln
         )
+    date_evidence = list(
+        (
+            await db.scalars(
+                select(TransactionDateMetadata)
+                .where(
+                    TransactionDateMetadata.user_id == owner,
+                    TransactionDateMetadata.transaction_id.in_(
+                        select(Posting.transaction_id).where(Posting.account_id.in_(accounts))
+                    ),
+                )
+                .order_by(TransactionDateMetadata.transaction_id)
+                .execution_options(populate_existing=True)
+            )
+        ).all()
+    )
     snapshot = canonical(
         {
             "batch": record(batch),
@@ -260,6 +281,7 @@ async def _snapshot(
             "accounts": [record(account) for account in account_records],
             "categories": [record(category) for category in category_records],
             "ledger_balances": balances,
+            "date_evidence": [record(metadata) for metadata in date_evidence],
             "ledger_digest": digest(
                 [[record(posting), record(transaction)] for posting, transaction in ledger]
             ),

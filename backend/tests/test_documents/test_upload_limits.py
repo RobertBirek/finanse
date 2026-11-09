@@ -7,7 +7,11 @@ from test_documents.fixtures import valid_pdf_bytes
 
 
 @pytest.mark.asyncio
-async def test_chunked_multipart_over_limit_returns_413_not_parse_error():
+@pytest.mark.parametrize(
+    "path",
+    ["/api/documents/upload", "/api/finance/imports/00000000-0000-0000-0000-000000000001/sources"],
+)
+async def test_chunked_multipart_over_limit_returns_413_not_parse_error(path):
     import httpx
     from fastapi import FastAPI, File, UploadFile
 
@@ -16,7 +20,7 @@ async def test_chunked_multipart_over_limit_returns_413_not_parse_error():
     app = FastAPI()
     app.add_middleware(DocumentUploadBodyLimitMiddleware, max_bytes=200)
 
-    @app.post("/api/documents/upload")
+    @app.post(path)
     async def upload(file: UploadFile = File(...)):  # noqa: B008 - local test route
         raise AssertionError("oversized body reached handler")
 
@@ -29,7 +33,7 @@ async def test_chunked_multipart_over_limit_returns_413_not_parse_error():
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
         response = await client.post(
-            "/api/documents/upload",
+            path,
             content=chunks(),
             headers={"Content-Type": "multipart/form-data; boundary=boundary"},
         )
@@ -38,9 +42,13 @@ async def test_chunked_multipart_over_limit_returns_413_not_parse_error():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "path",
+    ["/api/documents/upload", "/api/finance/imports/00000000-0000-0000-0000-000000000001/sources"],
+)
+@pytest.mark.parametrize(
     "headers", [[], [(b"content-length", b"100")], [(b"content-length", b"2")]]
 )
-async def test_body_limit_rejects_before_forwarding_excess_chunk(headers):
+async def test_body_limit_rejects_before_forwarding_excess_chunk(headers, path):
     from app.documents.upload_limits import DocumentUploadBodyLimitMiddleware
 
     messages = iter(
@@ -66,7 +74,7 @@ async def test_body_limit_rejects_before_forwarding_excess_chunk(headers):
 
     middleware = DocumentUploadBodyLimitMiddleware(app, max_bytes=4)
     await middleware(
-        {"type": "http", "method": "POST", "path": "/api/documents/upload", "headers": headers},
+        {"type": "http", "method": "POST", "path": path, "headers": headers},
         receive,
         send,
     )

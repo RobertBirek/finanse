@@ -102,7 +102,9 @@ async def candidate_postings(
         statement = statement.where(Account.id == account_id)
     records = (
         await db.execute(
-            statement.order_by(FinancialTransaction.date, FinancialTransaction.id, Posting.id)
+            statement.order_by(
+                FinancialTransaction.date, FinancialTransaction.id, Posting.id
+            ).execution_options(populate_existing=True)
         )
     ).all()
     candidates = []

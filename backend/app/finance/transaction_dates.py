@@ -151,3 +151,38 @@ async def set_transaction_dates(
     await db.flush()
     await db.refresh(txn, attribute_names=["updated_at", "date_metadata"])
     return txn
+
+
+async def add_import_date_metadata(
+    db: AsyncSession, txn: FinancialTransaction, purchase: date | None, booking: date
+) -> None:
+    """Only a pending ORM insert from the trusted bank adapter may attest bank dates."""
+    if (
+        txn not in db.new
+        or txn.source != "bank_import"
+        or txn.date != booking
+        or txn.date_metadata is not None
+        or txn.is_pending
+    ):
+        raise TransactionDateError(
+            "date_protected", "Import dates require a new posted bank transaction"
+        )
+    meta = TransactionDateMetadata(
+        transaction_id=txn.id,
+        user_id=txn.user_id,
+        purchase_date=purchase,
+        purchase_date_source="import" if purchase else None,
+        booking_date=booking,
+        booking_date_source="import",
+        version=1,
+    )
+    txn.date_metadata = meta
+    db.add(meta)
+    await log_event(
+        db,
+        txn.user_id,
+        "financial_transaction",
+        str(txn.id),
+        "set_import_dates",
+        new_state=_state(meta),
+    )
