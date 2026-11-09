@@ -4,7 +4,13 @@ import uuid
 from io import BytesIO
 
 from pypdf import PdfWriter
-from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+from pypdf.generic import (
+    ArrayObject,
+    DecodedStreamObject,
+    DictionaryObject,
+    NameObject,
+    NumberObject,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,12 +38,43 @@ HISTORY_TABLES = {
 def text_pdf_bytes(*pages: str, encrypted: bool = False) -> bytes:
     """Synthetic text PDF with real extractable content, never a mocked parser result."""
     writer = PdfWriter()
+    glyph_names = {
+        "Ą": "Aogonek",
+        "ą": "aogonek",
+        "Ć": "Cacute",
+        "ć": "cacute",
+        "Ę": "Eogonek",
+        "ę": "eogonek",
+        "Ł": "Lslash",
+        "ł": "lslash",
+        "Ń": "Nacute",
+        "ń": "nacute",
+        "Ó": "Oacute",
+        "ó": "oacute",
+        "Ś": "Sacute",
+        "ś": "sacute",
+        "Ź": "Zacute",
+        "ź": "zacute",
+        "Ż": "Zdotaccent",
+        "ż": "zdotaccent",
+    }
+    extra_chars = sorted({char for page in pages for char in page if ord(char) > 127})
+    codes = {char: 128 + index for index, char in enumerate(extra_chars)}
+    encoding = DictionaryObject({NameObject("/BaseEncoding"): NameObject("/WinAnsiEncoding")})
+    if extra_chars:
+        encoding[NameObject("/Differences")] = ArrayObject(
+            [
+                NumberObject(128),
+                *[NameObject("/" + glyph_names[char]) for char in extra_chars],
+            ]
+        )
     font = writer._add_object(
         DictionaryObject(
             {
                 NameObject("/Type"): NameObject("/Font"),
                 NameObject("/Subtype"): NameObject("/Type1"),
                 NameObject("/BaseFont"): NameObject("/Helvetica"),
+                NameObject("/Encoding"): encoding,
             }
         )
     )
@@ -54,7 +91,9 @@ def text_pdf_bytes(*pages: str, encrypted: bool = False) -> bytes:
             lines.append(f"({safe}) Tj 0 -14 Td")
         lines.append("ET")
         stream = DecodedStreamObject()
-        stream.set_data("\n".join(lines).encode("ascii"))
+        stream.set_data(
+            bytes(ord(char) if ord(char) < 128 else codes[char] for char in "\n".join(lines))
+        )
         page[NameObject("/Contents")] = writer._add_object(stream)
     if encrypted:
         writer.encrypt("synthetic-test-password")
