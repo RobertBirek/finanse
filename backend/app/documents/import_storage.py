@@ -15,21 +15,9 @@ from app.documents import service
 from app.documents.models import Document
 from app.documents.upload_limits import enforce_storage_admission
 from app.documents.validation import UnsupportedDocumentFormatError, validate_document_content
+from app.finance.imports.contracts import REVOLUT_CSV_COLUMNS
 
-REVOLUT_COLUMNS = frozenset(
-    {
-        "Rodzaj",
-        "Produkt",
-        "Data rozpoczęcia",
-        "Data zrealizowania",
-        "Opis",
-        "Kwota",
-        "Opłata",
-        "Waluta",
-        "State",
-        "Saldo",
-    }
-)
+REVOLUT_COLUMNS = frozenset(REVOLUT_CSV_COLUMNS)
 
 
 class ImportStorageError(ValueError):

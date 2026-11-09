@@ -1,0 +1,3 @@
+Rodzaj,Produkt,Data rozpoczęcia,Data zrealizowania,Opis,Kwota,Opłata,Waluta,State,Saldo
+Przelew,Bieżący,2026-02-01 09:00:00,2026-02-01 09:00:00,Synthetic funding,10.00,0.00,EUR,ZAKOŃCZONO,10.00
+Przelew,Bieżący,2026-02-02 10:00:00,2026-02-02 10:00:00,Synthetic payment,-2.00,0.00,EUR,ZAKOŃCZONO,8.00

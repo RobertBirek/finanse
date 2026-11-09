@@ -15,6 +15,18 @@ from pydantic import (
 )
 
 MAX_MINOR_UNITS = 9_007_199_254_740_991
+REVOLUT_CSV_COLUMNS = (
+    "Rodzaj",
+    "Produkt",
+    "Data rozpoczęcia",
+    "Data zrealizowania",
+    "Opis",
+    "Kwota",
+    "Opłata",
+    "Waluta",
+    "State",
+    "Saldo",
+)
 Bank = Literal["velo", "ing", "revolut"]
 Currency = Literal["PLN", "EUR", "USD"]
 ImportKind = Literal["statement", "loan_schedule"]
