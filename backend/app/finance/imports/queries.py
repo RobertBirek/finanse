@@ -10,12 +10,15 @@ from app.finance.imports.contracts import ScheduleRow, StatementRow
 from app.finance.imports.errors import ImportError
 from app.finance.imports.models import (
     ImportBatch,
+    ImportDecision,
     ImportEvidence,
+    ImportGroup,
+    ImportGroupRow,
     ImportRevision,
     ImportRow,
     ImportSource,
 )
-from app.finance.imports.schemas import BatchDTO, RowDTO, RowPage, SourceDTO
+from app.finance.imports.schemas import BatchDTO, ReviewGroupDTO, RowDTO, RowPage, SourceDTO
 
 
 async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> BatchDTO | None:
@@ -33,8 +36,21 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
             .order_by(ImportSource.created_at, ImportSource.id)
         )
     ).all()
+    revisions = (
+        await db.scalars(
+            select(ImportRevision)
+            .where(ImportRevision.user_id == owner, ImportRevision.batch_id == batch_id)
+            .order_by(ImportRevision.source_id, ImportRevision.number.desc())
+        )
+    ).all()
+    latest: dict[uuid.UUID, ImportRevision] = {}
+    for revision_entry in revisions:
+        latest.setdefault(revision_entry.source_id, revision_entry)
     sources = []
     for source, document, revision in records:
+        candidate = latest.get(source.id)
+        if candidate is not None and candidate.id == source.current_revision_id:
+            candidate = None
         sources.append(
             SourceDTO.model_validate(
                 {
@@ -49,8 +65,17 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
                     "processing_state": source.processing_state,
                     "validation_state": source.validation_state,
                     "current_revision_id": source.current_revision_id,
+                    "candidate_revision_id": candidate.id if candidate else None,
+                    "candidate_parser_version": candidate.parser_version if candidate else None,
                     "checks": revision.checks if revision else [],
-                    "warnings": revision.warnings if revision else [],
+                    "warnings": list(
+                        dict.fromkeys(
+                            [
+                                *(revision.warnings if revision else []),
+                                *(candidate.warnings if candidate else []),
+                            ]
+                        )
+                    ),
                 }
             )
         )
@@ -64,6 +89,41 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
             ~select(ImportEvidence.id).where(ImportEvidence.row_id == ImportRow.id).exists(),
         )
     )
+    groups = (
+        await db.execute(
+            select(ImportGroup, ImportDecision)
+            .outerjoin(
+                ImportDecision,
+                (ImportDecision.group_id == ImportGroup.id)
+                & (ImportDecision.user_id == owner)
+                & (ImportDecision.version == ImportGroup.version),
+            )
+            .where(ImportGroup.user_id == owner, ImportGroup.batch_id == batch_id)
+            .order_by(ImportGroup.created_at, ImportGroup.id)
+        )
+    ).all()
+    membership = (
+        await db.scalars(
+            select(ImportGroupRow)
+            .where(ImportGroupRow.user_id == owner, ImportGroupRow.batch_id == batch_id)
+            .order_by(ImportGroupRow.row_id)
+        )
+    ).all()
+    grouped_rows: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for member in membership:
+        grouped_rows.setdefault(member.group_id, []).append(member.row_id)
+    group_dtos = [
+        ReviewGroupDTO.model_validate(
+            {
+                "id": group.id,
+                "version": group.version,
+                "state": group.state,
+                "row_ids": grouped_rows.get(group.id, []),
+                "decision": decision.data if decision else None,
+            }
+        )
+        for group, decision in groups
+    ]
     return BatchDTO.model_validate(
         {
             "id": batch.id,
@@ -73,6 +133,7 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
             "commit_state": batch.commit_state,
             "sources": sources,
             "unresolved_count": unresolved or 0,
+            "groups": group_dtos,
         }
     )
 
@@ -85,6 +146,7 @@ async def list_rows(
     source_id: uuid.UUID | None,
     offset: int,
     limit: int,
+    revision_id: uuid.UUID | None = None,
 ) -> RowPage:
     if offset < 0 or limit <= 0 or limit > 100:
         raise ImportError("invalid_pagination", "Nieprawidłowy zakres listy.", 422)
@@ -105,14 +167,33 @@ async def list_rows(
         is None
     ):
         raise ImportError("source_not_found", "Nie znaleziono źródła.", 404)
+    if revision_id is not None and (
+        source_id is None
+        or await db.scalar(
+            select(ImportRevision.id).where(
+                ImportRevision.id == revision_id,
+                ImportRevision.user_id == owner,
+                ImportRevision.batch_id == batch_id,
+                ImportRevision.source_id == source_id,
+            )
+        )
+        is None
+    ):
+        raise ImportError("revision_not_found", "Nie znaleziono odczytu tego źródła.", 404)
     statement = (
         select(ImportRow)
-        .join(ImportSource, ImportSource.current_revision_id == ImportRow.revision_id)
+        .join(
+            ImportSource, (ImportSource.id == ImportRow.source_id) & (ImportSource.user_id == owner)
+        )
         .where(
             ImportRow.user_id == owner,
             ImportRow.batch_id == batch_id,
         )
     )
+    if revision_id is None:
+        statement = statement.where(ImportSource.current_revision_id == ImportRow.revision_id)
+    else:
+        statement = statement.where(ImportRow.revision_id == revision_id)
     if source_id is not None:
         statement = statement.where(ImportRow.source_id == source_id)
     total = int(await db.scalar(select(func.count()).select_from(statement.subquery())) or 0)
@@ -122,6 +203,27 @@ async def list_rows(
         )
     ).all()
     items = []
+    decisions = (
+        await db.execute(
+            select(ImportGroupRow.row_id, ImportDecision.data)
+            .join(
+                ImportGroup,
+                (ImportGroup.id == ImportGroupRow.group_id) & (ImportGroup.user_id == owner),
+            )
+            .join(
+                ImportDecision,
+                (ImportDecision.group_id == ImportGroup.id)
+                & (ImportDecision.user_id == owner)
+                & (ImportDecision.version == ImportGroup.version),
+            )
+            .where(
+                ImportGroupRow.user_id == owner,
+                ImportGroupRow.batch_id == batch_id,
+                ImportGroupRow.row_id.in_([row.id for row in rows]),
+            )
+        )
+    ).all()
+    row_decisions = {row_id: data for row_id, data in decisions}
     for row in rows:
         value = (
             StatementRow.model_validate(row.fields)
@@ -139,6 +241,7 @@ async def list_rows(
                     "kind": row.kind,
                     "bank_fields": value if isinstance(value, StatementRow) else None,
                     "schedule_fields": value if isinstance(value, ScheduleRow) else None,
+                    "decision": row_decisions.get(row.id),
                 }
             )
         )

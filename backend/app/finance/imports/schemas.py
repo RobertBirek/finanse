@@ -7,6 +7,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.finance.imports.card_statements import CardHeaderDecision
 from app.finance.imports.contracts import (
     Bank,
     Check,
@@ -33,8 +34,18 @@ class SourceDTO(ImportDTO):
     processing_state: Literal["queued", "processing", "ready", "error", "unsupported"]
     validation_state: Literal["passed", "needs_review", "blocked"]
     current_revision_id: uuid.UUID | None = None
+    candidate_revision_id: uuid.UUID | None = None
+    candidate_parser_version: str | None = None
     checks: list[Check] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+
+
+class ReviewGroupDTO(ImportDTO):
+    id: uuid.UUID
+    version: int
+    state: Literal["draft", "ready", "committed", "deferred"]
+    row_ids: list[uuid.UUID]
+    decision: dict[str, object] | None
 
 
 class BatchDTO(ImportDTO):
@@ -45,6 +56,7 @@ class BatchDTO(ImportDTO):
     commit_state: Literal["not_committed", "partial", "committed"]
     sources: list[SourceDTO] = Field(default_factory=list)
     unresolved_count: int = 0
+    groups: list[ReviewGroupDTO] = Field(default_factory=list)
 
 
 class RowDTO(ImportDTO):
@@ -90,6 +102,7 @@ class ImportDecisionInput(ImportDTO):
     fee_category_id: uuid.UUID | None = None
     manual_rate: Decimal | None = Field(default=None, gt=0, lt=1000000, decimal_places=6)
     acknowledgements: list[str] = Field(default_factory=list)
+    card_header: CardHeaderDecision | None = None
 
     @model_validator(mode="after")
     def validate_intent(self) -> Self:
@@ -164,3 +177,22 @@ class JobDTO(ImportDTO):
     state: Literal["queued", "processing", "ready", "error", "unsupported"]
     attempt: int
     error_code: str | None = None
+
+
+class ExistingCandidate(ImportDTO):
+    transaction_id: uuid.UUID
+    account_posting_id: uuid.UUID
+    strength: Literal["strong", "possible"]
+    reasons: list[str]
+    conflicts: list[str]
+
+
+class PreviewDTO(ImportDTO):
+    id: uuid.UUID
+    batch_id: uuid.UUID
+    version: int
+    request_hash: str
+    new_transaction_count: int
+    linked_transaction_count: int
+    warnings: list[str]
+    payload: dict[str, object]
