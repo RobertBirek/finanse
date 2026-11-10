@@ -126,6 +126,12 @@ transactions/postings, Actual mappings i payment links, ale NIE planowe raty, kt
 to polecenie może jawnie dodawać/archiwizować. Stare raty/ID/składniki są dodatkowo
 porównywane osobno. Nie zmieniać szerszego `ledger_snapshot` etapu A.
 
+Wykonawcze doprecyzowanie B1 (2026-11-10): membership ma również `loan_id` jako
+kontekst FK do rewizji i raty. Addytywne unique owner keys na LoanAgreement,
+LoanInstallment, FinanceCommandReceipt oraz ImportRevision/ImportRow umożliwiają
+FK owner/loan, bez zmiany identyfikatorów, DTO i istniejących relacji etapu A.
+Migracja obejmuje te constrainty oprócz dwóch tabel i dwóch nullable pointerów.
+
 - [ ] **Step 1: Write failing tests.** Model check/owner FK/ordinal, projected defaults
   NULL i prawdziwy Alembic roundtrip na seeded legacy loan+paid+partial+past-unpaid.
   ```python

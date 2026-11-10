@@ -110,6 +110,7 @@ class ImportSource(ImportOwned):
 class ImportRevision(ImportOwned):
     __tablename__ = "bank_import_revisions"
     __table_args__ = (
+        UniqueConstraint("id", "user_id", name="uq_bank_import_revision_owner"),
         UniqueConstraint("source_id", "number", name="uq_bank_import_revision_number"),
         UniqueConstraint("id", "user_id", "source_id", name="uq_bank_import_revision_owner_source"),
         UniqueConstraint("id", "user_id", "batch_id", name="uq_bank_import_revision_owner_batch"),
@@ -141,6 +142,7 @@ class ImportRevision(ImportOwned):
 class ImportRow(ImportOwned):
     __tablename__ = "bank_import_rows"
     __table_args__ = (
+        UniqueConstraint("id", "user_id", name="uq_bank_import_row_owner"),
         UniqueConstraint("revision_id", "ordinal", name="uq_bank_import_row_ordinal"),
         UniqueConstraint("revision_id", "source_key", name="uq_bank_import_row_key"),
         UniqueConstraint("id", "user_id", "batch_id", name="uq_bank_import_row_owner_batch"),

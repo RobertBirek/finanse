@@ -2,6 +2,85 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-10 — B1 pełny gate zielony
+
+- Drugi pełny backend2204PASS/14standardexcluded/0runtime-skips,10221.50s.
+  JUnit/collection zgodne,686hashcurrent+snapshotPASS; shellsh_1c5324f4e001HqE6jdd3XXj8o6.
+  StaticruffPASS/mypy185PASS, legacy3PASS28.82s, focused44PASS339.21s.
+- Migracja84fdbd10aa18 po6bd8758ebc7d rzeczywiście wygenerowana/przejrzana/testowana;
+  bez backfillu/Q7mutation. Dwa legacytesty poprawione do realnych historycznych
+  Alembicroundtripów we własnych scratch DB; guardy/retencja nie osłabione.
+- B1 gotowe do lokalnego commitu/task-done, potem B2parser. Bez produkcyjnych zmian.
+  Własny no-port PG/runner zachowane dla B2–B6; receipts wyłącznie ignoredworkspace.
+
+## 2026-11-10 — Etap B rozpoczęty po zgodzie; B1 testy fundamentu
+
+- User „ok, działaj” po opisie B; osobno question „Tak, bez portów” na NEWPG/runner/
+  volume i cleanupwyłączniewłasnychzasobów. Aresources już usunięte, nie odtworzono
+  cudzejDB. Newemptyfinanse_test/networknone/sharednamespace/noportsPASS; obrazycache,
+  bez pull/install/productionsecrets. Receipts w ignoredworkspace B.
+- Existing linkedworktreefeat/financial-document-workflow/BASEcdd6bc2 verified, oldQ7
+  dirtydocs/audits zachowane. Required4/opt docs w kolejności i aktualne worktree docs/
+  Bplan/spec przeczytane. Własnyledger B ma6todo i preflightinterfaces; B1briefREAD.
+- Wszystkie677źródeł identyczne z odebranym A2197backend, świeżyfrontend59679.24s/
+  tsc/eslintPASS. Freshbackendloan/contracts/Aacceptance sh_1c44edd3d001Nb6jHKmap6Fw3d;
+  B1REDsh_1c453663e001trxHlUr2whhbG8 blokującyflock, bezpowtórek/pollingu.
+- Napisano B1testsprzedkodem: DTOstrict/exacttarget/noledgerpayload, projectionNULL,
+  ownership/ordinal/singleactive/membership/pointerFK oraz realAlembicretention na
+  syntheticpaid/partial/pastunpaid+Actual+StageA. LegacySQL nie zależy od przyszłegoORM.
+  Prodmodel/migracja jeszczenienapisane; nie zgadywano revisionID. Brakdeploy/realimport.
+- Baselinebackend36PASS315.51s. B1RED6missingmodel/schemaFAIL observed beforecode.
+  MigrationseedSQL neededphysicaldate/created_by iis_budget_impact=false, nie są to
+  regresjeproduktu; poprawionytest doszedł do REALRED brakgeneratedmigrationfile.
+- Modele2tables+NULLpointers/strictDTO/projection dodane bezbackfillu; dodatkoweowner
+  uniqueconstraints i membership.loan_id egzekwująSQLowner+loan. Bothplansannotated.
+  First2schemaPASS/4testhelperFAIL(create_loan_installment zwracaORM, nieDetail), helper
+  .idpoprawiony; Ruff3dictstyle poprawione bezunsafe. Static/modelrerun irealautogen
+  ownscratchDB w tle, żaden IDniezgadywany. Wymagany GREEN/fullgate przedB1commitem.
+- Autogen wygenerował84fdbd10aa18 po6bd8758ebc7d, ownscratchDBremovedOID/ownerproof.
+  Reviewmigracji: owneruniques przed dependenttables, scheduledindexdriftusunięty,
+  downgradeguardprzedDDL, zerobackfill. B1ruffPASS/mypy185PASS. Testmodels3PASS/
+  3fixtureTypeError (syncwith naasyncsessiontx) poprawiono asynccontextmanagerem;
+  brakzmianproductguard. Schemat/B1roundtrip/Aroundtrip sh_1c45ce0c6001jhmeeXuyGlAxmD
+  trwa; żadnegoB1commitu lub pełnegoGREENclaim.
+- Schema/B1retention7PASS/1AfixtureFAIL74.55s: exactpreflight futureORMcolumnmissing
+  przedupgrade. Alegacyseedloan/installment/link teraz SQLstarychkolumn, pozostałe
+  konto/transactionservices i pełne snapshot/down/up/refusal asercje bez zmian.
+  Ruling wledgerB, to testfixtureadaptation nie naruszenie API/migracji/starych danych.
+  Expanded44focused+legacy/static sh_1c45f4afa001ReNmdQNLPP8m8R pending. Zamrożony
+  manifest686files/diffcheckPASS, pełnyB1backend dopiero po GREEN. Frontend596/staticPASS.
+- Expanded38PASS/6fixtureerrors343.34s: testBconftest bezpośrednio importował
+  siblingAconftest i kolidował z discoveryowner fixtureA. Usuniętoimportconftest,
+  własne2userfixturesB, wspólnyhelpermigracji nadal z tests.migration_fixtures.
+  Żaden produktowyguard/migration/dataassertion nie zmieniony.
+- Refrozen686manifest; finalchainsh_1c4666c23001lp4UdwI2rgXrDq:44focused→static→
+  FULLpytest/JUnit→collection/0runtime-skips/hashsnapshot+current/diff. Bezpollingu/
+  nowegokodu/commitu/B2 przed wynikami; spodziewana pełna regresja około3h.
+- CORRECTION: usunięcieimportuconftest NIE naprawiło6ownererrors; wcześniejsza hipoteza
+  niepotwierdzona. Drugi38PASS/6errors383.11s, set-e zatrzymał chain przedfullbackend.
+  Izolowanyprobe kolekcji wykazał realnytrigger: rozdzielone selektory dwóch plikówA
+  cache'ująownerdefs=[]; sąsiadujące/grupowane selektory zbierają te same44testy
+  zpoprawnymi fixturedefs. Nie zmieniono produktu/asercji/pytestconfig ani nie
+  wstrzykniętofixture. Probe tylko ignoredworkspace/tmp, nie ładowany w realnychtestach.
+- Fullrootcollection2204/2218(14standardproxy)24.14s z właściwymiA+BownerdefsPASS.
+  Nowychainsh_1c48e7c0d001e9t1dbLQ86A4SH:44adjacentselectors→static→fullJUnit/hash.
+  Czekaćautooutput, niepoll/niepowtarzać. B1bezcommitu, B2nierozpoczęte.
+- Corrected44focusedPASS339.21s/ruffPASS/mypy185PASS; pełnybackend skończył2202PASS/
+  2FAIL9971.96s,14standardexcluded/0runtime-skips. Log/JUnit2204/manifest zachowane
+  przednaprawami. Dwaróżneźródła: billmigrationfixedURL wymaga roli finanse(nieistnieje
+  w nowymrunnerze); loanmigrationuruchamia starybaredowngrade na nowym schemacie zFK.
+- PoprawioneTYLKO2testy do commonowned_migration_database irealAlembic właściwych
+  historycznychrewizji/UP-DOWN-UP. BezfixedURL/schemareset/GRANT, bezCASCADE/wyłączenia
+  FK czy nowych ról; stare snapshot/asercje/tables/constraints zachowane. Hashproof
+  potwierdza tylko2testfilechanges, productbytes te same. Ruling wledgerB.
+- Focusedlegacy3cases+static sh_1c53024ed0011LbPUj2BwSbjG4 pending; potemrefreeze i
+  pełnybackend. B1nieukończone/bezcommitu, żadnych zmienionych danych produkcyjnych.
+- Legacyfix3PASS28.31s; ruff potemF811fixtureimportshadow+I001, poprawiono reexport
+  przez moduł bez noqaF811/suppression/zmiany fixture. Refrozen686manifest; chain
+  sh_1c5324f4e001HqE6jdd3XXj8o6 static→3legacyagain→FULLJUnit/collection/hash.
+  Productbytes identyczne z2202PASS, tylko2testyhistorycznychmigracji zmienione.
+  Niepoll/niepowtarzać, bezB1commitu/B2 przed GREEN.
+
 ## 2026-11-10 — Import wyciągów A: ODEBRANE LOKALNIE
 
 - A11ad1b53f/taskdone6PASS86.67s, reviewfixfd0e6a4. Pełnybackend2197PASS/0runtime-skips,
@@ -596,6 +675,44 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   całego działania). Dopiero potem writing-plans. Brak migracji/deployu/importów,
   kod produktu bez zmian; dokumenty robocze bez commitu. Istniejące dirty audyty
   oraz niezatwierdzone wcześniej lokalne docs konfiguracji Q7 zachowane bez cofania.
+
+## 2026-11-08 — Istniejący kredyt Velo Q7 skonfigurowany
+
+- Cel: ponownie przejrzeć źródła Google i dodać kredyt bez duplikacji salda/historii.
+  Plan przedstawiony, właściciel Robert wskazany wcześniej; po Plan→Build user
+  „ok, działaj”. Required4hostdocs odczytane w kolejności. Pinned owner z wcześniejszej
+  autoryzacji karty; readonly discovery potwierdził konto Q7/VELOBANK, PLN, zero umów.
+- Zachowano oryginały umowy i nowszego harmonogramu, SHA zgodne z etapem planowania.
+  59 rat w groszach, wszystkie sumy i łańcuch kapitału do zera zgodne. Wdrożone
+  schematy przyjęły 59 danych i odrzuciły 8 nieprawidłowych bez połączenia DB.
+  Świeży szyfrowany backup serwisowy PASS; bez dry-run mutującego produkcję.
+- Niezależny preflight review ses_e4448b2d9ffeWBhh35Y2aKG4U5. Przed mutacją dodano
+  odmowę Python-O, kontrolę wszystkich wpłat o właściwej dacie/kwocie i przypiętego
+  UUID, receipt przed commit/marker po nim oraz wyłącznie readonly recovery.
+  7 testów guardów RED→GREEN, rzeczywisty interpreter kontenera Python-O odmawia
+  przed importem aplikacji. Nie przyjęto eligible.total==1: inne mniejsze wpłaty
+  nie są identyczną ratą; test duplikatu daty/kwoty i niezwiązanej wpłaty obejmuje to.
+- Jedna operacja SERIALIZABLE: mutex właściciela, wyłączne blokady dwóch kont,
+  domenowe create_loan/create_loan_installment/link_loan_payment oraz log_event agent.
+  Dodano1umowę/59rat/1link/1audit. Połączono istniejący jednoznaczny transfer
+  październikowy; nie dodano raty wrześniowej ze starego planu, nadpłat lub kosztów.
+- SHA snapshoty wszystkich62tabel modelowych: istniejące rekordy identyczne po
+  odjęciu ścisłej allowlisty nowych UUID; salda wszystkich kont właściciela identyczne.
+  Nowe połączenie READ ONLY po commit potwierdziło dane i pełny digest ponownie.
+  Globalny digest po commit jest obserwacją, by obcy równoległy zapis nie udawał
+  rollbacku; w tej sesji również w całości zgodny. Mutację uruchomiono dokładnie1raz.
+- Dodatkowy niezależny readonly lookup:59rat/1spłata/audit requestSHA+źródła/lista PASS.
+  Najbliższa niezapłacona planowana rata16.11.2026; szczegółowe kwoty prywatne.
+  Health200, bez zmiany obrazów i restartów; backend/frontend bez zmian. Nie było
+  migracji, nowych sesji użytkownika, push/merge/deploy lub korekt księgi.
+- Trwały prywatny pakiet: `/opt/finanse/webapp/maintenance/velo-q7-setup-20261108/`;
+  roboczy `/tmp/opencode/velo-q7-setup-20261108/`. Raport
+  `docs/audits/2026-11-08-velo-q7-configuration.md`. Dokumentacja lokalna, bez commitu.
+- Ograniczenia: początkowa stopa zmienna jest historyczną daną źródła/audytu, nie
+  nowym polem modelu. Harmonogram nie zastępuje aktualnego zadłużenia/wyciągu.
+  Link wpłaty dowodzi odniesienia do księgi, nie niezależnego rozliczenia bankowego.
+  Wcześniejsze rozbieżności wypłaty/odsetek zostają otwarte; dwóch starych dirty
+  audytów nie dotykano. Pełnych testów produktu nie ponawiano: kod produktu bez zmian.
 
 ## 2026-11-08 — Velo skonfigurowane po osobnej zgodzie właściciela
 

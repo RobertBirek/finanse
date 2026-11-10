@@ -8,6 +8,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Numeric,
     String,
@@ -20,6 +21,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.finance import credit_card_models as _credit_card_models
+from app.finance import loan_schedule_models as _loan_schedule_models  # noqa: F401
 from app.finance import receipt_models as _receipt_models  # noqa: F401
 from app.finance import receipt_read_models as _receipt_read_models  # noqa: F401
 from app.finance.imports import models as _bank_import_models  # noqa: F401
@@ -267,7 +269,20 @@ class LoanAgreement(Base):
     __table_args__ = (
         CheckConstraint("account_id <> payment_account_id", name="ck_loan_distinct_accounts"),
         UniqueConstraint("account_id", name="uq_loan_agreement_account"),
+        UniqueConstraint("id", "user_id", name="uq_loan_agreement_owner"),
+        ForeignKeyConstraint(
+            ["active_schedule_revision_id", "user_id", "id"],
+            [
+                "loan_schedule_revisions.id",
+                "loan_schedule_revisions.user_id",
+                "loan_schedule_revisions.loan_id",
+            ],
+            name="fk_loan_active_schedule_revision",
+            use_alter=True,
+            ondelete="RESTRICT",
+        ),
     )
+    active_schedule_revision_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 
 class LoanInstallment(Base):
@@ -285,8 +300,21 @@ class LoanInstallment(Base):
     principal_pln: Mapped[int] = mapped_column(BigInteger, nullable=False)
     interest_pln: Mapped[int] = mapped_column(BigInteger, nullable=False)
     fees_pln: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    superseded_by_revision_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
     __table_args__ = (
+        UniqueConstraint("id", "user_id", "loan_id", name="uq_loan_installment_owner_loan"),
+        ForeignKeyConstraint(
+            ["superseded_by_revision_id", "user_id", "loan_id"],
+            [
+                "loan_schedule_revisions.id",
+                "loan_schedule_revisions.user_id",
+                "loan_schedule_revisions.loan_id",
+            ],
+            name="fk_loan_installment_superseded_revision",
+            use_alter=True,
+            ondelete="RESTRICT",
+        ),
         UniqueConstraint("loan_id", "number", name="uq_loan_installment_number"),
         CheckConstraint("number > 0", name="ck_loan_installment_number"),
         CheckConstraint(
@@ -492,6 +520,7 @@ class FinanceCommandReceipt(Base):
     __tablename__ = "finance_command_receipts"
     __table_args__ = (
         UniqueConstraint("user_id", "action", "key", name="uq_finance_command_receipt"),
+        UniqueConstraint("id", "user_id", name="uq_finance_command_receipt_owner"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)

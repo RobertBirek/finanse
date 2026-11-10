@@ -11,6 +11,7 @@ import app.documents.models
 import app.documents.job_models
 import app.finance.models
 import app.finance.imports.models
+import app.finance.loan_schedule_models
 import app.finance.rule_models
 import app.finance.rule_event_models
 import app.finance.suggestion_models

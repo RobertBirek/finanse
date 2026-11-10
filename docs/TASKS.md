@@ -2,6 +2,14 @@
 
 Backlog zadań ze statusami.
 
+## Import harmonogramów — status B (2026-11-10)
+
+- [x] B1: modele, strict DTO i migracja84fdbd10aa18 bez backfillu; backend2204PASS,
+  JUnit0failure/error/runtime-skips, 14standardexcluded, 686hashzgodne; lint/typesPASS.
+- [ ] B2: deterministyczny parser Velo PDF i walidacja pełnej tabeli.
+- [ ] B3–B6: diff/projekcja/ochrona historii, jawna aktywacja, UI i odbiór.
+- Bez merge/push/deploy/migracji produkcyjnej i importu rzeczywistych harmonogramów.
+
 ## Import wyciągów i harmonogramów — projekt (2026-11-08)
 
 - [x] Potwierdzić banki: Velo, ING, Revolut; Citi wyraźnie wykluczone.
@@ -79,13 +87,46 @@ Backlog zadań ze statusami.
   Jedenreview:2ImportantfixedRED→GREEN fd0e6a4,0Critical/Minor; affected49PASS.
   Commitad1b53f/task-done6PASS86.67s, dowody zarchiwizowane, cleanupwyłącznie
   własnych2kontenerów/1wolumenuPASS; obrazcache/worktree/niepowiązanezmiany zachowane.
-- [ ] Etap B: importer harmonogramów i ich wersji, odrębny plan.
+- [~] Etap B: użytkownik „ok, działaj”; nowa osobna zgoda na własny PG+runner/wolumen
+  bez portów i cleanup tylko tych zasobów. B1 w toku: testy modeli/migracji napisane
+  przed implementacją, legacy paid/partial/past-unpaid i dane etapu A muszą pozostać.
+  Świeży frontend596/lint/typesPASS; baseline backend i RED B1 w toku, bez zmian produkcji.
+  UPDATEbaselinebackend36PASS; B1modele/realroundtrip7PASS, naprawiony wyłącznie seed
+  testustarejmigracjiA (futureORMvsoldcolumns). Expanded44focused/static i pełnygate
+  przedB1commitem; migracja84fdbd10aa18 wygenerowana, źródła686zamrożone.
+  Expanded38PASS/6fixtureerrors (cross-conftest import) poprawione wyłącznie wfixturesB.
+  Trwa correctedfocused→static→pełnybackend/JUnit/hashgate, B1bezcommitu, B2niezaczęte.
+  CORRECTIONfixturecause: importconftest nie był potwierdzoną przyczyną. Probe wykazał
+  zależnośćod rozdzielonych selektorów CLI; sąsiadujące zachowują wszystkie44testy
+  i poprawneownerdefs. Pełna kolekcja2204+14standardexcludedPASS; nowygate w toku.
+  UPDATE44focused/staticPASS; pełny2202PASS/2FAIL(legacy bill/loan migrationtests),
+  bezruntime-skips. Testy przeniesione na realne ownedscratchAlembic przy zachowanych
+  asercjach, productbytesbez zmian. Trwa focusednapraw, potem ponownyfullgate.
+  Legacyfix3PASS28.31s, importylint poprawione; świeży static→3legacy→fullJUnit/hashgate
+  w toku, bez nowego commitu. Własny PG/runner nadal aktywne na potrzeby etapu B.
 - [ ] Osobna zgoda na merge/push/deploy, produkcyjną migrację lub realny import.
 
 Projekt `docs/superpowers/specs/2026-11-08-bank-statements-and-loan-schedule-import-design.md`.
 Plany `docs/superpowers/plans/2026-11-08-bank-imports.md` i wskazane w nim etapy A/B.
 Etap A **odebrany lokalnie, nie jest wdrożony**; etap B niezaimplementowany.
 Nie mylić z zakończoną operatorską konfiguracją Q7.
+
+## Konfiguracja istniejącego kredytu Velo Q7 (2026-11-08)
+
+- [x] Po ponownym odczycie dokumentów Google Drive uzgodniono zakres; Plan→Build
+  i zgoda „ok, działaj”. Właściciel przypięty do wcześniejszego wyboru „Robert”.
+- [x] Odczyt bez zapisu: istniejące aktywne konta Q7/VELOBANK w PLN, brak umowy.
+  Nowszy harmonogram: 59 rat; zgodne hashe źródeł, sumy rat i łańcuch kapitału.
+- [x] Walidacja 59 wierszy przez schematy wdrożonego backendu i odrzucenie 8 błędnych
+  payloadów; brak połączeń DB w tej kontroli. Świeży szyfrowany backup PASS.
+- [x] Kontrola skryptu i atomowy zapis umowy/harmonogramu; tylko powiązanie jednej
+  istniejącej raty, bez nowych kont, postings, transakcji i odtwarzania nadpłat.
+- [x] Odczyt po commit, retencja wszystkich istniejących wierszy 62 tabel modelowych
+  i sald, źródłowy audyt agenta, widoczność w liście kredytów i końcowa dokumentacja.
+- [ ] Osobne uzgodnienie zadłużenia i historycznych podziałów spłat z bankiem,
+  gdy pojawią się brakujące dowody. Konfiguracja nie zamyka wcześniejszego audytu Q7.
+
+Raport: `docs/audits/2026-11-08-velo-q7-configuration.md`.
 
 ## Typ konta karty i przegląd wielu kart (2026-11-08)
 

@@ -4,12 +4,11 @@ import uuid
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.documents.models import Document
 from app.finance.entities import create_account
-from app.finance.loan_schemas import LoanCreate, LoanInstallmentCreate
-from app.finance.loans import create_loan, create_loan_installment, link_loan_payment
 from app.finance.models import ActualImportMapping
 from app.finance.schemas import AccountCreate, PostingCreate, TransactionCreate
 from app.finance.transactions import create_transaction
@@ -78,26 +77,35 @@ async def seed_legacy_finance(database: MigrationDatabase, owner: uuid.UUID) -> 
                     ],
                 ),
             )
-            loan = await create_loan(
-                db,
-                owner,
-                LoanCreate(
-                    name="Synthetic legacy loan", account_id=debt.id, payment_account_id=payer.id
+            # This test intentionally seeds a schema from before schedule versions.
+            # Future ORM columns must not be inserted before their own migration.
+            loan_id, installment_id = uuid.uuid4(), uuid.uuid4()
+            await db.execute(
+                text(
+                    "INSERT INTO loan_agreements(id,user_id,name,account_id,payment_account_id,is_active) "
+                    "VALUES(:id,:owner,'Synthetic legacy loan',:debt,:payer,true)"
                 ),
+                {"id": loan_id, "owner": owner, "debt": debt.id, "payer": payer.id},
             )
-            installment = await create_loan_installment(
-                db,
-                owner,
-                loan.id,
-                LoanInstallmentCreate(
-                    number=1,
-                    due_date="2020-01-03",
-                    principal_pln=9000,
-                    interest_pln=1000,
-                    fees_pln=0,
+            await db.execute(
+                text(
+                    "INSERT INTO loan_installments(id,user_id,loan_id,number,due_date,principal_pln,interest_pln,fees_pln) "
+                    "VALUES(:id,:owner,:loan,1,'2020-01-03',9000,1000,0)"
                 ),
+                {"id": installment_id, "owner": owner, "loan": loan_id},
             )
-            await link_loan_payment(db, owner, loan.id, installment.id, transfer.id)
+            await db.execute(
+                text(
+                    "INSERT INTO loan_payment_links(id,user_id,installment_id,transaction_id) "
+                    "VALUES(:id,:owner,:installment,:transaction)"
+                ),
+                {
+                    "id": uuid.uuid4(),
+                    "owner": owner,
+                    "installment": installment_id,
+                    "transaction": transfer.id,
+                },
+            )
             db.add(
                 ActualImportMapping(
                     user_id=owner,

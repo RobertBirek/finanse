@@ -139,6 +139,10 @@ zawiera `{source,is_duplicate,existing_batch_id}`. Inny właściciel nie poznaje
 
 ### Task 1: Trwałe kontrakty i addytywny staging (A1)
 
+Nota integracyjna etapu B (2026-11-10): B1 może dodać unikalne klucze `(id,user_id)`
+do ImportRevision/ImportRow i FinanceCommandReceipt dla owner-scoped FK pochodzenia
+harmonogramów. Nie zmienia źródeł, UUID, DTO, receipt allowlist ani reguł commitu A.
+
 **Files:** Create `imports/{__init__,models,contracts,schemas,service,queries,errors}.py`;
 Modify `documents/{models,schemas}.py`, `backend/migrations/env.py`;
 Modify `backend/pyproject.toml` wyłącznie o marker migration;

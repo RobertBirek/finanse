@@ -66,6 +66,8 @@ class LoanInstallmentResponse(BaseModel):
     remaining_pln: int
     payment_status: Literal["unpaid", "partial", "paid"]
     payments: list[LoanPaymentResponse]
+    bank_number: int | None = None
+    schedule_revision_id: uuid.UUID | None = None
 
 
 class LoanResponse(BaseModel):
@@ -87,6 +89,7 @@ class LoanResponse(BaseModel):
 
 class LoanDetailResponse(LoanResponse):
     installments: list[LoanInstallmentResponse]
+    active_schedule_revision_id: uuid.UUID | None = None
 
 
 class LoanPaymentCandidate(BaseModel):

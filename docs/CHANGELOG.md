@@ -2,6 +2,31 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, B1 zweryfikowane] — 2026-11-10 — Wersje harmonogramów
+
+### Added
+- Addytywne wersje i snapshoty rat, owner/loan-scoped FK, nullable projekcja legacy
+  i kontrakty aktywacji bez zapisów do księgi. Migracja `84fdbd10aa18` po `6bd8758ebc7d`
+  nie wykonuje backfillu; odmawia downgrade po zapisaniu nowych danych.
+
+### Verification
+- Backend **2204 PASS**, 14 standardowo deselected, zero runtime-skips; JUnit i 686
+  hashy źródeł zgodne. Focused44, legacy migrations3, lint i mypy185 PASS.
+- Frontend bez zmian: świeże596/lint/types PASS. Stare testy migracji uruchamiają
+  realny Alembic na własnych scratch DB zamiast hardkodowanej roli lub starego
+  downgrade na przyszłym schemacie; asercje retencji zachowane.
+- B2–B6 jeszcze przed odbiorem. Bez migracji produkcyjnej, deployu i realnego importu.
+
+## [Local, w toku] — 2026-11-10 — Fundament importu harmonogramów
+
+### Added
+- Rozpoczęto zatwierdzony etap B: testy wersji i projekcji planu, izolacji właściciela
+  oraz rzeczywistej migracji z retencją opłaconych, częściowych i przeszłych rat.
+- Lokalne modele wersji/membership, nullable pointery i strict DTO; wygenerowana
+  migracja84fdbd10aa18 po6bd8758ebc7d bez backfillu, z blokadą niepustego downgrade.
+- B1 w trakcie weryfikacji, nie jest to deklaracja gotowego importera harmonogramów.
+  Osobne testowe środowisko bez portów; brak produkcyjnej migracji, deployu lub danych.
+
 ## [Local, odebrane] — 2026-11-10 — Import wyciągów, etap A
 
 ### Added
@@ -136,6 +161,22 @@ Wszystkie istotne zmiany w projekcie.
   harmonogramów i wersji. Kontrakty, TDD, prywatne próbki, retencja, FX/fee i idempotencja
   opisane przed implementacją; wykonanie i osobne środowisko testowe czekają na zgodę.
   `docs/superpowers/plans/2026-11-08-bank-imports.md`.
+
+## [Production, konfiguracja] — 2026-11-08 — Kredyt Velo Q7
+
+### Added
+- Po ponownym odczycie dokumentów Google Drive, przedstawieniu zakresu i zgodzie
+  „ok, działaj” dodano umowę na istniejącym koncie Q7 właściwego właściciela.
+- Zapisano 59 rat nowszego harmonogramu bankowego z dokładnym podziałem na kapitał
+  i odsetki. Jedną istniejącą spłatę październikową powiązano z ratą, bez księgowania.
+
+### Changed
+- Zapis przez istniejące serwisy domenowe, atomowo, z audytem agenta i pochodzeniem
+  dokumentów. Świeży backup, kontrola skryptu, walidacja źródeł oraz niezależny odczyt
+  po commit PASS; 62 tabele modelowe zachowane poza wyłącznie nowymi rekordami.
+- Bez nowych kont, transakcji, postings, korekt historii lub zmiany sald. Bez zmian
+  kodu, migracji, restartów i deploymentu. Harmonogram nie oznacza uzgodnienia z bankiem.
+  Raport `docs/audits/2026-11-08-velo-q7-configuration.md`.
 
 ## [Production, konfiguracja] — 2026-11-08 — Warunki istniejącej karty Velo
 

@@ -1,19 +1,13 @@
-import importlib.util
 import uuid
 from pathlib import Path
 
 import pytest
 from alembic.config import Config
-from alembic.migration import MigrationContext
-from alembic.operations import Operations
 from alembic.script import ScriptDirectory
-from sqlalchemy import text
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.finance import service
-from app.finance.schemas import AccountCreate
-from tests.test_finance.test_loans import transfer
+from tests import migration_fixtures
+
+owned_migration_database = migration_fixtures.owned_migration_database
 
 
 def test_loan_migration_remains_in_the_single_head_lineage() -> None:
@@ -27,42 +21,48 @@ def test_loan_migration_remains_in_the_single_head_lineage() -> None:
     assert scripts.get_revision("c2d7e9a4f801").down_revision == "b8e4c2f1a7d9"
 
 
-@pytest.mark.integration
-@pytest.mark.asyncio
-async def test_loan_migration_preserves_old_records(db_session: AsyncSession) -> None:
-    backend = Path(__file__).resolve().parents[2]
-    spec = importlib.util.spec_from_file_location(
-        "loan_migration", backend / "migrations/versions/c2d7e9a4f801_loan_schedules.py"
+@pytest.mark.migration
+async def test_loan_migration_preserves_old_records(
+    owned_migration_database: migration_fixtures.MigrationDatabase,
+) -> None:
+    database = owned_migration_database
+    await database.migrate("upgrade", "b8e4c2f1a7d9")
+    db = database.connection
+    owner, debt, payer, legacy, transaction = [uuid.uuid4() for _ in range(5)]
+    for account, name, kind in [
+        (legacy, "Legacy", "cash"),
+        (debt, "Old debt", "credit"),
+        (payer, "Old payer", "checking"),
+    ]:
+        await db.execute(
+            "INSERT INTO accounts(id,user_id,name,type,currency,source,is_active,is_budget_account) VALUES($1,$2,$3,$4,'PLN','manual',true,true)",
+            account,
+            owner,
+            name,
+            kind,
+        )
+    await db.execute(
+        "INSERT INTO financial_transactions(id,user_id,date,description,type,source,is_pending,created_by) VALUES($1,$2,'2020-01-03','Synthetic transfer','transfer','manual',false,'human')",
+        transaction,
+        owner,
     )
-    assert spec is not None and spec.loader is not None
-    migration = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(migration)
-    await db_session.execute(
-        text(
-            "INSERT INTO accounts (id,user_id,name,type,currency,source,is_active,is_budget_account) VALUES (:id,:owner,'Legacy','cash','PLN','manual',true,true)"
-        ),
-        {"id": uuid.uuid4(), "owner": uuid.uuid4()},
-    )
-    owner = uuid.uuid4()
-    debt = await service.create_account(
-        db_session, owner, AccountCreate(name="Old debt", type="credit")
-    )
-    payer = await service.create_account(
-        db_session, owner, AccountCreate(name="Old payer", type="checking")
-    )
-    await transfer(db_session, owner, debt, payer, 12345)
-    queries = [
-        text(f"SELECT * FROM {table} ORDER BY id")
-        for table in ("accounts", "financial_transactions", "postings", "actual_import_mappings")
-    ]
-    before = [(await db_session.execute(query)).all() for query in queries]
-    connection = await db_session.connection()
-
-    def migrate(sync: Connection) -> None:
-        with Operations.context(MigrationContext.configure(sync)):
-            migration.downgrade()
-            migration.upgrade()
-
-    await connection.run_sync(migrate)
-    assert [(await db_session.execute(query)).all() for query in queries] == before
-    assert await db_session.scalar(text("SELECT count(*) FROM loan_agreements")) == 0
+    for account, direction in [(payer, "debit"), (debt, "credit")]:
+        await db.execute(
+            "INSERT INTO postings(id,transaction_id,account_id,source_amount,source_currency,base_amount_pln,fx_rate,fx_rate_source,direction,is_budget_impact) VALUES($1,$2,$3,12345,'PLN',12345,1,'manual',$4,false)",
+            uuid.uuid4(),
+            transaction,
+            account,
+            direction,
+        )
+    tables = ("accounts", "financial_transactions", "postings", "actual_import_mappings")
+    before = [await db.fetch(f'SELECT * FROM "{table}" ORDER BY id') for table in tables]
+    for command, revision in [
+        ("upgrade", "c2d7e9a4f801"),
+        ("downgrade", "b8e4c2f1a7d9"),
+        ("upgrade", "c2d7e9a4f801"),
+    ]:
+        await database.migrate(command, revision)
+        assert [
+            await db.fetch(f'SELECT * FROM "{table}" ORDER BY id') for table in tables
+        ] == before
+    assert await db.fetchval("SELECT count(*) FROM loan_agreements") == 0
