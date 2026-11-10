@@ -2,6 +2,584 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-10 — Etap A końcowy backend PASS, domykanie A11
+
+- Chainsh_1c280ff34001IoRP1zrF6oNI71EXIT0:49affected496.81s/lint/mypy182/
+  pełnybackend2197PASS9679.72s,14standardproxy-deselected,0runtime-skips.
+  FinalJUnit/kolekcja i677hashybiezące+snapshotzgodne, gitdiffcheckPASS.
+- Finalreview0Critical/2Important/0Minor/declinedempty; obieuwagifixedfd0e6a4,
+  3RED→GREEN+pełny2197PASS, bezdrugiegoreview. Reparse zachowujecurrent również
+  przedcommitem; signedfee refund niezmienia klasyfikacji prawdziwego mainmovement.
+- Frontendpostreview596/171E2E+1expectedskip/4themes/static/buildPASS, źródłazgodne.
+  RealAlembicretencjaPASS i ponownie wpełnymbackendzie;44privateparseroriginalshash
+  unchanged, żadne dane realne wtestDB/repo. Runbook/report mają dowody i15rulings.
+- Zapisacceptance/docs/taskdone i ownrunner/PG/volumecleanup następne. Brak zgody
+  merge/push/deploy/productionmigration/import. EtapB nadal osobno, nieukończony.
+
+## 2026-11-09 — A10 zapisane; A11 przekrojowy odbiór i review
+
+- A10b3aa562/taskdone67PASS17.25s, A11briefREAD. Acceptance sourcebytes→HTTP→realworker
+  →DBrevision→decision→preview→commit→freshread, replay/duplicate/overlap2link+1new,
+  foreignowner404/blank/truncated.6PASS84.19s. Initial2PASS/3wrongtestexpected409;
+  productmissingpreview404 poprawnie zachowane, asercja dokładnegostatus+code, nieOR.
+- Nowe6E2E375/1440PASS25.6s: upload/noauto-commit, decision/reload/frozencheckbox,
+  timeoutreceipt/duplicate/no-prepare/sourceblock. Pierwsze2PASS/4selectorTimeout:
+  getByLabelExact nie znalazł dostępnego comboboxKategoria; DOMsprawdzony, role-selector
+  naprawia wyłącznie harness. PełnefrontendE2E trwa sh_1c2735010001ip705hsa3mEnYN.
+- Nowy read-onlyprivateparser44unique:8ING292rows/3Veloacct154/3Revolut128PLNEURUSD/
+  5card96(4good/1expectedblockedrepeat+debt),18encrypted/4unsupportedbank/2layout/
+  1mixedCSV odrzucone. Hashy oryginałów niezmienione, zeroDB/ledger, raportypozaGit.
+- Runbook i raport wdocs, końcowegate oznaczony pending. Ruffmanuallywrong'.' scope
+  ujawnił66starychmigrationstyle+1newSIM117; wrócono do kontraktu /lintapp/tests,
+  asyncwithpołączony. Poprawionylint/mypy182PASS, freshAlembicretention1PASS28.59s.
+- Jedynywholebranchread-onlyreview ses_e3d8d30adffeMiwhAPInjWP4li (base61fbee1/headb3aa562
+  +A11untrackedtest/runbook). No per-task/secondreview,5focusów i scopeznane.
+  Fullbackend3h celowo dopiero po wyniku review aby nie dublować kosztu.
+  Produkcja/Actual/Q7 nietknięte; bez merge/push/deploy/productionmigration/importu.
+- Review wrócił:0Critical/2Important/0Minor/declinedempty. Obie przyjęte po weryfikacji
+  kodu: reparseprzedpierwszymcommitem auto-promuje rewizję, negativefee wymusza
+  błędną klasyfikacjęmainrefund. Regressiontests napisane przed kodem, REDrun
+  sh_1c276ecb3001pRhTL6tbLOS9lh w toku. Jedna turanapraw, bezdrugiegoreview.
+- RED3fail26.83s potwierdzone dokładnymi asercjami currentrevisionchanged i feeerror.
+  Minimalfix: jobs.currentrevision!=None oznacza reparse także bez evidence; decisions
+  fee-refund mainwymuszony tylko gdy main0, fee<0. Pozostałe walidacje bez zmian.
+  Affected6modules sh_1c2781ceb001DKcu9aov5Oid3f w toku, pełnybackend dopieroGREEN.
+- A11pełnyfrontendchainEXIT0:596unit97files74.98s/static/build i171E2E8.4min+
+  1istniejącyexpectedskipPASS. Naprawyreviewtylkobackend. Ruff/mypy po naprawach
+  sh_1c27db7bc001PcbzyT68doHnaR, affectedbackendsh_1c2781ceb001DKcu9aov5Oid3f pending.
+- Postfixruff/mypy182PASS. Affected48PASS/1FAIL514.85s: wszystkie3nowe regressionGREEN;
+  stary test job oczekiwał promocji choć helper przygotował jużcurrent source.
+  Poprawiono dokładną asercjęcurrent==old/candidate==claim/warning, lease/noop/ledger
+  bez osłabienia. Initialpublication realPDF/CSV pozostaje testowana wA11.
+- Zamrożony677filemanifest, backendfullchain sh_1c280ff34001IoRP1zrF6oNI71:49affected/
+  static→pełny3hJUnit→collection/zeroSkips/sourcehash/diff. Frontendpostreviewfresh
+  unit/static/build/fullE2E+4themes sh_1c281392b001n2hIBeAIbWUACn. Niepoll/niepowtarzać.
+  Brak nowych productsourceedit/commitu/A11taskdone przed wynikami, bezdrugiegoreview.
+- 2026-11-10: postreviewfrontendEXIT0:596unit97files75.14s/lint/types/build7.79sPASS,
+  pełne171E2E8.6min+1existingexpectedskip oraz4themes375/1440light/dark23.9sPASS.
+  Wszystkie677bieżącychcodehashzgodne zfrozenmanifest. Backendchain nadal oczekuje
+  autooutput sh_1c280ff34001IoRP1zrF6oNI71; bezpoll/restart/nowych źródeł/commitu.
+
+## 2026-11-09 — A10 końcowy gate i przejście do A11
+
+- Final2chain exit0:596frontend/97files85.21s, lint/types/buildPASS;4Chromium375/1440
+  light/darkPASS19s incl formularz/długa nazwa/keyboard/nooverflow/unknownAPI/errors.
+  Manifest245plików identyczny, backend zachowany z A9. Obejrzano świeże editor-light
+  mobile/editor-dark desktop; layout i native select mieszczą długą nazwę.
+- A10commit/task-done następne; A11 pełny odbiór i jeden fresh całościowy review,
+  bez nowych review per task (zatwierdzona metoda inline). Produkcja bez zmian.
+
+## 2026-11-09 — A9 kompletne; A10 importer UI w implementacji
+
+- A9task-done45PASS395.70s/a068a0c, A10generatedbrief READ/BASEa068a0c. Frontenddesign/
+  Reactperformance/TDD workflow, existingstyle/fontplan zapisany, bez ponownego pytania
+  o makiety. Initial3filemissingpages/hooksRED przed kodem.
+- Added bankImports.ts typedDTO+hooks zowner/generation/capture-current, actualAxios
+  fixtureadapter, importlist/review+7components, per-file błędy i duplicateexistinglink,
+  explicitdecision i readonlybankdata/daty/waluty, frozenpreviewcheckbox+receipt recovery.
+  App/nav/tabs oraz account/card/DocumentList actions po navigation2RED/entrylinks2RED.
+  Documents wrapper niepowielany, DocumentList jest rzeczywistym miejscem akcji.
+- Focused56PASS13.98s/expanded58PASS16.45s; missingblockedcheckwhileloading RED→
+  disableprepare untilrowsloaded, testswaitforenabled rather than premature click.
+  FreshstandalonetscEXIT0, lint2mixedexports movedhelpersto.ts; trzeba powtórzyćstatic.
+- DodatkoweRED→fix (jeszcze finalrerunrequired): globalfinancecache pokazuje obce
+  rachunki/kategorie→własne owner-scoped mapping hooks; unknownreceiptGET404 pozwala
+  porzucićintent→blokadanowychdecyzji/upload/preview i retry samekey; responsebinding
+  innybatch→POST/GETreceiptverify batch/hash/id. Pełneopisydowodów/rulings w ledgerze.
+- A10WIPbezcommitu/fullfrontend/build/browser. Nadal trzeba reparsecomparisonUI,
+  praktyczne recovery/header/acks UX, screen375/1440light/dark i kompletbramek.
+  Backend/produkcja/Q7 bez zmian po zweryfikowanym A9. A11/B nierozpoczęte.
+- UPDATE focused59PASS/staticPASS, potem592fullfrontendPASS97files61.01s/buildPASS
+  przed latefix link-facts. Candidatecompare/cardheader/reparseack/late-receipt/unknown-
+  form-lock/defer-header/linkfacts RED→implementacje; najnowsze18targetedPASS6.83s.
+  Stary Actual pokazuje własne daty/kwoty readonly i wymaga jawnego link_date_difference;
+  osobny cardheader nie zmienia source-rowamounts. Reparse tylko porównanie/explicitack,
+  serwer nadal blokuje niezgodność. ReceiptGET działa również po zmianie batchversion.
+- UI smoke używa istniejącego ui.test.invalid/distfixture (zeroports/APIprodukcji).
+  PrivateconfigESM błąd usunięty w ignoredworkspace. Następne4sceny doszły do screenów,
+  keyboard/overflowchecks, ale helper zwraca assertClean(), nie unknown/errors fields;
+  poprawionoTYLKOharnesscall bez ukrywania requestów. Obejrzane4screeny light/dark,
+  desktop/mobile, wizualnie existingstyle; jeszcze brak formalnego UI GREEN.
+- Nowy frozen245filefrontendmanifest; backendhashy zgodne z odebranym2188run.
+  Finalchain sh_1c25c1cf7001AJYiWHSUXo31Q4 fullunit/types/lint/build/UI w toku.
+  BrakA10commitu/A11start przed wynikiem/hashgate; nie edytować testowanych źródeł.
+- UPDATE593fullfrontend/tsc/eslint/buildPASS +4UI375/1440light/darkPASS12s. Dalsze
+  4UIeditorstressPASS12.6s z długą nazwą własnego rachunku i keyboardconfirm; trzeba
+  obejrzeć bieżące edytorscreeny. Transferowncash testdopisana pomyślna klasyfikacja.
+- Sourcepublication2RED pokazały rzeczywistą lukę: parentbatch polling nie odświeżał
+  wcześniej pustych rows i brak akcji ponownego odczytu. Queryrows wiąże teraz cache
+  zpublication/version/revision/state, bez nowych HTTPparamów; explicit sourceprepare
+  tworzy durablekey, nigdy commit. SourcecasesPASS w66PASS/1fixtureFAIL (duplikat opcji
+  Gotówka w dwóch selectach); test zawężony do docelowego selecta, guard nieosłabiony.
+- Refrozen245filemanifest, backend nadal identyczny z2188accepted. Final2chain
+  sh_1c26624ad001mGTrX1nNYXzOEN w toku; brak dalszych edycji produktu/testów do wyniku.
+
+## 2026-11-09 — A8 zapisane; A9 atomowy commit w implementacji
+
+- A8commit6aa8f6d/task-done46PASS414.66s. A9brief odczytany, BASE6aa8f6d;
+  kontekst po kompakcji zweryfikowany z4hostdocs i lokalnym ledgerem, nie powtórzono A8.
+- Missingbankadapter/commit RED przed kodem. Zaufany serwerowy adapter używa istniejącej
+  księgi z wewnętrznym refund flag, nie clientsource. Daty import tylko nowy ORM insert.
+  Receipt/operation w savepoint, replay przed sprawdzaniem podglądu zmienionego przez
+  własny pierwszy commit. Kolejność blokad commandkey→owner→batch/source/group/preview
+  →exclusiveaccounts→categories→oldtxns/postings, następnie decisivecanonical recheck.
+- Evidence main/fee/whole zachowuje netamount, strongidentity perowner/bank/account/
+  currency/reference; wspólny guard blokuje usunięcie/datę/pending/currencycorrection.
+  Pierwszy focusedgreen w tle sh_1c1420d6e001MfuSHqsfHOKILq, HTTPtestsRED
+  sh_1c1443228001EcKFM4DgqfGgbx czeka, nie wdrożono routes przed wynikiem RED.
+- Static2testimportorder+mypyLiteral znalezione i poprawione; rerunrequired. Dodatkowe
+  real2sessionsraces/Actualwholelink/drugi dowód transferu dopisane, jeszcze nieuruchomione.
+  A9nieukończone/bezcommitu/fullgate, frontend/produkcja/Q7 bez zmian.
+- UPDATE bank/commit16PASS266.68s, financialgroups3PASS50.42s; actualFX bezHTTP,
+  refundexpensecredit/cardmetadataviaexistingservice/retry1. Races+links4PASS/1FAIL:
+  real2sessions keys/competingstrongreference oraz staryActual PASS, drugi dowód
+  transferu nie przechodzi preview (nie commit). Diagnostyka sh_1c149ca3a001p6K13cD6j60j4E
+  śledzi wyłącznie zmienione klucze syntetycznego snapshotu; podejrzenie cacheNumeric
+  representation. Nie naprawiać bez dokładnego wyniku, nie udawać pełnegoGREEN.
+- HTTP5REDmissingroutes→router implementacja pod existingCSRF/auth. Osobna allowlist
+  prepcommand zapewnia durablekeys dla niefinansowych mutacji, nie rozszerza wspólnego
+  financialadaptera A/B. Publicpreview bez wewnętrznych ścieżek/fingerprintów.
+  Lint/types182PASS; routesfirstgreen/bodylimitRED w toku sh_1c1493ca4001s5ME7g6l0CnRQP.
+- UPDATE HTTP5PASS/1RED80.48s: limitbodytylkodocuments→dodano ścieżkę importsource
+  do istniejącego boundedmiddleware bez zwiększania limitów; tests oba path/chunked.
+  Diagnostic dokładnie wskazał candidates/row/posting/fx_rate, float→DBNumeric przy
+  późnym refreshledger. Candidatequery refreshuje przed hash, usunięto debugwrapper.
+- DodatkowyRED datymeta: purchase_date starego manual można zmienić bez parentupdated_at;
+  teraz snapshot obejmuje ownerTransactionDateMetadata. To nie jest zmiana starych dat.
+- Finalchain sh_1c14ebc9c0011hrkjA76Ltqd71: lint/types→bankimports+legacyexchange/dates/
+  billguards/cards/loans/currencycorrection/uploadlimits→fullbackend/JUnit→diffcheck.
+  Niezmieniony frontend świeże unit/lint/types sh_1c14f126a001mqqPvmh4CSRpZV. Niepoll,
+  niemodyfikować produktu/A9commit/A10start przed output/JUnit/hashgate. A9nieukończone.
+- Frontend final569PASS/93files110.98s, eslint/tscPASS. To regresja istniejącego
+  frontendu, nie ekran importera (A10jeszczeniezaczęte). Backendchain nadal czeka
+  na automatyczny wynik; brak zgody lub czynności na produkcji.
+- Backend focused429PASS/1FAIL2575.23s, pełnybackend nie wystartował (set-e).
+  Tylko nowy testCSRF nie włączał production; require_csrf celowo return w dev,
+  porównano z istniejącym test_security fixture. Poprawiono WYŁĄCZNIEtestenv i dodano
+  realną własną sesję: missingproof403/validproof201. Bez zmiany auth/CSRF produktu.
+  Wszystkie business/guards/Numeric/date-evidence/manualwriter/bodylimit w429PASS.
+- Corrected gate sh_1c1778fd600136gphyQo0Y5FBT: lint/types→nowytestCSRF+existingCSRF
+  →pełnybackend/JUnit→diffcheck. Nie dublowano całych43minfocused; full obejmie je
+  ponownie wraz z resztą projektu. Nazywać wcześniejszy wynik429PASS/1FAIL, nie GREEN.
+- Restart serwera anulował śledzenie shella, lecz istniejący pytest w naszym runnerze
+  nadal działał (59% po pytaniu użytkownika). Potwierdzone CSRF7PASS68s/lint/types182PASS.
+  Nie uruchomiono testów podwójnie. Powiadomienie o końcu ponownie podłączone przez
+  blokujący Linuxpidfd/select własnego jednoznacznego PID: sh_1c1d5a7da001gKHdMJXIW4Z7L7,
+  potem kopiaJUnit/analiza; bez poll/sleep, bez produkcji. A9nadalbezcommitu/fullwyniku.
+- UPDATE finalJUnit2188cases/0failure/error/runtime-skips11755.626s, dokładnie tyle co
+  kolekcja2202−14proxy. Wszystkie bieżące backend/frontendpyts hash zgodne ze snapshotem,
+  gitdiffcheckPASS. Capturetekst pozostał59% po restarcie; finalexitcode niedostępny,
+  jawnie zapisane w verificationJSON. Nie udajemy końcowego tekstsummary/exit0; pełny
+  JUnit i totals/collection są zweryfikowane. Lint/types182PASS, frontend569/staticPASS.
+  A9commit/taskdone następne, bez ponawiania całego3h testu po utracie terminala.
+- A9commita068a0c potwierdzony, backend/frontend clean. Finaltask-done i task-start10
+  w tle sh_1c22fcc03001gc6RpFuRhdcIPE; nie duplikować. A10 przygotowano tylko design/
+  integracyjne notatki, istniejący styl/fonts i capture/current actor model przeczytane.
+  BrakA10source przed odczytaniem wygenerowanego briefu; żadnej nowej rundy makiet.
+
+## 2026-11-09 — A7 kompletne; A8 review/quotes/preview w implementacji
+
+- A7 commit28403ec. Pierwszy final task-done miał ścieżkę bez.py (nie uruchomił
+  testów), poprawiony TYLKO task-done43PASS206.45s; canonical completion zapisany.
+  A8 BASE28403ec, wygenerowany brief odczytany; missing4modules RED przed kodem.
+- Dodano valuation: FrozenQuote/ExchangeValuation z Decimal, istniejąca polityka NBP
+  requesteddate/weekend, manual, brak quote = blocked. PLNactualleg anchor i outgoing
+  EUR/USD NBP+incomingimplied; precyzja6 i validator roundtrip zachowują actuallegs.
+  Pure valuation14PASS, następnie pierwsze4filefocused23PASS85.73s.
+- Decisions: owner/account/currency/IBAN/bank/category checks, create/link/defer,
+  optimistic version, immutable decision history/currentmembership. Znane pending/
+  zero informacyjne tylko defer; FX wymaga obu nóg, cashwithdrawal jawnego cashaccount.
+  Link sprawdza exact signedaccountposting/currency/type, nie modyfikuje Actual.
+- Matching sugeruje possible dla sameamount/date/description; strong dopiero identity
+  plus provenance. Preview fingerprint obejmuje źródła/revision/documenthash, grupy,
+  decisions/wybrane accounts+categories, source/basebalances i pełny SHA ledger-events,
+  a także IDs/updatedat kandydatów (netzerochanges też invalidują). QuoteIO przed
+  write-locks, ponowny snapshot po ownerMutex→batch. Getcanonical nie wycenia ponownie.
+- Test race RED wykazał, że identity map SQLAlchemy ukrywała zmianę fields podczas
+  wyceny; poprawiono refresh validate_decision select przez populate_existing=True.
+  Rozszerzone tests oryginałtamper/netzero/fee/strongconflict/wholelink bezwyceny w toku.
+- Pierwszy static: mypy177PASS, Ruff4unused/importstyle issues poprawione. Kolejna
+  próba Ruffa nie wystartowała przez równoległy tar do tej samej /snapshots ścieżki;
+  exacttrace File exists. Poprawiono TYLKO privateadapter: flock source-snapshot.lock
+  i marker.source-complete, gotowych snapshotów nie rozpakowuje ponownie w czasie testów.
+  Nie poluzowano test DB safety gate ani uprawnień; produkt bez obejścia testów.
+- Expandedgreen sh_1c0707e01001H9Hph40Sf63rhm obejmuje snapshot przed dopisaniem
+  pełnych2legFXtests. Czekać auto wynik bez poll; potem uruchomić rozszerzone nowe testy.
+  A8nieukończone/niecommitowane, pełnego gate jeszcze nie było, A9/A10/B nie zaczęte.
+- UPDATE expanded33PASS181.30s po fixie cache-race; nie obejmuje dopisanych później
+  actualFX2leg/strongreference/wrongaccount/membership przypadków. Równoległy eksport
+  2snapshotów potwierdzonyPASS po privateadapterfix; dwa importordererrors nowych
+  testów poprawione. Membershiptamper test RED w tle sh_1c073f154001Mn2o8FYzX6I2G7;
+  trzeba odczytać wynik, naprawić walidację/snapshot membership i uruchomić pełne4pliki.
+  Nie deklarować A8pełnegoPASS/commitu lub funkcji gotowej.
+- Kolejny all4files38PASS275.31s. Dalsze3RED→fix: CardHeaderDecision jako jawne optional
+  input i osobno zamrożony plan.card_statement dla A9; conflictingmanualFX z nogąPLN
+  odmawia zamiast ignorowania ręcznego kursu; fee-onlycharge/refund nie gubi prowizji
+  gdy main0. Reloadreview RED brakBatch.groups; dodano odczyt aktualnych grup/decyzji
+  i decyzję każdego wiersza. Querydict typing fix po mypy, statyczne trzeba powtórzyć.
+- Reparse-review2params RED sh_1c07e261f001r3AkrDQ5ipwpqV w toku. A8 musi wymagać
+  jawnego porównania candidateUUID i zgodności selectedoldrow z candidate, nie
+  przepuszczać needs_review jako zgody na ponowne stare niezapłacone wiersze.
+  Opłacone evidence/currentrevision nigdy nie są zastępowane. Jeszcze brakA8fullgate.
+- UPDATE2REDconfirmed→comparisonfix: token candidateUUID plus dokładna zgodność
+  StatementRow/sourceSHA; odmienne/newcandidate rows jawnie blocked, nie migrujemy
+  evidence ani nie zmieniamy currentrevision. SourceDTO pokazuje candidateID/parser/
+  warnings, preview wiąże candidatefingerprint; resultJSON jakoSHA zamiast ponownie
+  zapisywać cały wielki wyciąg. Ruling/costavailability w ledgerze, nie deklarować
+  automatycznej adopcji zmienionego parseroutput.
+- Kandydat paged comparison read jeszcze w RED sh_1c0803d86001kAe2lzzbw7QytB,
+  brakoptionalrevision_id w list_rows. Po wyniku dodać wyłącznie owner/source/batch
+  scoped read, bez promowania. Potem all4files+reparse/parsers i cały gate A8.
+- UPDATE integration4files43PASS320.43s; static lint/types177PASS. Kandydatread RED
+  potwierdzony jako brakrevision_id; dodano optionalrevision_id do list_rows, wymagane
+  owner+batch+source+revision. Defaultlista wciąż tylko currentrevision; A9route/A10UI
+  muszą przekazać source_id i revision_id przy prywatnym porównaniu kandydata.
+- A8 finalchain sh_1c0858989001g40cm4yEXQD4AW start: lint→types→wszystkie bankimports
+  (łącznie zlatecase reparse)→pełnybackend/JUnit→diffcheck, set-e. Źródła zamrożone,
+  czekać na auto wynik bez poll/restart/A8commit/A9start przed sprawdzeniem green.
+  Importer nadal bez HTTP/UI/finansowego commitu; produkcja/Q7/historia nietknięte.
+- Finalchain zatrzymał się przed testami na RuffSIM102 (zagnieżdżony warunek nowego
+  revisionread). Połączono ten sam warunek bez zmiany kontroli owner/source/revision;
+  poprawiony chain sh_1c0862b190018MvazOAkvb4Drx w toku, focused-2 a potem full.
+  Nie nazywać zatrzymanego przebiegu testami backendu ani przypisywać mu PASS.
+- UPDATE correctedchain288importerPASS894.88s, pełne2151backendPASS10334.01s,
+  lint/types177PASS. JUnit2151bez fail/error/runtime-skips,14standardproxy deselected,
+  10inheritedwarnings i wszystkie źródła zgodne ze snapshotem. Zlecono A8commit+
+  task-done, następnie task-start9/brief jako sh_1c1335df5001awN571pxzXoB96; czekać
+  na automatyczny wynik, nie dublować commitu/testów. A9 integracyjne notatki w private
+  workspace (exclusiveaccounts przed decisive preview recheck, nie polegać na samym
+  ownerMutex; HTTPJSON409 nie rollbackuje samo get_db). Produkcja nadal bez zmian.
+
+## 2026-11-09 — A6 zamknięte; A7 karty zachowują niejednoznaczne wiersze
+
+- A6 pełne2081PASS7257.02s (14proxy-deselected/10inheritedwarnings), JUnit2081bez
+  fail/error/runtime-skips i zgodność wszystkich bieżących źródeł ze snapshotem.
+  Commit524a237 obejmuje parser Direct+zatwierdzoną przez usera zmianę spec/planu
+  odkładającą savings. Final task-done61PASS0.97s; A7 BASE524a237, brief odczytany.
+- Missing-parser/header-adapter RED. Parser karty zachowuje daty, znaki rachunkowe,
+  pełne sekcje i wszystkie wystąpienia. Same identyczne zakupy w jednej sekcji są
+  niezależne; powtórka między kartami bez bankowej tożsamości zostaje jawnie blocked,
+  nie jest usuwana w celu dopasowania debt_rollforward.
+- Otwarcie/zamknięcie księgowe = minus independently printed debt, limit/minimum/
+  due oddzielne, total debt/future principal unknown pozostają None, nie zero.
+  CardHeaderDecision ma strictmoney/strictbool/noextra, waliduje jawne potwierdzenie
+  dokładnych danych; daje istniejący StatementCreate z deterministicrequestID,
+  niczego nie księguje. A9 mapuje właściciela/account i wywołuje istniejący serwis.
+- Prywatne5unikalnych cykli:9/15/29/19/24rows=96. Cztery niezależne mosty długu
+  zgodne;1problemowy cykl ma ambiguous_section_repeat+debt_rollforward i wszystkie
+  15wierszy zachowane. To jawne blocked, nie automatyczna deduplikacja. Niezależny
+  Decimal proof i pokrycie wszystkich par datPASS, bez prywatnych bajtów w repo.
+- Private dry-run ujawnił oddzielne drukowane total i future installment section.
+  Synthetic regression2RED→fix: kontrola printed total, rawdetails future planów
+  osobno w metadanych, żadne nowe postings ani fikcyjne salda/nowy kapitał.
+- Focused68PASS1.09s/lint/types173PASS. Fullbackend sh_1bfd385ff001mmrprJNAda9zo8,
+  task-7-full-backend.log/JUnit/tmp/bank-import-task-7.junit.xml w toku. Źródła frozen;
+  czekać na auto wynik, nie poll/restart/commit/A8 przed pełnym gate. Produkcja nietknięta.
+- UPDATE pełny gate2105PASS7386.86s/14proxy-deselected/10inheritedwarnings; JUnit2105
+  bez fail/error/runtime-skips i wszystkie bieżące źródła zgodne ze snapshotem.
+  Commit+task-done następnie task-start8 uruchomione jako sh_1c0457ca5001rYdMucD5oJwq71.
+  Zauważono literówkę ścieżki w task-done: test_credit_cards zamiast test_credit_cards.py;
+  glob potwierdził istniejący plik. Jeśli job zatrzyma się, ponowić tylko task-done
+  z poprawną ścieżką (nie commit lub całe pełne testy), potem wygenerować brief8.
+## 2026-11-09 — A5 zamknięte; użytkownik odkłada ING oszczędnościowe; A6 Direct
+
+- A5 pełny2064PASS6463.05s/focused112PASS142.47s/lint/types170PASS, JUnit2064bez
+  fail/error/runtime-skips i wszystkie bieżące źródła zgodne ze snapshotem.
+  Commitc95cb14, final task-done33PASS3.31s. A6 BASEc95cb14, brief odczytany.
+- Question scope: „Jak kontynuować obsługę ING oszczędnościowego…”; użytkownik wybrał
+  „Odłóż oszczędnościowe” zamiast dostarczenia zwykłego PDF. Zaktualizowano spec/plan
+  bez rozszerzania decrypt permissions. A6 Direct only, savings explicit unsupported.
+- Parser Direct: periods/header account/currency/credits+debits/counts/closing;
+  body retains booking/transaction dates, full descriptions and original amount.
+  Nie wymyśla per-row balances (źródło nie daje), bank_reference nie jest zgadywane
+  z numeru nadawcy. Przekroczone kwoty/incomplete rows/unknowncolumns blokują.
+- Missing-module RED→60focusedPASS. Private recon ujawnił kontynuację opisu na
+  następnej stronie PO kwocie (analogicznie Velo); test własny RED1→fix dopuszcza
+  wyłącznie późniejszą stronę, zachowując cały opis; nie pomija dodatkowej kwoty/dat.
+- Final132parser testsPASS1.95s/lint/types171PASS. Prywatny read-only test wszystkich
+  21Direct:8nieszyfrowanych/292wiersze, każda kontrolaPASS i niezależne Decimal sumy
+  z oryginalnego nagłówkaPASS;13encrypted jawnie odrzucone. Żadnych prób haseł,
+  mutacji DB/AI/OCR ani bajtów/osobowych danych w repo/logach.
+- Pełny gate A6 sh_1bf5c786b001qzwjxEn12fuZ0x, logtask-6-full-backend.log,
+  JUnit/tmp/bank-import-task-6.junit.xml w toku. Źródła zamrożone; czekać na auto wynik,
+  nie powtarzać/poll/commit/A7 przed zielonym gate. Produkcja/Q7/historia bez zmian.
+## 2026-11-09 — A4 ukończone; A5 Velo rachunek w pełnej regresji
+
+- A4 pełny2047backendPASS5549.98s, focused124PASS146.63s, lint/types169PASS;
+  JUnit2047bez błędów/runtime-skips i źródła zgodne ze snapshotem. Commit00748c2,
+  final task-done99PASS7.48s. A5 BASE00748c2, brief odczytany, brak parsera RED.
+- Velo deterministyczny układ tekstowy: ścisłe kotwice/nagłówki, dwie daty, amount/
+  balance i pełny wieloliniowy opis. W rzeczywistych PDF część opisu na następnej
+  stronie idzie PO kwocie/saldzie, więc rekord jest zamykany dopiero następną parą dat.
+  Znany publiczny footer banku wyłączany wyłącznie z potwierdzonymi kotwicami.
+  Dowolne unmatched finansowe linie i brak/ucięcie tabeli dają required failed.
+- Synthetic realPDF generator rozszerzono o jawne polskie glyph names w font encoding,
+  bez fontów prywatnych/dependencies; prawdziwy bounded pypdf odczytuje polskie etykiety.
+  Pierwsze30testówPASS3.41s; mypy raw-list invariance poprawione, lint/types170PASS.
+- Dodatkowe TDD3RED: financial lines after summary były pomijane i nieznane nagłówki
+  akceptowane przez zbyt luźny recognizer. Naprawiono ścisły kontrakt kolumn i required
+  unmatched_tail check. Nie zmieniano kwot ani znaków pod oczekiwane saldo.
+- Read-only trzy unikalne prywatne VeloPDF (inne kopie sha-dedup):3/5/3strony i
+  43/81/30wierszy=154, wszystkie kontrolePASS. Niezależny Decimal odczyt source-summary
+  potwierdził debits/credits/opening+turnover=closing i wszystkie pary dat policzone;
+  źródła przesyłane stdin tylko do owned offline runnera, bez DB/AI/OCR/logowania treści.
+- Ruling: syntetyczny PDF tworzony z fixture generatora w teście zamiast utrwalania
+  binarnego .pdf; zachowuje realny pypdf→wiersze i jawnie wyłącznie syntetyczne dane.
+- A5 final focused→pełnybackend→diffcheck sh_1beefa78d0014C3fwDH3cLXYWH w toku,
+  źródła zamrożone. Czekać na automatyczny wynik bez pollingu/ponawiania. Nie commit/A6
+  przed zielonym gate. User ponowił „dokończ”; kontynuować zatwierdzoną roadmapę,
+  bez merge/push/deploy/produkcyjnych mutacji, końcowy niezależny review nadal wymagany.
+- W przygotowawczym odczycie do A6 wszystkie5prywatnych ING oszczędnościowych PDF
+  mają szyfrowanie i zgodnie z zatwierdzoną polityką zwracają pdf_encrypted. Nie
+  próbowano haseł/odszyfrowania ani zmiany oryginałów. Nie deklarować odbioru layoutu
+  oszczędnościowego na tych próbkach; potrzebny nieszyfrowany oryginał albo jawne
+  ograniczenie do sprawdzonego formatu. ING Direct3strony czytelne, saldo per row
+  nie występuje (kontrole counts/summary bez wymyślania sald pośrednich).
+
+## 2026-11-09 — A3 zapisane, A4 parser Revolut w regresji
+
+- A3 commit21ff9df i final task-done45PASS157.35s. A4 BASE21ff9df, wygenerowany
+  brief odczytany, testy missing money/parser RED przed implementacją.
+- Ponowny prywatny odczyt4CSV (bez kopiowania danych do Git): trzy pojedyncze waluty
+  PLN102wiersze/USD20/EUR6, jeden plik mieszany. Wszystkie daty lokalne bez offsetu,
+  pełne10kolumn i kwoty z2miejscami. Wszystkie rzeczywiste21fee kroki sald potwierdzają
+  delta=Kwota−Opłata (Kwota nie zawiera fee); żaden nie wspiera przeciwnej semantyki.
+  Nie odwracać znaków lub interpretacji fee w odpowiedzi na rozbieżne saldo.
+- Parser zachowuje pełne kolumny/timestampy/opisy i fizyczne pozycje rekordów, stan
+  ZAKOŃCZONO/COMPLETED posted, znane pending/reverted/cancelled nieksięgowane,
+  unknown widoczny+required check failed. Money jest int, bezfloat/zaokrąglania lub
+  zgadywania separatora; opening-derived i brak timezone jawnie ostrzegane.
+- Salda kontrolowane chronologicznie (także odwrócony eksport) bez zmiany kolejności
+  źródłowych wierszy; dwa podobne zakupy i overlap nie są kasowane. Informacyjny
+  zerowy ruch wymaga niezmienionego salda. Niepełna tabela lub brak salda posted
+  odmawia wyniku, sprzeczne kompletne sumy pozostają z required failed.
+- Jednolity kontrakt10kolumn współdzielony przez admission i parser. Mieszany CSV
+  jawnie csv_mixed_currencies: kontrakt jednego ParsedStatement ma jedną walutę,
+  importer wymaga oddzielnych eksportów walut, nigdy nie pomija części wierszy.
+  Ruling/koszt w ledgerze. Nie dopisano bankowego numeru konta, którego CSV nie zawiera.
+- Pierwszy focused92PASS0.61s; Ruff2pairwise i mypydict-invariance poprawione,
+  następnie lint/types169filesPASS. Dry-run rzeczywistego parsera we własnym offline
+  runnerze przez stdin:128wierszy/3waluty wszystkie wymagane kontrolePASS, mieszany
+  plik jawnie odrzucony. Brak DBmutacji/AI/OCR lub prywatnych bajtów w repo/artifacts;
+  zapisany wyłącznie proof z licznikami/kodami.
+- Final chain sh_1bdd4f6ce0018HbjDPzIW1FOaE: expandedCSV/realpipeline/contracts/
+  registry/storage→lint→types→pełny backend/JUnit→diffcheck, set-e. Źródła zamrożone,
+  nie poll/restart/commit lub A5 przed pełnym zielonym wynikiem. Produkcja bez zmian.
+
+## 2026-11-09 — A2 zamknięte, A3 trwały worker w regresji
+
+- A2 commit f58fdf1, final task-done150PASS510.88s; pełny1971backend/569frontend,
+  lint/types/build i zgodność wszystkich źródeł ze snapshotem PASS. Bez zmian produkcji.
+- A3 task-start BASEf58fdf1, brief odczytany, missing-jobs/worker/registry RED.
+  Pierwsze21testów GREEN97.31s: idempotencja/kolidujący klucz/coalescing, izolacja
+  ownera, fencing dwóch lease/expiry/finite retry, prawdziwy pypdf bez otwartej
+  transakcjiDB, utrata Redis, IDs-only delivery, rejestracja ARQ i ograniczony recovery.
+- Job claim blokuje tylko job i kończy transakcję. Loading/publication używają
+  ownerMutex→batch→source→revision→job, zamknięte sesje przed parserem. Publish
+  sprawdza token/attempt/expiry/sourceSHA/latest revision i archiwizację. Żadnych
+  wywołań mutujących księgę, OCR lub AI; wynik błędnej walidacji jest ready+blocked.
+- Ponowny odczyt źródła z evidence zapisuje rewizję-kandydata z markerem
+  reparse_requires_comparison; NIE promuje current_revision i nie podmienia starych
+  UUID/decisions/evidence. A8/A9 muszą jawnie obsłużyć porównanie/adopcję kandydata,
+  a nie uznać ready za zgodę księgowania. Ruling i koszt w ledgerze. Registry na tym
+  etapie fail-closed, Citi unsupported; konkretne banki dopiero w zadaniach parserów.
+- Statyczny pierwszy Ruff nie wystartował przez race dwóch inicjalizacji prywatnego
+  syntetycznego Git context (update.sample exists). Mypy167PASS. Root cause z exact
+  trace; poprawiono TYLKO ignored adapter: per-snapshot flock i test rzeczywistego
+  commitu HEAD zamiast samego pliku HEAD. Dwa równoległe inicjalizatory następniePASS.
+  Kolejny Ruff zgłosił tylko5import-order/unused błędów, poprawione w źródłach/testach.
+- Wzmocniono prawdziwy probe kolejności blokad: event dopiero przy wejściu w mutex,
+  nie przed wywołaniem publishera. Recovery terminalizuje najwyżej1wyczerpany job
+  na transakcję, aby nie czekać na innego ownera trzymając wcześniejszy job lock.
+- Aktualny final chain sh_1bd6fc555001NE1Gec97iRuxuJ: ruff→mypy→focused nowe+stare
+  dispatchery→pełny backend/JUnit→diffcheck, set-e. Czekać na automatyczny wynik,
+  nie poll/restart i nie commit/A4 przed zielonym gate. A3 jeszcze nie odebrane.
+- UPDATE chain zakończony:45focusedPASS138.66s, pełne1992PASS5835.02s,
+  14standardproxy-deselected/10inheritedwarnings, lint/types167filesPASS. JUnit1992
+  bez fail/error/runtime-skips oraz hashe wszystkich bieżących źródeł zgodne ze
+  snapshotem. Zlecono commit A3 i final task-done, potem task-start A4 w jednym
+  set-e job sh_1bdcc4b06001fFlhul5IBDi9LG. Czekać na automatyczny wynik, nie dublować.
+
+## 2026-11-08 — A1 ukończone; A2 prywatne źródła w toku
+
+- Poprawiona pełna regresja A1:1933PASS/14standardproxy-deselected/10inheritedwarnings
+  w6569.42s. JUnit odczytany:1933cases bez failure/error/runtime-skips. Bieżący
+  lint/types PASS, final focused70PASS93.31s. Plan/spec commitb8f5887, fundament e4c6e20;
+  task-done Task1 zapisany. Nie wracać do implementacji ukończonego A1.
+- A2 BASEe4c6e20, brief odczytany, missing-modules RED. Nowy prywatny storage PDF/CSV
+  reuse content-addressed bajtów, verify hash/path/size; nowy Document bank_import/done,
+  bez DocumentText/revisions/jobs. CSV tylko w dedykowanym importerze, nagłówki i limity,
+  formuły pozostają oryginalnym tekstem. Reuse starego Document bez zmiany metody.
+- pypdf w osobnym ograniczonym procesie bez settings/secrets/HTTP/OCR. Odrzuca błędny,
+  zaszyfrowany i obrazowy PDF oraz limity bytes/pages/text/time/memory; nie ucina tabel.
+  Lifecycle źródła blokuje archive/delete/review/OCR/vision; zwykłe dokumenty bez zmian.
+- Pierwszy focused34backendPASS143.17s; frontend RED→10PASS + eslint/tscPASS. Bieżący
+  backend ruff/types163filesPASS. Rozszerzony suite i source-audit RED w tle; pełny
+  frontend uruchomiony, jeszcze nie twierdzić końcowego A2 PASS.
+- Dodatkowe TDD: samodzielny app registry RED (metadata importów brakowało bez kolekcji
+  importer testów), naprawiony import w finance.models. Real lock probe RED wykazał
+  parsowanie pod owner ledger-lock; przeniesiono ekstrakcję przed lock i dodano ponowną
+  walidację stanu/hash/path/size pod blokadą. Nie ma HTTP upload route/commitu/parserów
+  bankowych ani ekranu; to następne zadania. Produkcja/Q7/historia nadal nietknięte.
+- Dalsze wyniki A2: rozszerzone147backendPASS495.30s, pełny frontend569PASS52.97s,
+  lint/types/buildPASS (tylko istniejący bundle-size warning). Source-audit test
+  RED:0events zamiast1, dodano attach_source event wyłącznie dla nowego powiązania,
+  bez danych osobowych/treści; duplicate nie powtarza audytu. Audit+private HTTP2PASS
+  18.31s:409archive/delete/review, prywatny oryginał/download i crossowner404.
+- Header-only CSV RED (1FAIL/7PASS), poprawiono odmowę csv_empty zamiast zapisu
+  dokumentu bez operacji. Zlecony final focused, następnie pełny backend i statyczne
+  bramki w jednym set-e job sh_1bcf8ece70011EnuNyYr7u8F6s. Źródła A2 zamrożone,
+  czekać na automatyczny wynik; nie poll/restart/commit lub A3 przed zielonym gate.
+
+## 2026-11-08 — Diagnoza bazowej regresji: kontekst Git w izolowanym runnerze
+
+- Baseline z61fbee1 zakończył się1861PASS/2FAIL/14deselected w4998.21s. Nie oznaczać
+  go PASS: błędy test_backup_mocked_commands_run_in_snapshot_order_without_secrets
+  i test_failed_pg_restore_removes_only_created_uploads. JUnit zachowany prywatnie.
+- Odczyt exact XML i backup/restore source wykazał, że git archive nie zawiera .git;
+  oba skrypty wykonują git rev-parse do ustalenia repo root i kończyły pracę przed
+  mockowanymi komendami. Nie były to błędy importera ani dowód awarii produkcyjnych backupów.
+- Environment-only korekta: osobne syntetyczne Git metadata w /tmp owned runnera,
+  realny indeks/commit archiwalnych źródeł, GIT_WORK_TREE na snapshot, bez remotes,
+  kopiowania/montowania hostowego .git lub secrets. Cały baseline backup module21PASS
+  w1.60s po korekcie; skrypty i testy produktu bez zmian/wyłączeń.
+- Również sync_test_source omijał ops/docs przez zbyt wąskie pathspec; poprawiono
+  wyłącznie ignored adapter do pełnych tracked/unignored źródeł (dalej bez .env).
+  Wadliwy trwający task-full run przerwany SIGINT tylko do jednego potwierdzonego PID
+  pytest w owned runnerze z exactjunit i /snapshots cwd; stary log nie jest usuwany.
+- Dalszy krok: po automatycznym zakończeniu przerwanego przebiegu uruchomić pełny
+  poprawiony gate i dopiero zamknąć Task1. Nie podawać pełnego PASS na podstawie
+  targeted21. Brak nowych zmian produkcji lub opcji pomijania testów.
+- Przerwany task-full:420PASS/1FAIL; dodatkowa różnica środowiska to ograniczona rola
+  schemy bez session_replication_role, wymaganej przez istniejący test symulujący
+  uszkodzony legacyFK. Test niezmieniony; żadnych nowych uprawnień nie nadawano.
+  Po zakończeniu baseline pełna suite korzysta z pierwotnej własnej testowej roli
+  finanse/public, a scratch migracje pozostają na dedykowanej własnej roli. Hostowy
+  conftest safety gate ani usługi produkcyjne nie są ruszane.
+- Targeted runner-context regresja23PASS w29.89s (cały backup module, test legacy
+  corruption i wzbogacony Alembic retention). Uruchomiono pełną poprawioną suite
+  aktualnych źródeł sh_1bc7d7dca0018BKoGj2NiPPeFw; czekać na automatyczny wynik,
+  bez pollingu/powtarzania. Nadal brak Task1 commit/done i implementacji dalszych etapów.
+
+## 2026-11-08 — Task A1 w toku: własne testy bez portów, kontrakty i staging
+
+- User po zajętych portach zatwierdził „Bez portów (Recommended)”, później polecił
+  kontynuować/dokończyć. Owned PG16 networknone i runner container-networknamespace,
+  brak publikowanych portów/proxy/prod mountów lub sekretów. Resource IDs/labels,
+  losowe syntetyczne credentials i cleanup receipt wyłącznie w ignored workspace.
+- Bazowy kod61fbee1 zamrożono git archive (bez .env/uploads/Gitmetadata), runner montuje
+  go read-only. Pełny backend baseline pracuje asynchronicznie; NIE twierdzić PASS,
+  dopóki nie ma końcowego wyniku. Frontend568/93files/lint/types PASS.
+- Pierwszy backend lint miał błąd cache do read-only workspace; po odczycie exact trace
+  skierowano cache do /tmp w runnerze. Baseline lint/types PASS. Bez produktowego fixu.
+- Praca zadania używa osobnych content-addressed snapshotów źródeł w owned runnerze.
+  Integracje w osobnej schemie finanse_test, z własną rolą bez superuser/publicCREATE,
+  aby nie mieszać create_all/drop_all z równoległym zamrożonym baseline. To nadal
+  wyłącznie nowy własny PG; żadnego przejmowania istniejącej bazy lub safety-gate edit.
+- Task1 brief/BASE zapisane przez task-start. TDD contracts missing-module RED→40GREEN;
+  models/staging missing-module RED→51GREEN. Pierwsze4test-harness błędy (sync with
+  async savepoint i expired owner.id) rozpoznane ze śladu, poprawione w testach.
+  Rozszerzono testy kompletnego requestu bez client-postings i czytania typed rows.
+- Modele wewnątrz finance.imports, composite owner/kind FKs dla batch/source/Document,
+  immutable extraction/result i evidence event tożsamości. Dokumenty dostały wyłącznie
+  addytywne bank_import method i unique(id,user), bez zmiany starych wierszy.
+  Nie ma jeszcze HTTP uploadu, parserów, commitu ani ekranu — nie ogłaszać funkcji gotowej.
+- /migration bank_import_staging przez autogenerate w wyłącznie własnym scratch DB:
+  6bd8758ebc7d po739144d5eaef. Review usunął unrelated scheduled-index drift, ustawił
+  kolejność Documentunique przed sourceFK i jawny cyclicFK po obu tabelach; check
+  processingmethod jawnie rozszerzony. Downgrade odmawia, gdy jakikolwiek nowy rekord
+  lub dokument bank_import istnieje; nie kasuje/importuje nic automatycznie.
+- Prawdziwy migration test RED (brak pliku)→GREEN1: upgrade/downgrade/upgrade i guard
+  niepustego downgrade, scratch DB po sprawdzeniu OID/owner/0connections usunięta.
+  Następnie wzbogacono fixture retencji o istniejące ledger/Actual/loan/link/Document;
+  rozszerzona regresja w toku. Root integration create_all nie zastępuje Alembic:
+  osobny marker migration i owned_migration_database helper, bez poluzowania URLgate.
+- Aktualny task nadal w toku, brak commitów/migracji na produkcji. Próby statyczne
+  i focused wyniki w `.superpowers/sdd/2026-11-08-bank-statement-import/`; cała roadmapa
+  oraz17zadań nieukończone, końcowego review nie było. Dalej: A1 pełne bramki/commit,
+  potem A2 według briefu; nie powtarzać ukończonego setupu ani zmieniać portów hosta.
+
+## 2026-11-08 — Wykonanie Native zatwierdzone; przygotowanie testów zatrzymane na portach
+
+- Handoff question: user „W tej sesji (Recommended)” i „Tak, własne środowisko”.
+  Zgoda obejmuje ownPG16/volume/finanse_test/scratch DB/cleanup na127.0.0.1:55432,
+  jawnie bez produkcji/proxy/secrets; zajęty port miał oznaczać zatrzymanie.
+- using-git-worktrees: istniejący linked worktree feat/financial-document-workflow,
+  nie main, gitdir różny od common, brak submodule. Dependencies obecne; bez instalacji.
+- ss wykazał LISTEN na127.0.0.1:55432; odczytowa kontrola alternatywnego5432 także
+  LISTEN. Nie łączono się z tymi bazami, nie identyfikowano/stopowano kontenerów,
+  nic nie uruchamiano. Posiadanie testowej nazwy finanse_test nie jest zgodą na użycie
+  istniejącej bazy, której danych/wyłączności nie potwierdzono.
+- Utworzono wyłącznie ignored workspace/ledgery przez sdd-workspace dla obu planów
+  i zapisano pre-flight interfejsów. Task1 jeszcze nie wystartował; baseline/testy/
+  migracje/kod produktu bez zmian. Brak jakiejkolwiek mutacji bazy lub infrastruktury.
+- Potrzebna decyzja: ownPG+ownrunner bez portów hosta, ze wspólnym namespace localhost5432
+  i cleanup wyłącznie własnych zasobów, albo poczekać na zwolnienie zatwierdzonego portu.
+  Nie rozszerzać conftest safety gate, nie przejmować zajętych usług.
+
+## 2026-11-08 — Pełny projekt importów zatwierdzony; plany gotowe do handoffu
+
+- Po „nie potrzeba” makiet przedstawiono pełny opis importu wyciągów, harmonogramów,
+  ręcznego zatwierdzania, ochrony historii i propozycji NBP. User odpowiedział „tak”
+  na pytanie o zatwierdzenie całości i przygotowanie planu. Nie utożsamiać tej zgody
+  z wykonaniem planu, produkcyjną migracją, importem bankowych danych lub deployem.
+- Writing-plans: roadmapa `plans/2026-11-08-bank-imports.md`, osobny plan wyciągów
+  `2026-11-08-bank-statement-import.md` (11 zadań) i harmonogramów
+  `2026-11-08-loan-schedule-import.md` (6). Nagłówki numeric Task1…N zgodne ze skryptami;
+  aliasy A1/B1 opisują zależności. Jeden pakiet finance.imports, nie nowa domena.
+- Read-only explore backendu ses_e4407c611ffejWsUJwWfXHeFkq dostarczył rzeczywiste
+  kontrakty. Ważne: Document upload zwykle kolejkuje OCR/AI, więc dedykowany bank_import
+  storage/terminal status z addytywnym constraint i guardami; CSV nie staje się fakturą.
+  ARQ delivery nad durable PostgreSQL jobs, fencing/retry, bez księgi w workerze.
+- Zastany exchange ma jedną nogę PLN i wylicza drugą kwotę, a date metadata jest
+  manual-only. Plan jawnie dodaje zaufany bankowy entrypoint zachowujący actual legs
+  także EUR↔USD, precyzję6 i frozen valuation; refund to expense-credit, nie income.
+  Publiczne source nie włącza wyjątków; stara historia/Actual nie jest wyceniana ponownie.
+- Self-review poprawił: Event identity→group, evidence main/fee/whole dla legacy net
+  z nierozbitą fee, liczbę rodzin5, wspólny receipt adapter A/B, dokładne DTO/typy,
+  migracyjne cykle FK, odrębny marker/scratchDB do realnego Alembic zamiast create_all,
+  stare podobne wiersze vs duplikaty, zero/pending bez fikcyjnych txn i stale preview.
+- Harmonogramy: active projection przez superseded nullable FK; baseline dopiero
+  przy jawnym poleceniu, nie backfill Q7. Reuse UUID po dacie+składnikach, nie bankowym
+  numerze; cały kompletny future tail, zachowane paid/partial/past-unpaid, konflikt block.
+  Historyczne snapshots i bank_number osobno od stable internal number. Księga bez zmian.
+- Testy zapisane jako przyszłe RED/GREEN i final gate; nie uruchamiano ich teraz.
+  Sprawdzenie dokumentów nie jest wynikiem testów oprogramowania. Backend/frontend,
+  kontenery, infrastruktura i produkcja nie były modyfikowane; wszystkie plany lokalne.
+- Dalej: handoff, przegląd planów przez usera i wybór Native vs subagents; osobna zgoda
+  na własny PG16/finanse_test/scratch DB, loopback55432 i cleanup wyłącznie własnych
+  zasobów. Bez zgody nie używać wcześniejszych lub produkcyjnych DB. Stare dirty
+  audyty i wcześniejsze lokalne docs konfiguracji Q7 pozostają bez cofania/stage.
+
+## 2026-11-08 — Projekt importu bankowego: banki/formaty zatwierdzone, całość oczekuje
+
+- User po stwierdzeniu braku importera poprosił o wyciągi wszystkich swoich banków
+  i import przyszłych harmonogramów. Doprecyzował Velo/ING/Revolut, bez Citi.
+  Zaakceptował propozycję formatów: PDF Velo rachunku/karty, ING Direct/oszczędnościowe,
+  Revolut CSV PLN/EUR/USD i tekstowy PDF harmonogramu; bez zdjęć/skanów/Excela.
+- To nowy projekt, nie kontynuacja operatorskiego zapisu Q7. W brainstorming nie
+  rozpoczęto implementacji, nie tworzono scaffoldu ani zależności. Sesja Build nie
+  zastępuje zatwierdzenia pełnego projektu. Required4hostdocs odczytane ponownie;
+  lokalna dokumentacja jest nowsza od hostowego /opt po konfiguracjach Velo/Q7.
+- Read-only explore ses_e4422343cffezMe0S8M82JE5if potwierdził: reusable Document,
+  extraction revisions, receipts/locks/audit/finance services; brak bank staging i
+  CSV upload. Prywatne próbki obejmują typowe i problematyczne układy, overlap CSV,
+  powtórzone sekcje Velo karty; nie traktować hash/date/amount jako pewnej tożsamości.
+- Projekt zapisano w specs/2026-11-08-bank-statements-and-loan-schedule-import-design.md.
+  To moduł w finance (nie ósma domena), oddzielne życie pliku/odczytu/decyzji/księgi,
+  commit tylko jawny/idempotentny przez istniejące serwisy, bez historycznych korekt.
+  Harmonogramy PLN, pierwsza rodzina Velo; wersje chronią UUID/linki paid/partial,
+  archiwizują wyłącznie niepowiązane przyszłe raty bez podwójnego sumowania.
+- Builder check ses_e4410b324ffensLNrwj20uc3gf: pozostała bramka pełnej akceptacji.
+  Inne pytania rozstrzygnięto jawnie w projekcie jako propozycje autora: historyczne
+  pliki do review (bez autoimportu), existing NBP booking-date/weekend-fallback,
+  niezmienne źródło+rewizje+serwerowy request_hash, jawny zewnętrzny expense/income
+  vs własny transfer, minimalne kontrole parserów, odrębna zgoda na nagłówek karty.
+- Dalej: pokazać pełny opis i uzyskać akceptację (banki/formaty nie zatwierdzają jeszcze
+  całego działania). Dopiero potem writing-plans. Brak migracji/deployu/importów,
+  kod produktu bez zmian; dokumenty robocze bez commitu. Istniejące dirty audyty
+  oraz niezatwierdzone wcześniej lokalne docs konfiguracji Q7 zachowane bez cofania.
+
 ## 2026-11-08 — Velo skonfigurowane po osobnej zgodzie właściciela
 
 - User „masz dane skonfiguruj od razu”; przedstawione konkretne warunki33600PLN/

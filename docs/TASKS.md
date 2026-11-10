@@ -2,6 +2,90 @@
 
 Backlog zadań ze statusami.
 
+## Import wyciągów i harmonogramów — projekt (2026-11-08)
+
+- [x] Potwierdzić banki: Velo, ING, Revolut; Citi wyraźnie wykluczone.
+- [x] Zatwierdzić formaty pierwszej wersji: tekstowe PDF Velo rachunku/karty,
+  PDF ING Direct/oszczędnościowego, CSV Revolut PLN/EUR/USD, PDF harmonogramów.
+- [x] Rozpoznać istniejący obieg dokumentów/księgi i prywatne próbki bez mutacji.
+- [x] Spisać pełny projekt i przeprowadzić builder check; doprecyzować zachowanie
+  historii Actual, kursów NBP, tożsamości preview i ochrony istniejących rat Q7.
+- [x] Przedstawić i uzyskać akceptację całego opisu działania, nie tylko formatów;
+  user „tak” po pełnym opisie, bez potrzeby makiet.
+- [x] Przygotować i samodzielnie sprawdzić roadmapę oraz dwa plany implementacji,
+  z kontraktami między etapami, TDD, pełną regresją i odrębnymi migracjami.
+- [x] User zatwierdził plan i wykonanie w tej sesji (Native), z niezależnym końcowym review.
+- [x] Po zajętym55432/5432 user wyraźnie zatwierdził własne kontenery PG+runner bez
+  publikowania portów, z cleanup tylko własnych zasobów. Utworzono network-none PG16
+  i runner we wspólnym namespace; safety gate testów nie zmieniony, produkcja nietknięta.
+- [x] Etap A, zadanie1: kontrakty źródeł i komend, trwałe modele i owner-scoped staging.
+  Kontrakty40PASS, staging+ownerFK51PASS, prawdziwy Alembic roundtrip+retencja1PASS;
+  rozszerzony focused suite70PASS. Najnowszy lint/types PASS.
+  Backend lint/types oraz frontend baseline568/lint/types PASS. Bazowy backend miał
+  1861PASS/2błędy kontekstu Git w testach backupu; po environment-only poprawce cały
+  backup module21PASS. Dodatkowe23testy runner-context/migration PASS; poprawiony pełny
+  gate aktualnych źródeł zakończony1933PASS/zero runtime skips,14standard proxy deselected;
+  JUnit i bieżący lint/types sprawdzone. Migracja6bd8758ebc7d tylko lokalnie,
+  bez produkcyjnego upgrade. A1 zakończone, commit e4c6e20, final focused70PASS.
+- [x] A2: prywatny upload PDF/CSV, hashe/ścieżki, ograniczony odczyt tekstu PDF,
+  ochrona źródeł przed archive/delete/OCR/AI i frontend bez etykiety AI/OCR.
+  Rozszerzone147backend, audyt i prywatny streaming HTTP2PASS; frontend569PASS,
+  lint/types/build PASS. Pusty CSV wykryty testem RED i poprawiony. Końcowy focused150
+  i pełny backend1971PASS (14standard proxy-deselected,0runtime-skips); JUnit i hashe
+  wszystkich aktualnych źródeł zgodne ze zweryfikowanym snapshotem. Commit f58fdf1,
+  finalny task-done150PASS510.88s.
+- [x] A3: trwałe zadania/retry/lease fencing, worker bez transakcji DB podczas pypdf,
+  zachowanie starej rewizji i dowodów przy ponownym odczycie rozliczonego źródła.
+  Pierwsze21testów PASS; rozszerzone45 i pełne1992backend PASS, lint/types167filesPASS.
+  JUnit/źródła potwierdzone; commit21ff9df i final task-done45PASS157.35s.
+- [x] A4: parser Revolut CSV PLN/EUR/USD, dokładne kwoty/fee/stany i pełne surowe pola.
+  Pierwsze92testy PASS; prywatne128wierszy/3waluty/all required checks PASS, mieszany
+  CSV jawnie odrzucony. Focused124 i pełny2047backendPASS, lint/typesPASS, JUnit/hashe
+  źródeł zgodne; commit00748c2 i final task-done99PASS7.48s.
+- [x] A5: Velo rachunek PDF, pełna tabela/strony/daty/znaki/obroty/salda. Pierwsze30testów
+  PASS; trzy dodatkowe regresje kompletności RED→fix. Prywatne3wyciągi/154wiersze
+  i niezależne sumyDecimalPASS. Focused112 i pełne2064backendPASS, lint/types170PASS;
+  commitc95cb14, final task-done33PASS3.31s; JUnit i hashe źródeł zweryfikowane.
+- [x] A6: ING Direct; użytkownik jawnie odłożył oszczędnościowe (brak nieszyfrowanych
+  próbek). 132parser testsPASS, lint/types171PASS; prywatne8Direct/292wiersze i sumy
+  DecimalPASS. Pozostałe13DirectPDF szyfrowane są jawnie odrzucone. Pełne2081backendPASS,
+  JUnit/hashe źródeł zgodne; commit524a237, final task-done61PASS0.97s.
+- [ ] ING oszczędnościowe: osobne rozszerzenie po dostarczeniu nieszyfrowanej próbki;
+  nie deklarować obsługi na podstawie hipotetycznego układu.
+- [x] A7: Velo karta, jawne sekcje i niezależne metadane/minimum/termin.68testówPASS,
+  lint/types173PASS;5prywatnych cykli/96wierszy zachowane,4zgodne/1jawnie blocked bez
+  zgadywania deduplikacji. Pełny2105backendPASS/JUnit i hashe źródeł potwierdzone.
+  Commit28403ec, final task-done43PASS206.45s; literówka ścieżki pierwszego task-done
+  poprawiona bez powtarzania commitu. Nie ma jeszcze commitu finansowego/UI importera.
+- [x] A8: owner-scoped decyzje/mapowania, kandydaci tylko sugestiami, zamrożone kursy
+  i preview ze śladem źródeł/wersji/księgi. Kolejne23/33/38/43testyPASS. TDD napraw
+  cache/membership races, metadanych karty, fee-only, powrotu do review i porównania
+  candidate; końcowe288importer i pełne2151backendPASS, lint/types177PASS. JUnit i
+  hashe źródeł zgodne. Commit6aa8f6d/task-done46PASS; zmienione wiersze po reparse blocked.
+- [x] A9: atomowy commit/receipt/replay, zaufany adapter bankowy i dowody źródłowe.
+  Testy RED przed kodem;16commit+3financialgroupsPASS,4races/linkPASS,5HTTPPASS;
+  poprawki dodatkowychRED snapshotNumeric/datemetadata/bodylimit w finalgate.
+  Focused+legacy429PASS/1FAIL(testCSRF nie włączał production); poprawiono tylko test.
+  Pełny2188backendPASS(JUnit0fail/error/runtime-skips i zgodna kolekcja); źródła
+  zgodne ze snapshotem. Frontend569/lint/typesPASS. Commita068a0c, finaltask-done45PASS.
+- [x] A10: strony Import/review, per-file upload, mapowania/decyzje, readonly źródła,
+  frozenpreview/confirm/receipt i linki z kont/kart/dokumentów.596frontend/lint/types/
+  buildPASS,4UI375/1440light/darkPASS19s incl editor+keyboard, screenyobejrzane.
+  Źródła245zgodne z manifestem, backendniezmieniony. Commitb3aa562/task-done67PASS.
+- [~] A11: końcowe bramki PASS — backend2197/0runtime-skips/14standardproxy,
+  frontend596/171E2E+1expectedskip/4themes, lint/types/build, Alembic-retencja.
+  JUnit i manifest677plików zgodne;44prywatnepliki parser-only/hashbez zmian,
+  niejednoznaczny cykl karty jawnieblocked. Runbook i raport lokalny gotowe.
+  Jedenreview:2ImportantfixedRED→GREEN fd0e6a4,0Critical/Minor; affected49PASS.
+  ZapisA11/taskdone/cleanupwyłączniewłasnychzasobów w toku.
+- [ ] Etap B: importer harmonogramów i ich wersji, odrębny plan.
+- [ ] Osobna zgoda na merge/push/deploy, produkcyjną migrację lub realny import.
+
+Projekt `docs/superpowers/specs/2026-11-08-bank-statements-and-loan-schedule-import-design.md`.
+Plany `docs/superpowers/plans/2026-11-08-bank-imports.md` i wskazane w nim etapy A/B.
+Etap A **przeszedł bramki lokalne, nie jest wdrożony**; etap B niezaimplementowany.
+Nie mylić z zakończoną operatorską konfiguracją Q7.
+
 ## Typ konta karty i przegląd wielu kart (2026-11-08)
 
 - [x] Zatwierdzony podział i plan w rozmowie, po Build „ok, działaj”; osobna zgoda

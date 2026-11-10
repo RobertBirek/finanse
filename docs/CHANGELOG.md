@@ -2,6 +2,139 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, bramki odbioru PASS] — 2026-11-10 — Import wyciągów, etap A
+
+### Added
+- Przekrojowe testy syntetycznych PDF/CSV: HTTP → prawdziwy worker → rewizja →
+  decyzje → preview → commit → nowa sesja DB. Overlap jawnie linkuje stare operacje
+  i tworzy tylko zatwierdzone nowe; blank/truncated/wrong-owner nie księgują.
+- Instrukcja importera i lokalny raport odbioru. Powtórny read-only parser acceptance
+  wszystkich dostępnych rodzin prywatnych próbek, bez danych bankowych w repo/testDB.
+
+### Fixed
+- Po jednym niezależnym review: każdy reparse zachowuje bieżącą rewizję, również
+  przed pierwszym commitem. Wydatek i zwrot prowizji mają niezależne signed movements.
+  Obie uwagi Important naprawione RED→GREEN, commitfd0e6a4; brak Critical/Minor.
+
+### Verification
+- Końcowy backend2197PASS/0runtime-skips/14standard proxy-deselected; frontend596PASS,
+  pełne171E2E+1existingexpectedskip i4motywy375/1440PASS; lint/types/build PASS.
+- JUnit, kolekcja i manifest677plików zgodne. Realny Alembic roundtrip/retencjaPASS.
+  Brak produkcyjnych zmian, merge/push/deploy lub rzeczywistego importu. Etap B
+  harmonogramów nie jest zaimplementowany. Końcowy zapis/cleanup A11 w toku.
+
+## [Local, interfejs; odbiór całości w toku] — 2026-11-09 — Import wyciągów
+
+### Added
+- Ekrany importu i weryfikacji: osobny wynik każdego pliku, otwarcie istniejącego
+  importu, mapowanie rachunków i jawne decyzje create/link/defer. Źródłowe kwoty i daty
+  pozostają tylko do odczytu; transfery i FX wymagają kompletnych rzeczywistych nóg.
+- Zamrożony podgląd z wyceną i osobnym potwierdzeniem. Odzyskanie trwałego wyniku
+  po utracie odpowiedzi zachowuje klucz zamiaru, także po zmianie wersji importu.
+- Porównanie ponownego odczytu, osobne potwierdzenie nagłówka karty oraz zachowane
+  fakty starej płatności przy linkowaniu. Linki z kont, kart i istniejących dokumentów.
+
+### Verification
+- 596 testów frontendu, lint, typy i build PASS; 4 scenariusze Chromium375/1440
+  light/dark z formularzem, długą nazwą rachunku i potwierdzeniem klawiaturą PASS.
+  Źródła zgodne z manifestem245plików; backend identyczny z odebranym A9.
+- Całościowy odbiór A11 i niezależny review pozostają do wykonania. Bez deployu,
+  produkcyjnej migracji, rzeczywistego importu danych lub zmian historii/sald/Q7.
+
+## [Local, weryfikacja backendu] — 2026-11-09 — Atomowe zatwierdzanie importów
+
+### Added
+- Serwerowy adapter rzeczywistych bankowych postings, osobne zwroty wydatków,
+  importowe pochodzenie dat i atomowe evidence/receipt/replay. Idempotentne API
+  przygotowania, review, podglądu, zatwierdzenia i odzyskania zapisanego wyniku.
+- Dowód źródłowy chroni tożsamość płatności przed usunięciem lub zmianą dat/stanu.
+  Limit strumienia uploadu obejmuje nowy importer bez zwiększenia dotychczasowych limitów.
+
+### Verification
+- Pełny backend2188PASS (JUnit i kolekcja zgodne, bez runtime-skips), frontend569PASS,
+  lint/typesPASS. Źródła zgodne ze snapshotem. Restart przerwał tekstowy capture,
+  nie testy; końcowy JUnit zweryfikowany bez udawania odzyskanego kodu wyjścia procesu.
+### Status
+- A9 zapisane lokalnie: a068a0c, final task-done45PASS. UI opisane powyżej;
+  końcowy odbiór całości nadal w toku, bez deployu i produkcyjnej migracji/importu.
+
+## [Local, częściowa implementacja] — 2026-11-09 — Review i zamrożony podgląd importu
+
+### Added
+- Wersjonowane decyzje create/link/defer z kontrolą właściciela, rachunku, IBAN,
+  waluty i kategorii; dopasowania Actual są sugestiami, nie automatycznym linkiem.
+- Zamrożona wycena historyczna NBP/manual oraz rzeczywiste nogi FX, osobne prowizje
+  i zwroty; podgląd bez zapisów do księgi. Zmiana źródła, decyzji, kont lub nawet
+  bilansujących się nowych operacji unieważnia potwierdzenie.
+- Prywatne porównanie ponownego odczytu bez zastąpienia rozliczonych wierszy i dowodów.
+
+### Verification
+- 288testów importera/2151pełnego backendu PASS, lint/typesPASS; zero runtime-skips DB,
+  14standardowo wyłączonych testów proxy. Jeszcze bez finansowego commitu i UI importera.
+- Bez produkcyjnej migracji, deploy lub zmiany historii/sald/Q7.
+## [Local, częściowa implementacja] — 2026-11-09 — Parsery Revolut, Velo i ING Direct
+
+### Added
+- Revolut CSV PLN/EUR/USD: pełne surowe kolumny, dokładne kwoty, niezależna prowizja,
+  jawne stany niezaksięgowane i kontrole sald; brak deduplikacji podobnych zakupów.
+- Velo rachunek PDF: pełne tabele/strony/daty i obroty/salda; ING Direct PDF: nagłówki,
+  wszystkie wiersze, sumy/liczniki i wielomiesięczny okres, bez fikcyjnych sald pośrednich.
+- Commity00748c2/c95cb14/524a237. Ostatnia pełna regresja2081backendPASS, zero runtime
+  skips,14standard proxy-deselected; lint/typesPASS. Prywatne source controls i niezależne
+  Decimal sumy sprawdzone bez importu do księgi. Interfejs i zatwierdzanie jeszcze w toku.
+
+### Changed
+- Po jawnej decyzji użytkownika ING oszczędnościowe odłożone do dostarczenia
+  nieszyfrowanej próbki. Szyfrowane PDF-y są odrzucane, nie odszyfrowywane.
+- Bez deploy, produkcyjnej migracji lub zmiany istniejących finansów.
+
+## [Local, częściowa implementacja] — 2026-11-09 — Trwały odczyt importów
+
+### Added
+- Trwałe zadania w PostgreSQL z idempotencją, lease i fencing, ograniczonym retry
+  oraz odzyskiwaniem po utracie Redis/workera. Lokalny parser nie trzyma transakcji DB.
+- Ponowny odczyt rozliczonego źródła zachowuje aktywną rewizję i dowody; nowy wynik
+  wymaga jawnego porównania, bez automatycznego ponownego księgowania.
+
+### Verification
+- Pełny backend1992PASS, focused45PASS i lint/types PASS; 14 standardowo wyłączonych
+  testów proxy, zero runtime-skips DB. Źródła zgodne ze zweryfikowanym snapshotem.
+- Konkretne parsery bankowe, review i zatwierdzanie nadal są do implementacji.
+  Bez migracji/deploy lub zapisów finansowych na produkcji.
+
+## [Local, częściowa implementacja] — 2026-11-08 — Fundament importera bankowego
+
+### Added
+- Trwały staging źródeł i kontrakty parserów w `finance.imports`; odczyty ograniczone
+  do właściciela, powiązania chronione kluczami złożonymi. Commity b8f5887/e4c6e20.
+- Addytywna migracja `6bd8758ebc7d` po `739144d5eaef`, bez backfillu i z odmową
+  downgrade po zapisaniu danych importu; rzeczywisty roundtrip na własnej bazie.
+
+### Verification
+- Pełny backend fundamentu: 1933 PASS, 14 standardowo wyłączonych testów proxy;
+  frontend baseline 568 PASS, lint i typy PASS. Poprzednie błędy kontekstu runnera
+  opisane w JOURNAL; końcowy przebieg wykonano po ich usunięciu.
+- Prywatny upload PDF/CSV, ograniczony proces odczytu tekstu PDF, ochrona oryginałów
+  przed archive/delete/OCR/AI i jednokrotny audyt podpięcia źródła. Pełna regresja tego
+  etapu1971backend/569frontendPASS, lint/types/build PASS, brak runtime-skips DB.
+- Nie ma jeszcze kompletnego importera, ekranów ani zatwierdzania księgowania. Bez deploy/migracji
+  na produkcji lub zmian sald, historii i Q7.
+
+## [Projekt, niezaimplementowany] — 2026-11-08 — Import wyciągów i harmonogramów
+
+### Added
+- Użytkownik zatwierdził banki Velo/ING/Revolut, jawnie bez Citi, oraz pierwsze formaty:
+  PDF Velo rachunku/karty, PDF ING Direct/oszczędnościowego, CSV Revolut PLN/EUR/USD
+  i tekstowe PDF harmonogramów (pierwszy zweryfikowany układ Velo).
+- Projekt bezpiecznego importu: prywatne źródła, staging PostgreSQL, ręczne zatwierdzanie,
+  jawna deduplikacja/uzgodnienie, transfery/FX/fee i niezmienność istniejących spłat.
+  Pełny opis po builder check zatwierdzony przez użytkownika; nie dodano jeszcze funkcji do aplikacji.
+  `docs/superpowers/specs/2026-11-08-bank-statements-and-loan-schedule-import-design.md`.
+- Przygotowano roadmapę i dwa plany wykonania: 11 zadań importu wyciągów oraz 6 zadań
+  harmonogramów i wersji. Kontrakty, TDD, prywatne próbki, retencja, FX/fee i idempotencja
+  opisane przed implementacją; wykonanie i osobne środowisko testowe czekają na zgodę.
+  `docs/superpowers/plans/2026-11-08-bank-imports.md`.
+
 ## [Production, konfiguracja] — 2026-11-08 — Warunki istniejącej karty Velo
 
 ### Changed
