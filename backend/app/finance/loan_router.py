@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.finance import loans
+from app.finance.loan_schedule_projection import ScheduleMutationConflict
 from app.finance.loan_schemas import (
     LoanCreate,
     LoanDetailResponse,
@@ -25,6 +26,8 @@ router = APIRouter(prefix="/loans")
 
 
 def _error(error: Exception) -> HTTPException:
+    if isinstance(error, ScheduleMutationConflict):
+        return HTTPException(409, str(error))
     if isinstance(error, IntegrityError):
         return HTTPException(409, "Loan record conflicts with an existing record")
     if isinstance(error, LookupError):
@@ -174,9 +177,12 @@ async def candidates(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> LoanPaymentCandidatesResponse:
-    result = await loans.get_loan_payment_candidates(
-        db, current_user.id, loan_id, installment_id, limit, offset
-    )
+    try:
+        result = await loans.get_loan_payment_candidates(
+            db, current_user.id, loan_id, installment_id, limit, offset
+        )
+    except ValueError as error:
+        raise _error(error)
     if result is None:
         raise HTTPException(404, "Loan or installment not found")
     return result

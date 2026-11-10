@@ -8,7 +8,14 @@ Backlog zadań ze statusami.
   JUnit0failure/error/runtime-skips, 14standardexcluded, 686hashzgodne; lint/typesPASS.
 - [x] B2: parser VeloPDF;31testów/148parserregression/2235pełnybackendPASS, lint/types,
   JUnit0failure/error/runtime-skips i692hashPASS;2originals59+59rows sourcecomparePASS.
-- [ ] B3–B6: diff/projekcja/ochrona historii, jawna aktywacja, UI i odbiór.
+- [x] B3: diff/projekcja/ochrona historii — testy napisane przed implementacją;
+  RED23FAIL/1PASS potwierdzony; implementacja diff/projekcji/409/ownerlock gotowa do
+  GREEN, ruff/mypy187PASS. Focused24 i świeżyfrontend/static w toku, potemfullgate.
+  UPDATEfocused24PASS143.66s (4realDBraces); uruchomiony affectedguards→static→pełny
+  backend2259expected/JUnit/hashgate. BezB3commitu i bezstartuB4 przedwynikiem.
+  FINAL2259PASS/14standardexcluded/0runtime-skips/696hashPASS; affected97/frontend596/
+  ruff/mypy187/tsc/eslintPASS. B3 gotowe do lokalnego commitu/task-done.
+- [ ] B4–B6: jawna aktywacja, UI i odbiór.
 - Bez merge/push/deploy/migracji produkcyjnej i importu rzeczywistych harmonogramów.
 
 ## Import wyciągów i harmonogramów — projekt (2026-11-08)

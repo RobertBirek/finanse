@@ -8,6 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.finance.credit_card_models import CreditCard
 from app.finance.dates import _local_today
 from app.finance.document_guards import lock_document_mutations
+from app.finance.loan_schedule_models import LoanScheduleMembership
+from app.finance.loan_schedule_projection import (
+    active_installment_predicate,
+    assert_active_installment,
+    assert_manual_schedule_mutation,
+)
 from app.finance.loan_schemas import (
     LoanCreate,
     LoanDetailResponse,
@@ -37,12 +43,16 @@ def _total(row: LoanInstallment) -> int:
 async def _owned_loan(
     db: AsyncSession, user_id: uuid.UUID, loan_id: uuid.UUID, *, lock: bool = False
 ) -> LoanAgreement | None:
+    if lock:
+        await lock_document_mutations(db, user_id)
     statement = select(LoanAgreement).where(
         LoanAgreement.id == loan_id, LoanAgreement.user_id == user_id
     )
     if lock:
         statement = statement.with_for_update().execution_options(populate_existing=True)
-    return (await db.execute(statement)).scalar_one_or_none()
+    return (
+        await db.execute(statement.execution_options(populate_existing=True))
+    ).scalar_one_or_none()
 
 
 async def create_loan(db: AsyncSession, user_id: uuid.UUID, data: LoanCreate) -> LoanAgreement:
@@ -79,7 +89,7 @@ async def create_loan(db: AsyncSession, user_id: uuid.UUID, data: LoanCreate) ->
 async def update_loan(
     db: AsyncSession, user_id: uuid.UUID, loan_id: uuid.UUID, data: LoanUpdate
 ) -> LoanAgreement | None:
-    loan = await _owned_loan(db, user_id, loan_id)
+    loan = await _owned_loan(db, user_id, loan_id, lock=True)
     if loan is None:
         return None
     for key, value in data.model_dump(exclude_unset=True).items():
@@ -96,6 +106,7 @@ async def create_loan_installment(
     loan = await _owned_loan(db, user_id, loan_id, lock=True)
     if loan is None:
         raise LookupError("Loan not found")
+    await assert_manual_schedule_mutation(db, user_id, loan.id, loan.active_schedule_revision_id)
     installment = LoanInstallment(user_id=user_id, loan_id=loan.id, **data.model_dump())
     db.add(installment)
     await db.flush()
@@ -109,6 +120,9 @@ async def update_loan_installment(
     installment_id: uuid.UUID,
     data: LoanInstallmentUpdate,
 ) -> LoanInstallment | None:
+    loan = await _owned_loan(db, user_id, loan_id, lock=True)
+    if loan is None:
+        return None
     installment = (
         await db.execute(
             select(LoanInstallment)
@@ -123,6 +137,9 @@ async def update_loan_installment(
     ).scalar_one_or_none()
     if installment is None:
         return None
+    await assert_manual_schedule_mutation(
+        db, user_id, loan.id, loan.active_schedule_revision_id, installment
+    )
     linked = await db.scalar(
         select(LoanPaymentLink.id).where(LoanPaymentLink.installment_id == installment.id).limit(1)
     )
@@ -147,6 +164,9 @@ async def update_loan_installment(
 async def delete_loan_installment(
     db: AsyncSession, user_id: uuid.UUID, loan_id: uuid.UUID, installment_id: uuid.UUID
 ) -> bool:
+    loan = await _owned_loan(db, user_id, loan_id, lock=True)
+    if loan is None:
+        return False
     installment = (
         await db.execute(
             select(LoanInstallment)
@@ -161,6 +181,9 @@ async def delete_loan_installment(
     ).scalar_one_or_none()
     if installment is None:
         return False
+    await assert_manual_schedule_mutation(
+        db, user_id, loan.id, loan.active_schedule_revision_id, installment
+    )
     if (
         await db.scalar(
             select(LoanPaymentLink.id)
@@ -239,6 +262,7 @@ async def link_loan_payment(
     ).scalar_one_or_none()
     if installment is None:
         return None
+    assert_active_installment(installment)
     transaction = (
         await db.execute(
             select(FinancialTransaction)
@@ -322,7 +346,11 @@ async def _detail(db: AsyncSession, loan: LoanAgreement) -> LoanDetailResponse:
         (
             await db.execute(
                 select(LoanInstallment)
-                .where(LoanInstallment.loan_id == loan.id)
+                .where(
+                    LoanInstallment.loan_id == loan.id,
+                    LoanInstallment.user_id == loan.user_id,
+                    active_installment_predicate(),
+                )
                 .order_by(LoanInstallment.due_date, LoanInstallment.number, LoanInstallment.id)
             )
         ).scalars()
@@ -355,6 +383,20 @@ async def _detail(db: AsyncSession, loan: LoanAgreement) -> LoanDetailResponse:
             )
         )
     responses = []
+    memberships = (
+        (
+            await db.scalars(
+                select(LoanScheduleMembership).where(
+                    LoanScheduleMembership.revision_id == loan.active_schedule_revision_id,
+                    LoanScheduleMembership.user_id == loan.user_id,
+                    LoanScheduleMembership.loan_id == loan.id,
+                )
+            )
+        ).all()
+        if loan.active_schedule_revision_id is not None
+        else []
+    )
+    source_rows = {m.installment_id: m for m in memberships}
     for item in installments:
         total = _total(item)
         paid = sum(row.amount_pln for row in payment_rows[item.id])
@@ -372,6 +414,10 @@ async def _detail(db: AsyncSession, loan: LoanAgreement) -> LoanDetailResponse:
                 remaining_pln=remaining,
                 payment_status="paid" if remaining == 0 else "partial" if paid else "unpaid",
                 payments=payment_rows[item.id],
+                bank_number=source_rows[item.id].bank_number if item.id in source_rows else None,
+                schedule_revision_id=loan.active_schedule_revision_id
+                if item.id in source_rows
+                else None,
             )
         )
     ledger_balance = await db.scalar(
@@ -406,6 +452,7 @@ async def _detail(db: AsyncSession, loan: LoanAgreement) -> LoanDetailResponse:
         paid_pln=paid,
         remaining_pln=total - paid,
         installments=responses,
+        active_schedule_revision_id=loan.active_schedule_revision_id,
     )
 
 
@@ -450,6 +497,7 @@ async def get_loan_payment_candidates(
     ).scalar_one_or_none()
     if loan is None or installment is None:
         return None
+    assert_active_installment(installment)
     remaining = _total(installment) - await _installment_paid(db, installment.id)
     debit = Posting.__table__.alias("loan_payment_debit")
     credit = Posting.__table__.alias("loan_payment_credit")

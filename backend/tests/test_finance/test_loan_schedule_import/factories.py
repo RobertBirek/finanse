@@ -68,3 +68,87 @@ async def legacy_loan(
     db.add(receipt)
     await db.flush()
     return loan, installment, receipt
+
+
+async def schedule_version(db, owner_id, loan, receipt, *, bank=False):
+    """Synthetic version only; used to exercise projection and immutability guards."""
+    from app.documents.models import Document
+    from app.finance.imports.models import ImportBatch, ImportRevision, ImportSource
+    from app.finance.loan_schedule_models import LoanScheduleRevision
+
+    source_revision_id = None
+    if bank:
+        document = Document(
+            user_id=owner_id,
+            filename="synthetic-schedule.pdf",
+            original_name="synthetic-schedule.pdf",
+            mime_type="application/pdf",
+            sha256_hash=uuid.uuid4().hex * 2,
+            size_bytes=1,
+            storage_path="/test/synthetic-schedule.pdf",
+            status="done",
+            processing_method="bank_import",
+        )
+        batch = ImportBatch(user_id=owner_id, kind="loan_schedule")
+        db.add_all([document, batch])
+        await db.flush()
+        source = ImportSource(
+            user_id=owner_id, batch_id=batch.id, document_id=document.id, kind="loan_schedule"
+        )
+        db.add(source)
+        await db.flush()
+        revision = ImportRevision(
+            user_id=owner_id,
+            batch_id=batch.id,
+            source_id=source.id,
+            number=1,
+            source_sha256=document.sha256_hash,
+        )
+        db.add(revision)
+        await db.flush()
+        source_revision_id = revision.id
+    revision = LoanScheduleRevision(
+        user_id=owner_id,
+        loan_id=loan.id,
+        receipt_id=receipt.id,
+        ordinal=1,
+        kind="bank_import" if bank else "manual_baseline",
+        state="active",
+        source_revision_id=source_revision_id,
+        activated_on=date(2026, 11, 10),
+        cutover_date=date(2026, 11, 10),
+    )
+    db.add(revision)
+    await db.flush()
+    loan.active_schedule_revision_id = revision.id
+    await db.flush()
+    return revision
+
+
+async def payment_transfer(db, owner_id, loan, amount=100):
+    from app.finance.schemas import PostingCreate, TransactionCreate
+    from app.finance.transactions import create_transaction
+
+    return await create_transaction(
+        db,
+        owner_id,
+        TransactionCreate(
+            transaction_date="2020-01-01",
+            description="Synthetic repayment",
+            type="transfer",
+            postings=[
+                PostingCreate(
+                    account_id=loan.payment_account_id,
+                    source_amount=amount,
+                    base_amount_pln=amount,
+                    direction="debit",
+                ),
+                PostingCreate(
+                    account_id=loan.account_id,
+                    source_amount=amount,
+                    base_amount_pln=amount,
+                    direction="credit",
+                ),
+            ],
+        ),
+    )

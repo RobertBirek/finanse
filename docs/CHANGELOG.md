@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, B3 zweryfikowane] — 2026-11-10 — Diff i aktywny zakres rat
+
+### Added
+- Porównanie dat i trzech składników, immutable snapshot i fingerprint rat/linków,
+  zachowanie historii oraz jawne konflikty zamiast przepisywania istniejących spłat.
+- Wspólna projekcja usuwa wycofane przyszłe raty z sum. Bank-managed ręczne mutacje
+  i nowe linki do superseded zwracają409; retained history pozostaje dostępna po UUID.
+- Ujednolicona kolejność owner mutex → umowa → rata → transakcja/link. Testy RED
+  odtworzyły23brakujące zachowania przed implementacją; focused24PASS (4realDBraces).
+
+### Verification
+- Pełnybackend2259PASS/14standardexcluded/0runtime-skips; JUnit i696hashzgodne,
+  affectedguards97PASS, frontend596PASS, lint/typesPASS. Bez zapisów do produkcji.
+
 ## [Local, B2 zweryfikowane] — 2026-11-10 — Parser harmonogramów Velo
 
 ### Added

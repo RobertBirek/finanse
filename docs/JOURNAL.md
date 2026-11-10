@@ -2,6 +2,52 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-10 — B3 pełny gate zielony
+
+- Full2259PASS/14standardexcluded/0runtime-skips11688.20s, JUnit/collection i696hash
+  current+runnerPASS; affectedguards97PASS910.72s, focused24PASS143.66s(4realDBraces),
+  ruffPASS/mypy187PASS/frontend59698.44s/eslint/tscPASS.
+- B3 gotowe do lokalnego commitu/task-done. NastępneB4: immutablepreview/receipt/
+  aktywacja/historia, nie transakcje. WłasnyPG/runner nadal bezportów; produkcja bez zmian.
+
+## 2026-11-10 — B3 focused24PASS; pełny gate uruchomiony
+
+- GREEN24PASS143.66s, w tym4realDBmutex/loanNOWAITraces; ruffPASS/mypy187PASS na
+  tym samym zamrożonym ce6d94snapshot. Freshfrontendchainsh_1c6ba1c3a00187r32fvZCRC3rj
+  już działa, niepowtarzać/niepoll.
+- B3gate sh_1c6bc1e7600165n4WcVM3Y84bV: manifest+syntheticPDF, affectedloan/
+  transaction/bill/cardguards, static, pełnybackend2259expectedJUnit i proofkolekcji/
+  0runtime-skips/hashcurrent+snapshot. Czekaćautoresult, B3bezcommitu/B4nierozpoczęte.
+- HEAD93abf48, produkcja/Q7bez zmian, własnyPG/runner bezportów nadal do testów B.
+- Świeżyfrontend zakończony596PASS98.44s/97plików, eslint/tscPASS. Brakzmianfrontend.
+  PełnygateB3backend nadal oczekuje na wynik; bezpowtórek/commituprzedJUnit/hashproof.
+
+## 2026-11-10 — B3 implementacja po23RED
+
+- RED23FAIL/1PASS201.28s: missingdiff, aktywnaprojekcja/409 i4owner-mutexracefail.
+  Wdrożono immutable snapshots/fingerprint wszystkich dat/kwot/ID/linków/postings,
+  diff po dacie+składnikach i cutovermax(today,effective), zachowanie historii i blokady
+  konfliktów; numerbankowy nie jest ID. Nie wykonuje mutacji/aktywacji.
+- Wspólna aktywna projekcja wyklucza superseded z get/list/sum. Bank-managed manual
+  create/update/delete409 z instrukcją nowego importu; superseded nie przyjmuje
+  nowego linku/kandydatów. Owner mutex poprzedza loan→installment→transaction/link;
+  stare legacyAPI i retainedhistoryunlink/link zachowane.
+- GREEN24focused sh_1c6b9394f0013dTJh8c0AeQzqb/staticsh_1c6b94b1b001YO6yVps16HaD0k
+  trwają. Rulings wledger: pastunpaidomissionblocksdefault/futurelinkedmissingblocks,
+  historyHTTP świadomie B4perinterfaces. BezB3commitu przedaffected+fullgate.
+
+## 2026-11-10 — B2commit93abf48; B3 testy RED
+
+- B2task-done35PASS4.64s, commit93abf48. B3BASE93abf48, brief/spec§8 przeczytane.
+- Testy przed kodem: diff59identical+partial/reuse, shorterfulltail, renumbering,
+  linkedfuturemissing/changed, paid/partialhistory, pastunpaidconflicts, cutover,
+  newemptyhistorical, ambiguousmatches, no mutation forinvalidsource.
+- Projection/detail/list, bank-managedcreate/update/delete409, supersededcandidates/
+  link409, retainedhistoricalunlink/relink i fingerprintfields/payments;4realDBraces
+  owner-mutex→loan-row via NOWAIT. REDsh_1c6b45033001EDAxHwnWzZ5liE w toku.
+- Nie zmieniono jeszcze B3kodu aplikacji; historyAPI pozostaje B4 (własne snapshoty),
+  bez duplikacji endpointów w B3. No-porttestenv zachowane, produkcja/Q7bez zmian.
+
 ## 2026-11-10 — B2 pełny gate zielony
 
 - Full2235PASS/14standardproxyexcluded/0runtime-skips10859.29s, JUnit/collection/
