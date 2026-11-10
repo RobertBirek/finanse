@@ -125,3 +125,78 @@ async def test_candidate_rows_can_be_compared_privately_without_promoting_them(
             limit=10,
         )
     assert error.value.http_status == 404
+
+
+@pytest.mark.parametrize("changed", [False, True])
+async def test_worker_reparse_of_previewed_uncommitted_source_retains_current_revision(
+    db_session, owner, tmp_path, monkeypatch, changed
+):
+    from datetime import UTC, datetime
+
+    from sqlalchemy import func, select
+
+    from app.finance.imports.commit import commit_import
+    from app.finance.imports.contracts import ParsedStatement
+    from app.finance.imports.jobs import claim_import_job, finish_import_job, request_prepare
+    from app.finance.imports.models import ImportEvidence
+    from app.finance.imports.service import get_batch, list_rows
+    from tests.test_finance.test_bank_imports.commit_fixtures import confirmed_import
+    from tests.test_finance.test_bank_imports.factories import ledger_snapshot
+
+    case, frozen = await confirmed_import(db_session, owner.id, tmp_path, monkeypatch)
+    source = await db_session.get(ImportSource, case.source_id)
+    old = await db_session.get(ImportRevision, source.current_revision_id)
+    old_id, old_version, old_row_ids = old.id, source.parser_version, [row.id for row in case.rows]
+    assert await db_session.scalar(select(func.count()).select_from(ImportEvidence)) == 0
+    before = await ledger_snapshot(db_session)
+    payload = ParsedStatement.model_validate(old.result)
+    if changed:
+        payload = payload.model_copy(
+            update={
+                "rows": [payload.rows[0].model_copy(update={"amount": -101}), *payload.rows[1:]]
+            }
+        )
+    job = await request_prepare(db_session, owner.id, source.id, key="precommit-reparse")
+    claim = await claim_import_job(db_session, job.id, datetime.now(UTC))
+    assert claim is not None and await finish_import_job(db_session, claim, payload)
+    await db_session.refresh(source)
+    assert source.current_revision_id == old_id and source.parser_version == old_version
+    candidate = await db_session.get(ImportRevision, job.revision_id)
+    assert "reparse_requires_comparison" in candidate.warnings
+    batch = await get_batch(db_session, owner.id, case.batch_id)
+    assert batch.sources[0].candidate_revision_id == candidate.id
+    page = await list_rows(db_session, owner.id, case.batch_id, source_id=None, offset=0, limit=100)
+    assert [row.id for row in page.items] == old_row_ids
+    assert batch.groups[0].row_ids == [case.rows[0].id]
+    with pytest.raises(ImportError, match=".") as stale:
+        await commit_import(db_session, owner.id, case.batch_id, frozen, "stale-before-reparse")
+    assert stale.value.code == "preview_stale"
+    with pytest.raises(ImportError) as missing:
+        await save_decisions(
+            db_session,
+            owner.id,
+            case.batch_id,
+            DecisionUpdate(expected_version=batch.version, decisions=[case.decision]),
+        )
+    assert missing.value.code == "reparse_comparison_required"
+    acknowledged = case.decision.model_copy(
+        update={"acknowledgements": [f"reparse_comparison:{source.id}:{candidate.id}"]}
+    )
+    if changed:
+        with pytest.raises(ImportError) as conflict:
+            await save_decisions(
+                db_session,
+                owner.id,
+                case.batch_id,
+                DecisionUpdate(expected_version=batch.version, decisions=[acknowledged]),
+            )
+        assert conflict.value.code == "reparse_row_conflict"
+    else:
+        reviewed = await save_decisions(
+            db_session,
+            owner.id,
+            case.batch_id,
+            DecisionUpdate(expected_version=batch.version, decisions=[acknowledged]),
+        )
+        assert reviewed.sources[0].current_revision_id == old_id
+    assert await ledger_snapshot(db_session) == before

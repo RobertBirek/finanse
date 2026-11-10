@@ -97,7 +97,11 @@ async def test_job_has_only_one_live_claim_and_duplicate_publication_is_noop(
     assert await ledger_snapshot(db_session) == before
     restored = await get_batch(db_session, owner.id, batch.id)
     assert restored is not None and restored.sources[0].processing_state == "ready"
-    assert restored.sources[0].current_revision_id == claim.revision_id
+    # prepared_source already has a successful revision: this job is a reparse,
+    # even when no row has been committed. Publication must preserve that revision.
+    assert restored.sources[0].current_revision_id == batch.sources[0].current_revision_id
+    assert restored.sources[0].candidate_revision_id == claim.revision_id
+    assert "reparse_requires_comparison" in restored.sources[0].warnings
     page = await list_rows(db_session, owner.id, batch.id, source_id=None, offset=0, limit=100)
     assert page.total == 2
 

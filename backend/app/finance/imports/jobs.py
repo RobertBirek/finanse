@@ -18,7 +18,6 @@ from app.finance.imports.contracts import ImportFailure, ParsedImport, ParsedSta
 from app.finance.imports.errors import ImportError
 from app.finance.imports.models import (
     ImportBatch,
-    ImportEvidence,
     ImportJob,
     ImportRevision,
     ImportRow,
@@ -331,21 +330,15 @@ async def finish_import_job(
         parsed = TypeAdapter(ParsedImport).validate_python(result.model_dump(mode="json"))
         if parsed.kind != source.kind:
             raise ImportError("parser_kind_mismatch", "Parser zwrócił niewłaściwy rodzaj źródła.")
-        has_evidence = (
-            await db.scalar(
-                select(ImportEvidence.id)
-                .join(ImportRow, ImportRow.id == ImportEvidence.row_id)
-                .where(ImportRow.source_id == source.id, ImportEvidence.user_id == claim.owner_id)
-                .limit(1)
-            )
-            is not None
-        )
+        # A successful current revision is authoritative even before its first
+        # ledger evidence. Re-reading must not silently replace reviewed rows.
+        is_reparse = source.current_revision_id is not None
         revision.result = parsed.model_dump(mode="json")
         revision.parser_version = parsed.parser_version
         revision.checks = [check.model_dump(mode="json") for check in parsed.checks]
         revision.warnings = [
             *parsed.warnings,
-            *(["reparse_requires_comparison"] if has_evidence else []),
+            *(["reparse_requires_comparison"] if is_reparse else []),
         ]
         revision.error_code = None
         for ordinal, row in enumerate(parsed.rows, 1):
@@ -370,7 +363,7 @@ async def finish_import_job(
                     fields=fields,
                 )
             )
-        if not has_evidence:
+        if not is_reparse:
             source.current_revision_id = revision.id
             source.bank = parsed.bank
             source.layout = parsed.layout
@@ -387,7 +380,7 @@ async def finish_import_job(
         )
         source.processing_state = "ready"
         job.state = "ready"
-        job.error_code = "reparse_requires_comparison" if has_evidence else None
+        job.error_code = "reparse_requires_comparison" if is_reparse else None
     job.lease_token = None
     job.lease_expires_at = None
     batch.version += 1

@@ -33,6 +33,79 @@ async def test_refund_commit_remains_expense_not_income(db_session, owner, tmp_p
     assert posting.source_amount == 100 and transaction.source == "bank_import"
 
 
+async def test_net_expense_and_signed_fee_refund_commit_as_separate_opposite_movements(
+    db_session, owner, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(documents, "UPLOAD_DIR", tmp_path)
+    case = await review_case(
+        db_session,
+        owner.id,
+        tmp_path,
+        parsed_statement(account_reference=None, rows=[statement_row(amount=-9500, fee=-500)]),
+    )
+    decision = case.decision.model_copy(update={"fee_category_id": case.category.id})
+    batch = await save_decisions(
+        db_session,
+        owner.id,
+        case.batch_id,
+        DecisionUpdate(expected_version=1, decisions=[decision]),
+    )
+    preview = await prepare_preview(
+        db_session,
+        owner.id,
+        batch.id,
+        PreviewRequest(
+            expected_version=batch.version,
+            group_ids=[decision.group_id],
+            acknowledgements=[f"opening_gap:{case.source_id}"],
+        ),
+    )
+    operations = preview.payload["plans"][0]["operations"]
+    assert [(operation["kind"], operation["component"]) for operation in operations] == [
+        ("expense", "main"),
+        ("expense_refund", "fee"),
+    ]
+    request = CommitRequest(preview_id=preview.id, request_hash=preview.request_hash)
+    result = await commit_import(db_session, owner.id, case.batch_id, request, "signed-fee-refund")
+    assert len(result.transaction_ids) == 2 and result.commit_state == "committed"
+    account_postings = (
+        await db_session.scalars(select(Posting).where(Posting.account_id == case.account.id))
+    ).all()
+    assert sorted((posting.source_amount, posting.direction) for posting in account_postings) == [
+        (500, "credit"),
+        (10000, "debit"),
+    ]
+    assert (
+        sum(
+            posting.source_amount * (1 if posting.direction == "credit" else -1)
+            for posting in account_postings
+        )
+        == -9500
+    )
+    assert set((await db_session.scalars(select(FinancialTransaction.type))).all()) == {"expense"}
+    assert sorted(
+        (await db_session.scalars(select(ImportEvidence.attributed_source_amount))).all()
+    ) == [-10000, 500]
+    for transaction_id in result.transaction_ids:
+        postings = (
+            await db_session.scalars(
+                select(Posting).where(Posting.transaction_id == transaction_id)
+            )
+        ).all()
+        assert (
+            len(postings) == 2
+            and sum(
+                posting.base_amount_pln * (1 if posting.direction == "debit" else -1)
+                for posting in postings
+            )
+            == 0
+        )
+    assert (
+        await commit_import(db_session, owner.id, case.batch_id, request, "signed-fee-refund")
+        == result
+    )
+
+
 async def test_fx_commit_keeps_both_actual_legs_without_provider_calls(
     db_session, owner, tmp_path, monkeypatch
 ):

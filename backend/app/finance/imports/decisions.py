@@ -276,7 +276,9 @@ async def validate_decision(
         if bank and row.source.bank and row.source.bank not in bank:
             raise ImportError("account_bank_mismatch", "Bank źródła nie pasuje do wybranego konta.")
         row.account = account
-        if row.value.fee < 0 and decision.kind != "expense_refund":
+        # Classify the actual main movement independently from a signed fee.
+        # Only a fee-only refund has no main whose kind could be chosen instead.
+        if main == 0 and row.value.fee < 0 and decision.kind != "expense_refund":
             raise ImportError(
                 "fee_refund_classification_required",
                 "Zwrot prowizji wymaga jawnej klasyfikacji zwrotu wydatku.",
