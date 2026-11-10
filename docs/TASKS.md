@@ -6,7 +6,8 @@ Backlog zadań ze statusami.
 
 - [x] B1: modele, strict DTO i migracja84fdbd10aa18 bez backfillu; backend2204PASS,
   JUnit0failure/error/runtime-skips, 14standardexcluded, 686hashzgodne; lint/typesPASS.
-- [ ] B2: deterministyczny parser Velo PDF i walidacja pełnej tabeli.
+- [x] B2: parser VeloPDF;31testów/148parserregression/2235pełnybackendPASS, lint/types,
+  JUnit0failure/error/runtime-skips i692hashPASS;2originals59+59rows sourcecomparePASS.
 - [ ] B3–B6: diff/projekcja/ochrona historii, jawna aktywacja, UI i odbiór.
 - Bez merge/push/deploy/migracji produkcyjnej i importu rzeczywistych harmonogramów.
 

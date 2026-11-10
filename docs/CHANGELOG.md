@@ -2,6 +2,21 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, B2 zweryfikowane] — 2026-11-10 — Parser harmonogramów Velo
+
+### Added
+- Deterministyczny parser znanego układu PLN: daty obowiązywania, numery bankowe,
+  terminy, kapitał/odsetki i bankowe saldo. Pełny plan wymaga zgodnych stron,
+  numeracji, kwot i łańcucha sald; niepełne lub obce układy nie autoryzują aktywacji.
+- 31 testów parsera PASS, w tym rzeczywista ekstrakcja czterech syntetycznych PDF;
+  parser-only odbiór dwóch oryginałów (59+59 rat), wszystkie źródłowe wiersze zgodne,
+  oryginały niezmienione. Lint/types PASS.
+- Parser nie tworzy transakcji ani umów, nie oznacza rat jako zapłaconych.
+
+### Verification
+- Pełny backend2235PASS/14standardexcluded/0runtime-skips, JUnit i692hashzgodne;
+  przekrojowe parsery148PASS, mypy186PASS. Bez zmian produkcyjnych lub realnego importu.
+
 ## [Local, B1 zweryfikowane] — 2026-11-10 — Wersje harmonogramów
 
 ### Added

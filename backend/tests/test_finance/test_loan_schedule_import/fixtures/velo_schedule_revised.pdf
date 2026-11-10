@@ -1,0 +1,109 @@
+%PDF-1.3
+%‚„œ”
+1 0 obj
+<<
+/Producer (pypdf)
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Count 2
+/Kids [ 5 0 R 7 0 R ]
+>>
+endobj
+3 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+4 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+/Encoding <<
+/BaseEncoding /WinAnsiEncoding
+/Differences [ 128 /aogonek /lslash /zdotaccent ]
+>>
+>>
+endobj
+5 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 4 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 498
+>>
+stream
+BT /F1 10 Tf 72 780 Td
+(VeloBank S.A.) Tj 0 -14 Td
+(Harmonogram spÅaty kredytu) Tj 0 -14 Td
+(numer umowy kredytu SYNTHETIC-001) Tj 0 -14 Td
+(od kiedy obowiÄzuje nowy harmonogram) Tj 0 -14 Td
+(2026-11-01) Tj 0 -14 Td
+(Nr raty: Data raty: Rata kapitaÅowa \(PLN\) Rata odsetkowa \(PLN\) Rata ÅÄcznie \(PLN\)) Tj 0 -14 Td
+(Saldo) Tj 0 -14 Td
+(zadÅuÇenia kredytu po) Tj 0 -14 Td
+(spÅacie raty \(PLN\)) Tj 0 -14 Td
+(1 2026-12-15 1 000,00 20,00 1 020,00 2 000,00) Tj 0 -14 Td
+(Strona 1 z 2) Tj 0 -14 Td
+ET
+endstream
+endobj
+7 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 4 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 8 0 R
+>>
+endobj
+8 0 obj
+<<
+/Length 167
+>>
+stream
+BT /F1 10 Tf 72 780 Td
+(2 2027-01-15 1 000,00 10,00 1 010,00 1 000,00) Tj 0 -14 Td
+(3 2027-02-15 1 000,00 5,00 1 005,00 0,00) Tj 0 -14 Td
+(Strona 2 z 2) Tj 0 -14 Td
+ET
+endstream
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000054 00000 n 
+0000000119 00000 n 
+0000000168 00000 n 
+0000000335 00000 n 
+0000000467 00000 n 
+0000001016 00000 n 
+0000001148 00000 n 
+trailer
+<<
+/Size 9
+/Root 3 0 R
+/Info 1 0 R
+>>
+startxref
+1366
+%%EOF

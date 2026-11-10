@@ -2,6 +2,38 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-10 — B2 pełny gate zielony
+
+- Full2235PASS/14standardproxyexcluded/0runtime-skips10859.29s, JUnit/collection/
+  692hashcurrent+runnerPASS; parser148PASS8.96s/ruffPASS/mypy186PASS. Oryginały59+59rat
+  zgodne źródłowo/łańcuchyPASS/hashunchanged; bezDBwrite. Gate sh_1c6071242001DP46tWVa5oCRDL.
+- B2 gotowe do commitu/task-done; następny B3: diff, wspólna projekcja aktywnych rat,
+  ochrona manualmutations i wyścigów. B1commit1c60da2. Produkcja/Q7bez zmian.
+
+## 2026-11-10 — B2 parser i oryginały PASS; pełny gate
+
+- Parser31PASS4.84s, ruffPASS/mypy186PASS. Read-only2distinctoriginalPDFs:
+  każdy59wierszy zgadza się z niezależnym prostym czytnikiem źródła, wszystkie składniki/
+  łańcuchy/requiredchecksPASS. BrakDBaccess/ledgerwrite/sourcecopies; hashoryginałówbez zmian.
+- Do pełnego gate dodane hashowanie4binarnychsyntetycznychPDF. B2gate uruchamia
+  przekrojowe parseryA+B/static/originals/fullbackendJUnit/collection/hashcompare.
+  Nie commitowaćB2 ani nie zaczynaćB3 przed zielonymi dowodami. B1commit1c60da2.
+
+## 2026-11-10 — B1 zapisane, B2 parser RED→GREEN w toku
+
+- B1commit`1c60da2`, task-done7PASS75.24s. B2BASEtencommit, brief przeczytany,
+  TDD załadowane. Dwa różne lokalne oryginały harmonogramów mają ten sam układ daty
+  obowiązywania; testowane warianty inline/wrapped, data pisma nie zastępuje daty tabeli.
+- B2RED7FAIL20PASS (expectedlayoutunsupported), potem27PASS2.80s. Parser rozpoznaje
+  dokładne nagłówki PLN, numerację/daty/składniki/łańcuch sald i strony; complete_tail
+  wymaga wszystkich kontroli. Zero fees tylko z nazwanych2składników równych total,
+  nie z braku dowolnejkolumny. Brak transakcji/umów/oznaczeńzapłaty.
+- Dodane4syntetycznePDF z własnymi danymi, testyboundedpypdf i negatywne; brakprywatnych
+  danych w repo. Hostvenvpydantic starszy odrunnera — nie instalowano/zmienianohosta,
+  fixtures wygenerowane w pinnedrunnerze. Pierwszyruffflagowałaliasyre.I/pairwise,
+  poprawiono jawnie bezunsafe. Chainsh_1c6055e0b001YGo82j4dCM76Ab:31parser→static→
+  read-only2originalsacceptance, tylkoPDFmemory, bezDB/GoogleDrive/ledgerwrite.
+
 ## 2026-11-10 — B1 pełny gate zielony
 
 - Drugi pełny backend2204PASS/14standardexcluded/0runtime-skips,10221.50s.
