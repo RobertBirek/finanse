@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Local, bramki odbioru PASS] — 2026-11-10 — Import wyciągów, etap A
+## [Local, odebrane] — 2026-11-10 — Import wyciągów, etap A
 
 ### Added
 - Przekrojowe testy syntetycznych PDF/CSV: HTTP → prawdziwy worker → rewizja →
@@ -21,7 +21,9 @@ Wszystkie istotne zmiany w projekcie.
   pełne171E2E+1existingexpectedskip i4motywy375/1440PASS; lint/types/build PASS.
 - JUnit, kolekcja i manifest677plików zgodne. Realny Alembic roundtrip/retencjaPASS.
   Brak produkcyjnych zmian, merge/push/deploy lub rzeczywistego importu. Etap B
-  harmonogramów nie jest zaimplementowany. Końcowy zapis/cleanup A11 w toku.
+  harmonogramów nie jest zaimplementowany. A11ad1b53f/task-done6PASS, dowody pozaGit
+  zarchiwizowane i wyłącznie własne2kontenery/1wolumen usunięte po kontroli tożsamości.
+  Worktree i niepowiązane zmiany Q7 zachowane; obraz runnera pozostał jako cache.
 
 ## [Local, interfejs; odbiór całości w toku] — 2026-11-09 — Import wyciągów
 

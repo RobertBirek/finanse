@@ -1,7 +1,7 @@
 # Import wyciągów bankowych
 
-Stan: etap A zweryfikowany lokalnie (pełne bramki i review z naprawami);
-zapis odbioru i cleanup są domykane.
+Stan: etap A odebrany lokalnie (pełne bramki i review z naprawami), A11ad1b53f.
+Dowody zarchiwizowane, własne kontenery testowe i wolumen usunięte.
 Nie jest to zgoda na wdrożenie, migrację produkcji ani import rzeczywistych danych.
 Importer harmonogramów kredytowych (etap B) nie jest jeszcze dostępny.
 

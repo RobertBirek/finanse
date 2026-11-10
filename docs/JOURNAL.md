@@ -2,6 +2,23 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-10 — Import wyciągów A: ODEBRANE LOKALNIE
+
+- A11ad1b53f/taskdone6PASS86.67s, reviewfixfd0e6a4. Pełnybackend2197PASS/0runtime-skips,
+  frontend596/171E2E+1existingexpectedskip/4themes/static/buildPASS. JUnit+677hashPASS.
+  Jedenfreshreview:2ImportantfixedRED→GREEN/49affectedPASS,0Critical/Minor, bezrereview.
+- Dowody `/tmp/opencode/bank-import-stage-a-20261110-ad1b53f/`, checksumyartefaktów,
+  ledger/review/logi/JUnit/screens/proofs, bez.env/prywatnychlokalizacji. Raport i15
+  decyzji/kosztów wdocs/audits/2026-11-08-bank-imports-local.md, instrukcja woperations.
+- Cleanupwłasnego runnera/PG/wolumenu poIDs/labels/noports/networks/mounts/exclusive
+  volumeusersPASS. Początkowe docker top wymagałpid,args (zatrzymanieprzedmutacją).
+  Potem timeoutśledzeniashella po usunięciukontenerów; read-onlyinspect wykazałbrak
+  obu i pozostaływłasnywolumen. UsuniętoTYLKOtenwolumen, końcowybrakwszystkichPASS,
+  44oryginałyhashunchanged/noforce/prune. Obrazrunnera zostaje cache, inneusługi bezzmian.
+- Gałąź/worktree zachowane. Selektywneprefixystagingdocs nie zabrało starych zmianQ7;
+  stareaudityniecommitowane. Bezmerge/push/deploy/productionmigration/realnegoimportu.
+  EtapB harmonogramów nadal osobnym zadaniem; nie deklarować ukończenia całej roadmapy.
+
 ## 2026-11-10 — Etap A końcowy backend PASS, domykanie A11
 
 - Chainsh_1c280ff34001IoRP1zrF6oNI71EXIT0:49affected496.81s/lint/mypy182/

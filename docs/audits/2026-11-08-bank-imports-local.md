@@ -4,7 +4,7 @@ Plan: `docs/superpowers/plans/2026-11-08-bank-statement-import.md`.
 Specyfikacja: `docs/superpowers/specs/2026-11-08-bank-statements-and-loan-schedule-import-design.md`.
 Instrukcja: `docs/operations/bank-imports.md`.
 
-**Status: końcowe bramki etapu A PASS, obie uwagi review naprawione; domykanie lokalnego zapisu i cleanup.**
+**Status: etap A odebrany lokalnie; A11 zapisane w ad1b53f, cleanup zakończony.**
 Nie jest to deklaracja gotowości całego importera harmonogramów ani zgoda na
 merge/push/deploy, migrację produkcji lub import rzeczywistych danych.
 
@@ -88,9 +88,19 @@ spłaty nie były modyfikowane przez implementację ani testy.
 
 ## Końcowe zamknięcie
 
-Pełne bramki, manifest i jeden niezależny review wykonane. Zapis A11, archiwizacja
-dowodów i cleanup wyłącznie własnych kontenerów/wolumenu po kontroli ID/etykiet/mountów
-są domykane. Nie usuwać innych środowisk ani prywatnych oryginałów.
+Pełne bramki, manifest i jeden niezależny review wykonane. A11 zapisane w `ad1b53f`,
+końcowy task-done6PASS86.67s. Dowody zarchiwizowano poza Git:
+`/tmp/opencode/bank-import-stage-a-20261110-ad1b53f/` — logi, JUnit, manifesty,
+review, decyzje i zrzuty; bez env i lokalizacji prywatnych próbek.
+
+Usunięto wyłącznie własny runner, PostgreSQL i jego wolumen po kontroli ID/etykiet,
+sieci bez portów, mountów, daty utworzenia wolumenu i braku cudzych użytkowników.
+Potwierdzono nieobecność zasobów i niezmienione hashe44oryginałów; bezforce/prune.
+Pierwszy cleanup stanął przed mutacją przez brak kolumny PID wdocker top; po poprawce
+timeout shella przerwał śledzenie po usunięciu kontenerów. Sprawdzono stan i usunięto
+tylko pozostający własny nieużywany wolumen, bez ponawiania usuniętych kontenerów.
+Obraz runnera pozostaje jako cache. Pozostałe środowiska i worktree zachowano;
+zastane niepowiązane zmiany Q7 nie zostały włączone do commitów importera.
 
 ### Wynik niezależnego review
 

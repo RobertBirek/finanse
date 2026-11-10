@@ -72,18 +72,19 @@ Backlog zadań ze statusami.
   frozenpreview/confirm/receipt i linki z kont/kart/dokumentów.596frontend/lint/types/
   buildPASS,4UI375/1440light/darkPASS19s incl editor+keyboard, screenyobejrzane.
   Źródła245zgodne z manifestem, backendniezmieniony. Commitb3aa562/task-done67PASS.
-- [~] A11: końcowe bramki PASS — backend2197/0runtime-skips/14standardproxy,
+- [x] A11: końcowe bramki PASS — backend2197/0runtime-skips/14standardproxy,
   frontend596/171E2E+1expectedskip/4themes, lint/types/build, Alembic-retencja.
   JUnit i manifest677plików zgodne;44prywatnepliki parser-only/hashbez zmian,
   niejednoznaczny cykl karty jawnieblocked. Runbook i raport lokalny gotowe.
   Jedenreview:2ImportantfixedRED→GREEN fd0e6a4,0Critical/Minor; affected49PASS.
-  ZapisA11/taskdone/cleanupwyłączniewłasnychzasobów w toku.
+  Commitad1b53f/task-done6PASS86.67s, dowody zarchiwizowane, cleanupwyłącznie
+  własnych2kontenerów/1wolumenuPASS; obrazcache/worktree/niepowiązanezmiany zachowane.
 - [ ] Etap B: importer harmonogramów i ich wersji, odrębny plan.
 - [ ] Osobna zgoda na merge/push/deploy, produkcyjną migrację lub realny import.
 
 Projekt `docs/superpowers/specs/2026-11-08-bank-statements-and-loan-schedule-import-design.md`.
 Plany `docs/superpowers/plans/2026-11-08-bank-imports.md` i wskazane w nim etapy A/B.
-Etap A **przeszedł bramki lokalne, nie jest wdrożony**; etap B niezaimplementowany.
+Etap A **odebrany lokalnie, nie jest wdrożony**; etap B niezaimplementowany.
 Nie mylić z zakończoną operatorską konfiguracją Q7.
 
 ## Typ konta karty i przegląd wielu kart (2026-11-08)
