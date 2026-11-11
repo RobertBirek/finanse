@@ -4,6 +4,16 @@ Backlog zadań ze statusami.
 
 ## Wydanie importerów A+B — P zatrzymane, NO-GO (2026-11-11)
 
+- [x] Po osobnym „tak”: fixNginx z trwałym proxytestem, bez poszerzania zwykłegoAPI.
+  RED2FAIL→GREEN6PASS, wyłącznie własne no-port zasoby, cleanupbezforce.
+- [x] Verifier noforce/ownedID i jawny trustedfreeze rollbackguard; ops75PASS,
+  realny offlineimport/cleanupPASS. Testy nigdy nie traktują nieznanego stanu jako zera.
+- [x] Dodatkowa zgoda „Bez retencji”: wariant backupu z tym samym lockiem/checkami,
+  bez forget/prune, bez usuwania starych snapshotów; wariant przygotowany, niewykonany.
+- [~] Pełny backend w zgodnym runnerze i własnym syntetycznym PG; nowySHA/pakiet,
+  nowy ingress/offlineproof oraz backup/restore/migracje wyłącznie własnego klonu.
+- [x] Frontend617/lint/types/build i backendstatic193sourcesPASS dla poprawek.
+
 - [x] User zatwierdził przygotowanie planu bez zmian produkcji; wymagane4hostdocs readinorder.
 - [x] Read-only inventory: runtime7801ba5, schema739,62tabele; main/origin-main lokalnie
   e3c906f, kandydatc306948.747sourcehash ponownie zgodne; bez fetch lub backupu danych.

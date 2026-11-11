@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local fix, P w toku] — 2026-11-11 — Ingress i bramki operatora
+
+### Fixed
+- Wąski wyjątek21MiB obejmuje upload źródła importu, z i bez slash; limit zwykłegoAPI
+  bez zmian. Trwały proxytest używa własnego namespace bez hostportów/pull/force.
+- Verifier: create→kontrola exactID/label/image/user/network/mounts→start; cleanup
+  stop→potwierdzenie zatrzymania→rmbezforce→absent. Błąd cleanup blokuje PASS.
+- Trwały rollbackguard wymaga trustedfreeze i zgodnej obserwacji; poprawny format
+  innego imageID nie wystarcza. Bez freeze wynik zawszeSTOP.
+
+### Verification
+- Proxy RED2FAIL/4PASS→GREEN6PASS; ops75PASS, realne nonrootimports+cleanupPASS.
+  Frontend617/lint/types/buildPASS, backend static w zgodnym runnerze193sourcesPASS.
+- Pełny backend nadal uruchomiony na własnym no-portPG. Hostowy staryvenv dał75
+  błędów kolekcji (brakopenai.responses); nie zmieniono venv ani nie uznano tego zaPASS.
+- Zatwierdzono wznowienie P oraz backup bez retencji; nie ma zgody D. Brak wdrożenia
+  lub produkcyjnej migracji. Stary pakiet c306948 pozostajeNO-GO.
+
 ## [Preparation, NO-GO] — 2026-11-11 — Ingress blokuje wydanie A+B
 
 ### Added

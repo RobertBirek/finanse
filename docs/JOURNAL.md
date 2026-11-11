@@ -2,6 +2,34 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-11 — Zatwierdzony fix ingress/operatora i wznowienie P
+
+- User „tak” na Nginxfix/testy i operatorhardening + P; potem question „Bez retencji”
+  na nowy zaszyfrowany snapshot/ownclone bezforgetprune. Nadal nie D/realimport/prodUP.
+- Required4hostdocs readinorder, systematic-debugging/receiving-review/brainstorming
+  (mała zatwierdzona poprawka)/executing-plans/TDD. Ten sam linkedworktree; auditdirty
+  nietknięte. E=/tmp/opencode/bank-imports-repair-NpudCmae, stary E/Rc306948 immutable.
+- F1proxy2FAIL/4PASS→6PASS po rozszerzeniu wyłącznie uploadlocation sources.
+  F2rmforceRED→18PASS; prawdziwyDocker ujawnił lowercase 'no such object': osobnyRED
+  1FAIL20PASS→21PASS, generic inspect error nadal blokuje. Nowy realverifier oba
+  nonrootimports i noforcecleanupPASS. F3oldguard unboundRED→nowy durablepolicy22PASS,
+  validwrongoldimageID+drift/missingcounts→STOP. Wholeops75PASS/6proxyexcluded.
+- Frontend617/lint/types/buildPASS, standardowy warning bundla bez nowych zależności.
+  Host.venvpytest8/OpenAIold dał75collectionerrors missingopenai.types.responses;
+  hostimplicitruff3DTZ007 wniezmienionychparserach. Bez fixówparsers lub/optvenv.
+- Użyto tego samego runnerimage41be018 co odbiórB6, ownPGnetworknone+ownvolume,
+  credentials losowe, sourcecopyreadonly/zero proddata. Runnerpytest9.1.1/ruff0.17.4;
+  explicitprojectpyproject, cachew/tmp: lint+mypy193sourcesPASS. Pierwszy cache naRO
+  źródle odmówił, jawnie przekierowano cache. Fullbackendjob sh_1cbe528f3001i4QGUSln5OZwjW
+  w toku, bez deklaracjiPASS. Po snapshotcie tylkoops/verify CLI-case+3unitcases
+  zmienione; świeże focused75 i statictargets obejmują finalną wersję.
+- Standard makebackup ma retentionforgetprune, więc NIE uruchomiono; po zgodzie
+  przygotowano prywatny wariant: tylko explicit repo_path i skipretention, ten sam
+  sharedlock/pg_dump/uploadflock/manifest/encryption. Exactdiff/bash-nPASS, execution
+  jeszcze nie nastąpiło; wrapper wymaga dodatniegoTask2proof przed backupem.
+- Ten commit zamraża mały fix; pełny backend/Task2/Task3 mają być odebrane dalej.
+  Produkcji, usług danych, oryginałów i ustawień nie zmieniono; bez merge/push/deploy.
+
 ## 2026-11-11 — Faza P zatrzymana na ingress, c306948 NO-GO
 
 - User „tak” zatwierdził wyłącznie P. Existing linkedworktree;4hostdocs readinorder;

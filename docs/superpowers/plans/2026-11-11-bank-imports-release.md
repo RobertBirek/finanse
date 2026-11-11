@@ -8,6 +8,24 @@ opisują pierwotny runbook; stan wykonania i dowody:
 Brak zgody D, backupu, restore, migracji lub deployu. Wznowienie wymaga osobnej
 decyzji o poprawce/new SHA, a nie obejścia probe.
 
+**Zatwierdzone wznowienie:** kolejne „tak” obejmuje mały fix Nginx z trwałym
+testem proxy, no-force cleanup verifiera i wiązanie rollbacku z trustedfreeze,
+następnie ponowne P. Nie obejmuje D. Dotychczasowy pakiet c306948 i jego dowody
+NO-GO pozostają niezmienne; nowy kandydat otrzyma nowy SHA/E/R.
+
+### Poprawki przed wznowieniem P (F1–F3)
+
+- [ ] F1: test proxy nowego uploadu2MiB/21MiB+1, starego uploadu i zwykłegoAPI;
+  namespace bez hostportów, lokalne obrazy no-pull, cleanup exactID bezforce.
+  RED→wąski wyjątekNginx dla sources→GREEN. Brak globalnego szerszego limituAPI.
+- [ ] F2: verifier tworzy oznaczony kontener, uruchamia po exactID; cleanup sprawdza
+  ID/label/image/user/network/mounty/ports, stop→inspectstopped→rmbezforce→absent.
+  RED dla cleanup-success/timeout/foreignidentity/failure→GREEN; odmowa oznacza brakPASS.
+- [ ] F3: trwały `ops/release_policy.py`, testy rollbacku związane z zaufanym freeze
+  i aktualną obserwacją (inny poprawnie sformatowany oldID dajeSTOP). RED→GREEN.
+- [ ] Po focused/static/projecttests i commicie nowy freeze/newSHA; Task2/3 P
+  według reszty runbooka, z własnymi no-port klonami i świeżym review operatora.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Wydać odebrane lokalnie importery A+B, zachowując istniejące dane i możliwość bezpiecznego wycofania aplikacji, bez importu rzeczywistych dokumentów w ramach deployu.

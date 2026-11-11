@@ -16,6 +16,7 @@ from uuid import uuid4
 IMAGE = re.compile(r"[a-z0-9][a-z0-9./_-]*:[a-zA-Z0-9_.-]+")
 IMAGE_ID = re.compile(r"sha256:[0-9a-f]{64}")
 USER = re.compile(r"[1-9][0-9]*:[1-9][0-9]*")
+CONTAINER_ID = re.compile(r"[0-9a-f]{64}")
 
 PROBE = """import importlib,json,os,sys
 from pathlib import Path
@@ -99,12 +100,13 @@ def verify_release(
             result = subprocess.run(
                 [
                     "docker",
-                    "run",
-                    "--rm",
+                    "create",
                     "--pull",
                     "never",
                     "--name",
                     name,
+                    "--label",
+                    f"advisor.release.probe={name}",
                     "--network",
                     "none",
                     "--read-only",
@@ -132,6 +134,26 @@ def verify_release(
                 text=True,
                 timeout=timeout,
             )
+            identity = result.stdout.strip()
+            if CONTAINER_ID.fullmatch(identity) is None:
+                raise ValueError("Invalid probe container ID")
+            container = owned_probe(name, images[service], user, timeout)
+            if container is None or container["Id"] != identity:
+                raise ValueError("Probe identity mismatch")
+            result = subprocess.run(
+                ["docker", "start", "--attach", identity],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+            container = owned_probe(name, images[service], user, timeout)
+            if (
+                container is None
+                or container["State"]["Running"]
+                or container["State"]["ExitCode"]
+            ):
+                raise ValueError("Probe did not exit successfully")
             proof = json.loads(result.stdout.strip().splitlines()[-1])
             if (proof.get("uid"), proof.get("gid"), proof.get("module")) != (
                 uid,
@@ -146,20 +168,78 @@ def verify_release(
                 "image_tag": metadata[service],
                 **proof,
             }
-        except (subprocess.SubprocessError, ValueError, IndexError) as error:
+        except (subprocess.SubprocessError, ValueError, IndexError, KeyError) as error:
             raise RuntimeError(
                 f"{service} offline import probe failed; no release approval"
             ) from error
         finally:
-            # A host-side timeout must not leave a probe running. Only our random
-            # owned name is removed; never touch a production/container image tag.
+            # Never force removal. Cleanup failure must also prevent a PASS.
+            cleanup = cleanup_probe(name, images[service], user, max(timeout, 15))
+            if service in services:
+                services[service]["cleanup"] = cleanup
+    return {"passed": True, "revision": revision, "services": services}
+
+
+def owned_probe(
+    name: str, image: str, user: str, timeout: int
+) -> dict[str, Any] | None:
+    result = subprocess.run(
+        ["docker", "inspect", name],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    if result.returncode:
+        if (
+            result.returncode == 1
+            and f"no such object: {name}" in result.stderr.lower()
+        ):
+            return None
+        raise RuntimeError("Cannot inspect owned probe; no release approval")
+    rows = json.loads(result.stdout)
+    if len(rows) != 1:
+        raise RuntimeError("Invalid probe inspection")
+    obj = rows[0]
+    if (
+        CONTAINER_ID.fullmatch(obj.get("Id", "")) is None
+        or obj.get("Name") != "/" + name
+        or obj.get("Image") != image
+        or obj.get("Config", {}).get("User") != user
+        or obj.get("Config", {}).get("Labels", {}).get("advisor.release.probe") != name
+        or obj.get("HostConfig", {}).get("NetworkMode") != "none"
+        or obj["HostConfig"].get("PortBindings")
+        or obj.get("Mounts") != []
+        or type(obj.get("State", {}).get("Running")) is not bool
+    ):
+        raise RuntimeError("Probe ownership/isolation mismatch; refusing cleanup")
+    return obj
+
+
+def cleanup_probe(name: str, image: str, user: str, timeout: int) -> dict[str, Any]:
+    try:
+        obj = owned_probe(name, image, user, timeout)
+        if obj is None:
+            return {"absent": True, "created": False}
+        identity = obj["Id"]
+        if obj["State"]["Running"]:
             subprocess.run(
-                ["docker", "rm", "-f", name],
+                ["docker", "stop", "--time", "10", identity],
+                check=True,
                 capture_output=True,
                 timeout=timeout,
-                check=False,
             )
-    return {"passed": True, "revision": revision, "services": services}
+        stopped = owned_probe(name, image, user, timeout)
+        if stopped is None or stopped["Id"] != identity or stopped["State"]["Running"]:
+            raise RuntimeError("Probe did not stop; refusing removal")
+        subprocess.run(
+            ["docker", "rm", identity], check=True, capture_output=True, timeout=timeout
+        )
+        if owned_probe(name, image, user, timeout) is not None:
+            raise RuntimeError("Probe still exists")
+        return {"container_id": identity, "ownership_verified": True, "absent": True}
+    except (subprocess.SubprocessError, ValueError, KeyError, TypeError) as error:
+        raise RuntimeError("Probe cleanup failed; no release approval") from error
 
 
 def main() -> None:
