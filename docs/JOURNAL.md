@@ -29,6 +29,8 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Self-review i gitdiffcheckPASS:5tasks,wszystkiecheckboxyoperacyjnepuste, exactchain
   11+2tabele i747source/15distzgodne. Żadnego pełnegotestudeployuprerun; towalidacja
   dokumentacji iważności wcześniejszychdowodów, nie wynik próbybackup/restore/ingress.
+- Doprecyzowano Task3Step7: świeżyread-onlyreview bramekoperatora/fence/rollback
+  przed zgodąD, nie dopiero po wdrożeniu; applicationreviewB6 go nie zastępuje.
 
 ## 2026-11-11 — A+B zamknięte lokalnie, B6commit8e77988, cleanup PASS
 
