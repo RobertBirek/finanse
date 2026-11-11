@@ -19,6 +19,9 @@ Wszystkie istotne zmiany w projekcie.
   błędów kolekcji (brakopenai.responses); nie zmieniono venv ani nie uznano tego zaPASS.
 - Zatwierdzono wznowienie P oraz backup bez retencji; nie ma zgody D. Brak wdrożenia
   lub produkcyjnej migracji. Stary pakiet c306948 pozostajeNO-GO.
+- Świeży review wykrył1Important: wyjątek uploadu obejmował niepełne/malformedID.
+  Jeden fixpass zawęża do UUIDshape: RED3FAIL/8PASS→GREEN11PASS, całaops75PASS;
+  wymagane nowe SHA/pakiet/bramki. Nie deklarujemy ukończeniaP przed ich odnowieniem.
 
 ## [Preparation, NO-GO] — 2026-11-11 — Ingress blokuje wydanie A+B
 

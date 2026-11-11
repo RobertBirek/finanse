@@ -13,6 +13,8 @@ Backlog zadań ze statusami.
 - [~] Pełny backend w zgodnym runnerze i własnym syntetycznym PG; nowySHA/pakiet,
   nowy ingress/offlineproof oraz backup/restore/migracje wyłącznie własnego klonu.
 - [x] Frontend617/lint/types/build i backendstatic193sourcesPASS dla poprawek.
+- [x] Jeden review operatora/fixu:1Important malformedID; zamknięte RED3FAIL→11PASS
+  przez UUIDshape exception; ops75PASS. Bez drugiego review. Nowe SHA/pakiet wymagane.
 
 - [x] User zatwierdził przygotowanie planu bez zmian produkcji; wymagane4hostdocs readinorder.
 - [x] Read-only inventory: runtime7801ba5, schema739,62tabele; main/origin-main lokalnie

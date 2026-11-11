@@ -4,6 +4,12 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ## 2026-11-11 — Zatwierdzony fix ingress/operatora i wznowienie P
 
+- Review ses_e33dfafb9ffehoxwopqHJg5UWJ:1Important malformedbatchID dostawał21m.
+  Re-gradeImportant utrzymane; jeden fixpass RED3FAIL/8PASS→GREEN11PASS, ops75PASS,
+  scopedlint/typesPASS. Pattern wymaga canonicalUUIDshape; brak globalnegoAPIlimitfix.
+  NoweSHA/R i ponowne exactimagekontrole po commicie; e2b169b package zostaje jako
+  pre-review, a snapshot ff643adb i klon nadal ważne (app/migrations bez zmian).
+  Brak re-review; przyszłeD/fence oraz fullbackend/cleanup nadalpending, nieclaimPASS.
 - User „tak” na Nginxfix/testy i operatorhardening + P; potem question „Bez retencji”
   na nowy zaszyfrowany snapshot/ownclone bezforgetprune. Nadal nie D/realimport/prodUP.
 - Required4hostdocs readinorder, systematic-debugging/receiving-review/brainstorming

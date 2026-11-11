@@ -10,6 +10,13 @@ import pytest
 
 OLD = "/api/documents/upload"
 NEW = "/api/finance/imports/00000000-0000-0000-0000-000000000001/sources"
+INVALID = [
+    "/api/finance/imports/----/sources",
+    "/api/finance/imports/----/sources/",
+    "/api/finance/imports/00000000-0000-0000-0000-00000000000/sources",
+    "/api/finance/imports/g0000000-0000-0000-0000-000000000001/sources",
+    NEW + "/extra",
+]
 CLIENT = """
 import http.client,json,os,time
 os.environ.clear()
@@ -25,7 +32,11 @@ rows=[]
 paths=['/api/documents/upload','/api/documents/upload/',
  '/api/finance/imports/00000000-0000-0000-0000-000000000001/sources',
  '/api/finance/imports/00000000-0000-0000-0000-000000000001/sources/']
-for path in paths+['/api/health','/api/finance/accounts']:
+invalid=['/api/finance/imports/----/sources','/api/finance/imports/----/sources/',
+ '/api/finance/imports/00000000-0000-0000-0000-00000000000/sources',
+ '/api/finance/imports/g0000000-0000-0000-0000-000000000001/sources',
+ '/api/finance/imports/00000000-0000-0000-0000-000000000001/sources/extra']
+for path in paths+['/api/health','/api/finance/accounts']+invalid:
     sizes=[2*1024*1024,21*1024*1024+1] if path in paths else [2*1024*1024]
     for size in sizes:
         c=http.client.HTTPConnection('127.0.0.1',80,timeout=20)
@@ -112,7 +123,7 @@ def proxy_results(tmp_path_factory: pytest.TempPathFactory) -> list[dict[str, st
         state = json.loads(docker("inspect", client))[0]["State"]
         assert not state["Running"] and state["ExitCode"] == 0
         rows = json.loads(result)
-        assert len(rows) == 10
+        assert len(rows) == 15
         yield rows
     finally:
         for identity, network, image in reversed(owned):
@@ -143,6 +154,14 @@ def test_upload_2mib_reaches_upstream_and_over_21mib_is_rejected(
 @pytest.mark.proxy
 @pytest.mark.parametrize("path", ["/api/health", "/api/finance/accounts"])
 def test_non_upload_api_keeps_small_body_limit(
+    proxy_results: list[dict[str, str | int]], path: str
+) -> None:
+    assert [r["status"] for r in proxy_results if r["path"] == path] == [413]
+
+
+@pytest.mark.proxy
+@pytest.mark.parametrize("path", INVALID)
+def test_invalid_batch_or_suffix_does_not_get_upload_exception(
     proxy_results: list[dict[str, str | int]], path: str
 ) -> None:
     assert [r["status"] for r in proxy_results if r["path"] == path] == [413]
