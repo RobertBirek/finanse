@@ -2,6 +2,107 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-11 — B6 końcowy odbiór po review zielony
+
+- Postreviewfullbackend2300PASS/14standardexcluded/0runtime-skips10128.69s,
+  JUnitcollection/440backendhashcurrent+runnerPASS. Front617PASS/static/build/
+  ALL_E2E183PASS+1expectedskip/307fronthash/15distPASS. Combined747hashPASS.
+- Jedenreview0Critical/2Important: obie naprawioneRED→GREEN,43backend/12browserregression
+  iświeżypełnygatePASS. BrakMinor/declined. Rulings16 w raporcie lokalnym.
+- Runbook/CHANGELOG/TASKS/raport zaktualizowane. LokalnyB6commit i task-done następne;
+  potem archiwizacja dowodów i cleanup tylko zatwierdzonych własnychPG/runner/volume.
+  Worktree/branchzachowane, bezmain/push/deploy/migracji/importuprodukcyjnego.
+
+## 2026-11-11 — Front po review617PASS, nowe ekrany porównania sprawdzone
+
+- Fullfrontend617PASS97.75s/102pliki, eslint/tsc/buildPASS; focused12browserPASS34.7s
+  (upload/duplicate/reload/lostreply/candidatecomparison, 375/1440light/dark).
+  Obejrzane4nowescreeny candidatecomparison: czytelne obaodczyty iwybór, tableoverflow
+  lokalny; bezwyjścia kartpozaekran.307fronthashzgodne,15distfiles zamrożone.
+- ALL_E2E naidentycznymbuildzie `sh_1cb116cd3001V2S100OAKer73C` w toku.
+  Postreviewbackendfull `sh_1cafae484001O2BdoBN9XTA2Lh` nadal oczekuje automatycznego
+  wyniku. Bezduplikacji/pollowania/edycjizamrożonego kodu. B6bezcommitu.
+- FinalALL_E2E183PASS8.2min+1expecteddesktopskip (mobile-onlycalendar wykonanemobilePASS).
+  307source/15distmatchcurrent, frontendprooftrwały. Frontendbramkipo review zakończone;
+  backend nadal pending, nie powtarzaćtestów ani nie commitowaćprzedpełnymJUnit.
+
+## 2026-11-11 — Wznowienie po restarcie: 43 regresje PASS, pełne bramki po review
+
+- Reviewfix regression43PASS412.73s/ruffPASS/mypy191PASS naeadc865snapshot zachowane;
+  niepowtarzane. Razsprawdzono procesy/logi: przerwanyfrontendcommand nie wystartował.
+- Pierwszyfullfrontend/static/build/focusedbrowser po poprawkach:
+  `sh_1cb0da026001xs5TiZWcjJXttq`. Postreviewfullbackend2300expected:
+  `sh_1cafae484001O2BdoBN9XTA2Lh`; helper sprawdza zgodnośćbackenduz43/staticproof,
+  potem pełnyJUnit/0runtime-skips/hash. Frontend307manifest zamrożony.
+- KontrolakandydatastatusRED→GREEN zawarta w43; dane/faktyźródła pozostająniemutowane.
+  Runbook i plan zaktualizowane do odzyskiwaniareceipt i jawnegoparsercomparison.
+- Nie commitowaćB6 dopełnychwyników iobejrzenianowychscreenów; jedenreviewjuż wykonany,
+  brak potrzeby drugiego. Produkcja/Q7/Actual/oryginały bez zmian.
+
+## 2026-11-11 — Review fix pass: RED potwierdzone, implementacja w toku
+
+- B6baselinebackend2292PASS/14excluded/0runtime-skips/438hash/JUnit,5focusedmigrations/
+  acceptance i59+59originalsreadonlyPASS. To dowód sprzedfixów, nie odbiór końcowy.
+- BackendRED8FAILmissingDTO, po samym rozszerzeniu DTO4FAIL/4PASS95.42s wskazało
+  rzeczywisty brak wyboru odczytu/discoveryreceipt. FrontendRED2FAIL13.66s.
+- Implementacja: source-ownedactivations wbatchDTO, jawnylatestrevision+exactcomparisonack,
+  dwa odczyty iichkontrole, existingreceipt dla równoważnegoźródła wpreview. Pointer
+  ekstrakcjibieżącej pozostaje niezmienny; nowaplanrevisionwiążewybranycandidate.
+  Nie tworzy drugiej aktywacji równoważnego planu. Frontfocused10PASS11.25s.
+- Dodatkowe2REDUI wykryły fallback dooryginału poaktywacjikandydata i używanie starych
+  błędnychkontroli zamiast nowych; poprawki zawarte wtymjednymfixpass. Backendstatus
+  poaktywacjikandydata testRED w toku. Statictypetest-onlyexactoption poprawioneregexem.
+- Nie maB6commitu ani kolejnego review; wymagane nowe pełnebramki poGREEN.
+
+## 2026-11-11 — B6 frontend przed poprawkami review: 613unit/179E2E PASS
+
+- Fullfrontend613PASS87.14s/eslint/tsc/buildPASS; pełneE2E179PASS8.6min+1expectedskip:
+  desktopowy wariant testu mobile-onlycalendar; wariantmobilny wykonanyPASS.
+  304sourcehashzgodne; distidentycznyzB5(15plików/8obejrzanychscreenów).
+- Dowód zapisany jako pre-review-fixes; nie potwierdza przyszłej poprawki dwóchImportant.
+  Backendfullgate nadal oczekuje naautomatycznywynik; bez pollowania/duplikacji/edycji
+  zamrożonych źródeł. Jednofixpass po wyniku, B6 nadalotwarte, produkcja bez zmian.
+
+## 2026-11-11 — Końcowy review: dwie ważne luki do jednego fix pass
+
+- Freshreview `ses_e35a35cacffeRjVl1yXXeGFpOW`: 0Critical, 2Important, 0Minor,
+  Declinedempty. Po technicznej weryfikacji obie uwagi pozostająImportant:
+  batch nie ujawnia receipt/version po zamknięciu widoku, a reparsecandidate nie ma
+  ścieżki jawnego wyboru/porównania. Historia i blokada duplikatu nie zastępują UX.
+- Raport/triage/kontrakt RED zapisane w Bworkspace `final-review.md`. Wcześniejszy
+  conservativecandidateblock chronił historię, ale nie domykał obsługi nowego parsera.
+  Naprawy wjednymTDDpass po zakończeniu aktualniezamrożonychbramek; nie edytowano
+  źródeł w trakcie gate. Późniejsze poprawki wymagają świeżych dowodów, nie dziedziczą
+  pendingPASS. Bezdrugiegoreview/produkcji/realnegoimportu.
+
+## 2026-11-11 — B6 zamrożone źródła, pełne bramki i końcowy review
+
+- Backendfinalgate `sh_1ca41f3d1001qHORsI9DJb9NiT`: lint/mypy, rzeczywista integracja
+  i dwa Alembicroundtripy z retencją, prywatneoryginały parser-only, pełny2292expected/
+  JUnit/collection/0runtime-skips/hash. FrontALLunit/static/build/ALL_E2E
+  `sh_1ca5b6268001eCLpJUPRyiWjDI`. Bez ponawiania/pollowania; końcowe wyniki pending.
+- Jeden fresh końcowy review `ses_e35a35cacffeRjVl1yXXeGFpOW`, read-only, basecdd6bc2
+  doB5a8fabf7 + jawnyB6workingtreesupplement. Ruling: B6brief wymaga review przedcommit,
+  dlatego reviewer bada zamrożony kod w trakcie bramek, bez uznania pending zaPASS.
+- Runbook/raport lokalny uzupełnione z jawnym statusemB6pending. Kod produktów zamrożony;
+  uwagi review rozpatrzyć po wynikach, Important/Critical wjednymRED→GREENfixpass.
+- Produkcja/Q7/Actual/prywatneoryginały nietknięte; własnezasoby zachowane do końca testów.
+
+## 2026-11-11 — B6 rzeczywisty worker, luka statusu RED→GREEN
+
+- B5commit a8fabf7/task-done23PASS6.24s; B6briefREAD. SyntetycznyPDF przez uploadHTTP,
+  durablejob/realworker/DB, preview/activation/receipt/duplicate i świeże sesje.
+  RED1FAIL/2PASS39.26s: po udanej aktywacji batch nadalnot_committed i nierozstrzygnięte
+  wiersze. Rootcause: command nie zmieniałcommit_state; unresolvedquery znał tylko
+  ImportEvidence. Fix: source_rowmemberships owner-scoped i partial/committed poflush
+  wsamejtransakcji receipt, bez dowodów księgowych. GREEN3PASS36.81s.
+- Pozostałe2acceptance odrazuPASS: skrócony/renumbered planzachowujepaidUUID/history,
+  payment między preview/activation daje409 bezwersji/receipt. Charakterystyka, nie
+  wymuszano sztucznegoRED. Addedforeignoriginal404/archivedeleteguards.
+- Browser4FAILna błędnym regexie tekstu duplikatu wteście; correctedlocator, product
+  niezmieniony. Browser/static w toku. Runbook obu etapów uzupełniony, B6nieodebrane.
+- Required4hostdocs odświeżone w kolejności przy kontynuacji; produkcja bez zmian.
+
 ## 2026-11-11 — B5 komplet bramek i screenów zielony
 
 - Backend2289PASS/14standardexcluded/0runtime-skips8989.60s (bez ponawiania dlaCSS),

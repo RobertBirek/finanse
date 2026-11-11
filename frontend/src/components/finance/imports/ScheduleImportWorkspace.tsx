@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import type { AxiosError } from "axios";
 import {
   importError,
@@ -32,6 +32,8 @@ import { ScheduleTarget } from "./ScheduleTarget";
 import { validScheduleTarget } from "./scheduleTargetValidation";
 import { ScheduleDiff } from "./ScheduleDiff";
 import { ScheduleConfirmation } from "./ScheduleConfirmation";
+import { ScheduleReceipt } from "./ScheduleReceipt";
+import { ScheduleSourceComparison } from "./ScheduleSourceComparison";
 
 export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
   const actor = useImportActor();
@@ -48,10 +50,63 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
   const [selection, setSelection] = useState<string | null>(null);
   const source =
     batch.sources.find((s) => s.id === selection) ?? batch.sources[0];
+  const [revisionChoice, setRevisionChoice] = useState<{
+    sourceId: string;
+    id: string;
+  } | null>(null);
+  const [comparisonAck, setComparisonAck] = useState<string | null>(null);
+  const revisionId =
+    revisionChoice?.sourceId === source?.id &&
+    [source?.current_revision_id, source?.candidate_revision_id].includes(
+      revisionChoice.id,
+    )
+      ? revisionChoice.id
+      : source?.current_revision_id;
+  const comparing =
+    !!source?.candidate_revision_id &&
+    revisionId === source.candidate_revision_id;
+  const comparisonToken = source?.candidate_revision_id
+    ? `reparse_comparison:${source.id}:${source.candidate_revision_id}`
+    : null;
+  const previousRows = useImportRows(
+    comparing ? batch.id : null,
+    {
+      source_id: source?.id,
+      revision_id: source?.current_revision_id ?? undefined,
+      limit: 1000,
+    },
+    batch.version,
+  );
+  const candidateRows = useImportRows(
+    comparing ? batch.id : null,
+    {
+      source_id: source?.id,
+      revision_id: source?.candidate_revision_id ?? undefined,
+      limit: 1000,
+    },
+    batch.version,
+  );
+  const comparisonLoaded =
+    !!previousRows.data &&
+    !!candidateRows.data &&
+    !previousRows.isError &&
+    !candidateRows.isError &&
+    previousRows.data.items.length === previousRows.data.total &&
+    candidateRows.data.items.length === candidateRows.data.total;
+  const stored = (
+    source?.schedule_activations?.find(
+      (a) => a.source_revision_id === revisionId,
+    ) ?? (!revisionChoice ? source?.schedule_activations?.[0] : undefined)
+  )?.result;
   const [offset, setOffset] = useState(0);
   const rows = useImportRows(
     batch.id,
-    { source_id: source?.id, offset, limit: 100 },
+    {
+      source_id: source?.id,
+      revision_id: revisionId ?? undefined,
+      offset,
+      limit: 100,
+    },
     batch.version,
   );
   const [ack, setAck] = useState(false);
@@ -97,11 +152,16 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
   const current =
     !!preview &&
     preview.version === batch.version &&
-    preview.source_revision_id === source?.current_revision_id;
+    preview.source_revision_id === revisionId;
   const ready =
     source?.processing_state === "ready" &&
-    !isSourceBlocked(source) &&
-    !source.candidate_revision_id;
+    !isSourceBlocked(
+      comparing
+        ? { ...source, checks: source.candidate_checks ?? source.checks }
+        : source,
+    ) &&
+    (!source.candidate_revision_id ||
+      (comparing && comparisonLoaded && comparisonAck === comparisonToken));
   const mapped = validScheduleTarget(
     target,
     loans.data ?? [],
@@ -125,8 +185,12 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
         data: {
           expected_version: batch.version,
           source_id: source.id,
+          source_revision_id: revisionId,
           target,
-          acknowledgements: [`schedule_target:${source.id}`],
+          acknowledgements: [
+            `schedule_target:${source.id}`,
+            ...(comparing && comparisonToken ? [comparisonToken] : []),
+          ],
         },
       });
       if (isProcessingActorCurrent(actor)) setPreview(value);
@@ -138,7 +202,7 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
     }
   }
   async function commit() {
-    if (!preview || !current || busy) return;
+    if (!preview || !current || busy || preview.existing_activation) return;
     setProblem(null);
     if (intent.current?.previewId !== preview.id)
       intent.current = { previewId: preview.id, key: crypto.randomUUID() };
@@ -163,27 +227,7 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
       } else setUncertain(true);
     }
   }
-  if (receipt)
-    return (
-      <section className="card space-y-3" aria-label="Potwierdzenie aktywacji">
-        <h2 className="text-xl">Harmonogram aktywowany</h2>
-        <p>Księga pozostaje bez zmian. Zachowano zgodne raty i powiązania.</p>
-        <p className="break-all text-sm">
-          Potwierdzenie: {receipt.receipt_id} · wersja: {receipt.revision_id}
-        </p>
-        <p>
-          Zgodne raty: {receipt.reused_ids.length} · nowe:{" "}
-          {receipt.new_ids.length} · wycofane przyszłe:{" "}
-          {receipt.superseded_ids.length}
-        </p>
-        <Link
-          className="underline"
-          to={`/settings/finances/loans?loan=${encodeURIComponent(receipt.loan_id)}`}
-        >
-          Otwórz kredyt i historię wersji
-        </Link>
-      </section>
-    );
+  if (receipt) return <ScheduleReceipt result={receipt} />;
   return (
     <div className="space-y-5">
       <p className="card font-medium">Harmonogram nie księguje spłat</p>
@@ -197,6 +241,8 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
           setOffset(0);
           setPreview(null);
           setAck(false);
+          setRevisionChoice(null);
+          setComparisonAck(null);
           intent.current = null;
         }}
         onPrepare={async (id) => {
@@ -214,167 +260,245 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
         }}
       />
       {source?.candidate_revision_id ? (
-        <p role="alert" className="card">
-          Ponowny odczyt pozostaje kandydatem. Nie zastępuje bieżącej wersji;
-          aktywacja wymaga osobnego porównania.
-        </p>
-      ) : null}
-      {accounts.isError || loans.isError ? (
-        <p role="alert">Nie udało się pobrać kont lub umów. Odśwież import.</p>
-      ) : null}
-      {accounts.isLoading || loans.isLoading ? (
-        <p className="card" role="status">
-          Ładowanie kont i umów…
-        </p>
-      ) : (
-        <ScheduleTarget
-          value={target}
-          onChange={changeTarget}
-          loans={loans.data ?? []}
-          accounts={accounts.data ?? []}
-          disabled={busy || uncertain || !!batch.archived_at}
-        />
-      )}
-      <section className="card space-y-3" aria-label="Raty źródłowe">
-        <h2 className="text-xl">
-          Numer bankowy w wersji — nie identyfikator wpłaty
-        </h2>
-        <p className="text-sm">
-          Numery wewnętrzne i UUID istniejących rat nie zostaną przepisane.
-        </p>
-        {rows.isLoading ? (
-          <p role="status">Ładowanie rat…</p>
-        ) : rows.isError ? (
-          <p role="alert">Nie udało się pobrać rat źródłowych.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  {[
-                    "Numer bankowy",
-                    "Termin",
-                    "Kapitał PLN",
-                    "Odsetki PLN",
-                    "Opłaty PLN",
-                    "Razem PLN",
-                  ].map((t) => (
-                    <th key={t} className="p-2 text-left">
-                      {t}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(rows.data?.items ?? []).map((item) => {
-                  const r =
-                    item.schedule_fields as unknown as ScheduleRow | null;
-                  return r ? (
-                    <tr key={item.id}>
-                      <td className="p-2">{r.bank_number}</td>
-                      <td className="p-2 whitespace-nowrap">{r.due_date}</td>
-                      {[r.principal, r.interest, r.fees, r.total].map(
-                        (v, i) => (
-                          <td
-                            className="p-2 text-right font-mono whitespace-nowrap"
-                            key={i}
-                          >
-                            {formatPLN(v)}
-                          </td>
-                        ),
-                      )}
-                    </tr>
-                  ) : null;
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="flex gap-3">
-          <button
-            className="btn-secondary"
-            disabled={!offset || busy}
-            onClick={() => setOffset(Math.max(0, offset - 100))}
-          >
-            Poprzednie raty
-          </button>
-          <button
-            className="btn-secondary"
-            disabled={offset + 100 >= (rows.data?.total ?? 0) || busy}
-            onClick={() => setOffset(offset + 100)}
-          >
-            Następne raty
-          </button>
-        </div>
-      </section>
-      <section className="card space-y-4">
-        <label className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            checked={ack}
-            disabled={busy || uncertain || !!batch.archived_at}
-            onChange={(e) => {
-              setAck(e.target.checked);
-              setPreview(null);
-              intent.current = null;
-            }}
-          />
-          Sprawdziłem przypisanie harmonogramu do kredytu i wskazanych kont
-        </label>
-        <button
-          className="btn-primary"
-          type="button"
-          disabled={
-            !ready ||
-            !mapped ||
-            !ack ||
-            busy ||
-            uncertain ||
-            rows.isLoading ||
-            rows.isError ||
-            !!batch.archived_at
-          }
-          onClick={makePreview}
-        >
-          {prepare.isPending
-            ? "Przygotowywanie…"
-            : "Przygotuj podgląd harmonogramu"}
-        </button>
-      </section>
-      {problem ? (
-        <p role="alert" className="card">
-          {problem}
-        </p>
-      ) : null}
-      {uncertain ? (
-        <section className="card space-y-2">
-          <p>
-            Wynik niepewny. Nie twórz nowej decyzji; sprawdź zapisane
-            potwierdzenie.
+        <section className="card space-y-3">
+          <label className="block">
+            Odczyt harmonogramu
+            <select
+              className="input mt-1 w-full"
+              value={revisionId ?? ""}
+              disabled={busy || uncertain}
+              onChange={(e) => {
+                setRevisionChoice({ sourceId: source.id, id: e.target.value });
+                setComparisonAck(null);
+                setPreview(null);
+                intent.current = null;
+                setOffset(0);
+              }}
+            >
+              <option value={source.current_revision_id ?? ""}>
+                Zachowany odczyt · {source.parser_version}
+              </option>
+              <option value={source.candidate_revision_id}>
+                Kandydat · {source.candidate_parser_version}
+              </option>
+            </select>
+          </label>
+          <p className="text-sm">
+            Kandydat wymaga wyboru i porównania. Zachowany odczyt oraz
+            poprzednie wersje pozostaną niezmienione.
           </p>
-          <button className="btn-secondary" onClick={() => recovered.refetch()}>
-            Sprawdź potwierdzenie
-          </button>
-          <button className="btn-secondary" disabled={busy} onClick={commit}>
-            Ponów tę samą decyzję
-          </button>
         </section>
       ) : null}
-      {preview ? (
+      {comparing ? (
         <>
-          <ScheduleDiff
-            diff={preview.diff}
-            installments={detail.data?.installments}
+          <ScheduleSourceComparison
+            previous={previousRows.data?.items ?? []}
+            candidate={candidateRows.data?.items ?? []}
+            loading={previousRows.isLoading || candidateRows.isLoading}
+            error={
+              !comparisonLoaded &&
+              !previousRows.isLoading &&
+              !candidateRows.isLoading
+            }
           />
-          <ScheduleConfirmation
-            key={preview.id}
-            preview={preview}
-            current={current && !uncertain}
-            pending={activate.isPending}
-            onActivate={commit}
-          />
+          <label className="card flex items-start gap-2">
+            <input
+              type="checkbox"
+              disabled={!comparisonLoaded || busy || uncertain}
+              checked={comparisonAck === comparisonToken}
+              onChange={(e) => {
+                setComparisonAck(e.target.checked ? comparisonToken : null);
+                setPreview(null);
+                intent.current = null;
+              }}
+            />
+            Porównałem odczyty z oryginałem i świadomie wybieram wskazaną
+            rewizję kandydującą
+          </label>
         </>
       ) : null}
+      {stored ? (
+        <ScheduleReceipt result={stored} />
+      ) : (
+        <>
+          {accounts.isError || loans.isError ? (
+            <p role="alert">
+              Nie udało się pobrać kont lub umów. Odśwież import.
+            </p>
+          ) : null}
+          {accounts.isLoading || loans.isLoading ? (
+            <p className="card" role="status">
+              Ładowanie kont i umów…
+            </p>
+          ) : (
+            <ScheduleTarget
+              value={target}
+              onChange={changeTarget}
+              loans={loans.data ?? []}
+              accounts={accounts.data ?? []}
+              disabled={busy || uncertain || !!batch.archived_at}
+            />
+          )}
+          <section className="card space-y-3" aria-label="Raty źródłowe">
+            <h2 className="text-xl">
+              Numer bankowy w wersji — nie identyfikator wpłaty
+            </h2>
+            <p className="text-sm">
+              Numery wewnętrzne i UUID istniejących rat nie zostaną przepisane.
+            </p>
+            {rows.isLoading ? (
+              <p role="status">Ładowanie rat…</p>
+            ) : rows.isError ? (
+              <p role="alert">Nie udało się pobrać rat źródłowych.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      {[
+                        "Numer bankowy",
+                        "Termin",
+                        "Kapitał PLN",
+                        "Odsetki PLN",
+                        "Opłaty PLN",
+                        "Razem PLN",
+                      ].map((t) => (
+                        <th key={t} className="p-2 text-left">
+                          {t}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(rows.data?.items ?? []).map((item) => {
+                      const r =
+                        item.schedule_fields as unknown as ScheduleRow | null;
+                      return r ? (
+                        <tr key={item.id}>
+                          <td className="p-2">{r.bank_number}</td>
+                          <td className="p-2 whitespace-nowrap">
+                            {r.due_date}
+                          </td>
+                          {[r.principal, r.interest, r.fees, r.total].map(
+                            (v, i) => (
+                              <td
+                                className="p-2 text-right font-mono whitespace-nowrap"
+                                key={i}
+                              >
+                                {formatPLN(v)}
+                              </td>
+                            ),
+                          )}
+                        </tr>
+                      ) : null;
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                className="btn-secondary"
+                disabled={!offset || busy}
+                onClick={() => setOffset(Math.max(0, offset - 100))}
+              >
+                Poprzednie raty
+              </button>
+              <button
+                className="btn-secondary"
+                disabled={offset + 100 >= (rows.data?.total ?? 0) || busy}
+                onClick={() => setOffset(offset + 100)}
+              >
+                Następne raty
+              </button>
+            </div>
+          </section>
+          <section className="card space-y-4">
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={ack}
+                disabled={busy || uncertain || !!batch.archived_at}
+                onChange={(e) => {
+                  setAck(e.target.checked);
+                  setPreview(null);
+                  intent.current = null;
+                }}
+              />
+              Sprawdziłem przypisanie harmonogramu do kredytu i wskazanych kont
+            </label>
+            <button
+              className="btn-primary"
+              type="button"
+              disabled={
+                !ready ||
+                !mapped ||
+                !ack ||
+                busy ||
+                uncertain ||
+                rows.isLoading ||
+                rows.isError ||
+                !!batch.archived_at
+              }
+              onClick={makePreview}
+            >
+              {prepare.isPending
+                ? "Przygotowywanie…"
+                : "Przygotuj podgląd harmonogramu"}
+            </button>
+          </section>
+          {problem ? (
+            <p role="alert" className="card">
+              {problem}
+            </p>
+          ) : null}
+          {uncertain ? (
+            <section className="card space-y-2">
+              <p>
+                Wynik niepewny. Nie twórz nowej decyzji; sprawdź zapisane
+                potwierdzenie.
+              </p>
+              <button
+                className="btn-secondary"
+                onClick={() => recovered.refetch()}
+              >
+                Sprawdź potwierdzenie
+              </button>
+              <button
+                className="btn-secondary"
+                disabled={busy}
+                onClick={commit}
+              >
+                Ponów tę samą decyzję
+              </button>
+            </section>
+          ) : null}
+          {preview?.existing_activation ? (
+            <section className="space-y-3">
+              <h2 className="text-xl">Odczyt zgodny z zapisaną wersją</h2>
+              <p>
+                Nie tworzymy kolejnej wersji ani rat. Poniżej oryginalne
+                potwierdzenie tej aktywacji.
+              </p>
+              <ScheduleReceipt result={preview.existing_activation} />
+            </section>
+          ) : preview ? (
+            <>
+              <ScheduleDiff
+                diff={preview.diff}
+                installments={detail.data?.installments}
+              />
+              <ScheduleConfirmation
+                key={preview.id}
+                preview={preview}
+                current={current && !uncertain}
+                pending={activate.isPending}
+                onActivate={commit}
+              />
+            </>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

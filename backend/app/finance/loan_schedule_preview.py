@@ -34,12 +34,13 @@ from app.finance.loan_schedule_diff import (
     diff_schedule,
     load_schedule_state,
 )
-from app.finance.loan_schedule_models import LoanScheduleRevision
 from app.finance.loan_schedule_schemas import (
     ScheduleActivateRequest,
+    ScheduleCommitResult,
     SchedulePreviewDTO,
     SchedulePreviewRequest,
 )
+from app.finance.loan_schedule_sources import schedule_semantics, source_activations
 from app.finance.models import LoanAgreement
 from app.finance.queries import lock_accounts
 
@@ -55,6 +56,7 @@ class ScheduleContext:
     state: ScheduleState
     diff: ScheduleDiff
     snapshot: dict[str, Any]
+    existing_activation: ScheduleCommitResult | None
 
 
 async def _context(
@@ -103,7 +105,7 @@ async def _context(
     revision = await db.scalar(
         select(ImportRevision)
         .where(
-            ImportRevision.id == source.current_revision_id,
+            ImportRevision.id == (data.source_revision_id or source.current_revision_id),
             ImportRevision.source_id == source.id,
             ImportRevision.user_id == owner,
         )
@@ -124,6 +126,13 @@ async def _context(
             "schedule_reparse_requires_comparison",
             "Nowa rewizja pozostaje kandydatem i wymaga osobnego porównania.",
         )
+    if revision.id != source.current_revision_id:
+        token = f"reparse_comparison:{source.id}:{revision.id}"
+        if data.source_revision_id != revision.id or token not in data.acknowledgements:
+            raise ImportError(
+                "schedule_reparse_requires_comparison",
+                "Wybierz kandydata i potwierdź porównanie obu odczytów: " + token,
+            )
     try:
         parsed = ParsedSchedule.model_validate(revision.result)
     except ValidationError as error:
@@ -133,7 +142,7 @@ async def _context(
         or parsed.bank != "velo"
         or source.currency != "PLN"
         or source.layout != parsed.layout
-        or source.parser_version != parsed.parser_version
+        or revision.parser_version != parsed.parser_version
     ):
         raise ImportError(
             "schedule_source_mismatch", "Bank, waluta lub układ źródła są niezgodne.", 422
@@ -235,19 +244,38 @@ async def _context(
         loaded = await load_schedule_state(db, owner, loan.id, lock=True)
         assert loaded is not None
         state = loaded
-    # A source revision cannot silently create a second plan on a new intent.
-    if await db.scalar(
-        select(LoanScheduleRevision.id)
-        .where(
-            LoanScheduleRevision.source_revision_id == revision.id,
-            LoanScheduleRevision.user_id == owner,
-        )
-        .limit(1)
+    if (
+        not parsed.complete_tail
+        or not parsed.rows
+        or parsed.effective_date is None
+        or any(c.required and c.result != "passed" for c in parsed.checks)
     ):
         raise ImportError(
-            "schedule_source_already_activated",
-            "To źródło ma już zatwierdzoną wersję; zobacz historię.",
+            "schedule_source_invalid", "Odczyt nie ma kompletu wymaganych poprawnych kontroli.", 422
         )
+    existing_activation = None
+    activations = (await source_activations(db, owner, batch_id)).get(source.id, [])
+    for activation in activations:
+        if activation.result.loan_id != data.target.loan_id:
+            raise ImportError(
+                "schedule_source_target_conflict",
+                "To źródło jest już przypisane do innej umowy; odczytaj zapisane potwierdzenie.",
+            )
+        original_revision = await db.scalar(
+            select(ImportRevision).where(
+                ImportRevision.id == activation.source_revision_id,
+                ImportRevision.user_id == owner,
+                ImportRevision.source_id == source.id,
+            )
+        )
+        if (
+            original_revision is not None
+            and original_revision.source_sha256 == revision.source_sha256
+            and schedule_semantics(ParsedSchedule.model_validate(original_revision.result))
+            == schedule_semantics(parsed)
+        ):
+            existing_activation = activation.result
+            break
     required = {f"schedule_target:{source.id}"}
     if required - set(data.acknowledgements):
         raise ImportError(
@@ -265,9 +293,14 @@ async def _context(
             "loan": record(loan) if loan else None,
             "accounts": [record(accounts[i]) for i in sorted(accounts, key=str)],
             "loan_fingerprint": state.fingerprint,
+            "existing_activation": existing_activation.model_dump(mode="json")
+            if existing_activation
+            else None,
         }
     )
-    return ScheduleContext(today, batch, source, revision, rows, parsed, state, diff, snapshot)
+    return ScheduleContext(
+        today, batch, source, revision, rows, parsed, state, diff, snapshot, existing_activation
+    )
 
 
 def _payload(
@@ -325,6 +358,7 @@ async def prepare_schedule_preview(
         loan_fingerprint=context.state.fingerprint,
         diff=context.diff,
         bank_effective_date=context.parsed.effective_date,
+        existing_activation=context.existing_activation,
     )
 
 
@@ -368,6 +402,11 @@ async def load_confirmed_schedule(
     ):
         raise ImportError(
             "preview_stale", "Dane podglądu zmieniły się; wymagane ponowne potwierdzenie."
+        )
+    if context.existing_activation is not None:
+        raise ImportError(
+            "schedule_source_already_activated",
+            "Odczyt odpowiada zapisanej wersji. Użyj istniejącego potwierdzenia; nie twórz nowej aktywacji.",
         )
     if context.diff.conflicts:
         raise ImportError(

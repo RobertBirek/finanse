@@ -320,6 +320,14 @@ Doprecyzowanie interfejsu B4→B5 (2026-11-11): historia potrzebuje owner-scoped
 bez nowego modelu/migracji/księgowania. Test źródłowego powiązania RED przed zmianą.
 Workspace UI wydzielony do komponentu, aby nie mieszać decyzji księgi i aktywacji planu.
 
+Końcowy review B6 (2026-11-11): addytywny odczyt źródła ujawnia owner-scoped
+`schedule_activations(source_revision_id,result)` i kontrole kandydata. Żądanie preview
+może jawnie wskazać `source_revision_id`; nowsza rewizja wymaga dokładnego potwierdzenia
+porównania. Ekstrakcja bieżąca nie jest nadpisywana. Równoważny kandydat zwraca
+`existing_activation` w preview zamiast tworzyć drugą wersję/raty. Nowe fakty używają
+normalnej jawnej aktywacji i ochrony spłat. Zamyka to dwa Important końcowego review,
+pod warunkiem świeżych bramek po RED→GREEN.
+
 - [ ] **Step 1: Write failing tests.** URL kredytu preselectuje target bez utworzenia
   umowy; nowy kredyt wymaga jawnego wyboru dwóch kont; upload bez aktywacji.
   ```tsx

@@ -1,9 +1,12 @@
-# Import wyciągów bankowych
+# Import wyciągów i harmonogramów kredytowych
 
 Stan: etap A odebrany lokalnie (pełne bramki i review z naprawami), A11ad1b53f.
 Dowody zarchiwizowane, własne kontenery testowe i wolumen usunięte.
 Nie jest to zgoda na wdrożenie, migrację produkcji ani import rzeczywistych danych.
-Importer harmonogramów kredytowych (etap B) nie jest jeszcze dostępny.
+Etap B odebrany lokalnie: 2300 backend, 617 frontend i183 E2E PASS po poprawkach
+końcowego review. Jeden desktopowy wariant testu mobile-only ma oczekiwany skip.
+Nie używaj tego statusu jako zgody na realny import. Zasoby testowe etapu B są
+odrębne od wcześniejszych zasobów etapu A; cleanup dotyczy wyłącznie własnych zasobów.
 
 ## Obsługiwane źródła
 
@@ -12,6 +15,8 @@ Importer harmonogramów kredytowych (etap B) nie jest jeszcze dostępny.
   do dostarczenia nieszyfrowanej próbki; nie deklarujemy jego obsługi.
 - Revolut: CSV jednego rachunku/waluty PLN, EUR lub USD, rozpoznany zestaw kolumn.
   Zestawienie mieszające waluty jest odrzucane; użyj odrębnych eksportów.
+- Harmonogram kredytu Velo: tekstowy PDF PLN, z rozpoznanym nagłówkiem, datą
+  obowiązywania i kompletną tabelą pozostałych rat. Nie importuj go jako wyciągu.
 - Nie obsługujemy Citi, skanów, OCR, AI, odszyfrowywania PDF ani pobierania z Drive.
   Nieznany układ, brakujące strony i wymagane niezgodne kontrole blokują zapis.
 
@@ -82,6 +87,71 @@ i jego rozliczonych grup; nie odtwarzaj nowego zatwierdzenia w ciemno. Przy nada
 niejasnym stanie potrzebna jest kontrola trwałego receipt przez uprawnionego operatora.
 Zmiana użytkownika odcina późne odpowiedzi i nie przenosi zamiarów do nowej sesji.
 
+## Harmonogram kredytu: wybór, porównanie, aktywacja
+
+1. W **Ustawienia → Finanse → Kredyty i pożyczki** otwórz umowę i wybierz
+   **Importuj harmonogram**. Możesz też wejść w **Finanse → Import** i zmienić rodzaj
+   na **Harmonogram kredytu**. Link z umowy tylko wstępnie wybiera kredyt.
+2. Dodaj tekstowy PDF Velo. Upload i odczyt przez worker nie dodają rat do aktywnego
+   planu ani płatności do księgi. Duplikat tych samych bajtów prowadzi do istniejącego
+   importu. Nie tworzy ponownie wersji ani rat.
+3. Sprawdź oryginał i wybierz istniejącą umowę. Dla nowej umowy podaj nazwę oraz
+   dwa różne, aktywne konta PLN: długu i spłaty. Konta karty nie są dozwolone.
+   Nowa umowa powstaje dopiero przy aktywacji. Potwierdź przypisanie do kredytu.
+4. Przygotuj podgląd. Sprawdź datę bankową oraz granicę zmiany planu:
+   późniejszą z daty bankowej i bieżącego dnia aplikacji. Podgląd rozdziela zgodne
+   raty, nowe raty, wycofywany przyszły ogon i zachowaną historię.
+5. Zgodność oznacza tę samą datę i składniki: kapitał, odsetki, opłaty.
+   Numer bankowy dotyczy konkretnej wersji i może zaczynać się ponownie od 1.
+   Aplikacja zachowuje UUID oraz numery wewnętrzne istniejących rat i ich spłaty.
+6. Przeszłe niepokryte raty pozostają w historii. Brak zgodności przeszłej
+   niepowiązanej raty blokuje aktywację; aplikacja nie oznaczy jej jako zapłaconej.
+   Pominięta lub zmieniona przyszła rata z powiązaną spłatą także blokuje całość.
+   Nie odpinaj płatności tylko po to, żeby ominąć konflikt. Sprawdź źródło i historię.
+7. Zaznacz potwierdzenie aktualizacji planu i wybierz **Aktywuj harmonogram**.
+   Aplikacja wycofa tylko niepowiązane przyszłe raty zastąpionego zakresu. Zachowa
+   ich historię, ale nie doliczy ich ponownie do aktywnych sum.
+
+Aktywacja nie zmienia salda długu, nie księguje odsetek lub prowizji i nie tworzy
+nadpłaty ani statusu „zapłacona”. Pokrycie rat nadal pochodzi z istniejących przelewów
+i jawnych powiązań. Do dodania rzeczywistej spłaty służy księga i operacje płatności.
+
+### Blokady i ponowny podgląd
+
+- Brak daty obowiązywania, nieznany układ, niepełny ogon lub niezgodne kontrole
+  blokują aktywację. Nie wpisuj brakującej daty ręcznie ani nie używaj daty pisma.
+  Uzyskaj kompletny dokument bankowy. Importer nie korzysta z OCR lub AI.
+- Zmiana dnia, źródła, kont, rat lub powiązań po podglądzie daje konflikt HTTP409.
+  Przygotuj i sprawdź nowy podgląd; poprzednie potwierdzenie nie upoważnia do zapisu.
+- Ponowny odczyt istniejącego źródła pozostaje kandydatem. W polu **Odczyt
+  harmonogramu** wybierz kandydata, porównaj obie tabele z oryginałem i zaznacz
+  potwierdzenie porównania. Podgląd wiąże wybór z konkretną rewizją, datą i kontami.
+  Aplikacja nie nadpisuje poprzedniego odczytu. Jeśli zmieniły się fakty bankowe,
+  sprawdź zwykły diff i potwierdź nową wersję planu. Nie omijaj konfliktów spłat.
+- Gdy nowy odczyt zachowuje fakty już zatwierdzonego źródła, podgląd pokaże
+  **Odczyt zgodny z zapisaną wersją** i poprzedni receipt. Nie tworzy kolejnego planu,
+  rat ani nowej aktywacji. Zmiana wersji parsera lub fizycznego położenia wierszy
+  nie wystarcza do utworzenia nowego harmonogramu.
+- Przy niepewnym wyniku użyj **Sprawdź potwierdzenie** lub **Ponów tę samą decyzję**.
+  Aplikacja zachowuje ten sam klucz komendy. Receipt po udanym zapisie działa także
+  następnego dnia. Nowy zamiar dla starego podglądu wymaga nowego potwierdzenia.
+- Klucz komendy żyje w pamięci widoku. Po zamknięciu widoku otwórz istniejący import:
+  odczyt źródła pokaże zapisany receipt i wersję bez znajomości klucza. Ten sam plik
+  prowadzi do istniejącego źródła i potwierdzenia; nie aktywuj go ponownie.
+  W razie niejasności operator powinien sprawdzić trwały receipt i historię umowy.
+
+### Plan ręczny i historia wersji
+
+Przed pierwszą aktywacją możesz edytować ręczne raty. Przy aktywacji aplikacja
+zapisuje ich bazę historyczną, bez backfillu innych kredytów. Gdy umowa ma wersję
+bankową, aktualizuj plan następnym PDF zamiast zmieniać raty w miejscu. Nadal możesz
+kontrolować powiązania płatności zgodnie z regułami domenowymi.
+
+Otwórz **Historia wersji harmonogramu** przy umowie. Wybierz wersję aktywną,
+zastąpioną lub bazę ręczną. Tabela pokazuje snapshot tej wersji, nie bieżące saldo.
+Przy wersji bankowej pobierz przypisany oryginał. Baza ręczna nie ma bankowego PDF.
+Nie sumuj wersji historycznych z aktywnym planem.
+
 ## Ochrona i cofanie
 
 Oryginały źródłowe nie są nadpisywane. Źródeł importu nie wolno archiwizować,
@@ -95,6 +165,10 @@ Korekta finansowa wymaga osobnej decyzji domenowej. Migracja stagingu jest addyt
 downgrade po zapisaniu danych importu odmawia usunięcia tabel. Nie uruchamiaj go
 jako sposobu „cofnięcia importu”.
 
+Migracja wersji harmonogramów również odmawia downgrade, gdy istnieje choć jedna
+wersja lub membership. Operator musi oddzielnie uzgodnić rollback aplikacji i schematu;
+nie kasuj wersji, receiptów, powiązań lub oryginałów w celu obejścia retencji.
+
 ## Weryfikacja operatorska (bez produkcyjnych mutacji)
 
 Syntetyczne PDF/CSV przechodzą upload HTTP → worker z ograniczonym parserem →
@@ -103,3 +177,4 @@ overlap z jawnym linkiem, replay, uszkodzone źródła, owner-scope, księgę i 
 Prawdziwe prywatne próbki wolno badać tylko read-only; poza Git przechowujemy hash,
 układ, liczbę wierszy i kontrole, nie kopie danych bankowych w repo/E2E/testowej DB.
 Pełne dowody lokalnego odbioru: `docs/audits/2026-11-08-bank-imports-local.md`.
+Harmonogramy i końcowy odbiór B: `docs/audits/2026-11-08-loan-schedule-import-local.md`.

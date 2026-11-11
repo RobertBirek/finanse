@@ -2,7 +2,7 @@
 
 Backlog zadań ze statusami.
 
-## Import harmonogramów — status B (2026-11-10)
+## Import harmonogramów — B odebrane lokalnie (2026-11-11)
 
 - [x] B1: modele, strict DTO i migracja84fdbd10aa18 bez backfillu; backend2204PASS,
   JUnit0failure/error/runtime-skips, 14standardexcluded, 686hashzgodne; lint/typesPASS.
@@ -33,7 +33,20 @@ Backlog zadań ze statusami.
   finalfreshfrontend/build/4browsergeometry w toku. B5nadalbezcommitu.
   FINAL2289backend/613frontend/static/build/4browser16.6sPASS;8screenów375/1440light/
   darkobejrzane,740sourcehash i15distproofPASS. B5gotowe do commitu/task-done.
-- [ ] B6: odbiór całości harmonogramów, E2E/retencja/runbook/finalreview.
+- [x] B6: odbiór całości harmonogramów, E2E/retencja/runbook/finalreview.
+  B5commita8fabf7/taskdone23PASS; realPDF→worker→activation→freshread RED1FAIL/2PASS
+  wykrył brak statusu/licznika po aktywacji. Minimalnyfix→GREEN3PASS; pełnygate później.
+  BaselineFINAL2292backend/613frontend/179E2E+1expectedskip/2Alembic/originalsreadonlyPASS.
+  Jedenreview2Important: reopenreceipt i reparsecomparison. JednofixpassRED→GREEN,
+  focused43backend/617frontend/12browser/static/buildPASS; nowyfullbackend2300expected
+  iALL_E2E w toku. Nowe4screeny375/1440light/darkobejrzane,307fronthash i15distzgodne.
+  FINALfrontendpo review617PASS/static/build/ALL_E2E183PASS+1expecteddesktopskip,
+  source/distproofzgodne. Dozamknięcia pozostaje pełnybackend2300expected/JUnit/hash.
+  ZAMKNIĘCIE:2300backendPASS/14standardexcluded/0runtime-skips;617frontend/183E2E+
+  1expectedskip/static/buildPASS.747sourcehash/15dist/JUnitPASS,2Important naprawione
+  jednymTDDpass,0Critical/Minor. A+B odebrane lokalnie; szczegóły i decyzje w raporcie
+  docs/audits/2026-11-08-loan-schedule-import-local.md. Commit/task-done i cleanup własnych
+  zasobów kończą sesję; gałąź/worktree pozostają, brak zgody na release produkcyjny.
 - Bez merge/push/deploy/migracji produkcyjnej i importu rzeczywistych harmonogramów.
 
 ## Import wyciągów i harmonogramów — projekt (2026-11-08)

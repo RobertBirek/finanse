@@ -16,6 +16,7 @@ from app.finance.imports.contracts import (
     SourcePosition,
     StatementRow,
 )
+from app.finance.loan_schedule_schemas import ScheduleSourceActivation
 
 
 class ImportDTO(BaseModel):
@@ -36,6 +37,8 @@ class SourceDTO(ImportDTO):
     current_revision_id: uuid.UUID | None = None
     candidate_revision_id: uuid.UUID | None = None
     candidate_parser_version: str | None = None
+    candidate_checks: list[Check] = Field(default_factory=list)
+    schedule_activations: list[ScheduleSourceActivation] = Field(default_factory=list)
     checks: list[Check] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 

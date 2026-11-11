@@ -26,6 +26,7 @@ class SchedulePreviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expected_version: int = Field(ge=1, strict=True)
     source_id: uuid.UUID
+    source_revision_id: uuid.UUID | None = None
     target: ScheduleTarget
     acknowledgements: list[str] = Field(default_factory=list)
 
@@ -49,6 +50,11 @@ class ScheduleCommitResult(BaseModel):
     ledger_changed: Literal[False] = False
 
 
+class ScheduleSourceActivation(BaseModel):
+    source_revision_id: uuid.UUID
+    result: ScheduleCommitResult
+
+
 class SchedulePreviewDTO(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: uuid.UUID
@@ -62,6 +68,7 @@ class SchedulePreviewDTO(BaseModel):
     diff: ScheduleDiff
     ledger_effect: Literal["none"] = "none"
     bank_effective_date: date | None = None
+    existing_activation: ScheduleCommitResult | None = None
 
 
 class ScheduleRevisionDTO(BaseModel):

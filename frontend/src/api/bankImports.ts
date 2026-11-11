@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import api from "../lib/api";
 import { useAuthStore } from "../stores/authStore";
+import type { ScheduleResult } from "./loanScheduleImports";
 import {
   captureProcessingActor,
   isProcessingActorCurrent,
@@ -46,6 +47,11 @@ export interface ImportSource {
   current_revision_id: string | null;
   candidate_revision_id?: string | null;
   candidate_parser_version?: string | null;
+  candidate_checks?: ImportCheck[];
+  schedule_activations?: {
+    source_revision_id: string;
+    result: ScheduleResult;
+  }[];
   checks: ImportCheck[];
   warnings: string[];
 }

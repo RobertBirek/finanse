@@ -19,6 +19,8 @@ from app.finance.imports.models import (
     ImportSource,
 )
 from app.finance.imports.schemas import BatchDTO, ReviewGroupDTO, RowDTO, RowPage, SourceDTO
+from app.finance.loan_schedule_models import LoanScheduleMembership, LoanScheduleRevision
+from app.finance.loan_schedule_sources import source_activations
 
 
 async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> BatchDTO | None:
@@ -46,6 +48,9 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
     latest: dict[uuid.UUID, ImportRevision] = {}
     for revision_entry in revisions:
         latest.setdefault(revision_entry.source_id, revision_entry)
+    activations = (
+        await source_activations(db, owner, batch_id) if batch.kind == "loan_schedule" else {}
+    )
     sources = []
     for source, document, revision in records:
         candidate = latest.get(source.id)
@@ -67,6 +72,8 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
                     "current_revision_id": source.current_revision_id,
                     "candidate_revision_id": candidate.id if candidate else None,
                     "candidate_parser_version": candidate.parser_version if candidate else None,
+                    "candidate_checks": candidate.checks if candidate else [],
+                    "schedule_activations": activations.get(source.id, []),
                     "checks": revision.checks if revision else [],
                     "warnings": list(
                         dict.fromkeys(
@@ -87,6 +94,20 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
             ImportRow.user_id == owner,
             ImportRow.batch_id == batch_id,
             ~select(ImportEvidence.id).where(ImportEvidence.row_id == ImportRow.id).exists(),
+            ~select(LoanScheduleMembership.id)
+            .where(
+                LoanScheduleMembership.source_row_id == ImportRow.id,
+                LoanScheduleMembership.user_id == owner,
+            )
+            .exists(),
+            ~select(LoanScheduleRevision.id)
+            .join(ImportRevision, ImportRevision.id == LoanScheduleRevision.source_revision_id)
+            .where(
+                ImportRevision.source_id == ImportRow.source_id,
+                ImportRevision.user_id == owner,
+                LoanScheduleRevision.user_id == owner,
+            )
+            .exists(),
         )
     )
     groups = (

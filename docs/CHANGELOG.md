@@ -2,6 +2,30 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, B6 odebrane] — 2026-11-11 — Całościowy odbiór harmonogramów
+
+### Fixed
+- Po aktywacji odczyt importu uwzględnia membership rat i pokazuje poprawny status
+  oraz liczbę nierozstrzygniętych wierszy. Zapis planu i receipt pozostaje atomowy.
+  RealPDF/HTTP/worker/freshread: RED1FAIL/2PASS → GREEN3PASS, bez zmian księgi.
+
+### Added
+- Całościowe testy worker/DB, shorter/renumbered/paid-history, zmiana spłaty409,
+  duplikat/receipt, oryginał i retencja; przeglądarkowy upload/replay/reload.
+- Poprawki po końcowym review: odczyt source pokazuje właścicielowi poprzedni receipt,
+  także po zamknięciu widoku. Jawny wybór rewizji-kandydata wymaga porównania tabel
+  i dokładnego potwierdzenia; zgodny odczyt wskazuje istniejącą wersję bez nowych rat.
+- Instrukcja obu rodzajów importu i raport lokalny. Końcowe bramki i niezależny
+  review wykazały dwie ważne luki; obie poprawione RED→GREEN w jednym fix pass.
+
+### Verification
+- Po poprawkach: backend2300PASS/14standardexcluded/0runtime-skips, frontend617PASS,
+  E2E183PASS+1expectedskip (mobile-only test wyłączony na desktopie, mobilePASS).
+- Focused43backend/12browser, lint/types/buildPASS; JUnit i747hashźródeł/15distzgodne.
+  Oba realne roundtripy Alembic z retencją i2oryginały59+59rat parser-onlyPASS.
+- Jeden niezależny review:0Critical/2Important naprawione/0Minor. Lokalne A+B odebrane,
+  runbook i raport gotowe. Bez merge/push/deploy, produkcyjnej migracji lub realnego importu.
+
 ## [Local, B5 zweryfikowane] — 2026-11-11 — Harmonogramy w aplikacji
 
 ### Added

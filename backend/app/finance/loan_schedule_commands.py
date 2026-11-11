@@ -9,6 +9,7 @@ from app.documents.models import Document
 from app.finance.imports.commands import ImportCommandOutcome, run_import_command
 from app.finance.imports.errors import ImportError
 from app.finance.imports.models import ImportRevision, ImportSource
+from app.finance.imports.queries import get_batch
 from app.finance.loan_schedule_models import LoanScheduleMembership, LoanScheduleRevision
 from app.finance.loan_schedule_preview import load_confirmed_schedule
 from app.finance.loan_schedule_schemas import (
@@ -151,6 +152,10 @@ async def activate_schedule(
             )
         loan.active_schedule_revision_id = revision.id
         context.batch.version += 1
+        await db.flush()
+        batch_view = await get_batch(db, owner, batch_id)
+        assert batch_view is not None
+        context.batch.commit_state = "partial" if batch_view.unresolved_count else "committed"
         await db.flush()
         result = ScheduleCommitResult(
             receipt_id=receipt_id,

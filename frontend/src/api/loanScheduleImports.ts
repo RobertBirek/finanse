@@ -51,10 +51,12 @@ export interface SchedulePreview {
   diff: ScheduleDifference;
   ledger_effect: "none";
   bank_effective_date?: string | null;
+  existing_activation?: ScheduleResult | null;
 }
 export interface SchedulePreviewRequest {
   expected_version: number;
   source_id: string;
+  source_revision_id?: string | null;
   target: ScheduleTargetData;
   acknowledgements: string[];
 }
