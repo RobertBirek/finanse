@@ -2,6 +2,36 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-11 — Faza P zatrzymana na ingress, c306948 NO-GO
+
+- User „tak” zatwierdził wyłącznie P. Existing linkedworktree;4hostdocs readinorder;
+  executing-plans/TDD. Nagłówki planu Task1→Task 1 dostosowano do native task-start.
+- E=/tmp/opencode/bank-imports-release-c306948-O0UIJYQN; R=/opt/finanse/webapp/releases/
+  bank-imports-c306948-O0UIJYQN. Fetch origin:main nadal e3c906f; git_tip65f34f2;
+  runtimec306948;747source/15distmatch. Task1guard9tests REDmissingmodule→GREEN9PASS,
+  corruptSHArefused; artefakty prywatne, nie wdrażają same SQL/Docker.
+- R dokładne445sourcefiles Gitc306948,3buildnetworknone/pullfalsePASS; fullinherited
+  Compose różni tylko image/build;users10001:10001/uploads. Niczego nie zastosowano.
+- Ruling: ingress przed verifierem, bo istniejącyops/verify_release.py robi rm-f
+  wfinally sprzeczne z noforce. Nie uruchomiono verifiera ani alternatywy; bramka pending.
+- Izolowany nginx exactnewimage+backendHTTPclient, noports/networknone, lokalnystub204,
+  bezdb/envuploads.10HTTPcases: old2MiB204; new2MiB413 bezslash i zeslash (2FAIL);
+  wszystkie21MiB+1→413, zwykłeAPI2MiB413.3testmethods:2PASS/1FAIL; przyczyną brak
+  wyjątku client_max_body_size dla nowego finance/imports/.../sources wnginx.conf.
+- STOP zgodnie zplanem, nie fixbez zgody: Task2partial/Task3nietknięty, brakbackupu,
+  klonówPG/wolumenów, migracji, fulltestrerun, merge/push/maintenance/deploy/importu.
+- Probe2kontenery exactID/label/network/noports verified, stop/rm bezforce, absentPASS.
+  Finalcheck: wszystkie6prodIDs/images/Config/HostConfig/starttime/restart unchanged,
+  activemeta/Compose/envhash bez zmian; schema739/62tabele. Oryginały/Q7/Actual nietknięte.
+- Raport docs/audits/2026-11-11-bank-imports-preparation.md. Zachowano nieaktywne
+  obrazy/pakietNO-GO i prywatne dowody; auditdirty spoza zakresu nietknięte. Następne:
+  osobna zgoda na mały Nginxfix/TDD/newSHA oraz noforce cleanup verifiera, niezgoda D.
+- Jeden niezależnyread-onlyreview: NO-GOpotwierdzone,9puretestsPASS,0Critical/Minor;
+  przyszłeImportant: select_rollback wymaga zewnętrznego wiązania oldIDs ztrustedfreeze,
+  nie wolno używać samodzielnie. Uwaga nie naprawiona i jawnie blokuje wznowienie,
+  nie uzasadnia kontynuacji za STOP. Archiwum22dowodów sha2f2d58ddf787a63a71ece67003e81133f2f824c68b435e337f68cb17453caaf1,
+  R/evidence/preparation-no-go.tar.gz; późniejszy review osobnoR/evidence/review.json.
+
 ## 2026-11-11 — Plan wydania A+B, bez działań operacyjnych
 
 - User „ok, działaj” odpowiedział na propozycję przygotowania planu wydania bez zmian

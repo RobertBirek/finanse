@@ -1,5 +1,13 @@
 # Bezpieczne wydanie importerów A+B — Implementation Plan
 
+**Wykonanie P, 2026-11-11: NO-GO.** Po osobnym „tak” Task 1 wykonano,
+Task 2 zatrzymano na ingress: nowy upload 2 MiB →413 w obu wariantach slash.
+Pakiet i trzy obrazy zbudowane offline; Task 3 nie rozpoczęto. Checkboxy poniżej
+opisują pierwotny runbook; stan wykonania i dowody:
+[`2026-11-11-bank-imports-preparation.md`](../../audits/2026-11-11-bank-imports-preparation.md).
+Brak zgody D, backupu, restore, migracji lub deployu. Wznowienie wymaga osobnej
+decyzji o poprawce/new SHA, a nie obejścia probe.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Wydać odebrane lokalnie importery A+B, zachowując istniejące dane i możliwość bezpiecznego wycofania aplikacji, bez importu rzeczywistych dokumentów w ramach deployu.
@@ -93,7 +101,7 @@ Po zgodzie P użyj nowego prywatnego katalogu dowodów pod `/tmp/opencode/bank-i
 
 ---
 
-### Task1: Zgoda przygotowania, zamrożenie zakresu i guardy
+### Task 1: Zgoda przygotowania, zamrożenie zakresu i guardy
 
 **Files:** Create `E/{freeze.json,inventory.private.json,release_policy.py,test_release_policy.py,resources.private.json}`. Read plan, bieżące active metadata, Git, zaakceptowane archiwum odbioru. Bez zmian plików produkcyjnych.
 
@@ -123,7 +131,7 @@ Po zgodzie P użyj nowego prywatnego katalogu dowodów pod `/tmp/opencode/bank-i
 
   Pozostałe testy zmieniają kolejno każdą tabelę, każdy wymagany klucz, proof starego runtime, flagę writerów oraz pola freeze. Expected: odmowa dla każdego pojedynczego naruszenia; fixture zawsze ma dodatni przypadek odniesienia.
 
-### Task2: Dokładny pakiet, runtime i offline import
+### Task 2: Dokładny pakiet, runtime i offline import
 
 **Files:** Create `R/*`, `E/{built-images.json,offline-import-proof.json,compose.private.json}`. Read istniejący aktywny pakiet7801. Nie stosuj Compose do usług.
 
@@ -148,7 +156,7 @@ Po zgodzie P użyj nowego prywatnego katalogu dowodów pod `/tmp/opencode/bank-i
 - [ ] **Step5: Obowiązkowy verifier.** Run `python3 ops/verify_release.py --release "$R" --backend-user "$FINAL_BACKEND_UID_GID" --worker-user "$FINAL_WORKER_UID_GID" --timeout 60 > "$E/offline-import-proof.json"`. Expected: exit0/passed dla dokładnychIDs; nonroot users z finalnego renderu. Timeout/import/read-access/root oznacza STOP. Nie podłączaj produkcyjnego env/DB; verifier nie uruchamia lifespan/workera.
 - [ ] **Step6: Próby odmowy i ingress.** Na kopiach metadata sprawdź guard dla zmienionego imageID, użytkownika i hasha Compose; każda musi odmówić. Nie retaguj aktywnych obrazów i nie uruchamiaj zmienionej kopii. Osobny `python3 -B -m unittest discover -s "$E" -p 'test_import_ingress.py' -v` ma używać własnego, oznaczonego Nginx/runner namespace bez sieci zewnętrznej i bez portów hosta, lokalnego już dostępnego obrazu (bezpull) oraz syntetycznego upstreamstub204. Dla starego `/api/documents/upload` i nowego `/api/finance/imports/00000000-0000-0000-0000-000000000001/sources`, z i bez slash:2MiB→204,21MiB+1→413. Sprawdź też, że zwykłe nieuploadowe `/api/` nie otrzymało szerszego limitu. To test proxy, nie parsera/auth. Dotychczasowy harness publikuje port i używa `rm -f`: nie uruchamiaj go pod zgodą „bezportów/bezforce”; nowyprobe ma cleanup po exactID i bezforce. Jeśli nowa ścieżka daje413 już przy2MiB, STOP przed Task3/D, raport niezgodności i osobna decyzja o poprawce/newSHA. Nie obchodź wyniku zmniejszeniem testowego pliku lub limitem globalnym.
 
-### Task3: Backup, odtworzenie i migracje wyłącznie na własnych klonach
+### Task 3: Backup, odtworzenie i migracje wyłącznie na własnych klonach
 
 **Files:** Create `E/rehearsal/*` oraz dokładne wpisy zasobów w `E/resources.private.json`. Read `ops/backup.sh`, backup manifest i oba migrationfiles. Nie używaj zajętych cudzych testDB ani istniejącego finanse_restore.
 
@@ -162,7 +170,7 @@ Po zgodzie P użyj nowego prywatnego katalogu dowodów pod `/tmp/opencode/bank-i
 - [ ] **Step6: Granice retencji na osobnej syntetycznej DB.** Istniejące testy `test_bank_imports/test_migration.py` i `test_loan_schedule_import/test_migration.py` dowodzą odmowy DOWN po danych. Połącz je z guardem Task1: pojedynczy stagingbatch, dokumentbank_import, commandreceipt lub planpointer daje `stop`. Nie dosiewaj takich danych do klonu służącego porównaniu z produkcją.
 - [ ] **Step7: Review i podsumowanie przygotowania.** Jeden świeży read-only review obejmuje zamrożone guardy operatora, pełny Compose/fence, kontrakt backup/restore/rollback i dowody dokładnych obrazów **przed** pytaniem o zgodę D. Nie zastępuje go review aplikacji B6. Uwagi Critical/Important wymagają RED→GREEN i odnowienia właściwych proofów; bez drugiego review lub automatycznego APPLY. Expected: snapshotodtworzony/retencja/oldruntimeproof/guardtests/offlineimports/ingressPASS i brak nierozwiązanych Critical/Important, bez skutków na produkcji. Zapisz ograniczenia i dokładny zakres zgody D. Niepowodzenie pozostawia NO-GO, nie „wydanie z zastrzeżeniem”.
 
-### Task4: Zgoda produkcyjna, fence i jednokrotny UP
+### Task 4: Zgoda produkcyjna, fence i jednokrotny UP
 
 **Files:** Create `E/{approval-D.json,fenced/*,migration-proof.json,applied.json}`; po sukcesie nowy activeoverride i metadata. Wykorzystaj, nie nadpisuj, zachowane artefakty7801.
 
@@ -176,7 +184,7 @@ Po zgodzie P użyj nowego prywatnego katalogu dowodów pod `/tmp/opencode/bank-i
 - [ ] **Step6: Spójne trzy aplikacje za fence.** Pełna zamrożona lista Compose z Task2; `up -d --no-deps --no-build` tylko backend/worker/frontend. Żadnego odtwarzania PG/Redis/Stirling. Expected: dokładneimageIDs/c306948, numeryczneusers backend/worker, zachowaneenv/sieci/mounty/dane, brakhostbind/app, healthwewnętrznePASS; worker zna importercron, tabelejużistnieją.
 - [ ] **Step7: Gałąź awaryjna jest warunkowa.** Przed każdą próbą cofnięcia zachowaj503, zatrzymaj writerów, wykonaj aktualny snapshot i odczyt guardów. Gdy pełnydowód daje `app_only`, przywróć dokładne7801images+zachowanyoverride, zachowując schema84 i wszystkie bieżące dane; sprawdź przed otwarciem. Gdy istnieje staging/importdocument/receipt/plan albo proof jest niepełny, pozostaw503 i uzgodnij fix-forward. Nie uruchamiaj historycznego rollback020c229, DOWN lub restoreprodukcji. Przy schema6bd po niepełnej operacji także STOP, dopóki nie ma osobnego dowodu/zgody.
 
-### Task5: Otworzenie, obserwacja, raport i cleanup
+### Task 5: Otworzenie, obserwacja, raport i cleanup
 
 **Files:** Create `E/{public-smoke.json,observation.json,final-proof.json,cleanup-proof.json}`; Modify `docs/CHANGELOG.md`, `docs/TASKS.md`, `docs/JOURNAL.md`; Create `docs/audits/2026-11-11-bank-imports-production.md` dopiero po wykonaniu wydania.
 

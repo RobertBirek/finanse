@@ -2,16 +2,24 @@
 
 Backlog zadań ze statusami.
 
-## Wydanie importerów A+B — plan, nie wdrożenie (2026-11-11)
+## Wydanie importerów A+B — P zatrzymane, NO-GO (2026-11-11)
 
 - [x] User zatwierdził przygotowanie planu bez zmian produkcji; wymagane4hostdocs readinorder.
 - [x] Read-only inventory: runtime7801ba5, schema739,62tabele; main/origin-main lokalnie
   e3c906f, kandydatc306948.747sourcehash ponownie zgodne; bez fetch lub backupu danych.
 - [x] Plan i self-review: freeze/exactimages, backup/restore na własnych no-port klonach,
   retencja13nowychtabel/62starych, offlineimport, fence, UP i warunkowyrollback.
-- [ ] Zgoda P na przygotowanie artefaktów, backup i własne klony/probe bez portów.
-- [ ] Izolowany test ingress nowejścieżki importu:2MiB→204,21MiB+1→413; statyczne
-  ryzyko braku nowego wyjątku Nginx. Przy failure: NO-GO c306948 i osobna decyzja o fixie.
+- [x] Zgoda P („tak”) na artefakty, backup i własne klony/probe bez portów; brak zgody D.
+- [x] Task1: fetch bez driftu, freeze747source/15dist i9testów guardów RED→GREEN.
+- [x] Pakiet c306948/445plików źródeł exactGit,3offlinebuildPASS, Compose pozaimage/build bez zmian.
+- [x] Wykonano izolowany test ingress:2metodyPASS/1FAIL,2subtestyFAIL dla importu2MiB→413;
+  oldupload204 i granica21MiB+1→413 PASS. Kontenery probe usunięte bezforce.
+- [~] Task2/P zatrzymane NO-GO. Verifier nieuruchomiony; backup/restore/klony Task3 nie rozpoczęte.
+- [ ] Osobna decyzja o fixie Nginx+trwałym proxyteście/newSHA i rozstrzygnięciu no-force
+  cleanup verifiera przed wznowieniem P. Nie zwiększać globalnie limitu `/api/`.
+- [x] Niezależny read-onlyreview potwierdza zamknięcieNO-GO, ingress i cleanup;9puretestsPASS.
+- [ ] Important przed wznowieniem: jawne powiązanie oldimageIDs z trustedfreeze/inventory
+  wworkflow; samo select_rollback waliduje tylkoformat i nie upoważnia do rollbacku.
 - [ ] Po pozytywnym przygotowaniu: osobna zgoda D na konkretny SHA/FF/push/UP/trzyusługi.
 - [ ] Pilotaż rzeczywistego dokumentu dopiero po odrębnej decyzji; poza deployem.
 

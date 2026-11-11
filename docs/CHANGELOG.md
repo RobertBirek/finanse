@@ -2,6 +2,21 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Preparation, NO-GO] — 2026-11-11 — Ingress blokuje wydanie A+B
+
+### Added
+- Po zgodzie P: freeze747source/15dist,9testów guardów RED→GREEN, dokładny pakiet
+  c306948 i3obrazy zbudowane offline; pełny Compose bez zmian poza image/build.
+- Izolowany no-port probe wykazał413 dla importu2MiB w obu wariantach slash;
+  stary upload204, ponad21MiB413, zwykłeAPI nadal ograniczone. Raport w audycie
+  `2026-11-11-bank-imports-preparation.md`; brak poprawki produktu w tej sesji.
+
+### Changed
+- Zatrzymano P w Task2 zgodnie z NO-GO: bez backupu/restore/migracji/deployu.
+  Produkcja7801ba5/schema739 bez zmian; dwa własne kontenery probe usunięte bezforce.
+- Verifier offline pozostaje niewykonany: jego cleanup używa rm-f sprzecznego
+  z zakazem force. Wymagana osobna decyzja przed wznowieniem, nie obejście bramki.
+
 ## [Plan, niewykonany] — 2026-11-11 — Wydanie importerów A+B
 
 ### Added
