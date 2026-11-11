@@ -6,7 +6,8 @@ Nie jest to zgoda na wdrożenie, migrację produkcji ani import rzeczywistych da
 Etap B odebrany lokalnie: 2300 backend, 617 frontend i183 E2E PASS po poprawkach
 końcowego review. Jeden desktopowy wariant testu mobile-only ma oczekiwany skip.
 Nie używaj tego statusu jako zgody na realny import. Zasoby testowe etapu B są
-odrębne od wcześniejszych zasobów etapu A; cleanup dotyczy wyłącznie własnych zasobów.
+odrębne od wcześniejszych zasobów etapu A. Własne PG/runner/wolumen B zostały usunięte
+po weryfikacji; dowody zarchiwizowano bez plików prywatnych. Gałąź i worktree pozostały.
 
 ## Obsługiwane źródła
 

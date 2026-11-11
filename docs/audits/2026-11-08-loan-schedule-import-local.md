@@ -185,6 +185,23 @@ Pełny ledger zachowuje także decyzje tymczasowe. Poniżej kolejność i koszt 
     a równoważny odczyt tylko identyfikuje istniejący receipt. Koszt: nie utworzy się
     drugiego planu przez zmianę parsera; zmienione fakty wymagają zwykłej aktywacji.
 
+## Commit, dowody i cleanup
+
+- Kod i odbiór B6: **`8e77988`**. Native task-done: **11 PASS**,112,81 s.
+- Archiwum556 plików dowodów:
+  `/tmp/opencode/loan-schedule-import-evidence-8e779883a009-20261110-db93aa91.tar.gz`.
+  SHA-256: `19c3df381945959edfa2483f768ad3c6d2ef478cd226758f942ca7275a6f89e6`.
+- Publiczny receipt:
+  `/tmp/opencode/loan-schedule-import-final-8e779883a009.json`.
+  Archiwum nie zawiera plików prywatnych, env ani kopii baseline.
+- Cleanup sprawdził pełne ID/nazwy/etykiety kontenerów i wolumenu, brak portów,
+  sieć `none` PostgreSQL, współdzielony namespace runnera i dokładne mounty.
+  Usunięto tylko własne dwa kontenery i jeden wolumen; potwierdzono ich brak.
+  Bez `force`, `prune` lub zmian innych środowisk.
+- Po archiwizacji usunięto scratch workspace tego planu. Gałąź
+  `feat/financial-document-workflow` i host-managed worktree pozostały.
+  Niezwiązane, wcześniej brudne audyty zachowano poza commitami.
+
 Instrukcja użytkownika i operatora: [bank-imports.md](../operations/bank-imports.md).
 Prywatne PDF pozostają poza Git; raport zawiera wyłącznie wyniki kontroli,
 nie numery umów, rachunków ani kopie harmonogramów użytkownika.

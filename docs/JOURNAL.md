@@ -2,6 +2,21 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-11 — A+B zamknięte lokalnie, B6commit8e77988, cleanup PASS
+
+- B6commit8e77988/task-done11PASS112.81s; full2300backend/617frontend/183E2E+
+  1expectedskip/static/build/JUnit/747hash/15distPASS.2Important naprawionejednympass,
+  0Critical/Minor,16rulings utrwalone w raporcie.
+- Publicznyreceipt `/tmp/opencode/loan-schedule-import-final-8e779883a009.json`;
+  archiwum556files bezprivate/env/baseline, sha256
+  `19c3df381945959edfa2483f768ad3c6d2ef478cd226758f942ca7275a6f89e6`.
+- OwnPG/runner/wolumen ID/label/network/ports/mountsPASS, brak aktywnychtestów;
+  stop/rm tylkoexactIDs iownewolume, potwierdzonybrak, bezforce/prune. Scratchplan
+  usuniętypopublikacjiarchiwum. Worktree i gałąźfeat/financial-document-workflowzostają.
+- Kodpopełnymgatebez zmian, dokumentacyjnycleanupcommitnastępny. Niezwiązaneauditdirty
+  zachowane. Zero merge/push/main/deploy/produkcjinej migracji/importu/Q7/Actual zmian.
+  Następny ruch tylko po osobnej decyzji o release; brak dalszych zadań A+B.
+
 ## 2026-11-11 — B6 końcowy odbiór po review zielony
 
 - Postreviewfullbackend2300PASS/14standardexcluded/0runtime-skips10128.69s,

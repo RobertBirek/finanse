@@ -47,6 +47,9 @@ Backlog zadań ze statusami.
   jednymTDDpass,0Critical/Minor. A+B odebrane lokalnie; szczegóły i decyzje w raporcie
   docs/audits/2026-11-08-loan-schedule-import-local.md. Commit/task-done i cleanup własnych
   zasobów kończą sesję; gałąź/worktree pozostają, brak zgody na release produkcyjny.
+  WYKONANE:commit8e77988/task-done11PASS112.81s, cleanup własnychPG/runner/wolumenuPASS,
+  archiwum556plików bezprywatnychdanych + checksum. Brak pozostałych zadań etapu B;
+  release/main/push/deploy/realnyimport wymagają osobnej decyzji użytkownika.
 - Bez merge/push/deploy/migracji produkcyjnej i importu rzeczywistych harmonogramów.
 
 ## Import wyciągów i harmonogramów — projekt (2026-11-08)

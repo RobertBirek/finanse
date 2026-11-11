@@ -25,6 +25,9 @@ Wszystkie istotne zmiany w projekcie.
   Oba realne roundtripy Alembic z retencją i2oryginały59+59rat parser-onlyPASS.
 - Jeden niezależny review:0Critical/2Important naprawione/0Minor. Lokalne A+B odebrane,
   runbook i raport gotowe. Bez merge/push/deploy, produkcyjnej migracji lub realnego importu.
+- B6commit `8e77988`, task-done11PASS112.81s. Dowody zarchiwizowane bez plików prywatnych;
+  własne PG/runner/wolumen usunięte po sprawdzeniu ID/etykiet/sieci/mountów, bez force/prune.
+  Gałąź i worktree zachowane; pozostałe środowiska nietknięte.
 
 ## [Local, B5 zweryfikowane] — 2026-11-11 — Harmonogramy w aplikacji
 
