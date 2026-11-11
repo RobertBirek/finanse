@@ -2,6 +2,19 @@
 
 Backlog zadań ze statusami.
 
+## Wydanie importerów A+B — plan, nie wdrożenie (2026-11-11)
+
+- [x] User zatwierdził przygotowanie planu bez zmian produkcji; wymagane4hostdocs readinorder.
+- [x] Read-only inventory: runtime7801ba5, schema739,62tabele; main/origin-main lokalnie
+  e3c906f, kandydatc306948.747sourcehash ponownie zgodne; bez fetch lub backupu danych.
+- [x] Plan i self-review: freeze/exactimages, backup/restore na własnych no-port klonach,
+  retencja13nowychtabel/62starych, offlineimport, fence, UP i warunkowyrollback.
+- [ ] Zgoda P na przygotowanie artefaktów, backup i własne klony/probe bez portów.
+- [ ] Izolowany test ingress nowejścieżki importu:2MiB→204,21MiB+1→413; statyczne
+  ryzyko braku nowego wyjątku Nginx. Przy failure: NO-GO c306948 i osobna decyzja o fixie.
+- [ ] Po pozytywnym przygotowaniu: osobna zgoda D na konkretny SHA/FF/push/UP/trzyusługi.
+- [ ] Pilotaż rzeczywistego dokumentu dopiero po odrębnej decyzji; poza deployem.
+
 ## Import harmonogramów — B odebrane lokalnie (2026-11-11)
 
 - [x] B1: modele, strict DTO i migracja84fdbd10aa18 bez backfillu; backend2204PASS,

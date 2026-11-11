@@ -2,6 +2,34 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-11 — Plan wydania A+B, bez działań operacyjnych
+
+- User „ok, działaj” odpowiedział na propozycję przygotowania planu wydania bez zmian
+  produkcji. Użyto writing-plans i deployment/backup guidance; obecna zgoda nie oznacza
+  backupu, klonowania danych, buildów obrazów, merge/push/migracji/deployu lub importu.
+- Required4/opt docs w kolejności. Read-only: active metadata/OCI revision wszystkich
+ 3apps7801ba5, schema739144d5eaef i62tabele (dwaSELECTmetadata, default_transaction_read_only),
+  obecnyCompose base+prod+active7801,users10001:10001, mounttylko/uploads, restarty0.
+- Main i lokalnyorigin/main e3c906f (bez fetch), kandydat c306948. Do main22commity/
+  186files/27618add/213del; requirements/frontendpackage/lock/ops bez zmian. Archiwum
+  odbioru747sourcehash zweryfikowane; nie powtarzano2300backend/617frontend/183E2E.
+- Plan: docs/superpowers/plans/2026-11-11-bank-imports-release.md,5tasks i self-review,
+  jawne zgodyP/D. Schema739→6bd→84:11+2nowetabele; brakbackfill, nullablepointery.
+  Downgradeguard blokuje nawetstaging/upload; rollback020zactive metadata niejest
+  rollbackiemtegowydania. App-only7801na84 wyłączniepoproofieklonu i13tabelachpustych;
+  poimportach/niepewnymstanie maintenance+fixforward, bezDOWN/restoreprodukcji.
+- Statycznaryzyko znalezione przy planowaniu: frontend/nginx.conf ma21m tylko dla
+  /api/documents/upload, a test_proxy_upload.py obejmuje tylko tenendpoint (14proxy
+  standardexcluded). Nowy finance/imports/.../sources wymaga izolowanegoprobeprzedwydaniem;
+  nie uznano tego jeszcze za runtimeRED ani nie zmieniono produktu. Failure→NO-GO SHA/
+  osobnypoprawkowyTDDplan i nowe freeze/testy.
+- Dotknięto tylko dokumentacji wworktree. Roboczeaudits nietknięte; żadnych nowych
+  zasobów lub backupów, danych/ustawień/aplikacji produkcji nie zmieniono. Następnie:
+  użytkownik czyta plan i ewentualnie zatwierdza P, nie produkcyjnyD.
+- Self-review i gitdiffcheckPASS:5tasks,wszystkiecheckboxyoperacyjnepuste, exactchain
+  11+2tabele i747source/15distzgodne. Żadnego pełnegotestudeployuprerun; towalidacja
+  dokumentacji iważności wcześniejszychdowodów, nie wynik próbybackup/restore/ingress.
+
 ## 2026-11-11 — A+B zamknięte lokalnie, B6commit8e77988, cleanup PASS
 
 - B6commit8e77988/task-done11PASS112.81s; full2300backend/617frontend/183E2E+

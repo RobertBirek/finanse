@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Plan, niewykonany] — 2026-11-11 — Wydanie importerów A+B
+
+### Added
+- Plan wydania `docs/superpowers/plans/2026-11-11-bank-imports-release.md`:
+  osobna zgoda na przygotowanie/backup/klony i osobna na produkcyjny FF/push/UP/deploy.
+- Odczyt potwierdził produkcję7801ba5/schema739/62tabele, kandydata c306948 i747hash
+  odebranych źródeł. Migracje739→6bd→84, bez backfillu; rollback wyłącznie warunkowy.
+- Wykryte statycznie ryzyko ingress: wyjątek21MiB dotyczy starego uploadu, a nie
+  nowej ścieżki importera. Obowiązkowy izolowany proxyprobe przed wydaniem; runtime
+  testu nie wykonano, produkt pozostaje bez zmian. Nie deklarujemy zgody na deploy.
+
 ## [Local, B6 odebrane] — 2026-11-11 — Całościowy odbiór harmonogramów
 
 ### Fixed
