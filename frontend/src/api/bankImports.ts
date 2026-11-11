@@ -248,11 +248,11 @@ export function useImportActor(): ProcessingActor {
   const generation = useDocumentProcessingStore((state) => state.generation);
   return { ownerId, generation };
 }
-function assertActor(actor: ProcessingActor) {
+export function assertActor(actor: ProcessingActor) {
   if (!isProcessingActorCurrent(actor))
     throw new Error("Sesja importu zmieniła się. Otwórz import ponownie.");
 }
-async function guarded<T>(
+export async function guarded<T>(
   actor: ProcessingActor,
   operation: () => Promise<T>,
 ): Promise<T> {
@@ -261,7 +261,7 @@ async function guarded<T>(
   assertActor(actor);
   return value;
 }
-function useImportMutation<Input, Output>(
+export function useImportMutation<Input, Output>(
   operation: (input: Input, actor: ProcessingActor) => Promise<Output>,
   ledger = false,
 ) {

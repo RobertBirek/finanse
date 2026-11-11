@@ -22,6 +22,8 @@ export type LoanInstallment = {
   remaining_pln: number;
   payment_status: LoanPaymentStatus;
   payments: LoanPayment[];
+  bank_number?: number | null;
+  schedule_revision_id?: string | null;
 };
 export type Loan = {
   id: string;
@@ -39,7 +41,10 @@ export type Loan = {
   remaining_pln: number;
   requires_accounting_review: boolean;
 };
-export type LoanDetail = Loan & { installments: LoanInstallment[] };
+export type LoanDetail = Loan & {
+  installments: LoanInstallment[];
+  active_schedule_revision_id?: string | null;
+};
 export type LoanCandidate = {
   transaction_id: string;
   transaction_date: string;

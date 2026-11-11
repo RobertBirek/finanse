@@ -2,6 +2,26 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, B5 zweryfikowane] — 2026-11-11 — Harmonogramy w aplikacji
+
+### Added
+- Rodzaj „Harmonogram kredytu” we wspólnym imporcie, wybór istniejącej umowy lub
+  jawnie nowej z dwoma kontami PLN. Upload nie aktywuje planu i nie księguje spłat.
+- Porównanie zakresu zmiany, potwierdzenie, obsługa409 i odzyskiwanie receipt; query
+  keys owner+generation, bez planów lub danych bankowych w localStorage.
+- Numer bankowy odrębny od wewnętrznego, readonly bankowy plan oraz oddzielna
+  historia snapshotów z owner-scoped odnośnikiem do oryginału. Addytywne readonly DTO
+  historii i data banku w preview; bez migracji/modeli lub zmian księgi.
+- W testach RED→GREEN poprawiono link powrotny do istniejącej trasy kredytów,
+  kolizję kluczy formularza/historii i mobilny clipping siatki bez maskowania overflow.
+
+### Verification
+- Backend2289PASS/14standardexcluded/0runtime-skips, frontend613PASS, lint/types/build,
+  4browserwarianty375/1440light/darkPASS16.6s; 8screenów obejrzanych. 740hashźródeł
+  i15plikówdist zapisane; readonlybridge history/activation17PASS.
+- B6 — całościowy odbiór, worker/E2E/retencja/runbook i niezależny review — pozostaje.
+  Brak zmian produkcji, realnego importu, merge/push/deploy.
+
 ## [Local, B4 zweryfikowane] — 2026-11-11 — Podgląd i aktywacja planu
 
 ### Added

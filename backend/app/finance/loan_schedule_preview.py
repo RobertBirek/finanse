@@ -324,6 +324,7 @@ async def prepare_schedule_preview(
         cutover_date=context.diff.cutover_date,
         loan_fingerprint=context.state.fingerprint,
         diff=context.diff,
+        bank_effective_date=context.parsed.effective_date,
     )
 
 

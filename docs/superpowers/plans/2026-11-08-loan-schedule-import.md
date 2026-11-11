@@ -314,6 +314,12 @@ Rozszerzenia LoanDetail: `active_schedule_revision_id?:string|null`,
 LoanInstallment: `bank_number?:number|null`, `schedule_revision_id?:string|null`;
 legacy fields/number/UUID pozostają kompatybilne. Historia to oddzielny odczyt.
 
+Doprecyzowanie interfejsu B4→B5 (2026-11-11): historia potrzebuje owner-scoped
+`document_id/original_name/batch_id` (nullable dla manual_baseline), a preview
+`bank_effective_date` odrębnej od cutover. Są to wyłącznie addytywne odczytowe DTO,
+bez nowego modelu/migracji/księgowania. Test źródłowego powiązania RED przed zmianą.
+Workspace UI wydzielony do komponentu, aby nie mieszać decyzji księgi i aktywacji planu.
+
 - [ ] **Step 1: Write failing tests.** URL kredytu preselectuje target bez utworzenia
   umowy; nowy kredyt wymaga jawnego wyboru dwóch kont; upload bez aktywacji.
   ```tsx

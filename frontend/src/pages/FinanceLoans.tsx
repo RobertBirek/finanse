@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAccounts } from "../api/finance";
 import {
   loanApiErrorMessage,
@@ -15,6 +16,7 @@ import {
 import { QueryFeedback } from "../components/QueryFeedback";
 import { LoanAgreementForm } from "../components/finance/loans/LoanAgreementForm";
 import { LoanInstallmentForm } from "../components/finance/loans/LoanInstallmentForm";
+import { ScheduleHistory } from "../components/finance/loans/ScheduleHistory";
 import { formatPLN } from "../lib/format";
 
 const statusLabels: Record<LoanPaymentStatus, string> = {
@@ -26,9 +28,11 @@ const statusLabels: Record<LoanPaymentStatus, string> = {
 function InstallmentRow({
   loanId,
   installment,
+  managed = false,
 }: {
   loanId: string;
   installment: LoanInstallment;
+  managed?: boolean;
 }) {
   const [showPayments, setShowPayments] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -64,6 +68,11 @@ function InstallmentRow({
         <div>
           <h3 className="font-medium text-white">
             Rata {installment.number}{" "}
+            {installment.bank_number != null ? (
+              <span className="text-sm font-normal">
+                · numer bankowy w wersji: {installment.bank_number}{" "}
+              </span>
+            ) : null}
             <span className="ml-2 text-sm font-normal text-gray-300">
               {statusLabels[installment.payment_status]}
             </span>
@@ -97,7 +106,7 @@ function InstallmentRow({
         </dl>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {installment.payments.length === 0 ? (
+        {installment.payments.length === 0 && !managed ? (
           <button
             className="btn-secondary"
             type="button"
@@ -113,7 +122,7 @@ function InstallmentRow({
         >
           {showPayments ? "Ukryj płatności" : "Powiąż płatność"}
         </button>
-        {installment.payments.length === 0 ? (
+        {installment.payments.length === 0 && !managed ? (
           <button
             className="btn-secondary"
             type="button"
@@ -288,7 +297,10 @@ function InstallmentRow({
 }
 
 export function FinanceLoans() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const [selectedId, setSelectedId] = useState<string | null>(() =>
+    params.get("loan"),
+  );
   const accounts = useAccounts();
   const loans = useLoans();
   const activeLoanId = selectedId ?? loans.data?.[0]?.id ?? null;
@@ -323,7 +335,7 @@ export function FinanceLoans() {
             Brak umów. Dodaj umowę, aby ręcznie wprowadzić harmonogram.
           </p>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-[16rem_1fr]">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[16rem_1fr]">
             <aside className="card h-fit">
               <h2 className="mb-3 font-semibold text-white">Umowy</h2>
               <div className="space-y-2">
@@ -348,7 +360,7 @@ export function FinanceLoans() {
               errorMessage="Nie udało się pobrać szczegółów umowy."
               onRetry={detail.refetch}
             >
-              <main>
+              <main className="min-w-0">
                 {detail.data ? (
                   <>
                     <section className="card mb-4">
@@ -362,7 +374,15 @@ export function FinanceLoans() {
                             potwierdzonym pozostałym kapitałem.
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          {detail.data.is_active ? (
+                            <Link
+                              className="btn-secondary"
+                              to={`/finances/imports?kind=loan_schedule&loan=${encodeURIComponent(detail.data.id)}`}
+                            >
+                              Importuj harmonogram
+                            </Link>
+                          ) : null}
                           <button
                             className="btn-secondary"
                             type="button"
@@ -429,11 +449,19 @@ export function FinanceLoans() {
                         zdublować obecnych harmonogramów.
                       </p>
                     </section>
-                    <LoanInstallmentForm
-                      key={activeLoanId}
-                      loanId={detail.data.id}
-                      onSuccess={() => setSelectedId(detail.data!.id)}
-                    />
+                    {detail.data.active_schedule_revision_id ? (
+                      <p className="card mb-4 text-sm">
+                        Plan z wersją bankową jest niezmienny. Zamiast edytować
+                        raty w miejscu, importuj nowy harmonogram. Powiązania
+                        płatności pozostają dostępne.
+                      </p>
+                    ) : (
+                      <LoanInstallmentForm
+                        key={activeLoanId}
+                        loanId={detail.data.id}
+                        onSuccess={() => setSelectedId(detail.data!.id)}
+                      />
+                    )}
                     {loanApiErrorMessage(updateLoan.error) ? (
                       <p role="alert" className="mb-4 text-sm text-red-400">
                         {loanApiErrorMessage(updateLoan.error)}
@@ -451,10 +479,15 @@ export function FinanceLoans() {
                             key={installment.id}
                             loanId={detail.data!.id}
                             installment={installment}
+                            managed={!!detail.data!.active_schedule_revision_id}
                           />
                         ))
                       )}
                     </section>
+                    <ScheduleHistory
+                      key={`history:${detail.data.id}`}
+                      loanId={detail.data.id}
+                    />
                   </>
                 ) : (
                   <p className="card text-sm text-gray-400">

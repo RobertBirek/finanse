@@ -23,7 +23,17 @@ Backlog zadań ze statusami.
   pełnyfrontendconfirmation/static po restarcie w toku, bez osłabiania testów.
   FINALfrontendconfirmation596PASS64.08s/eslint/tscPASS bez zmian kodu/asercji/timeoutów.
   B4 gotowe do lokalnego commitu/task-done, pierwotny timeout zachowany w dowodach.
-- [ ] B5–B6: UI i odbiór harmonogramów.
+- [x] B5: UI target/diff/confirmation/history, owner-scoped hooks i import z kredytu;
+  REDfrontend/missingoriginalmetadata potwierdzone, focused/static w toku.
+  UPDATEfrontend613PASS/eslint/tsc/buildPASS. Browser4FAIL(dotyczyłlocatoragetByLabel,
+  DOMcomboboxpoprawny); zachowanaasercjawartości, rerunrolelocatorna tym samymdist.
+  Backend2289expectedgate i browser/screenproof w toku, bezB5commitu.
+  BackendFINAL2289PASS/437hash/JUnitPASS. Front613/static/build i4browserPASS, lecz
+  visualreview wykazał mobileclipping; mocniejszytest2RED, gridminwidth/flexwrapfix,
+  finalfreshfrontend/build/4browsergeometry w toku. B5nadalbezcommitu.
+  FINAL2289backend/613frontend/static/build/4browser16.6sPASS;8screenów375/1440light/
+  darkobejrzane,740sourcehash i15distproofPASS. B5gotowe do commitu/task-done.
+- [ ] B6: odbiór całości harmonogramów, E2E/retencja/runbook/finalreview.
 - Bez merge/push/deploy/migracji produkcyjnej i importu rzeczywistych harmonogramów.
 
 ## Import wyciągów i harmonogramów — projekt (2026-11-08)

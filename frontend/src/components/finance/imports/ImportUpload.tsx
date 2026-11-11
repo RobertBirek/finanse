@@ -6,6 +6,7 @@ import {
   useUploadImportSource,
   usePrepareImportSource,
   useAttachImportDocument,
+  type ImportKind,
 } from "../../../api/bankImports";
 import {
   captureProcessingActor,
@@ -22,10 +23,12 @@ export function ImportUpload({
   batchId,
   documentId,
   disabled = false,
+  kind = "statement",
 }: {
   batchId?: string;
   documentId?: string | null;
   disabled?: boolean;
+  kind?: ImportKind;
 }) {
   const create = useCreateImport();
   const [params] = useSearchParams();
@@ -45,7 +48,7 @@ export function ImportUpload({
         batchId ??
         (
           await create.mutateAsync({
-            kind: "statement",
+            kind,
             idempotencyKey: crypto.randomUUID(),
           })
         ).id;
@@ -105,21 +108,26 @@ export function ImportUpload({
       <div>
         <h2 className="text-xl">Dodaj źródła</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Velo i ING Direct: tekstowy PDF. Revolut: CSV PLN, EUR lub USD. Bez
-          skanów, OCR i AI. Dodanie pliku nie księguje operacji.
+          {kind === "loan_schedule"
+            ? "Harmonogram Velo: tekstowy PDF PLN. Bez skanów, OCR i AI. Dodanie pliku nie aktywuje planu ani nie księguje spłat."
+            : "Velo i ING Direct: tekstowy PDF. Revolut: CSV PLN, EUR lub USD. Bez skanów, OCR i AI. Dodanie pliku nie księguje operacji."}
         </p>
       </div>
       {documentId ? (
         <p>Wybrany dokument: {documentId}</p>
       ) : (
         <label className="block text-sm">
-          Pliki wyciągów
+          {kind === "loan_schedule" ? "Pliki harmonogramów" : "Pliki wyciągów"}
           <input
             className="input mt-2 block w-full"
             type="file"
             multiple
-            accept=".pdf,.csv"
-            aria-label="Pliki wyciągów"
+            accept={kind === "loan_schedule" ? ".pdf" : ".pdf,.csv"}
+            aria-label={
+              kind === "loan_schedule"
+                ? "Pliki harmonogramów"
+                : "Pliki wyciągów"
+            }
             disabled={busy || disabled}
             onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
           />
@@ -146,7 +154,7 @@ export function ImportUpload({
             {result.batchId ? (
               <Link
                 className="ml-2 underline"
-                to={`/finances/imports/${encodeURIComponent(result.batchId)}${params.get("account") ? `?account=${encodeURIComponent(params.get("account")!)}` : ""}`}
+                to={`/finances/imports/${encodeURIComponent(result.batchId)}${params.get("loan") ? `?loan=${encodeURIComponent(params.get("loan")!)}` : params.get("account") ? `?account=${encodeURIComponent(params.get("account")!)}` : ""}`}
               >
                 {result.duplicate
                   ? "Otwórz istniejący import"

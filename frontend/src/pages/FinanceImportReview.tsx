@@ -29,6 +29,7 @@ import { ImportRows } from "../components/finance/imports/ImportRows";
 import { ImportGroupEditor } from "../components/finance/imports/ImportGroupEditor";
 import { ImportPreview } from "../components/finance/imports/ImportPreview";
 import { ImportReceipt } from "../components/finance/imports/ImportReceipt";
+import { ScheduleImportWorkspace } from "../components/finance/imports/ScheduleImportWorkspace";
 import { invalidateFinanceLedger } from "../api/finance";
 import { isProcessingActorCurrent } from "../stores/documentProcessingStore";
 
@@ -478,7 +479,11 @@ export function FinanceImportReview() {
     <div className="max-w-6xl">
       <header className="finance-page-heading">
         <div>
-          <h1>Weryfikacja wyciągu</h1>
+          <h1>
+            {batch.data?.kind === "loan_schedule"
+              ? "Weryfikacja harmonogramu"
+              : "Weryfikacja wyciągu"}
+          </h1>
           <p>
             Oryginał pozostaje bez zmian. Decyzje i podgląd nie księgują
             operacji.
@@ -500,8 +505,11 @@ export function FinanceImportReview() {
           </button>
           .
         </p>
-      ) : batch.data.kind !== "statement" ? (
-        <p className="card">Ten widok obsługuje wyłącznie wyciągi bankowe.</p>
+      ) : batch.data.kind === "loan_schedule" ? (
+        <ScheduleImportWorkspace
+          key={`${actor.ownerId}:${actor.generation}:${batchId}`}
+          batch={batch.data}
+        />
       ) : (
         <Workspace
           key={`${actor.ownerId}:${actor.generation}:${batchId}`}

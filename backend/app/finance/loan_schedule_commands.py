@@ -5,8 +5,10 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.documents.models import Document
 from app.finance.imports.commands import ImportCommandOutcome, run_import_command
 from app.finance.imports.errors import ImportError
+from app.finance.imports.models import ImportRevision, ImportSource
 from app.finance.loan_schedule_models import LoanScheduleMembership, LoanScheduleRevision
 from app.finance.loan_schedule_preview import load_confirmed_schedule
 from app.finance.loan_schedule_schemas import (
@@ -198,7 +200,49 @@ async def list_schedule_revisions(
             .order_by(LoanScheduleRevision.ordinal.desc())
         )
     ).all()
-    return [ScheduleRevisionDTO.model_validate(revision) for revision in revisions]
+    return await _revision_dtos(db, owner, list(revisions))
+
+
+async def _revision_dtos(
+    db: AsyncSession, owner: uuid.UUID, revisions: list[LoanScheduleRevision]
+) -> list[ScheduleRevisionDTO]:
+    source_ids = {r.source_revision_id for r in revisions if r.source_revision_id is not None}
+    sources = (
+        (
+            await db.execute(
+                select(
+                    ImportRevision.id,
+                    ImportSource.batch_id,
+                    Document.id.label("document_id"),
+                    Document.original_name,
+                )
+                .join(ImportSource, ImportSource.id == ImportRevision.source_id)
+                .join(Document, Document.id == ImportSource.document_id)
+                .where(
+                    ImportRevision.id.in_(source_ids),
+                    ImportRevision.user_id == owner,
+                    ImportSource.user_id == owner,
+                    Document.user_id == owner,
+                )
+            )
+        ).all()
+        if source_ids
+        else []
+    )
+    metadata = {
+        s.id: {
+            "document_id": s.document_id,
+            "original_name": s.original_name,
+            "batch_id": s.batch_id,
+        }
+        for s in sources
+    }
+    return [
+        ScheduleRevisionDTO.model_validate(r).model_copy(
+            update=metadata.get(r.source_revision_id, {})
+        )
+        for r in revisions
+    ]
 
 
 async def get_schedule_revision(
@@ -237,7 +281,8 @@ async def get_schedule_revision(
             )
         )
     ).all()
+    dto = (await _revision_dtos(db, owner, [revision]))[0]
     return ScheduleRevisionDetailDTO(
-        **ScheduleRevisionDTO.model_validate(revision).model_dump(),
+        **dto.model_dump(),
         installments=[ScheduleMembershipDTO.model_validate(m) for m in members],
     )

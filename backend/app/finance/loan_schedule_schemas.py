@@ -61,6 +61,7 @@ class SchedulePreviewDTO(BaseModel):
     loan_fingerprint: str
     diff: ScheduleDiff
     ledger_effect: Literal["none"] = "none"
+    bank_effective_date: date | None = None
 
 
 class ScheduleRevisionDTO(BaseModel):
@@ -76,6 +77,9 @@ class ScheduleRevisionDTO(BaseModel):
     bank_effective_date: date | None
     activated_on: date
     cutover_date: date
+    document_id: uuid.UUID | None = None
+    original_name: str | None = None
+    batch_id: uuid.UUID | None = None
 
 
 class ScheduleMembershipDTO(BaseModel):

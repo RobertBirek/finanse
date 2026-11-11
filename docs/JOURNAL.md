@@ -2,6 +2,86 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-11 — B5 komplet bramek i screenów zielony
+
+- Backend2289PASS/14standardexcluded/0runtime-skips8989.60s (bez ponawiania dlaCSS),
+  readonlybridge17PASS147.31s/ruffPASS/mypy190PASS/437hashcurrent+runner/JUnitPASS.
+- Finalfrontend613PASS61.07s/eslint/tsc/buildPASS, 4browser16.6s z mocną geometriąkart,
+  mobile/desktop375/1440light/dark. Obejrzane8finalnychscreenów review/history: czytelne
+  kwoty/typografia, bezclippingu kart; szerokie tabele przewijają się we własnym kontenerze.
+- Combinedproof740sourcehash (437backend+303frontend) i15distfiles zgadza się ztestami.
+  Dowody wignoredBworkspace. B5commit/task-done następnieB6brief: actualworkeracceptance,
+  dedup/retencja, pełneE2E/runbook/finalreview. Nie deklarować całego Bodebrane przedB6.
+- Bezmerge/push/deploy/produkcji/realnegoimportu; własnyPG/runner zachowane doB6.
+
+## 2026-11-11 — B5 backend2289PASS; kontrola wizualna wykryła clipping
+
+- Backendpełny2289PASS/14standardexcluded/0runtime-skips8989.60s,437hashcurrent+runner/
+  JUnitcollectionPASS; history/activation17PASS147.31s/ruff/mypy190PASS. Niepowtarzać
+  backendu dla frontendowych poprawek przy zachowaniu437hash.
+- Frontfrontend613PASS74.11s/static/buildPASS; browser4PASS17.7s pofixURI. Obejrzane
+  mobile darkscreens źródła/historii: karta aktywnegokredytuprzycięta wpoziomie mimo
+  document.scrollWidthPASS. To realna luka testu geometrii, nie „gotowe UI”.
+- Dodanaasercja rzeczywistychgranic.card, mobileREDsh_1ca1dc15c001VgfoRbmDYS2cum w toku;
+  screenshoty mają scrollIntoView dla diff/confirmation/snapshot. LayoutfixdopieropoRED.
+  B5bezcommitu, B6niezaczęte. Produkcja bez zmian.
+- MobilegeometryRED2FAIL odtworzone w obu motywach. Minimalnyfix: grid-cols-1,
+  mainmin-w-0 i flex-wrap akcji, zamiast maskowaniaoverflow. Backend437hash ponownie
+  niezmienione, frontend303manifestodświeżony. Finalfront613/static/build/4geometry
+  sh_1ca2765a3001mrU7LNg3TTEPqK w toku; obejrzećfinalscreens przedcommitem.
+
+## 2026-11-11 — B5 browser odtworzył błędny powrót do kredytu
+
+- Locatorfix pozwolił przejść preview/confirmation/receipt, potem4browserFAIL: powrót
+  otwierałToday. DowódApp.tsx: kredyty mają /settings/finances/loans, nie /finances/loans.
+  To błądproduktu, nie testu. Dodany dokładnyunit hrefassert, REDsh_1c9a69d5d001PJt2shqF8DJ61p
+  przed poprawkąjednegoURI; późniejfreshfrontend/build/browser. Backendbez zmian.
+- UnitRED1FAIL3.75s potwierdził złyhref; poprawiono tylkoURI na istniejącątrasę.
+  Front303manifest odświeżony (poprzednizachowany), fullfrontend/static/build/4browser
+  chainsh_1c9fa60c0001EXlHoTg9ZhVBVz w toku. Backendfreeze niezmieniony/bezduplikacji.
+
+## 2026-11-11 — B5 frontend613PASS; browser locator poprawiony
+
+- Fullfrontend613PASS64.81s/101plików, eslint/tsc/buildPASS8.61s; standardowewarning
+  bundle>500k bez zmiany progów. First4browserFAIL przygetByLabelexactKredyt; snapshot
+  DOMpokazuje prawidłowycomboboxKredyt i loan-a selected. Locator→getByRolecombobox,
+  ta sama asercjawartości i timeout, bez zmian aplikacji. Rerun4wariantów
+  sh_1c9a4a6840018T8W739NDh1cUR naidentycznymdist, screenshotfailuremobileobejrzany.
+- Backendreadonlybridge nadal pełnygate w tle; niepowtarzać. B5bezcommitu do wyników
+  browser/screens/backendJUnit/hash. Pierwotne błędy zachowane w ledger/logach.
+
+## 2026-11-11 — B5 focused22PASS, pełne bramki w toku
+
+- Po19PASS/2FAIL znalezione realneprzyczyny: kolizjakluczy rodzeństwa form/history
+  loan-1 dublowałaform przyprzełączeniu, a select montowałsię przedloanoptions.
+  Prefixhistorykey i jawneloadingtarget fix; stareasercjezachowane. RuffRefreshhelper
+  przeniesiony do.ts, readonlyfixturechecks skopiowane do mutableJSON — bezsuppressions.
+- Frontfocused22PASS6.03s/eslint/tscPASS; backendhistory/bankdateRED→GREEN1PASS8.31s,
+  ruff/mypy190PASS. OsobnyfrontendREDinactiveaccount odtworzył aktywnypreviewbutton;
+  validTarget teraz sprawdza oba kontaPLN/nocard także dla istniejącej umowy.
+- Dodany test recoveryuncertainresult i4browserwarianty(light/dark375/1440), dokładny
+  productionbuild wmemory przez istniejącefixture, bezservera/realAPI. Pełnyfrontend+
+  lint/types/build/browser sh_1c98b72f3001ftS0GppTkCmOLx w toku.
+- Backendreadonlybridge gate sh_1c98aecd7001J0LtEh5x2VWgOK: freeze backend→history+
+  activationregression→pełny2289expected/JUnit/collection/0runtime-skips/hashproof.
+  Manifestfrontend303files, backend osobny. Rulingwledger: niezależnecomponentproofs,
+  frontendpolish nie wymaga duplikacji3hbackendu, o ilebackendbytesbez zmian.
+- Nie commitowaćB5 przed wszystkimi dowodami i obejrzeniem screenów. Produkcja bez zmian.
+
+## 2026-11-11 — B4commit976f06c; B5 UI RED→GREEN w toku
+
+- B4task-done29PASS287.54s, B5BASE976f06c/briefREAD. React/designskills użyte do
+  istniejącego stylu (card/input, bieżąca typografia/kolory/motywy); cutover+stanrat
+  to główna struktura, nie nowe saldo lub dashboard. Brak nowegoautodesignu/AI/OCR.
+- FrontendRED6FAIL+2brakujące moduły, backendhistoryoriginalRED1FAIL missingdocument_id.
+  Uzupełnienie B4→B5 tylko readonlynullable metadataoryginału oraz bank_effective_date
+  osobno odcutover; plan iRuling wledger. BankdateRED w toku przedimplementacją.
+- Hooks owner+generation/sharedactorfence, targetexisting/newtwoaccounts, uploadkind,
+  diff/confirmation/receiptcovery, oddzielny workspace i historia. LoanUI importlink/
+  banknumbervsinternalnumber/read-onlybankmanaged, linkiunlinkdalejdostępne. Legacytest
+  otrzymał MemoryRouter bezusuwaniaasercji. Frontfocused/static w toku, pełnygatepóźniej.
+- WłasnyPG/runner bezportów, produkcja/Q7oryginały bez zmian. Nie commitowaćB5 bezbramek.
+
 ## 2026-11-11 — B4 komplet bramek zielony
 
 - Frontendconfirmation596PASS64.08s/97plików, eslint/tscPASS; bez edycji źródeł lub

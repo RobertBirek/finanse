@@ -1,6 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FinanceLoans } from "./FinanceLoans";
+
+const render = (element: ReactElement) =>
+  rtlRender(<MemoryRouter>{element}</MemoryRouter>);
 
 const hooks = vi.hoisted(() => ({
   useAccounts: vi.fn(),
@@ -123,6 +128,44 @@ describe("FinanceLoans", () => {
     expect(screen.getByText("Saldo księgowe")).toBeInTheDocument();
     expect(screen.getByText("Do pokrycia w harmonogramie")).toBeInTheDocument();
     expect(screen.getByText(/Plan ≠ wykonana płatność/)).toBeInTheDocument();
+  });
+
+  it("offers import for this agreement and distinguishes bank numbering while preserving payments", () => {
+    const current = hooks.useLoan().data;
+    hooks.useLoan.mockReturnValue({
+      data: {
+        ...current,
+        active_schedule_revision_id: "bank-version",
+        installments: [
+          {
+            ...current.installments[0],
+            number: 45,
+            bank_number: 1,
+            schedule_revision_id: "bank-version",
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(<FinanceLoans />);
+    expect(
+      screen.getByRole("link", { name: "Importuj harmonogram" }),
+    ).toHaveAttribute(
+      "href",
+      "/finances/imports?kind=loan_schedule&loan=loan-1",
+    );
+    expect(screen.getByText(/numer bankowy w wersji: 1/)).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Dodaj ratę" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Edytuj ratę" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Powiąż płatność" }),
+    ).toBeEnabled();
   });
 
   it("keeps the installment form open after a 409 conflict", () => {

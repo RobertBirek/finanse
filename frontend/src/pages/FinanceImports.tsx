@@ -6,18 +6,43 @@ import { ImportUpload } from "../components/finance/imports/ImportUpload";
 export function FinanceImports() {
   const actor = useImportActor();
   const imports = useImports();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const kind =
+    params.get("kind") === "loan_schedule" ? "loan_schedule" : "statement";
   return (
     <div className="max-w-6xl">
       <header className="finance-page-heading">
         <div>
-          <h1>Import wyciągów</h1>
+          <h1>
+            {kind === "loan_schedule"
+              ? "Import harmonogramów"
+              : "Import wyciągów"}
+          </h1>
           <p>Źródło → Decyzja → Księga. Ty wybierasz, co zostanie zapisane.</p>
         </div>
       </header>
       <FinanceTabs />
+      <label className="mb-4 block">
+        Rodzaj importu
+        <select
+          className="input mt-1 block w-full sm:w-auto"
+          value={kind}
+          onChange={(e) => {
+            const next = new URLSearchParams(params);
+            next.set("kind", e.target.value);
+            setParams(next);
+          }}
+        >
+          <option value="statement">Wyciąg bankowy</option>
+          <option value="loan_schedule">Harmonogram kredytu</option>
+        </select>
+      </label>
+      {kind === "loan_schedule" ? (
+        <p className="card mb-4">Harmonogram nie księguje spłat</p>
+      ) : null}
       <ImportUpload
-        key={`${actor.ownerId}:${actor.generation}`}
+        key={`${actor.ownerId}:${actor.generation}:${kind}`}
+        kind={kind}
         documentId={params.get("document")}
       />
       <section className="card mt-5" aria-label="Zapisane importy">
@@ -38,7 +63,7 @@ export function FinanceImports() {
         ) : (
           <ul className="space-y-3">
             {(imports.data ?? [])
-              .filter((batch) => batch.kind === "statement")
+              .filter((batch) => batch.kind === kind)
               .map((batch) => (
                 <li
                   key={batch.id}
