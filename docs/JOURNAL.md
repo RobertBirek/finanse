@@ -2,6 +2,70 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-11 — B4 komplet bramek zielony
+
+- Frontendconfirmation596PASS64.08s/97plików, eslint/tscPASS; bez edycji źródeł lub
+  timeoutów. WcześniejszyDocumentArchivetimeout nieodtworzony (isolated4PASS, full596),
+  dowodypierwotnegofailzachowane; nie deklarowano fikcyjnej naprawy produktu.
+- Backend2288PASS/14standardexcluded/0runtime-skips i704hash/JUnitPASS zachowane;
+  focused45PASS335.92s, ruffPASS/mypy190PASS. B4 lokalnycommit/task-done, następnie B5UI.
+- WłasnyPG/runner bezportów nadal do testówB, produkcja/Q7oryginały bez zmian.
+
+## 2026-11-11 — Wznowienie po restarcie, B4 backend zielony
+
+- B4pełny2288PASS/14standardexcluded/0runtime-skips10681.29s, focused45PASS335.92s
+  (59rat irealwrongbatchbinding), ruffPASS/mypy190PASS; JUnit/kolekcja/704hashzgodne.
+  Po restarcie readrequired4/opt docs w kolejności; HEADd7cff54, własnyrunneraktywny/
+  noports/labelsPASS, brakpytestprocesów. Aktualne704hash nadal zgodne. Niepowtarzaćbackendu.
+- Frontend595PASS/1FAIL: DocumentArchive archiveflow czekałna przycisk, DOMnadalloading;
+  set-e nie uruchomił wtedy lint/types. Frontend268hash identyczne zB3(596PASS).
+  Przerwanapróba izolacji sprzedrestartu nie zostawiłalogu; rzeczywistaizolacja4PASS7.41s
+  z dotychczasowymi actwarnings. Timinghipoteza, nieustalonajednoznacznaprzyczyna;
+  zero zmian kodu/asercji/timeoutów. Pełnepotwierdzeniefrontend+static
+  sh_1c9738e59001HCxaVtBuawBz5e w toku. BezB4commitu/B5 do wyników.
+- Produkcja/Q7/prywatneoryginały bez zmian, istniejącebrudneaudits zachowane poza commitami.
+
+## 2026-11-10 — B4 pierwsze28PASS; pełny gate
+
+- FirstB4GREEN28PASS320.70s, ruffPASS/mypy190PASS po jawnym fixie lokalnych nazw/importów.
+  Rozszerzenie o59-rowactivation irealwrongbatchpreview w finalnymgate, nieprzypisywać
+  mu jeszcze PASS. Sourcefreeze i static→updatedB4+sharedArequests→FULL2288expected/
+  JUnit/collection/0runtime-skips/hashcurrent+runner/diffcheck uruchomione jako
+  sh_1c79119fc001igW8uUduUKzNJo. Freshfrontend/staticsh_1c791a799001GrZn1KG7uiczTY równolegle.
+- Niepoll/niepowtarzać/nieedytowaćzamrożonego kodu. B4bezcommitu/B5nierozpoczęte.
+  WłasnyPG/runner nadal do testów, bezportów/produkcji; HEADd7cff54.
+
+## 2026-11-10 — B4 implementacja po27RED
+
+- B4RED27FAIL/1PASS240.10s (brakmodułów/trasy404). WspólneImportPreview/receipty,
+  źródło/hash/currentrevision/każdyrowhash/oryginał/owner/targetaccounts/PLN/nocard,
+  jawnytargetack; fingerprint/day/diff liczone ponownie pod blokadami przedzapisem.
+- Aktywacja wsavepoint sharedcommand: baseline snapshoty tylko istniejących rat,
+  poprzedniawersja superseded, nowaactive, reuse/new/internalnumbermax/archive,
+  membershipsourcebanknumbers, activepointer/batchversion/audit/receipt atomowo.
+  activated_on to frozenapplicationday, cutover może być przyszły. Replayreceipt
+  przed ponowną oceną dnia. Żadnego create_transaction/link_loan_payment/forecast.
+- Historia ma własne snapshotDTO i owner404. Splitrouters included into existing
+  import/loanrouters, bez nowej domeny. Candidate reparse nie podmienia źródła.
+- FirstGREEN28 sh_1c78b29a00019HCX1OGtF3XO70, staticsh_1c78b1707001pH8UaPw6ztnHbG
+  w toku; nie deklarować odbioru/commitu B4 przed wynikami i pełnymi bramkami.
+- Staticinitial14lintstyle/import/unused i2mypynameinference poprawione jawnie, bez
+  suppressions/unsafe; ruffPASS/mypy190PASS na316b72snapshot. Initial28GREEN jeszcze
+  pending; dodano59-rowactualactivationfixture ze źródłemsyntetycznym/internal501..559/
+  1partiallink. WrongbatchHTTP test poprawiony do realvalidpreview zamiast randomUUID;
+  jego wcześniejszyREDPASS404 nie był dowodem bindingu (ledger jawnie odnotowuje).
+
+## 2026-11-10 — B3commitd7cff54; B4 RED w toku
+
+- B3task-done24PASS107.81s, B4BASEd7cff54/briefREAD. Testypierwsze4pliki+fixture
+  rzeczywistego syntetycznegoPDF/currentrevision/rows/canonicalprivatepath.
+- B4REDsh_1c783e094001gaA6e92bW5kz6t: previewimmutable/targetack, activationnol edger/
+  receipt/replay/day/stalesource/ownership/overflow, baseline/history/shorterplan,
+  2sessions/2batches/paymentafterpreview, strictHTTP/owner/recovery/history.
+- Rulings wledger: wspólneImportPreview+receiptcommand, jawnytargetackboLoanAgreement
+  nie posiada nr umowy, splitimport/historyrouters included into existingpaths.
+  Zero B4koduaplikacji przedRED. Produkcja/Q7oryginały bez zmian.
+
 ## 2026-11-10 — B3 pełny gate zielony
 
 - Full2259PASS/14standardexcluded/0runtime-skips11688.20s, JUnit/collection i696hash

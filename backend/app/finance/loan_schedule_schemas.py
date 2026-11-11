@@ -1,10 +1,12 @@
 """Strict command boundary for plan activation, not financial postings."""
 
 import uuid
+from datetime import date
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.finance.loan_schedule_diff import ScheduleDiff
 from app.finance.loan_schemas import LoanCreate
 
 
@@ -45,3 +47,48 @@ class ScheduleCommitResult(BaseModel):
     new_ids: list[uuid.UUID]
     superseded_ids: list[uuid.UUID]
     ledger_changed: Literal[False] = False
+
+
+class SchedulePreviewDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: uuid.UUID
+    batch_id: uuid.UUID
+    version: int
+    request_hash: str
+    source_revision_id: uuid.UUID
+    target: ScheduleTarget
+    cutover_date: date
+    loan_fingerprint: str
+    diff: ScheduleDiff
+    ledger_effect: Literal["none"] = "none"
+
+
+class ScheduleRevisionDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    loan_id: uuid.UUID
+    ordinal: int
+    kind: Literal["manual_baseline", "bank_import"]
+    state: Literal["active", "superseded"]
+    previous_revision_id: uuid.UUID | None
+    source_revision_id: uuid.UUID | None
+    receipt_id: uuid.UUID
+    bank_effective_date: date | None
+    activated_on: date
+    cutover_date: date
+
+
+class ScheduleMembershipDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    installment_id: uuid.UUID
+    bank_number: int | None
+    source_row_id: uuid.UUID | None
+    due_date: date
+    principal_pln: int
+    interest_pln: int
+    fees_pln: int
+    balance_after_pln: int | None
+
+
+class ScheduleRevisionDetailDTO(ScheduleRevisionDTO):
+    installments: list[ScheduleMembershipDTO]

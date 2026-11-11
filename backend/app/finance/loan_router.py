@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.finance import loans
 from app.finance.loan_schedule_projection import ScheduleMutationConflict
+from app.finance.loan_schedule_router import history_routes as schedule_history_routes
 from app.finance.loan_schemas import (
     LoanCreate,
     LoanDetailResponse,
@@ -23,6 +24,7 @@ from app.identity.models import User
 from app.identity.router import get_current_user
 
 router = APIRouter(prefix="/loans")
+router.include_router(schedule_history_routes)
 
 
 def _error(error: Exception) -> HTTPException:

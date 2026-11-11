@@ -15,7 +15,15 @@ Backlog zadań ze statusami.
   backend2259expected/JUnit/hashgate. BezB3commitu i bezstartuB4 przedwynikiem.
   FINAL2259PASS/14standardexcluded/0runtime-skips/696hashPASS; affected97/frontend596/
   ruff/mypy187/tsc/eslintPASS. B3 gotowe do lokalnego commitu/task-done.
-- [ ] B4–B6: jawna aktywacja, UI i odbiór.
+- [x] B4: frozenpreview/aktywacja/history/receipts — testy napisane przed kodem.
+  RED27FAIL/1PASS→GREEN28PASS320.70s, lint/typesPASS. Uruchomione finalneupdatedB4+
+  sharedArequests/full2288expectedJUnit/hashgate i świeżyfrontend; bezB4commitu do wyników.
+  BackendFINAL2288PASS/14standardexcluded/0runtime-skips/704hashPASS; focused45/staticPASS.
+  Frontend595PASS/1DocumentArchive timeout; unchangedsource268hash iisolated4PASS;
+  pełnyfrontendconfirmation/static po restarcie w toku, bez osłabiania testów.
+  FINALfrontendconfirmation596PASS64.08s/eslint/tscPASS bez zmian kodu/asercji/timeoutów.
+  B4 gotowe do lokalnego commitu/task-done, pierwotny timeout zachowany w dowodach.
+- [ ] B5–B6: UI i odbiór harmonogramów.
 - Bez merge/push/deploy/migracji produkcyjnej i importu rzeczywistych harmonogramów.
 
 ## Import wyciągów i harmonogramów — projekt (2026-11-08)

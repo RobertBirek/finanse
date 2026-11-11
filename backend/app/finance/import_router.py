@@ -38,6 +38,7 @@ from app.finance.imports.schemas import (
 )
 from app.finance.imports.service import create_batch
 from app.finance.imports.storage import attach_source
+from app.finance.loan_schedule_router import import_routes as schedule_import_routes
 from app.identity.models import User
 from app.identity.router import get_current_user
 
@@ -45,6 +46,7 @@ Database = Annotated[AsyncSession, Depends(get_db)]
 Owner = Annotated[User, Depends(get_current_user)]
 Key = Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=200)]
 router = APIRouter(prefix="/imports")
+router.include_router(schedule_import_routes)
 
 
 class BatchCreate(BaseModel):

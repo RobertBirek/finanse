@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, B4 zweryfikowane] — 2026-11-11 — Podgląd i aktywacja planu
+
+### Added
+- Frozenpreview związany ze źródłem, mapowaniem, dniem, kontami i fingerprintem rat/
+  spłat. Aktywacja korzysta ze wspólnego trwałego receipt i jednej transakcji DB.
+- Baseline powstaje dopiero przy jawnej aktywacji; zgodne raty zachowują UUID,
+  nowe dostają numery ponad starym max, przyszły niepowiązany ogon jest archiwizowany.
+- Owner-scoped historia czyta snapshoty membership, nie bieżące wartości rat.
+  Bez księgowania, odpinania spłat, wyliczania odsetek lub korekty salda.
+- RED27FAIL/1PASS potwierdzony przed kodem; focused45PASS, w tym59rat i sharedreceipts.
+
+### Verification — aktualizacja 2026-11-11
+- Backend2288PASS, 14standardowoexcluded,0runtime-skips; focused45/lint/typesPASS,
+  JUnit i704hashzgodne także po restarcie. Zakończonego backendu nie powtarzano.
+- Frontend miał595PASS/1timeout testu archiwum dokumentów; izolowany4PASS przy
+  niezmienionych źródłach. Pełne potwierdzenie596PASS64.08s/eslint/tscPASS bez zmian
+  asercji/timeoutów. Pierwotny błąd zachowany w dowodach; brak zmian produkcyjnych.
+
 ## [Local, B3 zweryfikowane] — 2026-11-10 — Diff i aktywny zakres rat
 
 ### Added
