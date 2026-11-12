@@ -1,5 +1,13 @@
 # Bezpieczne wydanie importerów A+B — Implementation Plan
 
+**Stan 2026-11-12: P odebrane dla `5dc84fe`.** Backend2329PASS, frontend617PASS,
+proxy11PASS, exactimages/nonroot/backupbezretencji/owncloneUP-DOWN-UP/retencja62PASS.
+Zarchiwizowano dowody i usunięto wyłącznie własne zasoby. Produkcja nadal7801/schema739.
+**Task 4–5 wymagają osobnej zgody D.** Szczegóły i wcześniejsze nieudane próby:
+[`2026-11-11-bank-imports-preparation-repair.md`](../../audits/2026-11-11-bank-imports-preparation-repair.md).
+Pierwotny runbook poniżej opisuje historyczny kandydatc306948; przy D użyj odebranego
+SHA5dc84fe i odpowiadającego mu pakietu/obrazów, po ponownym freeze i kontroli driftu.
+
 **Wykonanie P, 2026-11-11: NO-GO.** Po osobnym „tak” Task 1 wykonano,
 Task 2 zatrzymano na ingress: nowy upload 2 MiB →413 w obu wariantach slash.
 Pakiet i trzy obrazy zbudowane offline; Task 3 nie rozpoczęto. Checkboxy poniżej
@@ -15,15 +23,15 @@ NO-GO pozostają niezmienne; nowy kandydat otrzyma nowy SHA/E/R.
 
 ### Poprawki przed wznowieniem P (F1–F3)
 
-- [ ] F1: test proxy nowego uploadu2MiB/21MiB+1, starego uploadu i zwykłegoAPI;
+- [x] F1: test proxy nowego uploadu2MiB/21MiB+1, starego uploadu i zwykłegoAPI;
   namespace bez hostportów, lokalne obrazy no-pull, cleanup exactID bezforce.
   RED→wąski wyjątekNginx dla sources→GREEN. Brak globalnego szerszego limituAPI.
-- [ ] F2: verifier tworzy oznaczony kontener, uruchamia po exactID; cleanup sprawdza
+- [x] F2: verifier tworzy oznaczony kontener, uruchamia po exactID; cleanup sprawdza
   ID/label/image/user/network/mounty/ports, stop→inspectstopped→rmbezforce→absent.
   RED dla cleanup-success/timeout/foreignidentity/failure→GREEN; odmowa oznacza brakPASS.
-- [ ] F3: trwały `ops/release_policy.py`, testy rollbacku związane z zaufanym freeze
+- [x] F3: trwały `ops/release_policy.py`, testy rollbacku związane z zaufanym freeze
   i aktualną obserwacją (inny poprawnie sformatowany oldID dajeSTOP). RED→GREEN.
-- [ ] Po focused/static/projecttests i commicie nowy freeze/newSHA; Task2/3 P
+- [x] Po focused/static/projecttests i commicie nowy freeze/newSHA; Task2/3 P
   według reszty runbooka, z własnymi no-port klonami i świeżym review operatora.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

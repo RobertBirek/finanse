@@ -2,19 +2,27 @@
 
 Backlog zadań ze statusami.
 
-## Wydanie importerów A+B — P zatrzymane, NO-GO (2026-11-11)
+## Wydanie importerów A+B — P odebrane, D wymaga zgody (2026-11-12)
 
 - [x] Po osobnym „tak”: fixNginx z trwałym proxytestem, bez poszerzania zwykłegoAPI.
   RED2FAIL→GREEN6PASS, wyłącznie własne no-port zasoby, cleanupbezforce.
 - [x] Verifier noforce/ownedID i jawny trustedfreeze rollbackguard; ops75PASS,
   realny offlineimport/cleanupPASS. Testy nigdy nie traktują nieznanego stanu jako zera.
 - [x] Dodatkowa zgoda „Bez retencji”: wariant backupu z tym samym lockiem/checkami,
-  bez forget/prune, bez usuwania starych snapshotów; wariant przygotowany, niewykonany.
-- [~] Pełny backend w zgodnym runnerze i własnym syntetycznym PG; nowySHA/pakiet,
+  bez forget/prune, bez usuwania starych snapshotów; backup/restore wykonane i sprawdzone.
+- [x] Pełny backend w zgodnym runnerze i własnym syntetycznym PG; nowySHA/pakiet,
   nowy ingress/offlineproof oraz backup/restore/migracje wyłącznie własnego klonu.
 - [x] Frontend617/lint/types/build i backendstatic193sourcesPASS dla poprawek.
 - [x] Jeden review operatora/fixu:1Important malformedID; zamknięte RED3FAIL→11PASS
   przez UUIDshape exception; ops75PASS. Bez drugiego review. Nowe SHA/pakiet wymagane.
+- [x] Finalny kandydat5dc84fe: nowe3obrazy/offlineimports/11proxy i ponowne exactimage
+  UP/DOWN/UP na własnym klonie PASS;62legacyhash bez zmian,13nowychpustych, oldreaderPASS.
+- [x] Pierwszyfull2320PASS/2FAIL/4ERROR odrzucony: braki własnego środowiska Git/role,
+  nie problem produktu. Naprawione bez zmian guardów/app;80focused +193staticPASS.
+- [x] Finalny pełny backend2329PASS/23standardexcluded/0failure/error/runtime-skips;
+  XML i191app/775trackedsource/15distmatch, finalcheckPASS. Brak zgody D.
+- [x] Archiwum54dowodów/sekretyscanPASS, cleanup13owncontainers+2ownvolumes/idle/ID/
+  label/mountsPASS bezforce/prune; plaintextcopy usunięta.6prodservices/sieci/mounty bez zmian.
 
 - [x] User zatwierdził przygotowanie planu bez zmian produkcji; wymagane4hostdocs readinorder.
 - [x] Read-only inventory: runtime7801ba5, schema739,62tabele; main/origin-main lokalnie
@@ -26,12 +34,12 @@ Backlog zadań ze statusami.
 - [x] Pakiet c306948/445plików źródeł exactGit,3offlinebuildPASS, Compose pozaimage/build bez zmian.
 - [x] Wykonano izolowany test ingress:2metodyPASS/1FAIL,2subtestyFAIL dla importu2MiB→413;
   oldupload204 i granica21MiB+1→413 PASS. Kontenery probe usunięte bezforce.
-- [~] Task2/P zatrzymane NO-GO. Verifier nieuruchomiony; backup/restore/klony Task3 nie rozpoczęte.
-- [ ] Osobna decyzja o fixie Nginx+trwałym proxyteście/newSHA i rozstrzygnięciu no-force
+- [x] Historyczny c306948 zatrzymano NO-GO; po osobnym zatwierdzeniu zamknięto P dla5dc84fe.
+- [x] Osobna decyzja o fixie Nginx+trwałym proxyteście/newSHA i rozstrzygnięciu no-force
   cleanup verifiera przed wznowieniem P. Nie zwiększać globalnie limitu `/api/`.
 - [x] Niezależny read-onlyreview potwierdza zamknięcieNO-GO, ingress i cleanup;9puretestsPASS.
-- [ ] Important przed wznowieniem: jawne powiązanie oldimageIDs z trustedfreeze/inventory
-  wworkflow; samo select_rollback waliduje tylkoformat i nie upoważnia do rollbacku.
+- [x] Important oldimageIDs zamknięte: trwały guard wymaga trustedfreeze/obserwacji
+  i zgodnych ID; użycie bez powiązania dajeSTOP. Testy i pełny backendPASS.
 - [ ] Po pozytywnym przygotowaniu: osobna zgoda D na konkretny SHA/FF/push/UP/trzyusługi.
 - [ ] Pilotaż rzeczywistego dokumentu dopiero po odrębnej decyzji; poza deployem.
 

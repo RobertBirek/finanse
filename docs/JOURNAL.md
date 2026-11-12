@@ -2,8 +2,48 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — P zamknięte dla5dc84fe, bez zgody D
+
+- Powrót finalnego joba sh_1cc7d4bc6001RGI90B9CHgRVmk:2329PASS/23standardproxyexcluded,
+  XML0failure/error/runtime-skips,8622.78s. To świeży pełny przebieg finalnego snapshotu,
+  nie suma wcześniejszego2320PASS i focused80. Host75collectionerrors i pierwszyfull
+  2FAIL/4ERROR pozostają w dowodach wraz z przyczyną Git/role we własnym runnerze.
+- Required4hostdocs ponownie odczytano w kolejności. Końcowy readonlycheck:775sourcehash,
+  191app i15distmatch,6prodIDs/images/Config/HostConfig/starttime/restarts i active
+  metadata bez zmian; schema739. Po cleanup sieci i mounty wszystkich6zgodne.
+- Task2/3 nativecompletionPASS dla5dc84febc9a22e16afa76a9641e45a5f337d76a0;
+  frontend617/ops75/proxy11/static193/build i realnonrootimports+noforcecleanupPASS.
+  Snapshotff643adb bezretencji, własnycloneUP/DOWN/UP62legacyhash/13newempty/pointersNULL/
+  ledger0/old7801readonlyORMPASS.1Important z jednego review naprawiony TDD3FAIL→11PASS,
+  resztaops75PASS; bezdrugiegoreview i bezodłożonychMinor.
+- Po archiveprecleanup i kontroli exactID/label/image/network/mount/idle usunięto13
+  własnychkontenerów i2własnewolumeny. Usunięto plaintextrestore i5plików ownDB
+  credentials; wszystkie usunięcia bezforce/prune. CudzeDB/preview/originals nietknięte.
+- Finalarchive54files R/evidence/preparation-final.tar.gz,
+  SHA0056abc5bd95ef8676c13852d0aea20ae17b157b669412b3a41f9ddf541ce59a.
+  Actualsecretvalues scanPASS/privateDB/env/Composeexcluded. Supplemental networks/
+  mounts proof R/evidence/last-inventory-proof.json SHA3fe6c61e0031b8646367b37298a6d77b08970391793ecedd2a039b16ece77842.
+- E=/tmp/opencode/bank-imports-repair-NpudCmae; R=/opt/finanse/webapp/releases/
+  bank-imports-5dc84febc9a2-NpudCmae. Pakiet, obrazy i rollback7801 pozostają; branch/
+  hostmanagedworktree i ledger zachowane, ponieważ Task4–5 wymagają odrębnej decyzji.
+- Ostatni commit ma być docs-only; runtime5dc pozostaje bez zmian. Przy D potrzebne
+  freshrefs/diff, dokładny aktualnyGitTip, re-freeze/source/images/env/Compose i świeży
+  fencedbackup+ownrestore. Nie używać starych c306/e2 lub initialrunner jako accepted.
+  Nadal zero merge/push/main/prodUP/deploy/financialimport/Q7/Actual zmian.
+
 ## 2026-11-11 — Zatwierdzony fix ingress/operatora i wznowienie P
 
+- Pierwszyfullbackend final job sh_1cbe528f3001i4QGUSln5OZwjW:2320PASS/2FAIL/4ERROR/
+  18deselected/0runtime-skips/9598.51s. Nie zaliczono. Własny runner nie miałGitmetadata,
+  a fixture migracji słusznie odrzucił initrole release_test (wymaga bank_import_task_*).
+  Rootcauses naprawiono tylko w ownsourcecopy/ownPG: Gitinit prywatnego snapshotu,
+  nowa wyłączna rola i BANK_IMPORTurl na nią. Nie zmieniono guardów/app i nie
+  powtarzano backupu/prodoperacji. PierwotnyXML/log preserved backend-first-run.*.
+- Po naprawie środowiska80focusedPASS/6deselected (całyops+4migrationfiles), static
+  finalsnapshot193sourcesPASS. Job sh_1cc7d4bc6001RGI90B9CHgRVmk uruchamia świeży pełny
+  finalbackend; P nadalpending, nie używać sumy2320+focused jako greenfull. Aktualna
+  kopia zawiera finalops i UUIDproxyfix, apphashy bez zmian. Nie ma nowej poprawki
+  produktu lub potrzeby re-review; to konfiguracja własnego runnera.
 - Review ses_e33dfafb9ffehoxwopqHJg5UWJ:1Important malformedbatchID dostawał21m.
   Re-gradeImportant utrzymane; jeden fixpass RED3FAIL/8PASS→GREEN11PASS, ops75PASS,
   scopedlint/typesPASS. Pattern wymaga canonicalUUIDshape; brak globalnegoAPIlimitfix.

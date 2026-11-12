@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Prepared, P odebrane] — 2026-11-12 — Importery A+B, kandydat5dc84fe
+
+### Verification
+- Finalny pełny backend2329PASS/23standardproxyexcluded/0failure/error/runtime-skips,
+  frontend617PASS, jawne proxy11PASS, ops75PASS, lint/types/buildPASS. Źródła i dist
+  odpowiadają odebranemu pakietowi:191app,775trackedsourcehash,15dist.
+- Nowy szyfrowany backup bez retencji i restore we własnym no-port kloniePASS.
+  ExactimageUP/DOWN/UP zachowuje62tabele;13nowychpustych/pointeryNULL/ledger0naruszeń,
+  stary7801 czytaORM na84. JedenImportant z review naprawiony jednym TDDpass.
+
+### Changed
+- Zamknięto przygotowanie i cleanup:13własnychkontenerów,2własnewolumeny oraz
+  plaintextcopy usunięte po kontroli ownership/idle;54sanityzowane dowody zarchiwizowane.
+- Produkcja7801ba5/schema739,6usług i ich sieci/mounty bez zmian. Brak merge/push,
+  produkcyjnej migracji, deployu i realnego importu. Następny etap wymaga zgody D.
+- Raport `docs/audits/2026-11-11-bank-imports-preparation-repair.md` zachowuje też
+  odrzucone próby i naprawy środowiska; wcześniejszy c306948 nadalNO-GO.
+
 ## [Local fix, P w toku] — 2026-11-11 — Ingress i bramki operatora
 
 ### Fixed
@@ -22,6 +40,9 @@ Wszystkie istotne zmiany w projekcie.
 - Świeży review wykrył1Important: wyjątek uploadu obejmował niepełne/malformedID.
   Jeden fixpass zawęża do UUIDshape: RED3FAIL/8PASS→GREEN11PASS, całaops75PASS;
   wymagane nowe SHA/pakiet/bramki. Nie deklarujemy ukończeniaP przed ich odnowieniem.
+- Final5dc84fe i odnowione exactimage bramki/clonePASS. Pierwszy pełny backend
+  2320PASS/2FAIL/4ERROR odrzucony (brakGit i zgodnejrole we własnym runnerze);
+  po naprawie tylko środowiska80focused/193staticPASS, świeży pełny przebieg w toku.
 
 ## [Preparation, NO-GO] — 2026-11-11 — Ingress blokuje wydanie A+B
 
