@@ -690,6 +690,14 @@ async def _get_mapped_entity(
 async def _store_mapping(
     db: Any, user_id: uuid.UUID, entity_type: str, actual_id: str, entity_id: uuid.UUID
 ) -> uuid.UUID:
+    if entity_type == "transaction":
+        # Polymorphic mapping IDs have no FK: share the categorization parent lock
+        # so even an insert into a previously empty mapping set cannot race review.
+        await db.execute(
+            select(FinancialTransaction.id)
+            .where(FinancialTransaction.id == entity_id, FinancialTransaction.user_id == user_id)
+            .with_for_update()
+        )
     result = await db.execute(
         pg_insert(ActualImportMapping)
         .values(

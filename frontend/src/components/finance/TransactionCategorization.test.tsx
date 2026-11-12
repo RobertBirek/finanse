@@ -84,6 +84,25 @@ async function open() {
   await screen.findByLabelText("Kwota PLN 1");
 }
 
+it("lets a supported imported expense use the reviewed category editor without editing its source", async () => {
+  const post = vi.spyOn(api, "post");
+  render(
+    <TransactionList
+      transactions={[{ ...txn, source: "actual" }]}
+      loading={false}
+      error={false}
+    />,
+    { wrapper },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Zmień kategorie" }));
+  expect(await screen.findByLabelText("Kwota PLN 1")).toHaveValue("100.00");
+  fireEvent.change(screen.getByLabelText("Kategoria 1"), {
+    target: { value: "home" },
+  });
+  expect(screen.getByRole("button", { name: "Sprawdź podział" })).toBeEnabled();
+  expect(post).not.toHaveBeenCalled();
+});
+
 it("labels approved-rule origin distinctly from human approval in the transaction list", () => {
   render(
     <TransactionList

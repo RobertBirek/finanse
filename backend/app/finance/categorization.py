@@ -135,7 +135,7 @@ async def _write_category_parts(
 async def get_categorization_context(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID
 ) -> CategorizationContext:
-    return (await load_context(db, user_id, transaction_id)).response()
+    return (await load_context(db, user_id, transaction_id)).response(allow_imported=True)
 
 
 async def preview_categorization(
@@ -146,13 +146,13 @@ async def preview_categorization(
 ) -> CategorizationPreview:
     ctx = await load_context(db, user_id, transaction_id, lock=True)
     if (
-        ctx.response().version != data.expected_version
+        ctx.response(allow_imported=True).version != data.expected_version
         or ctx.snapshot() != data.expected_context_snapshot
     ):
         raise CategorizationError(
             "category_snapshot_conflict", "Dane zmieniły się. Zamknij okno i odśwież podział."
         )
-    return build_preview(ctx, data.parts)
+    return build_preview(ctx, data.parts, allow_imported=True)
 
 
 async def apply_categorization(
@@ -201,9 +201,9 @@ async def apply_categorization(
             )
         return CategorizationContext.model_validate(receipt.response_json)
     ctx = await load_context(db, user_id, transaction_id, lock=True)
-    before = ctx.response()
+    before = ctx.response(allow_imported=True)
     try:
-        preview = build_preview(ctx, data.parts)
+        preview = build_preview(ctx, data.parts, allow_imported=True)
     except CategorizationError as error:
         if error.code == "invalid_category":
             raise CategorizationError(
@@ -251,7 +251,7 @@ async def apply_categorization(
             },
         )
         await db.flush()
-    response = ctx.response()
+    response = ctx.response(allow_imported=True)
     db.add(
         FinanceCommandReceipt(
             user_id=user_id,

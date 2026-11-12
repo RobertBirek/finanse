@@ -2,6 +2,40 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Ręczna kategoryzacja importowanych wydatków
+
+- User zgłosił komunikatprotectedhistory podczas zmiany kategorii, zaakceptował
+  narrowmanualimportcorrection bez kwot/kont/dat i zachowaniem loanguard. Plan
+  docs/superpowers/plans/2026-11-12-imported-expense-recategorization.md zatwierdzony
+  z realizacją natywną. BASEa145088, existinglinkedworktree, unrelateddirtydocs zachowane.
+- eligibility/response/build_preview keywordonlyallow_importedFalse; tylko human
+  get/preview/apply ustawiaTrue. Allowlista actual/bank_import obok manual/document,
+  własnośćmapping/evidence, loan dedicateddeny. Default automation/receipt nadal deny.
+- Bankimport evidence odczytane i lockowane/snapshotbound; bez evidence kształt hasha
+  bez zmian. Categorywriter zachowuje accountposting, pieniądze/source/daty/importrefs,
+  ręcznyorigin/audit. Replaybank zachowuje korektę; Actual strictreconciliation może
+  jawnie odmówić source-absentlocalcategoryprovenance zamiast nadpisania użytkownika.
+- Baseline655. BackendRED7capabilityFAIL/8guardPASS+2badloanfixture poprawione.
+  Firstgreen51PASS/3fixtureMissingGreenlet, jawny asyncupdated_atrefresh w testach.
+  BankevidencedriftRED1→snapshotevidencefix. Finalfocused57PASS.
+- Frontend656PASS/E2E8PASS/static/buildPASS, screeny375/1440 obejrzane bez overflow;
+  productionUI bez zmian, istniejący dialog konsumuje allowedcontext.
+- Onefreshreview ses_e2f62d7dbffeXqfHB8oOSSD136:0Critical/1Important/0Minor.
+  Actualmapping bezFK mógł zmienić się równolegle. RED3insert/update/delete→GREEN3:
+  load_context lockmappingrows+populateexisting, _store_mapping parenttransactionlock
+  zapobiega phantominsert. Jednofixpass, bez drugiegoreview. Fullbackendpozmianie
+  2398PASS/0fail/error/skip na8ownednoportPG, dokładnyJUnitunion i425sourcehashmatch;
+  importerhash79afcb47… również zgodny. Frontend294sourcehashmatch.
+- Cleanup20własnychidlecontainersPASS bezforce/prune. Operatorcleanup zatrzymał się
+  bez mutacji przy docker top wymagającymPID; użyto pid,args. Sleep/init po SIGTERM
+  zwraca143 (nie błąd/OOM), PGexit0; exactownership/IDs/noports/sessioncount sprawdzone.
+- Rulings: minimalny parentlock w importerze mimo warunkowego zakresu planu;
+  FX/refund/full-edit nadal osobnafunkcja; review nie zastępuje fullsuite;
+  slashcommands niedostępne, użyto równoważnychkomend w ownedrunners.
+- Odbiór lokalny bez merge/push/deploy. Prywatnyledger
+  .superpowers/sdd/2026-11-12-imported-expense-recategorization/progress.md.
+  Brakmerge/push/deploy lub produkcyjnychmutacji; tylko własny no-porttestPG/runner.
+
 ## 2026-11-12 — Audyt read-only ustawień kategoryzacji
 
 - User poprosił sprawdzić /settings/finances/categorization. Required4hostdocs odczytane.

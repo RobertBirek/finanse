@@ -2,6 +2,17 @@
 
 Backlog zadań ze statusami.
 
+## Ręczna zmiana kategorii importowanych wydatków (2026-11-12)
+
+- [x] Uzgodniony zakres: tylko ręczna kategoria dodatniego wydatku PLN, bez kwot/
+  kont/dat; pożyczki/FX/refundy nadal protected. Brak zgody na deploy.
+- [x] Manualonlycapability +restrykcyjnedefault dla rules/AI/receipts, snapshotbankevidence.
+- [x] Frontend656PASS,8E2EPASS375/1440, lint/types/build i istniejącyUIcontract.
+- [x] Focused57+race3PASS, fullbackend2398PASS, importreplay/races i jedno review;
+  Importantmappingrace naprawiony jednym RED3→GREEN3pass.
+- [x] Dokumentacja i cleanup20własnych idle testresources bezforce/prune.
+- [x] Odbiór do lokalnego commitu; integracja/deploy osobno po zgodzie.
+
 ## Kontrola ustawień kategoryzacji (2026-11-12)
 
 - [x] Odczyt wskazanego konta z wymuszonym READONLY i bez sesji/zmian produkcji.

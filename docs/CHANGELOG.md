@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, verified] — 2026-11-12 — Kategorie importowanych wydatków
+
+### Changed
+- Ręczny podgląd i zatwierdzenie zmiany kategorii importowanych wydatków PLN,
+  także historycznych i na archiwalnym koncie. Kwoty/saldo/daty/importreferencje
+  zachowane, ręczna decyzja audytowana. Płatności pożyczek nadal chronione.
+- Odrębne uprawnienie manualne nie rozszerza reguł/AI/paragonów na historię;
+  dowody importu wiążą podgląd. Bez migracji lub wdrożenia.
+- Backend2398PASS/0fail/error/skip, frontend656/E2E8/static/buildPASS;
+  jedno review: wyścig mapowań naprawiony RED3→GREEN3. Cleanup20własnychkontenerów.
+  Bez merge/push/deploy. Raport
+  `docs/audits/2026-11-12-imported-expense-recategorization-local.md`.
+
 ## [Audit, read-only] — 2026-11-12 — Ustawienia kategoryzacji
 
 ### Checked

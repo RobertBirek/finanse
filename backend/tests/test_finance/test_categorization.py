@@ -275,7 +275,9 @@ async def test_bad_amount_never_writes(db_session, amount):
     "protection",
     ["actual", "mapping", "pending", "income", "transfer", "exchange", "other_source", "fx"],
 )
-async def test_protected_context_never_enables_approval(db_session, protection):
+async def test_human_context_allows_imported_expenses_but_keeps_unsupported_guards(
+    db_session, protection
+):
     owner, txn, _, _, _ = await setup(db_session)
     if protection == "mapping":
         db_session.add(
@@ -295,7 +297,7 @@ async def test_protected_context_never_enables_approval(db_session, protection):
     async with client_for(db_session, owner) as client:
         response = await client.get(path(txn))
         assert response.status_code == 200, response.text
-        assert response.json()["eligibility"]["allowed"] is False
+        assert response.json()["eligibility"]["allowed"] == (protection in {"actual", "mapping"})
 
 
 async def test_target_rename_or_ledger_change_invalidates_preview(db_session):
