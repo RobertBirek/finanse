@@ -2,6 +2,66 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Importery A+B5dc84fe wdrożone i zweryfikowane
+
+- ZgodaDquestion „Tak, pełny etap D”+„dokończ”:main4d2cf21FF/pushverified,
+  runtime5dc84febc9a22e16afa76a9641e45a5f337d76a0 i3acceptedimages,739→6bd→84.
+  BrakzgodyprodDOWN/restore/realimport/history/Q7/Actual/Veloedits; niczego z tego nie wykonano.
+- ReviewDses_e3192decbffeFAziCQDuSwqWm0 0Critical/Important,1Minor odłożone:
+  cleanupsourcehash/proof wpakiecie, pełneźródłoD poza nim. Guards3RED→GREEN3;
+  author zauważył brakDockerHealthcheck i poprawiłoperatorprzedUP RED→GREEN4:
+  actualHTTP/ARQreadiness mandatory, optionalDockerHealthifexists. Obrazy/env bez zmian.
+- Public503/drain0/SIGTERMstopped bezSIGKILL→frozen62/uploads→freshbackup406802268541d10282ae5dcf0467905eb88611ff0afcad21ac18d9f004d399e5
+  bezretencji. OwnPGbootstrap firstUnixsocketready trafiłwrestart; pustawłasnaDB+
+  finalTCPconfirmed, resumeonlytail wtym samymPG. OwnrestoreUP-DOWN-UP/oldORM/ledger
+  i frozenproduction62hash+uploadsmatchPASS przedprodUP, bez powtórzenia backupu.
+- SINGLEprodUP84 zatrzymanym retainedmigratorem fdafa2ef1a6c426985b13c5cc343fef051ecb458def3a11affe853fee57ca9f5;
+  exactID/image/user/env/mount/cmd/exit0 i62legacy/13newempty/pointersNULL/uploads
+  retentionPASS.3newapps behind503 realreadiness/env/user/mount/network/dataIDsPASS.
+- Publicopen health/login200/import+history401/all15distbytesmatch. GETonlybrowser
+  375/1440/protectedredirect/fonts/overflow0/JSerror0/foreign0/mutations0; screenyviewed.
+  Startup3appsERROR0. Observationjob sh_1ce838dd800159zmPb1IUegSH7PASSminimum300s/
+  29checks/restary0/logerrors0/ledger0/Redisready/dataIDsunchanged.
+- finish.py atomic active metadata verified-live:runtime5dc/schema84/GitTip4d,
+  newstandaloneactiveoverride equivalencePASS, app-only7801rollback conditional;
+  noimplicitDOWN/restore. Cleanup5ownclonecontainers+1volume ownership/mount/idlePASS
+  bezforce/prune, plaintextrestore+ownenvdeleted; retainedmigrator/backup/oldimages.
+- D=/tmp/opencode/bank-imports-deploy-5dc84fe-ZsicuH9p; R=/opt/finanse/webapp/releases/
+  bank-imports-5dc84febc9a2-NpudCmae/evidence/deployment-ZsicuH9p.53filemanifest
+  SHAa105c46320fa2ed033154a4e36c2f37e4f4ecdf16aa6f00314dd66082506341d,actualsecret
+  scanPASS/privateenvComposeDBuploads excluded. live-final-proof iarchive-proof zapisane.
+- Raport docs/audits/2026-11-12-bank-imports-production.md. OdbiórP2329/617/11proxy/
+  static/build re-used afterfresh775hash/15dist/exactimagecheck, nie rerun2hours wmaintenance.
+  Końcowe docscommit lokalny, nie rozszerza approvedGitTip4d naorigin/main. Branch/
+  worktree i niezwiązaneaudits zachowane. Następnydzieńread-onlyfollowup i pilot
+  prawdziwegopliku osobno; brak automatycznego importu po deployu.
+
+## 2026-11-12 — D wdrożone za zgodą, końcowa obserwacja w toku
+
+- Jawne question „Tak, pełny etap D”, potem „dokończ”:FF/push4d2cf21, runtime5dc84fe,
+  migrations739→6bd→84/3apps/maintenance/freshbackupBEZretencji+ownclone/cleanup,
+  conditionalapp-only7801rollback. BezprodDOWN/DBrestore/realimport/historyQ7/Actualedits.
+- D=/tmp/opencode/bank-imports-deploy-5dc84fe-ZsicuH9p. Required4hostdocs+deploy/migrate
+  runbook; świeże refs/accepted775source/15dist/exactimages/UID/imports/ComposePASS.
+  /optmainFFe3c→4d iremoteverified.3operatorguardREDmissing→GREEN3; real ownstopped
+  frontend copybeforestart503/noports/cleanupPASS. JednoDoperatorreview0Critical/
+  Important,1Minor deferred:hashcleanupscript+proofarchived, źródłopozostajeD.
+- Public503→readonlyDB/Redisidle→SIGTERMstoppedoldapps bezSIGKILL, freeze62/uploadshash.
+  Freshbackup406802268541d10282ae5dcf0467905eb88611ff0afcad21ac18d9f004d399e5 po stoppedwriters,
+  checksumy/ownrestoreUP-DOWN-UP/oldORM/ledger/frozen62+uploadsPASS. Clone firstready
+  trafiłwbootstrapUnixsocketrestart; nowaownDBemptyTCPreadyconfirmed, resumeonlysame
+  clone restoretail, bezpowtórkiprodukcyjnegobackupu lub osłabiania guardów.
+- Stosnie ma DockerHealthcheck: przedUP poprawiono operatorguardRED→GREEN4, optional
+  Healthifpresent i prawdziwebackendHTTP/arq--check mandatory. Brakzmianyapp/images.
+- PojedynczyUP wykonany zatrzymanymretainedmigratorem finanse-bank-imports-migrate-5dc84fe,
+  exactimage/env/user/mount/cmd/ID/exit0PASS.62legacyrows hashes iuploads bez zmian,
+ 13newempty/pointersNULL/ledger0.3newapps za503 zenv/user/mount/networks zachowane,
+  internalhealthPASS; publicopen200/import+history401/all15distbyteexact.
+- BrowserGETonly375/1440/login/protectedroutes/fonts/overflow/errors0/mutations0/
+  foreign0PASS, screenshotyobejrzane. Startup3appserrors0. Task4nativecomplete, Task5
+  trwa; observationjob sh_1ce838dd800159zmPb1IUegSH7,minimum300s. Nie claimverified-live
+  metadata lubcleanupdopókijobnie zakończyPASS. Kod/stawki/daneimportu bez nowych zmian.
+
 ## 2026-11-12 — P zamknięte dla5dc84fe, bez zgody D
 
 - Powrót finalnego joba sh_1cc7d4bc6001RGI90B9CHgRVmk:2329PASS/23standardproxyexcluded,

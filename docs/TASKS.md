@@ -2,7 +2,7 @@
 
 Backlog zadań ze statusami.
 
-## Wydanie importerów A+B — P odebrane, D wymaga zgody (2026-11-12)
+## Wydanie importerów A+B — wdrożone, verified-live (2026-11-12)
 
 - [x] Po osobnym „tak”: fixNginx z trwałym proxytestem, bez poszerzania zwykłegoAPI.
   RED2FAIL→GREEN6PASS, wyłącznie własne no-port zasoby, cleanupbezforce.
@@ -40,7 +40,18 @@ Backlog zadań ze statusami.
 - [x] Niezależny read-onlyreview potwierdza zamknięcieNO-GO, ingress i cleanup;9puretestsPASS.
 - [x] Important oldimageIDs zamknięte: trwały guard wymaga trustedfreeze/obserwacji
   i zgodnych ID; użycie bez powiązania dajeSTOP. Testy i pełny backendPASS.
-- [ ] Po pozytywnym przygotowaniu: osobna zgoda D na konkretny SHA/FF/push/UP/trzyusługi.
+- [x] Osobna zgoda D „Tak, pełny etap D”, potem „dokończ”:4dGitTip/5dcruntime,
+  FF/pushmain,739→6bd→84,3apps/maintenance/backupbezretencji+ownclone/cleanup.
+- [x] Gitmain iremote4d2cf21; freshfencedbackup40680226+ownrestore/prodhash62 iuploadsPASS;
+  singleprodUP84/retencja62/new13empty/pointerNULL/ledger0, exact3apps za503PASS.
+- [x] Public200/import+history401/distbytes iGET-onlybrowser375/1440PASS; screenyobejrzane,
+  startupERROR0 iretainedmigratoridentity/exit0PASS. Nie wykonywano realnego importu.
+- [x] Minimum300s/29kontroli:health200/restarty0/ERROR0/ledger0/Redisready; active metadata
+  verified-live,53trwałedowody/checksum/sekretscanPASS, cleanup5owncontainers+1ownvolume
+  exactID/label/network/mounts/idle bezforce/prune. Zachowano migrator/backup/rollback.
+- [x] Jedna odłożonaMinor ujawniona w raporcie: pakiet ma hash i wynik cleanup,
+  źródło pozostaje w prywatnymD. Nie rozszerzano zakresu o poprawkę kosmetyczną.
+- [ ] Read-only kontrola health/status/operatorlogs następnego dnia; bez mutacji.
 - [ ] Pilotaż rzeczywistego dokumentu dopiero po odrębnej decyzji; poza deployem.
 
 ## Import harmonogramów — B odebrane lokalnie (2026-11-11)

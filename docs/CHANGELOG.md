@@ -2,6 +2,22 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, 5dc84fe] — 2026-11-12 — Importery wyciągów i harmonogramów A+B
+
+### Changed
+- Po jawnej zgodzie D: FF/pushmain4d2cf21, pojedynczyUP739→6bd→84 i trzy odebrane
+  obrazy5dc84fe. Produkcja `verified-live`, istniejące env/user/mounty/sieci zachowane.
+- Freshfencedbackup bez retencji i własny no-port restore/UP-DOWN-UP/oldORMPASS;
+  62staretabele iuploady zgodne z zamrożonym źródłem,13nowychpustych/pointeryNULL,
+  ledger0naruszeń. Nie wykonywano realnego importu, korekt historii lub konfiguracjiVelo.
+- Publichealth/login200, import/history401, wszystkie15dist byte-match iGET-onlybrowser
+  375/1440PASS.29kontroli w oknie minimum300s:0restartów/ERROR/ledgernaruszeń, Redisready.
+- Atomowe active metadata po proofach,53dowody ze skanemsekretówPASS; cleanup tylko5
+  własnychkontenerów i1wolumenu bezforce/prune. Zachowano migrator irollback7801.
+- Raport `docs/audits/2026-11-12-bank-imports-production.md`;1odłożonaMinor dotyczy
+  źródła cleanup w samodzielnym pakiecie audytowym, nie wyniku cleanup. Read-only
+  kontrola następnego dnia pozostaje osobnym zadaniem. Dokumentacyjne zamknięcie lokalne.
+
 ## [Prepared, P odebrane] — 2026-11-12 — Importery A+B, kandydat5dc84fe
 
 ### Verification

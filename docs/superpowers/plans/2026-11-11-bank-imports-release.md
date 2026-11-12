@@ -1,5 +1,15 @@
 # Bezpieczne wydanie importerów A+B — Implementation Plan
 
+**Stan 2026-11-12: D wdrożone, `verified-live`.** Użytkownik zatwierdził dokładny
+GitTip4d2cf21/runtime5dc84fe, dwie migracje i3usługi; wykonano je po freshfencedbackup
+bezretencji i własnym restore.62tabele/uploadyretained, ledger0,29kontroli minimum300s,
+GET-onlybrowser/auth/distPASS. Active metadata zapisano atomowo; cleanup tylko5własnych
+kontenerów i1wolumenu, bezforce/prune. Raport:
+[`2026-11-12-bank-imports-production.md`](../../audits/2026-11-12-bank-imports-production.md).
+Task4–5 zakończone w zakresie wydania; read-only kontrola następnego dnia pozostaje
+osobnym zadaniem. Nie wykonywano realnego importu/produkcyjnegoDOWN/restore.
+Poniżej zachowano historyczny runbook i wcześniejsze wyniki, nie instrukcję ponownegoUP.
+
 **Stan 2026-11-12: P odebrane dla `5dc84fe`.** Backend2329PASS, frontend617PASS,
 proxy11PASS, exactimages/nonroot/backupbezretencji/owncloneUP-DOWN-UP/retencja62PASS.
 Zarchiwizowano dowody i usunięto wyłącznie własne zasoby. Produkcja nadal7801/schema739.
