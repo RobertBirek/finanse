@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Wydanie deklaracji opłacenia —69ee8b7 (2026-11-12)
+
+- [x] Zgoda użytkownika: scal, wypchnij main i wdróż; brak zgody na mutacje faktur.
+- [x] mainFF/push69ee8b7 i remoteSHA, źródła i runtime dependencies bez driftu.
+- [x] Świeży frontend631/static/build, backend2351+422hash,6proxy i nonrootgatePASS.
+- [x] Public503/drain/stop, backup bezretencji, ownrestore76tabel/uploads/ledger0/newORMPASS.
+- [x] Podmiana3aplikacji, publicHTTPS/auth/15assets/worker/logs/browser,29kontroli minimum300sPASS.
+- [x] Active69ee8b7/schema84 verified-live, cleanup własnego klonu/plaintext i raport; rollback5dc zachowany.
+- [ ] Kontrola read-only kolejnego dnia; bez automatycznego oznaczania rzeczywistej faktury.
+
 ## Deklaracja opłacenia — implementacja lokalna (2026-11-12)
 
 - [x] Użytkownik zatwierdził plan i wykonanie natywne w tej sesji.
@@ -10,7 +20,7 @@ Backlog zadań ze statusami.
 - [x] Focused backend40, pełny backend2351/0fail/error/skip/23proxyexcluded;
   frontend631, E2E28 desktop/mobile, lint/types/build, jedno review bez uwag.
 - [x] Odbiór lokalny, źródła bez driftu, cleanup18własnych kontenerów bezforce/prune.
-- [ ] Merge/push/deploy wyłącznie po osobnej zgodzie.
+- [x] Merge/push/deploy po osobnej zgodzie:69ee8b7 verified-live, bez migracji i mutacji faktur.
 
 ## Rozliczenie bez transakcji — zakres zatwierdzony, plan do odbioru (2026-11-12)
 

@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, 69ee8b7] — 2026-11-12 — Deklaracyjne opłacenie faktury
+
+### Changed
+- Po jawnej zgodzie: fast-forward main1b43f0d→69ee8b7, push i remoteexactSHA.
+- Spójny pakiet backend/worker/frontend, schema84 bez migracji i zmiany zależności.
+  Świeży frontend631, lint/types/build, backend2351/422hash i6packagingproxyPASS.
+- Backup bez retencji, własny no-port restore76tabel/uploads/ledger0 i newORMreadonlyPASS.
+  Podmieniono3aplikacje, zachowano env/user/mounty/sieci i usługi danych.
+- HTTPS200/protected401,15dist byte-match, GET-onlybrowser375/1440 i29kontroli
+  minimum300sPASS:0ERROR/restartów,ledger0,workerready. Active69ee8b7 verified-live.
+- Własny klon i plaintextrestore usunięte bezforce/prune, backup i rollback5dc zachowane.
+  Nie zmieniano faktur użytkownika. Raport `docs/audits/2026-11-12-bill-declaration-production.md`.
+
 ## [Local, verified] — 2026-11-12 — Opłacenie faktury bez transakcji
 
 ### Added

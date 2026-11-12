@@ -2,6 +2,39 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Zatwierdzone scalenie, push i wdrożenie deklaracji faktury
+
+- User: „scal, wypchnij do main i wdróż”. Zakres69ee8b7/3appservices, bez migracji,
+  importu, korekt danych lub oznaczania rzeczywistej faktury. Required4hostdocs i/deploy
+  runbook/active metadata odczytane. main1b43f0d→69ee8b7FF/push/remotematchPASS.
+- Freshfrontend631/ESLint/tsc/buildPASS, Ruff/mypy192PASS; backend2351 odebrany po
+  ponownym422hashmatch.6realpackagingproxyPASS/11nonproxycasesdeselected. Offline
+  nonroot10001:10001 gate dla exact3imageIDs. Bez ponawiania godzin testów bez driftu.
+- Guard wykrył odziedziczone legacy /app i tessdatamount w nowym standaloneoverride;
+  przed produkcją dodano explicit!override jak w aktywnym5dc. Pełne rendery zgodne
+  poza3image/build; brak zmian hardeningu/env/userów/sieci/mountów lub usług danych.
+- Jedno deploysafetyreview ses_e30600084ffeoy9Fb3mRv5sUIp:1Important artifactshape.
+  TestREDKeyError→GREEN po zmianie na services.<service>.image_id; realpreflightPASS,
+  brak drugiego review i brak poprawki produktu. Runnery/obrazy rollback5dc zachowane.
+- D=/tmp/opencode/bill-declaration-deploy-69ee8b7; release=/opt/finanse/webapp/releases/
+  bill-declaration-69ee8b7. Fencedpublic503, drained, stoppedwritersSIGTERMbez137.
+  Freshencryptedbackup247606953fcee001daedb10005936d3a1d1b7e783e3f4d45bc27035d092cc936
+  bezretencji/checksumsPASS. Własny no-port tmpfsrestore76tabelhash/uploadshash/ledger0
+  i nowyORMreadonlyPASS. Bez produkcyjnego restore,UP/DOWN lub zmian danych.
+- FINAL:3appimages69ee8b7, schema84 bez migracji. ExactimageIDs/env/users/mounty/sieci
+  zgodne z zatwierdzonym renderem; retencja76publictables i uploadów przedotwarciem
+  ingressPASS.3usługi danych bez zmian. HTTPS200/protected401/15distbytesmatchPASS.
+- GET-onlybrowser375/1440PASS, screenyobejrzane,0JSerrors/overflow/foreign/mutations.
+ 29kontroli minimum300s:health200,0ERROR/restartów,ledger0,workerARQreadyPASS.
+- Active metadata atomowo69ee8b7 verified-live dopiero po proofach; rollback5dc activeoverride
+  i obrazy zachowane, bezDOWN/restore produkcji. Własny cloneidle/exactID/label/network/
+  ports/exit0/absencecleanupPASS bezforce/prune; plaintextcopy usunięta,encryptedbackup
+  zachowany. Prywatne dowody w release/evidence, operator i rejectedattempts zachowane.
+- Końcowy commit wyłącznie dokumentacji aktualizuje status main, nie wymaga ponownego
+  buildu lub restartów. Unrelateddirtydocs/audity pozostają nietknięte. Następne:
+  readonlyfollowup kolejnego dnia. Fakturę użytkownik może oznaczyć samodzielnie;
+  agent nie wykonał finansowej mutacji lub testowego oznaczenia w produkcji.
+
 ## 2026-11-12 — Implementacja deklaracji opłacenia bez transakcji
 
 - Zgoda „tak” obejmuje zatwierdzony plan i natywne wykonanie; nie obejmuje deployu,
