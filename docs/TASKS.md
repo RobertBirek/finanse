@@ -2,6 +2,19 @@
 
 Backlog zadań ze statusami.
 
+## Wdrożenie kategorii importów i oznaczeń —db3a4b3 (2026-11-12)
+
+- [x] User zgoda na merge/push/deploy; main9e17435 pushed i exactappcode.
+- [x] Freshfrontend667/6E2E/static/build, packagingproxy6,3offlineimages/nonrootgate.
+- [x] Safetyreview rollbackartifact+namedmigrationtimeoutguard:RED2→GREEN5+REALPASS.
+- [x] Maintenance/drain/freshbackupnoretention100dc2a9…, ownedrestore/migration/rollbackcompat.
+- [x] Produkcyjna325,3apps, readsmoke/browser375/1440,29kontroli303.60s/atomicverified-live.
+- [x] Cleanupownclone/plaintext i dokumentacja odbioru, bez mutacji danych finansowych.
+- [ ] PILNE: audyt/aktualizacja zależności frontendowych. GitHubCI43306569775
+  npm audit:7podatności(6moderate/1high), follow-redirectsGHSA-mrwp-f3q8-3g9p,
+  minimatchGHSA-g3hv-75wg-m249 i devtoolchain. Nie stosować auditfix--force bez planu.
+- [ ] Read-only kontrola następnego dnia; backendGitHubCI niepotwierdzony przy odbiorze.
+
 ## Wdrożenie ręcznych zwrotów —94211b2 (2026-11-12)
 
 - [x] Zgoda użytkownika, mainmergea4d4228/push/remotematch; appcodeexact94211b2.

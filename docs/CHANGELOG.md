@@ -2,6 +2,23 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, db3a4b3] — 2026-11-12 — Kategorie importów i oznaczenia transakcji
+
+### Changed
+- Po jawnej zgodzie użytkownika mainmerge9e17435/push/remotematch, appcodeexactdb3a4b3.
+- Świeże667frontend/6E2E/static/build i6packagingproxyPASS,3immutableobrazy oraz
+  mandatorynonroot10001read/importgatePASS. Addytywna325 po verifiedbackup/restoreklonu.
+- Safetyreview2ważneuwagi naprawione RED2→GREEN5+REALtimeoutPASS: rollbackrender
+  i kontrola daemonowego kontenera migracji. Backup100dc2a9… bez retencji, retention76
+  tabel/uploads/ledger0, własny restore+clone325+old942rollbackcompatPASS.
+- Produkcyjna325 i3apps podmienione; HTTPS/auth/assets/OpenAPI/browser375/1440PASS,
+  29kontroli/303.60s bez błędów/restartów, ledger0/workerready. Atomicverified-live,
+  ownclone/plaintext usunięte, backup i rollback zachowane. Brak mutacji finansowych.
+- GitHubCI43306569775 nie jest zielone: frontendnpm audit7podatności(6moderate/1high),
+  backend był w toku przy sprawdzeniu. Dependencylock identyczny z poprzednią produkcją;
+  aktualizacja zależności oddzielnym pilnym zadaniem, nie wykonano auditfix--force.
+- Raport `docs/audits/2026-11-12-transaction-annotations-production.md`.
+
 ## [Production, 94211b2] — 2026-11-12 — Ręczne zwroty wydatków
 
 ### Changed

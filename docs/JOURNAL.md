@@ -2,6 +2,47 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Zatwierdzone main/push/deploy kategorii i oznaczeń db3a4b3
+
+- User „scal, wypchnij do main i wdróż”.4requireddocs,/deploycommand/runbook/active
+  przeczytane. Oldactive94211b2/schema84verified-live. Noweappdb3a4b3+schema325,
+  bez realfinancialsmokewrites,importu/historyrewrite/policytransition.
+- main76fbebf→9e17435 merge/push/remotematch;3docconflicts zachowują oba wpisy.
+  Kod backend/frontend/ops exactdb3. Fresh667vitest109plików/6E2E/static/build,
+ 6packagingproxyPASS/11deselected.2429backend ztej samejsesji, codebezdriftu.
+-3immutableofflineimages zpoprzednichruntime, inheritedComposeexact pozaimage/build;
+  nonroot10001read/importgatePASS. Existingprojectrefspreflight0invalid.
+- One safetyreview ses_e2e6bc9a8ffe5j0Z3SWBHcmkJu:1Criticalmissingrollbackartifact,
+ 1Importantuncontainedmigrationtimeout. FixpassRED2→GREEN5+REALsynthetictimeoutPASS:
+  captureoldrender/configpreflight; namedownedcreate/start/stop/wait/rm+absence,
+  barrierprzycontainmentfailure. Pierwszyrealtimeoutfalse-negative: Dockerlowercase
+  „no such object”, potwierdzonyexactIDremoved i case-normalization→retryPASS.
+  Minorprivateartifactpermissions już0700/0600; no rereview, codeproduktu bez zmian.
+- Operatorderived poprzedni942runbook w /tmp/opencode/annotations-deploy-db3a4b3.
+  Deploymentflock→503/drain/stop→freshbackupnoretention→ownrestore→clone325migration/
+  old942rollbackcompat+newreadonlyfeatures→production325→3apps→readonlysmoke→300s.
+  Przedbackup/migracją nie tworzono fikcyjnych annotations lub transakcji użytkownika.
+  Pipeline sh_1d19b599f0014JgBsBkr5dAbiM EXIT0.
+- FINALbackup100dc2a9fcda32e144ab130230bd162c8fc127e3f3632ae9a40fc65487db6556
+  fresh/noretention/checksumsPASS; ownrestore76tabel/uploads/ledger0, clone325migration
+  bez zmiany starychwierszy i3emptytables, old942readonlyORMcompat+newfeaturesreadPASS.
+  Produkcyjna325 tym samymnonrootimage po backup/fence/cloneproof; ownedmigrator
+  stop/wait/rm/absenceverified, envfile usunięty. Retention76oldtables przed ingressPASS.
+-3apps exactdb3/imageIDs, env/users/mounts/networks/dataIDs zachowane. HTTPS200/auth401,
+  distbyte-match, backendOpenAPIannotationsPUT GET-only i browser375/1440PASS;
+  screeny obejrzane.29obserwacji/303.60s,0ERROR/restartów/ledger0 i workerready.
+  Active atomowodb3/schema325verified-live. Ownidleclone/plaintextremoved bezforce/prune,
+  backup i rollback942 zachowane; rollbackretains325, noDOWN/noDBrestore.
+- Freshvalidate_final.py PASS po zakończeniu: liveexactimages/schema/health/auth/dataIDs/
+  ledger/cloneabsence/plaintextabsence. Finalruntimeproof w release/evidence.
+- CIoddzielnie: main9e run43306569775 frontendfailed na npm audit --audit-level=low.
+  GitHubjoblog:7vulns6moderate/1high, follow-redirects1.16.0–1.16.1 credentialredirect
+  GHSA-mrwp-f3q8-3g9p i minimatch7–11 amplificationGHSA-g3hv-75wg-m249/devtoolchain.
+  BackendCI przyodczycie w toku. GitHubCI NIEclaimPASS; stare76fbebf/a4d4228 teżfailed.
+  packagejson/lock/backendrequirements exactjak94211b2. Lokalnenpmaudit odczyt timeout,
+  więc źródłem jest konkretny GitHubjoblog, nie zgadywane lokalnewyniki.
+  Nie wykonano niezatwierdzonego dependencyupgrade/auditfix--force; pilnyTASKSbacklog.
+
 ## 2026-11-12 — Zatwierdzone main/push/deploy ręcznych zwrotów94211b2
 
 - User „scal, wypchnij do main i wdróż”. Required4hostdocs,/deploy/runbook/active
