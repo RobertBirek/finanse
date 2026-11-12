@@ -2,6 +2,14 @@
 
 Backlog zadań ze statusami.
 
+## Kontrola ustawień kategoryzacji (2026-11-12)
+
+- [x] Odczyt wskazanego konta z wymuszonym READONLY i bez sesji/zmian produkcji.
+- [x] Publiczne health/auth/15assets, workerready i logi bez5xx.
+- [x] Frontend18PASS +4workflowE2E +2replay375/1440, bez błędów w sprawdzonym zakresie.
+- [x] Stan: reguły włączone ale0reguł; AI efektywnie włączone,5wolnych wywołań.
+- [-] Realny zapis lub wywołanie dostawcy AI poza zakresem kontroli read-only.
+
 ## Ręczny zwrot wydatku (2026-11-12)
 
 - [x] Zakres zatwierdzony: konto/kategoria/kwota, bez linku do zakupu; zmniejsza

@@ -2,6 +2,27 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Audyt read-only ustawień kategoryzacji
+
+- User poprosił sprawdzić /settings/finances/categorization. Required4hostdocs odczytane.
+  Wiele aktywnych kont: nie zgadywano właściciela; użytkownik wskazał konto w czacie.
+  Email i dane konta nie trafiają do Git. Produkcja94211b2; kod aplikacji bez zmian.
+- Oddzielny proces w backendzie, REPEATABLEREAD/READONLY, te same handlery odczytu
+  settings/rules/AIsettings/usage +categories. Bez lifespan/logowania/providerów;
+  rollback i counts unchanged. Nie używano ani nie tworzono sesji użytkownika.
+- Stan: marker aktywny/expense/hierarchyvalid, rulesenabledtrue ale0reguł; AIserver/
+  config/fingerprint/consent/effective=true, blocked_reasonnull,5remainingcallsUTC,
+ 0event/jobs. WorkerARQready. Logi30min nie mają5xx kategoryzacji; zapisów testowych brak.
+- Publiczne SPA/health200,5API401anon,15distbyte-match, GET-onlybrowser375/1440PASS.
+  Freshvitest18PASS/5files i workflowreguł4E2EPASS z faktycznego deployed-dist.
+  Replayread-only bieżących ustawień2PASS375/1440: marker/AI/rules/status/editor/
+  confirmguards bez mutacji. Początkowe2błędy harnessESM/importpaths naprawiono
+  wyłącznie w prywatnym katalogu, nie produkcie.
+- Raport docs/audits/2026-11-12-categorization-settings-check.md; prywatne snapshoty/
+  screeny pozaGit /tmp/opencode/categorization-audit-20261112. Nie testowano realnego
+  providerrequest lub produkcyjnegozapisu; brak podstaw do twierdzenia pełnegoE2EAI.
+  Włączone reguły bez zapisanych reguł niczego nie przypiszą; historia i zwroty są wyłączone.
+
 ## 2026-11-12 — Ręczne zwroty do kategorii wydatkowych
 
 - User potwierdził małą zmianę: Zwrotwydatku/konto/kategoria/kwota, bez linku zakupu,

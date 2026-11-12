@@ -2,6 +2,15 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Audit, read-only] — 2026-11-12 — Ustawienia kategoryzacji
+
+### Checked
+- Strona/API/bieżące ustawienia wskazanego konta: reguły i AI włączone, marker poprawny,
+  reguł0, zadań0, limitAI pozostałe5. Publiczne health/auth/assets i workerreadyPASS.
+- Frontend18PASS, workflowreguł4E2EPASS, replay bieżących ustawień375/1440 2PASS.
+  Bez wykrytych błędów w zakresie audytu. Bez zapisu, wywołania AI lub wdrożenia.
+- Raport: `docs/audits/2026-11-12-categorization-settings-check.md`.
+
 ## [Local, verified] — 2026-11-12 — Ręczny zwrot wydatku
 
 ### Added
