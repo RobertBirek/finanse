@@ -714,6 +714,32 @@ export function useCreateTransaction() {
   });
 }
 
+export interface ExpenseRefundInput {
+  account_id: string;
+  category_id: string;
+  amount_minor: number;
+  transaction_date: string;
+  description: string;
+}
+
+export function useCreateExpenseRefund() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    onMutate: () => ({ session: useAuthStore.getState().sessionVersion }),
+    mutationFn: async (input: ExpenseRefundInput) => {
+      const { data } = await api.post<Transaction>(
+        "/finance/transactions/expense-refund",
+        input,
+      );
+      return data;
+    },
+    onSuccess: (_data, _variables, context) => {
+      if (context?.session !== useAuthStore.getState().sessionVersion) return;
+      invalidateFinanceLedger(queryClient);
+    },
+  });
+}
+
 export function useCreateExchange() {
   const queryClient = useQueryClient();
   return useMutation({

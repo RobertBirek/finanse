@@ -206,6 +206,25 @@ class TransactionCreate(BaseModel):
         return self
 
 
+class ExpenseRefundCreate(BaseModel):
+    """Small manual command: the server owns posting shape, signs and currency."""
+
+    model_config = {"extra": "forbid"}
+    account_id: uuid.UUID
+    category_id: uuid.UUID
+    amount_minor: int = Field(strict=True, gt=0, le=9007199254740991)
+    transaction_date: dt.date
+    description: str = Field(min_length=1)
+
+    @field_validator("description")
+    @classmethod
+    def nonblank_description(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Description must not be blank")
+        return value
+
+
 class ExchangeCreate(BaseModel):
     from_account_id: uuid.UUID
     to_account_id: uuid.UUID

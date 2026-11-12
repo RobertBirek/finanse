@@ -2,6 +2,39 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Ręczne zwroty do kategorii wydatkowych
+
+- User potwierdził małą zmianę: Zwrotwydatku/konto/kategoria/kwota, bez linku zakupu,
+  saldo+, expenses/category/budget−, nieincome; lokalniebezdeploy. Plan iapproveddescription
+  `docs/superpowers/plans/2026-11-12-manual-expense-refund.md`. Existinglinkedworktree
+  od d09ee8a, unrelateddirtydocs/audity zachowane; main ma nowsze deploydocs0a3cb5b.
+- POSTtransactions/expense-refund strictsmallcommand, serverpostings accountcredit/
+  categorydebit, typeexpense/sourcemanual. Privateallow_manual_refund nie jest polem
+  publicznego TransactionCreate; zwykła trasa nadal zabrania odwróconegoexpense.
+  LockedownerPLNaccount, aktywność iexpensecategory, budgetflag serwerowy, auditcreate.
+  Brak enrolmentu reguł/AI. Bez nowegoDBtype/migracji lub linkowania zakupu.
+- UIexpense_refund/useCreateExpenseRefund/sessionguard/invalidateFinanceLedger;
+  takjakmanualform tylkoPLN, dodatniakwota+dateguard, expensecategory/fullpath.
+- Baseline648; backendRED22missingroute405/1PASS→GREEN23. UIRED3/51→54PASS;
+  missingdateRED1→guard. Auth/noeventregressions dodane przed frozenfullbackend.
+- Ruling: Ruff w verifiedrunner0.17.4 zgodny z pyproject>=0.17.1 zamiast hostvenv0.16.2,
+  który zgłasza3existingDTZ007 w parserach; nie zmieniano tych parserów. Staticmypy193PASS.
+- Ruling: pełnybackend w8noportPG/runner, pliki testów rozłączne i pokrywają całą
+  kolekcję; JUnitcounts/sourcehash, zamiast timestamp-sensitiveparamnodeIDs. Koszt:
+  mniejserialordercoverage, ale wszystkie testy raz. Pierwszysetupracepg_isready
+  przedtestami usunięty ownpair + boundedreadinesswait; żadnej produkcyjnejDB.
+- FINALbackend2375PASS/0fail/error/skip (pierwsze2274PASS+101fixtureERROR, wszystkie101
+  powtórzonePASS z normalną kolekcją katalogu i pluginem selekcji). Gzipmtime tylko
+  w jednym OCRparamname kanonizowane do kontroli tożsamości; niczego nie pominięto.
+  Brak zmiany aplikacji po fullsuitefreeze; końcowe uporządkowanie importu w nowym
+  pliku testowym: identyczny zestaw importów i AST ciał testów, focused24 ponowione.
+- Frontend655PASS/E2E10PASS/ESLint/tsc/buildPASS, screeny375/1440 obejrzane bez overflow.
+  Jedno review ses_e2fef4c91ffe924lt1L9MIPEZ9:0Critical/Important/Minor, Declinednone.
+  Finalfocused24PASS, Ruff/mypyPASS; cleanup18ownkontenerów+2initialstartuppairPASS,
+  bezforce/prune. Raport `docs/audits/2026-11-12-manual-expense-refund-local.md`.
+  Prywatnyledger `.superpowers/sdd/2026-11-12-manual-expense-refund/progress.md`.
+  Bezmerge/push/deploy; kolejny release musi objąć backend+frontend razem.
+
 ## 2026-11-12 — Pełne ścieżki i sortowanie wszystkich wyborów kategorii
 
 - User zatwierdził plan: wszystkie finansowe selecty, pełna wielopoziomowa ścieżka

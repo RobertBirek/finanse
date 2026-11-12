@@ -17,6 +17,7 @@ import {
   useCreateAccount,
   useCreateCategory,
   useCreateExchange,
+  useCreateExpenseRefund,
   useDeleteAccount,
   useDeleteCategory,
   useDeleteTransaction,
@@ -331,6 +332,46 @@ describe("invalidateFinanceLedger", () => {
 });
 
 describe("transaction mutation hooks", () => {
+  it("posts only the small refund command and refreshes all ledger projections", async () => {
+    const post = vi
+      .spyOn(api, "post")
+      .mockResolvedValue({ data: { id: "refund" } } as AxiosResponse);
+    try {
+      const client = new QueryClient();
+      const keys = [
+        "accounts",
+        "transactions",
+        "summary",
+        "category-summary",
+        "budget-status",
+        "cashflow",
+        "credit-card",
+        "credit-cards",
+      ];
+      keys.forEach((key) => client.setQueryData(["finance", key], {}));
+      const { result } = renderHook(() => useCreateExpenseRefund(), {
+        wrapper: queryClientWrapper(client),
+      });
+      const input = {
+        account_id: "a1",
+        category_id: "c1",
+        amount_minor: 15000,
+        transaction_date: "2026-11-12",
+        description: "Zwrot",
+      };
+      await result.current.mutateAsync(input);
+      expect(post).toHaveBeenCalledWith(
+        "/finance/transactions/expense-refund",
+        input,
+      );
+      for (const key of keys)
+        expect(client.getQueryState(["finance", key])?.isInvalidated).toBe(
+          true,
+        );
+    } finally {
+      post.mockRestore();
+    }
+  });
   it("exports the update and delete hooks as functions", () => {
     expect(useUpdateTransaction).toBeTypeOf("function");
     expect(useDeleteTransaction).toBeTypeOf("function");
@@ -378,11 +419,9 @@ describe("transaction mutation hooks", () => {
 
 describe("account mutation hooks", () => {
   it("invalidates the multi-card overview after account creation", async () => {
-    const post = vi
-      .spyOn(api, "post")
-      .mockResolvedValue({
-        data: { id: "new-card" },
-      } as unknown as AxiosResponse);
+    const post = vi.spyOn(api, "post").mockResolvedValue({
+      data: { id: "new-card" },
+    } as unknown as AxiosResponse);
     const queryClient = new QueryClient();
     queryClient.setQueryData(["finance", "credit-cards"], []);
     const { result } = renderHook(() => useCreateAccount(), {

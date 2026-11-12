@@ -6,6 +6,7 @@ import {
   useAccounts,
   useCategories,
   useCreateExchange,
+  useCreateExpenseRefund,
   useCreateTransaction,
 } from "../../api/finance";
 import { localTodayIso } from "../../lib/date";
@@ -19,7 +20,8 @@ function apiErrorDetail(error: unknown): string | null {
   );
 }
 
-type TransactionType = "income" | "expense" | "transfer" | "exchange";
+type TransactionType =
+  "income" | "expense" | "expense_refund" | "transfer" | "exchange";
 
 type TransactionFormProps = {
   onSuccess?: () => void;
@@ -36,6 +38,7 @@ export function TransactionForm({
   const categoriesQuery = useCategories();
   const create = useCreateTransaction();
   const exchange = useCreateExchange();
+  const refund = useCreateExpenseRefund();
 
   const [type, setType] = useState<TransactionType>(initialType);
   const [accountId, setAccountId] = useState("");
@@ -59,11 +62,15 @@ export function TransactionForm({
     (account) => account.is_active !== false,
   );
   const filteredCategories = categories.filter(
-    (category) => category.is_active !== false && category.type === type,
+    (category) =>
+      category.is_active !== false &&
+      category.type === (type === "expense_refund" ? "expense" : type),
   );
 
   const errorMessage =
-    apiErrorDetail(create.error) ?? apiErrorDetail(exchange.error);
+    apiErrorDetail(create.error) ??
+    apiErrorDetail(exchange.error) ??
+    apiErrorDetail(refund.error);
 
   const sourceAccount = accounts.find((account) => account.id === accountId);
   const amountCurrency =
@@ -171,6 +178,29 @@ export function TransactionForm({
 
     setValidationError(null);
 
+    if (type === "expense_refund") {
+      if (!date) {
+        setValidationError("Podaj datę zwrotu.");
+        return;
+      }
+      refund.mutate(
+        {
+          account_id: accountId,
+          category_id: categoryId,
+          amount_minor: amountGrosze,
+          transaction_date: date,
+          description: description.trim(),
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+            onSuccess?.();
+          },
+        },
+      );
+      return;
+    }
+
     const postings =
       type === "transfer"
         ? buildTransactionPostings({
@@ -257,6 +287,7 @@ export function TransactionForm({
             }
           >
             <option value="expense">Wydatek</option>
+            <option value="expense_refund">Zwrot wydatku</option>
             <option value="income">Przychód</option>
             <option value="transfer">Transfer</option>
             <option value="exchange">Przewalutowanie</option>
@@ -438,7 +469,7 @@ export function TransactionForm({
               hierarchyCategories={categories}
               value={categoryId}
               onChange={setCategoryId}
-              type={type}
+              type={type === "expense_refund" ? "expense" : type}
             />
           </>
         )}
@@ -477,6 +508,12 @@ export function TransactionForm({
           {validationError}
         </p>
       ) : null}
+      {type === "expense_refund" ? (
+        <p className="mt-3 text-sm text-gray-400">
+          Zwrot zwiększa saldo konta i pomniejsza wydatki kategorii. Nie jest
+          przychodem.
+        </p>
+      ) : null}
       {errorMessage ? (
         <p role="alert" className="mt-4 text-sm text-red-400">
           {errorMessage}
@@ -486,7 +523,7 @@ export function TransactionForm({
         <button
           type="submit"
           className="btn-primary"
-          disabled={create.isPending || exchange.isPending}
+          disabled={create.isPending || exchange.isPending || refund.isPending}
         >
           Zapisz transakcję
         </button>

@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Ręczny zwrot wydatku (2026-11-12)
+
+- [x] Zakres zatwierdzony: konto/kategoria/kwota, bez linku do zakupu; zmniejsza
+  wydatek, nie przychód. Lokalnie, bez wdrożenia.
+- [x] Strictcommand, trustedmanualreversal, saldo/raport/budget/owner/type/PLN guardy.
+- [x] Typ formularza, hook, refresh projekcji i walidacja dodatniej kwoty oraz daty.
+- [x] Backend2375PASS, frontend655PASS, E2E10PASS/static/build; review bez uwag.
+- [x] Implementacja i dokumentacja lokalna; przyszły deploy wyłącznie po osobnej zgodzie,
+  backend+frontend razem, bo jest nowy endpoint.
+
 ## Jednolite ścieżki kategorii w selectach (2026-11-12)
 
 - [x] Zatwierdzony zakres: pełna ścieżka ` - `, sortowanie rosnące po polsku,

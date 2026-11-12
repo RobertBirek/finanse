@@ -16,6 +16,7 @@ from app.finance.credit_card_router import router as credit_card_router
 from app.finance.credit_cards import CardConflict
 from app.finance.import_router import router as import_router
 from app.finance.loan_router import router as loan_router
+from app.finance.manual_refunds import create_manual_expense_refund
 from app.finance.models import FinancialTransaction, Posting
 from app.finance.proposals_router import router as proposals_router
 from app.finance.receipt_read_router import router as receipt_read_router
@@ -36,6 +37,7 @@ from app.finance.schemas import (
     CategorySummaryResponse,
     CategoryUpdate,
     ExchangeCreate,
+    ExpenseRefundCreate,
     FinanceSettingsResponse,
     FinanceSettingsUpdate,
     FinancialSummary,
@@ -342,6 +344,22 @@ async def create_exchange_endpoint(
         return await create_exchange_transaction(db, current_user.id, data)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.post(
+    "/transactions/expense-refund",
+    response_model=TransactionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_expense_refund_endpoint(
+    data: ExpenseRefundCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> FinancialTransaction:
+    try:
+        return await create_manual_expense_refund(db, current_user.id, data)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.get("/transactions/{transaction_id}", response_model=TransactionResponse)

@@ -9,6 +9,7 @@ const hooks = vi.hoisted(() => ({
   useCategories: vi.fn(),
   useCreateTransaction: vi.fn(),
   useCreateExchange: vi.fn(),
+  useCreateExpenseRefund: vi.fn(),
 }));
 
 vi.mock("../../api/finance", async (importOriginal) => {
@@ -120,11 +121,18 @@ describe("TransactionForm", () => {
   });
   let mutate: ReturnType<typeof vi.fn>;
   let exchangeMutate: ReturnType<typeof vi.fn>;
+  let refundMutate: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mutate = vi.fn();
     exchangeMutate = vi.fn();
+    refundMutate = vi.fn();
+    hooks.useCreateExpenseRefund.mockReturnValue({
+      mutate: refundMutate,
+      isPending: false,
+      error: null,
+    });
     hooks.useAccounts.mockReturnValue({
       data: accounts,
       isLoading: false,
@@ -177,6 +185,108 @@ describe("TransactionForm", () => {
     expect(screen.queryByLabelText("Kategoria")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Z konta")).toBeInTheDocument();
     expect(screen.getByLabelText("Na konto")).toBeInTheDocument();
+  });
+
+  it("records a positive refund in the expense category without sending postings or pretending it is income", () => {
+    render(<TransactionForm />);
+    expect(
+      screen.getByRole("option", { name: "Zwrot wydatku" }),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Typ"), {
+      target: { value: "expense_refund" },
+    });
+    const category = screen.getByLabelText("Kategoria");
+    expect(
+      within(category).getByRole("option", { name: "Czynsz" }),
+    ).toBeInTheDocument();
+    expect(
+      within(category).queryByRole("option", { name: "Wynagrodzenie" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Data zakupu")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Konto"), {
+      target: { value: "a1" },
+    });
+    fireEvent.change(category, { target: { value: "c1" } });
+    fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
+      target: { value: "150,25" },
+    });
+    fireEvent.change(screen.getByLabelText("Opis"), {
+      target: { value: " Zwrot części zakupów " },
+    });
+    fireEvent.change(screen.getByLabelText("Data operacji"), {
+      target: { value: "2026-11-12" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz transakcję" }));
+    expect(refundMutate.mock.calls[0][0]).toEqual({
+      account_id: "a1",
+      category_id: "c1",
+      amount_minor: 15025,
+      transaction_date: "2026-11-12",
+      description: "Zwrot części zakupów",
+    });
+    expect(mutate).not.toHaveBeenCalled();
+    expect(exchangeMutate).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Typ"), {
+      target: { value: "income" },
+    });
+    expect(screen.getByLabelText("Kategoria")).toHaveValue("");
+  });
+
+  it.each(["0", "-1", "1.234"])(
+    "rejects invalid refund amount %s before sending it",
+    (amount) => {
+      render(<TransactionForm />);
+      fireEvent.change(screen.getByLabelText("Typ"), {
+        target: { value: "expense_refund" },
+      });
+      fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
+        target: { value: amount },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Zapisz transakcję" }),
+      );
+      expect(refundMutate).not.toHaveBeenCalled();
+      expect(screen.getByText("Podaj kwotę większą od 0.")).toBeInTheDocument();
+    },
+  );
+
+  it("shows refund errors and disables submission while refund is being recorded", () => {
+    hooks.useCreateExpenseRefund.mockReturnValue({
+      mutate: refundMutate,
+      isPending: true,
+      error: { response: { data: { detail: "Kategoria jest nieaktywna" } } },
+    });
+    render(<TransactionForm />);
+    fireEvent.change(screen.getByLabelText("Typ"), {
+      target: { value: "expense_refund" },
+    });
+    expect(screen.getByText("Kategoria jest nieaktywna")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Zapis/ })).toBeDisabled();
+  });
+
+  it("requires the refund date before sending the command", () => {
+    render(<TransactionForm />);
+    fireEvent.change(screen.getByLabelText("Typ"), {
+      target: { value: "expense_refund" },
+    });
+    fireEvent.change(screen.getByLabelText("Konto"), {
+      target: { value: "a1" },
+    });
+    fireEvent.change(screen.getByLabelText("Kategoria"), {
+      target: { value: "c1" },
+    });
+    fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
+      target: { value: "10" },
+    });
+    fireEvent.change(screen.getByLabelText("Opis"), {
+      target: { value: "Zwrot" },
+    });
+    fireEvent.change(screen.getByLabelText("Data operacji"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz transakcję" }));
+    expect(refundMutate).not.toHaveBeenCalled();
+    expect(screen.getByText("Podaj datę zwrotu.")).toBeInTheDocument();
   });
 
   it("shows only active PLN accounts in the account selector", () => {
