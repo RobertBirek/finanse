@@ -59,10 +59,15 @@ async def _create_transaction(
     allow_inactive_accounts: bool = False,
     allow_card_refund: bool = False,
     allow_bank_refund: bool = False,
+    allow_manual_refund: bool = False,
     import_dates: tuple[date | None, date] | None = None,
 ) -> FinancialTransaction:
     # Only trusted import code explicitly opts into preserving source-category
     # reversals. Client-controlled `source` never disables validation.
+    if allow_manual_refund and (
+        data.source != "manual" or data.type != "expense" or data.is_pending
+    ):
+        raise ValueError("Manual refunds require the trusted posted expense correction path")
     if allow_category_reversal and data.source != "actual":
         raise ValueError("Category reversals require the explicit Actual import path")
     if allow_card_refund and (data.source != "credit_card" or data.type != "expense"):
@@ -87,6 +92,7 @@ async def _create_transaction(
         allow_inactive_accounts=allow_inactive_accounts,
         allow_card_refund=allow_card_refund,
         allow_bank_refund=allow_bank_refund,
+        allow_manual_refund=allow_manual_refund,
     )
     await validate_project_reference(db, user_id, data.project_id)
 
@@ -137,6 +143,7 @@ async def _create_transaction(
 
     if (
         created.source == "manual"
+        and not allow_manual_refund
         and created.type == "expense"
         and not created.is_pending
         and len(created.postings) == 2

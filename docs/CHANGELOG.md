@@ -13,6 +13,18 @@ Wszystkie istotne zmiany w projekcie.
   Atomowe metadane verified-live; własny klon/plaintext usunięte, backup i rollback zachowane.
   Raport `docs/audits/2026-11-12-category-select-paths-production.md`.
 
+## [Local, verified] — 2026-11-12 — Ręczny zwrot wydatku
+
+### Added
+- Opcja „Zwrot wydatku” w transakcjach: konto PLN, kategoria wydatkowa, dodatnia
+  kwota, data i opis, bez wskazywania zakupu. Zwiększa saldo i zmniejsza wydatek
+  kategorii oraz wykorzystanie budżetu, nie tworzy zwykłego przychodu.
+- Mała serwerowa komenda z owner/active/type/currency/amount guardami i audytem,
+  dwoma odwróconymi postings i bez inicjowania automatycznej kategoryzacji/AI.
+- Backend2375PASS (po jawnej powtórce101fixture-error), frontend655PASS/E2E10PASS,
+  lint/types/buildPASS i jedno review bez uwag. Bez migracji lub wdrożenia; raport
+  `docs/audits/2026-11-12-manual-expense-refund-local.md`.
+
 ## [Local, verified] — 2026-11-12 — Jednolite wybory kategorii
 
 ### Changed
