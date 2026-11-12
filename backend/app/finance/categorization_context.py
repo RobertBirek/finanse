@@ -3,7 +3,7 @@
 import hashlib
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any, cast
@@ -21,6 +21,7 @@ from app.finance.categorization_schemas import (
     CategorizationPreview,
 )
 from app.finance.document_guards import lock_document_mutations
+from app.finance.imports.models import ImportEvidence
 from app.finance.ledger_validation import _validate_posting_sum
 from app.finance.models import (
     Account,
@@ -87,6 +88,7 @@ class LedgerContext:
     dates: TransactionDateMetadata | None
     origin: TransactionCategorizationOrigin | None = None
     origin_grant: dict[str, Any] | None = None
+    import_evidence: list[ImportEvidence] = field(default_factory=list)
 
     def snapshot(self) -> str:
         return self._snapshot("expense-categorization-v3")
@@ -124,15 +126,31 @@ class LedgerContext:
                 "mappings": [columns(x) for x in self.mappings],
                 "loans": [columns(x) for x in self.loans],
                 "allocations": [columns(x) for x in self.allocations],
+                **(
+                    {"bank_import_evidence": [columns(x) for x in self.import_evidence]}
+                    if self.import_evidence
+                    else {}
+                ),
             }
         )
 
-    def eligibility(self) -> CategorizationEligibility:
+    def eligibility(self, *, allow_imported: bool = False) -> CategorizationEligibility:
         def denied(code: str, message: str) -> CategorizationEligibility:
             return CategorizationEligibility(allowed=False, reason_code=code, message=message)
 
         t = self.txn
-        if t.source not in {"manual", "document_payment"} or self.mappings or self.loans:
+        if self.loans:
+            return denied("protected_loan", "Płatność pożyczki jest chroniona.")
+        if any(m.user_id != t.user_id for m in self.mappings):
+            return denied("protected", "Powiązanie importu nie należy do właściciela transakcji.")
+        if any(e.user_id != t.user_id for e in self.import_evidence):
+            return denied("protected", "Dowód importu nie należy do właściciela transakcji.")
+        allowed_sources = {"manual", "document_payment"}
+        if allow_imported:
+            allowed_sources |= {"actual", "bank_import"}
+        if t.source not in allowed_sources or (
+            (self.mappings or self.import_evidence) and not allow_imported
+        ):
             return denied("protected", "Historia importu lub płatność pożyczki jest chroniona.")
         if t.type != "expense" or t.is_pending:
             return denied("unsupported", "Podział obsługuje zaksięgowane wydatki PLN.")
@@ -185,8 +203,8 @@ class LedgerContext:
             return denied("ledger_shape", "Transakcja nie jest zbilansowana.")
         return CategorizationEligibility(allowed=True)
 
-    def response(self) -> CategorizationContext:
-        eligibility = self.eligibility()
+    def response(self, *, allow_imported: bool = False) -> CategorizationContext:
+        eligibility = self.eligibility(allow_imported=allow_imported)
         account = next((p for p in self.txn.postings if p.account_id), None)
         safe = account is not None and 0 < account.source_amount <= MAX_SAFE_MINOR
         parts = (
@@ -311,18 +329,18 @@ async def load_context(
         if account_id
         else None
     )
-    mappings = list(
-        (
-            await db.scalars(
-                select(ActualImportMapping)
-                .where(
-                    ActualImportMapping.entity_type == "transaction",
-                    ActualImportMapping.entity_id == txn_id,
-                )
-                .order_by(ActualImportMapping.id)
-            )
-        ).all()
+    mapping_stmt = (
+        select(ActualImportMapping)
+        .where(
+            ActualImportMapping.entity_type == "transaction",
+            ActualImportMapping.entity_id == txn_id,
+        )
+        .order_by(ActualImportMapping.id)
+        .execution_options(populate_existing=True)
     )
+    if lock:
+        mapping_stmt = mapping_stmt.with_for_update()
+    mappings = list((await db.scalars(mapping_stmt)).all())
     loans = list(
         (
             await db.scalars(
@@ -348,13 +366,34 @@ async def load_context(
         .where(TransactionDateMetadata.transaction_id == txn_id)
         .execution_options(populate_existing=True)
     )
+    evidence_stmt = (
+        select(ImportEvidence)
+        .where(ImportEvidence.transaction_id == txn_id)
+        .order_by(ImportEvidence.id)
+        .execution_options(populate_existing=True)
+    )
+    if lock:
+        evidence_stmt = evidence_stmt.with_for_update()
+    evidence = list((await db.scalars(evidence_stmt)).all())
     return LedgerContext(
-        txn, state, categories, account, mappings, loans, allocations, dates, origin, origin_grant
+        txn,
+        state,
+        categories,
+        account,
+        mappings,
+        loans,
+        allocations,
+        dates,
+        origin,
+        origin_grant,
+        evidence,
     )
 
 
-def build_preview(ctx: LedgerContext, parts: list[CategorizationPart]) -> CategorizationPreview:
-    eligibility = ctx.eligibility()
+def build_preview(
+    ctx: LedgerContext, parts: list[CategorizationPart], *, allow_imported: bool = False
+) -> CategorizationPreview:
+    eligibility = ctx.eligibility(allow_imported=allow_imported)
     if not eligibility.allowed:
         raise CategorizationError(
             eligibility.reason_code or "protected", eligibility.message or "Operacja chroniona"
@@ -388,7 +427,7 @@ def build_preview(ctx: LedgerContext, parts: list[CategorizationPart]) -> Catego
                 )
             category = ctx.categories.get(category.parent_id) if category.parent_id else None
         paths[str(part.category_id)] = " / ".join(reversed(names))
-    response = ctx.response()
+    response = ctx.response(allow_imported=allow_imported)
     token = digest(
         {
             "context": response.context_snapshot,

@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.finance.annotation_models import FinanceTag, TransactionAnnotation, TransactionTag
+from app.finance.annotation_reads import attach_annotations
 from app.finance.credit_card_models import CreditCard
 from app.finance.models import (
     Account,
@@ -19,6 +21,7 @@ from app.finance.models import (
 )
 from app.finance.rule_origin_reads import attach_assignment_origins
 from app.finance.schemas import TransactionResponse, TransactionSearch, TransactionSearchResponse
+from app.work.models import Project
 
 
 def _account_rows(user_id: uuid.UUID):
@@ -148,7 +151,9 @@ async def get_transactions(
 
     stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
-    return await attach_assignment_origins(db, user_id, list(result.scalars().all()))
+    return await attach_annotations(
+        db, user_id, await attach_assignment_origins(db, user_id, list(result.scalars().all()))
+    )
 
 
 async def search_transactions(
@@ -212,6 +217,37 @@ async def search_transactions(
         conditions.append(
             or_(
                 txn.description.icontains(filters.q, autoescape=True),
+                select(TransactionAnnotation.id)
+                .where(
+                    TransactionAnnotation.transaction_id == txn.id,
+                    TransactionAnnotation.user_id == user_id,
+                    or_(
+                        TransactionAnnotation.display_description.icontains(
+                            filters.q, autoescape=True
+                        ),
+                        TransactionAnnotation.note.icontains(filters.q, autoescape=True),
+                    ),
+                )
+                .exists(),
+                select(TransactionTag.id)
+                .join(
+                    FinanceTag,
+                    (FinanceTag.id == TransactionTag.tag_id)
+                    & (FinanceTag.user_id == TransactionTag.user_id),
+                )
+                .where(
+                    TransactionTag.transaction_id == txn.id,
+                    TransactionTag.user_id == user_id,
+                    FinanceTag.name.icontains(filters.q, autoescape=True),
+                )
+                .exists(),
+                select(Project.id)
+                .where(
+                    Project.id == txn.project_id,
+                    Project.user_id == user_id,
+                    Project.name.icontains(filters.q, autoescape=True),
+                )
+                .exists(),
                 select(Posting.id)
                 .join(Account, Posting.account_id == Account.id)
                 .where(
@@ -242,7 +278,11 @@ async def search_transactions(
     return TransactionSearchResponse(
         items=[
             TransactionResponse.model_validate(txn)
-            for txn in await attach_assignment_origins(db, user_id, list(result.scalars().all()))
+            for txn in await attach_annotations(
+                db,
+                user_id,
+                await attach_assignment_origins(db, user_id, list(result.scalars().all())),
+            )
         ],
         total=total or 0,
         limit=filters.limit,
@@ -261,4 +301,5 @@ async def get_transaction(
     txn = result.scalar_one_or_none()
     if txn is not None:
         await attach_assignment_origins(db, user_id, [txn])
+        await attach_annotations(db, user_id, [txn])
     return txn

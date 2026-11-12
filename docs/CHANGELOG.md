@@ -27,6 +27,53 @@ Wszystkie istotne zmiany w projekcie.
   Atomowe metadane verified-live; własny klon/plaintext usunięte, backup i rollback zachowane.
   Raport `docs/audits/2026-11-12-category-select-paths-production.md`.
 
+## [Local, verified] — 2026-11-12 — Opis i oznaczenia transakcji
+
+### Added
+- Osobny formularz własnego opisu, notatki, swobodnie tworzonych i ponownie
+  używanych tagów oraz projektu. Oryginalny opis bankowy, kwoty, konta, daty
+  i referencje importu pozostają; również dla płatności chronionych.
+- Dedykowany zapis owner/version/snapshot/idempotency/audit, batchodczyty
+  i wyszukiwanie; oryginał nadal dostępny dla reguł/importów. Addytywna migracja
+  3254a4781542 z preflight projektów, bez uruchamiania na produkcji.
+- Backend2429PASS (jawna aktualizacja starego kontraktu testowego i retry10),
+  frontend667PASS/E2E6PASS375/1440/static/buildPASS. Jedno review: uwaga o legacyAPI
+  rozstrzygnięta według jawnej zgodności wpisów ręcznych; dodatkowe10regresjiPASS.
+  Cleanup18ownkontenerów, bez merge/push/deploy. Migracja wyłącznie testowa.
+  Raport `docs/audits/2026-11-12-transaction-annotations-local.md`.
+
+## [Planned, not implemented] — 2026-11-12 — Opisowe oznaczenia transakcji
+
+### Added
+- Zakres zatwierdzony w czacie: własny opis bez nadpisania bankowego, notatka,
+  wielokrotnego użytku tagi tworzone podczas edycji i opcjonalny istniejący projekt.
+- Specyfikacja i4taskplan do akceptacji, bez implementacji lub migracji:
+  `docs/superpowers/plans/2026-11-12-transaction-annotations.md`.
+- Buildercheck2pytania rozstrzygnięte przez istniejącąspecyfikację: opisowe oznaczenia
+  dla wszystkich własnych źródeł, projekt przez canonicalproject_id; bez praw do księgi.
+
+## [Local, verified] — 2026-11-12 — Kategorie importowanych wydatków
+
+### Changed
+- Ręczny podgląd i zatwierdzenie zmiany kategorii importowanych wydatków PLN,
+  także historycznych i na archiwalnym koncie. Kwoty/saldo/daty/importreferencje
+  zachowane, ręczna decyzja audytowana. Płatności pożyczek nadal chronione.
+- Odrębne uprawnienie manualne nie rozszerza reguł/AI/paragonów na historię;
+  dowody importu wiążą podgląd. Bez migracji lub wdrożenia.
+- Backend2398PASS/0fail/error/skip, frontend656/E2E8/static/buildPASS;
+  jedno review: wyścig mapowań naprawiony RED3→GREEN3. Cleanup20własnychkontenerów.
+  Bez merge/push/deploy. Raport
+  `docs/audits/2026-11-12-imported-expense-recategorization-local.md`.
+
+## [Audit, read-only] — 2026-11-12 — Ustawienia kategoryzacji
+
+### Checked
+- Strona/API/bieżące ustawienia wskazanego konta: reguły i AI włączone, marker poprawny,
+  reguł0, zadań0, limitAI pozostałe5. Publiczne health/auth/assets i workerreadyPASS.
+- Frontend18PASS, workflowreguł4E2EPASS, replay bieżących ustawień375/1440 2PASS.
+  Bez wykrytych błędów w zakresie audytu. Bez zapisu, wywołania AI lub wdrożenia.
+- Raport: `docs/audits/2026-11-12-categorization-settings-check.md`.
+
 ## [Local, verified] — 2026-11-12 — Ręczny zwrot wydatku
 
 ### Added

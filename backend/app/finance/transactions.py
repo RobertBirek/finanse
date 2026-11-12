@@ -252,6 +252,34 @@ async def update_transaction(
     if txn is None:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    if "description" in update_data and update_data["description"] != txn.description:
+        from app.finance.imports.models import ImportEvidence
+        from app.finance.models import ActualImportMapping
+
+        imported = (
+            txn.source in {"actual", "bank_import"}
+            or await db.scalar(
+                select(ActualImportMapping.id)
+                .where(
+                    ActualImportMapping.entity_type == "transaction",
+                    ActualImportMapping.entity_id == txn.id,
+                )
+                .limit(1)
+            )
+            is not None
+            or await db.scalar(
+                select(ImportEvidence.id)
+                .where(
+                    ImportEvidence.transaction_id == txn.id,
+                )
+                .limit(1)
+            )
+            is not None
+        )
+        if imported:
+            raise ValueError(
+                "Oryginalny opis importu jest chroniony. Użyj opisu i oznaczeń transakcji."
+            )
     if (
         txn.date_metadata is not None
         and "transaction_date" in update_data

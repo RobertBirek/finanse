@@ -24,6 +24,7 @@ from app.finance import credit_card_models as _credit_card_models
 from app.finance import loan_schedule_models as _loan_schedule_models  # noqa: F401
 from app.finance import receipt_models as _receipt_models  # noqa: F401
 from app.finance import receipt_read_models as _receipt_read_models  # noqa: F401
+from app.finance.annotation_models import TransactionAnnotation, TransactionTag
 from app.finance.imports import models as _bank_import_models  # noqa: F401
 
 
@@ -185,13 +186,16 @@ class ActualImportMapping(Base):
 
 class FinancialTransaction(Base):
     __tablename__ = "financial_transactions"
+    __table_args__ = (UniqueConstraint("id", "user_id", name="uq_financial_transaction_id_owner"),)
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     date: Mapped[date] = mapped_column(Date, nullable=False, server_default=func.current_date())
     description: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(String(20), nullable=False)
     is_pending: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    project_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True
+    )
     created_by: Mapped[str] = mapped_column(String(50), nullable=False, default="human")
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
 
@@ -201,6 +205,24 @@ class FinancialTransaction(Base):
     date_metadata: Mapped["TransactionDateMetadata | None"] = relationship(
         back_populates="transaction", uselist=False, lazy="selectin", passive_deletes="all"
     )
+
+    annotation_record: Mapped[TransactionAnnotation | None] = relationship(
+        lazy="raise", uselist=False, viewonly=True
+    )
+    finance_taglinks: Mapped[list[TransactionTag]] = relationship(lazy="raise", viewonly=True)
+
+    @property
+    def annotations(self) -> object:
+        return self.__dict__.get("_annotations")
+
+    @property
+    def effective_description(self) -> str:
+        record = self.__dict__.get("annotation_record")
+        return (
+            record.display_description
+            if record and record.display_description
+            else self.description
+        )
 
     @property
     def assignment_origin(self) -> object:

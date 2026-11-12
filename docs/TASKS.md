@@ -23,6 +23,42 @@ Backlog zadań ze statusami.
 - [x] Minimum300s obserwacjiPASS, atomowe active metadata verified-live i cleanup własnego klonu/plaintext.
 - [ ] Read-only kontrola kolejnego dnia, bez mutacji kategorii i transakcji.
 
+## Opis, notatka, tagi i projekt transakcji (2026-11-12)
+
+- [x] User zatwierdził zakres i tworzenie tagów w edytorze, z ponownym użyciem.
+- [x] Design i4taskplan, buildercheck: pytania już rozstrzygnięte wspec (allsources
+  narrativeonly; istniejący project_id bez duplikacji).
+- [x] Zatwierdzenie technicznego planu/defaults, wykonanie natywne i1końcowereview.
+- [x] Task1 modele/migracja/schematy:951a981,8PASS/Ruff/mypy195PASS.
+- [x] Task2 owner/version/snapshot/idempotency/audit:c094fdc,32focused/crossdomainPASS.
+- [x] Task3 odczyty/search:846962b,28PASS i Ruff/mypy198PASS.
+- [x] Task4UI, końcowyreview/docs/cleanup; backend2429PASS
+  po jawnej aktualizacji sprzecznego starego testukontraktu i ponowieniu10case.
+- [x] Frontend667PASS109plików,6E2EPASS375/1440, ESLint/tsc/build, screeny obejrzane.
+- [x] Pełne testy/lint/types/build/E2E i jedno review; wyłącznie lokalnie.
+- [x] ReviewlegacyAPI rozstrzygnięty według spec, dodatkowe10PASS, źródła444+299hash
+  zgodne z odbiorem i cleanup18owncontainers; żadne unrelateddirtydocs nie są częścią commitu.
+- [ ] Merge/push/deploy wymagają odrębnej zgody i produkcyjnego preflight migracji.
+
+## Ręczna zmiana kategorii importowanych wydatków (2026-11-12)
+
+- [x] Uzgodniony zakres: tylko ręczna kategoria dodatniego wydatku PLN, bez kwot/
+  kont/dat; pożyczki/FX/refundy nadal protected. Brak zgody na deploy.
+- [x] Manualonlycapability +restrykcyjnedefault dla rules/AI/receipts, snapshotbankevidence.
+- [x] Frontend656PASS,8E2EPASS375/1440, lint/types/build i istniejącyUIcontract.
+- [x] Focused57+race3PASS, fullbackend2398PASS, importreplay/races i jedno review;
+  Importantmappingrace naprawiony jednym RED3→GREEN3pass.
+- [x] Dokumentacja i cleanup20własnych idle testresources bezforce/prune.
+- [x] Odbiór do lokalnego commitu; integracja/deploy osobno po zgodzie.
+
+## Kontrola ustawień kategoryzacji (2026-11-12)
+
+- [x] Odczyt wskazanego konta z wymuszonym READONLY i bez sesji/zmian produkcji.
+- [x] Publiczne health/auth/15assets, workerready i logi bez5xx.
+- [x] Frontend18PASS +4workflowE2E +2replay375/1440, bez błędów w sprawdzonym zakresie.
+- [x] Stan: reguły włączone ale0reguł; AI efektywnie włączone,5wolnych wywołań.
+- [-] Realny zapis lub wywołanie dostawcy AI poza zakresem kontroli read-only.
+
 ## Ręczny zwrot wydatku (2026-11-12)
 
 - [x] Zakres zatwierdzony: konto/kategoria/kwota, bez linku do zakupu; zmniejsza

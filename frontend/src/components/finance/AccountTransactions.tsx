@@ -200,10 +200,10 @@ export function TransactionList({
   const updateMutation = useUpdateTransaction();
   const deleteMutation = useDeleteTransaction();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDescription, setEditDescription] = useState("");
   const [editDate, setEditDate] = useState("");
   const [dateTarget, setDateTarget] = useState<Transaction | null>(null);
   const [categoryTarget, setCategoryTarget] = useState<string | null>(null);
+  const [annotationTarget, setAnnotationTarget] = useState<string | null>(null);
 
   const updateError = apiErrorDetail(updateMutation.error);
   const deleteError = apiErrorDetail(deleteMutation.error);
@@ -219,7 +219,6 @@ export function TransactionList({
 
   function startEdit(transaction: Transaction) {
     setEditingId(transaction.id);
-    setEditDescription(transaction.description);
     setEditDate(transaction.transaction_date);
   }
 
@@ -231,7 +230,6 @@ export function TransactionList({
     updateMutation.mutate({
       id: transaction.id,
       ...(transaction.date_metadata ? {} : { transaction_date: editDate }),
-      description: editDescription,
     });
   }
 
@@ -267,6 +265,12 @@ export function TransactionList({
 
   return (
     <div className="space-y-1">
+      {annotationTarget ? (
+        <TransactionAnnotationsDialog
+          transactionId={annotationTarget}
+          onClose={() => setAnnotationTarget(null)}
+        />
+      ) : null}
       {categoryTarget ? (
         <TransactionCategorizationDialog
           id={categoryTarget}
@@ -316,7 +320,8 @@ export function TransactionList({
               <div className="mb-2 flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-gray-200">
-                    {transaction.description}
+                    {transaction.effective_description ||
+                      transaction.description}
                   </p>
                   <p className="text-xs text-gray-500">
                     <TransactionDateLabel transaction={transaction} />
@@ -338,21 +343,6 @@ export function TransactionList({
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor={`transaction-description-${transaction.id}`}
-                    className="mb-1 block text-xs text-gray-400"
-                  >
-                    Opis
-                  </label>
-                  <input
-                    id={`transaction-description-${transaction.id}`}
-                    type="text"
-                    value={editDescription}
-                    onChange={(event) => setEditDescription(event.target.value)}
-                    className="w-full rounded-sm border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
-                  />
-                </div>
                 <div>
                   <label
                     htmlFor={`transaction-date-${transaction.id}`}
@@ -404,9 +394,26 @@ export function TransactionList({
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-gray-200">
-                {transaction.description}
+                {transaction.effective_description || transaction.description}
               </p>
               <AssignmentOriginLabel origin={transaction.assignment_origin} />
+              {transaction.annotations?.project_name ? (
+                <p className="text-xs text-gray-400 [overflow-wrap:anywhere]">
+                  Projekt: {transaction.annotations.project_name}
+                </p>
+              ) : null}
+              {transaction.annotations?.tags.length ? (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {transaction.annotations.tags.map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="max-w-full rounded-sm border border-gray-700 px-1.5 py-0.5 text-xs text-gray-300 [overflow-wrap:anywhere]"
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               <p className="text-xs text-gray-500">
                 <TransactionDateLabel transaction={transaction} />
                 {transaction.type}
@@ -426,6 +433,14 @@ export function TransactionList({
               )}
             </p>
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-secondary px-3 py-1.5 text-sm"
+                disabled={isDeleting}
+                onClick={() => setAnnotationTarget(transaction.id)}
+              >
+                Opis i oznaczenia
+              </button>
               {transaction.type === "expense" ? (
                 <button
                   type="button"
@@ -464,7 +479,7 @@ export function TransactionList({
                 disabled={isDeleting}
                 className="btn-secondary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Edytuj
+                Edytuj datę
               </button>
               <button
                 type="button"
@@ -485,3 +500,4 @@ export function TransactionList({
   );
 }
 import { AssignmentOriginLabel } from "./AssignmentOriginLabel";
+import { TransactionAnnotationsDialog } from "./TransactionAnnotationsDialog";

@@ -171,11 +171,16 @@ describe("AccountTransactions", () => {
     render(<AccountTransactions accounts={accounts} />);
     fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));
 
-    expect(screen.getByRole("button", { name: "Edytuj" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Opis i oznaczenia" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Edytuj datę" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Usuń" })).toBeInTheDocument();
   });
 
-  it("edits a transaction inline and saves the new description and date", () => {
+  it("keeps legacy date editing separate and never overwrites a source description", () => {
     useAccountTransactions.mockReturnValue({
       data: [incomeTransaction],
       isLoading: false,
@@ -185,21 +190,18 @@ describe("AccountTransactions", () => {
     render(<AccountTransactions accounts={accounts} />);
     fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Edytuj" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edytuj datę" }));
 
-    const descriptionInput = screen.getByLabelText("Opis");
-    expect(descriptionInput).toHaveValue("Wynagrodzenie");
+    expect(screen.queryByLabelText("Opis")).not.toBeInTheDocument();
     const dateInput = screen.getByLabelText("Data");
     expect(dateInput).toHaveValue("2026-08-14");
 
-    fireEvent.change(descriptionInput, { target: { value: "Premia roczna" } });
     fireEvent.change(dateInput, { target: { value: "2026-08-20" } });
     fireEvent.click(screen.getByRole("button", { name: "Zapisz" }));
 
     expect(updateMutate).toHaveBeenCalledWith({
       id: "tx-income",
       transaction_date: "2026-08-20",
-      description: "Premia roczna",
     });
   });
 
@@ -252,7 +254,7 @@ describe("foreign currency presentation", () => {
       expect(screen.getByText(`−123,45 ${currency}`)).toBeInTheDocument();
       expect(screen.getByText("Równowartość: 543,21 PLN")).toBeInTheDocument();
       expect(screen.queryByText("−123,45 PLN")).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: "Edytuj" }));
+      fireEvent.click(screen.getByRole("button", { name: "Edytuj datę" }));
       expect(screen.getByText(`−123,45 ${currency}`)).toBeInTheDocument();
     },
   );

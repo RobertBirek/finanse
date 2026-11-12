@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.finance.account_validation import normalize_bic, normalize_iban
+from app.finance.annotation_schemas import AnnotationResponse
 from app.finance.credit_card_schemas import CardConfig, CardSettings
 from app.finance.rule_schemas import AssignmentOrigin
 
@@ -267,6 +268,8 @@ class TransactionDatesUpdate(BaseModel):
 
 class TransactionResponse(BaseModel):
     assignment_origin: AssignmentOrigin | None = None
+    annotations: AnnotationResponse | None = None
+    effective_description: str = ""
     id: uuid.UUID
     user_id: uuid.UUID
     transaction_date: dt.date = Field(validation_alias="date")
@@ -282,6 +285,12 @@ class TransactionResponse(BaseModel):
     date_metadata: TransactionDateMetadataResponse | None = None
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def fallback_description(self) -> "TransactionResponse":
+        if not self.effective_description:
+            self.effective_description = self.description
+        return self
 
 
 class TransactionSearch(BaseModel):

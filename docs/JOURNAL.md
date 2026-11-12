@@ -57,6 +57,122 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   Backup i obrazy rollbacku zachowane. Prywatnedowody /opt/finanse/webapp/releases/category-selects-d09ee8a/evidence.
   Publicznyraport docs/audits/2026-11-12-category-select-paths-production.md.
 
+## 2026-11-12 — Uzgodnienie opisowych oznaczeń transakcji
+
+- User zapytał o dodatkowe edycje; wybrał opis własny/notatkę/tagi/istniejącyprojekt,
+  następnie potwierdził swobodne tworzenie tagów w edytorze i ponowne używanie.
+  Bez kwot/kont/dat/importrefs; sourceopis zachowany, audyt. Bez zgody na deploy.
+- Design docs/superpowers/specs/2026-11-12-transaction-annotations-design.md i plan
+  docs/superpowers/plans/2026-11-12-transaction-annotations.md, bez implementacji.
+  Autor proponuje osobne PostgreSQLannotation/tag/link, canonicalexistingproject_id,
+  FKprojectSETNULL zpreflight, batchedreads/search i dedykowaną wersjonowanąkomendę.
+  Limityconfig200/5000/60/20 to propozycjaautora, nie wypowiedź użytkownika.
+- Buildercheck ses_e2f4bfff6ffeA1wc6z7CVKW59V: pytania o eligibilitysources i osobny
+  projectlink mają odpowiedź już wspec: każde własne źródło/typ, tylko narrative;
+  istniejącyproject_id z bieżącym widokiem projektu, bez duplikacji. Brak pytań
+  wymagających dodatkowej decyzji użytkownika. Plan do przeglądu i zgody na wykonanie.
+- Poprzednia kategoryzacja zakończona lokalnym4bf966f:2398backend/656frontend/8E2E,
+  cleanup20testcontainers. Źródła nie były zmieniane w trakcie suite. Ten plan
+  może wystartować dopiero po akceptacji, preferowane wykonanie natywne+1review.
+
+### Realizacja po zgodzie użytkownika
+
+- User potwierdził plan+native+1review. Workspace .superpowers/sdd/2026-11-12-transaction-annotations,
+  BASE8c6e79d, istniejący linkedworktree; żadnych zmian produkcji lub unrelateddirtydocs.
+- Task1commit951a981: annotation/tag/link, canonicalprojectFKSETNULL i preflight,
+  configdefaults/schematy. Redmissingmodule/migration3→8PASSpowtórzone, Ruff/mypy195PASS.
+  Autogen3254a4781542 parent84fdbd10aa18; usunięty unrelatedindexdrift, FKorder poprawiony.
+- ORMlazyraise zamiast globaleselectin dla kompatybilności oldschemamigrationtools;
+  publiczne odczyty będą batched wTask3. Responseoriginal_description/project_name
+  bez duplikacjiDB. Projektlock przedtxnrow zgodnie zFKSETNULLdeleteorder.
+- Task2RED18→firstGREEN17/2fixtureMissingGreenlet; testhelperinspect.identity usuwa
+  expiredIDread po rollback. Dedykowaneendpointy/receipty/audit/strictNULguard,
+  sourcelegacyPATCH chroniimport. Ruff/mypy197PASS, finaltaskgate w toku.
+- Własny no-portPG i runner, hexrolebank_import_task_aee20261112 wymaganymigrationfixture;
+  początkowy idle runner normalniestop/rm/replaced. Pełny odbiór/cleanup dopiero na końcu.
+  Raport docs/audits/2026-11-12-transaction-annotations-local.md.
+
+### Etap odczytów i UI
+
+- Task2c094fdc gate32PASS (własne19pluscrossdomain), Task3read/search846962b gate28PASS.
+  Backendfull2426PASS/3starycontractFAIL: testbankimportu dopuszczał sourcesdescription
+  rewrite. Zaktualizowano tylko tę funkcję na denial+overlay, całyplik10PASS,
+  AST pozostałychfunkcji/fixtures i444sourcehash bez driftu. ExactJUnitunion2429PASS.
+- UIhook/dialog strictpayload, frozencontext+sessionguard, idempotencykeyretry,
+  taglocaluntilsave, legacydataeditor osobno. REDpendingbackdrop→Dialogbusy;
+  REDFastAPI422arrayReactcrash→unknowndetailtypetest. Focused18PASS.
+- Frontendfinal667PASS109plików,ESLint/tsc/buildPASS. E2Efinal6PASS375/1440
+  (annotations/importedcategory/split), realAPI0. Projektselect explicitlabeluseId
+  po wykryciu exactlabeltextu zoptions; amountselector DOMtrace dowodzi braku
+  whitespace między textnode/span, końcowy anchoredregex sprawdza pełną kwotę.
+- Screeny obejrzane bez horizontaloverflow; mobileformularz scrolluje. Jeden final
+  review ses_e2e7ef90dffeu351PXrWjRvqAt zakończony:0Critical/1Important/0Minor/Declinednone.
+  Important stwierdza oldPATCHmanualFX/loan descriptioneditable; sprawdzono explicit
+  spec43legacyAPImanualretained i istniejącytestloan-narrative200. Ruling: nie
+  dodawaćglobalnejblokady ręcznieautorskiegoopisu, nakładka nie poszerza tegoAPI;
+  protectedimportsource nadaldenied. Koszt: legacyklient może nadal edytować własny
+  ręcznyopis FX/loan; globalfreeze wymaga osobnejzgody. No newdefect/bezfixpass,
+  bez nowychkodzmian po verifiedsuite. Finding/ruling jawny wraporcie i finalu.
+- Dodatkowe10regresji scopePASS, finalpowtórzonyfrontend667PASS109plików. Finalproof
+  backend2429exactJUnit/444hash+frontend667/299hash+6E2E/static/buildPASS. Cleanup18ownidle
+  containers po ownership/IDs/noports/zeroDBclients, runnerexit143/PGexit0, bezforce/prune.
+  Odbiór do finalnego lokalnego commitu; bez merge/push/deploy lub produkcyjnejmigracji.
+
+## 2026-11-12 — Ręczna kategoryzacja importowanych wydatków
+
+- User zgłosił komunikatprotectedhistory podczas zmiany kategorii, zaakceptował
+  narrowmanualimportcorrection bez kwot/kont/dat i zachowaniem loanguard. Plan
+  docs/superpowers/plans/2026-11-12-imported-expense-recategorization.md zatwierdzony
+  z realizacją natywną. BASEa145088, existinglinkedworktree, unrelateddirtydocs zachowane.
+- eligibility/response/build_preview keywordonlyallow_importedFalse; tylko human
+  get/preview/apply ustawiaTrue. Allowlista actual/bank_import obok manual/document,
+  własnośćmapping/evidence, loan dedicateddeny. Default automation/receipt nadal deny.
+- Bankimport evidence odczytane i lockowane/snapshotbound; bez evidence kształt hasha
+  bez zmian. Categorywriter zachowuje accountposting, pieniądze/source/daty/importrefs,
+  ręcznyorigin/audit. Replaybank zachowuje korektę; Actual strictreconciliation może
+  jawnie odmówić source-absentlocalcategoryprovenance zamiast nadpisania użytkownika.
+- Baseline655. BackendRED7capabilityFAIL/8guardPASS+2badloanfixture poprawione.
+  Firstgreen51PASS/3fixtureMissingGreenlet, jawny asyncupdated_atrefresh w testach.
+  BankevidencedriftRED1→snapshotevidencefix. Finalfocused57PASS.
+- Frontend656PASS/E2E8PASS/static/buildPASS, screeny375/1440 obejrzane bez overflow;
+  productionUI bez zmian, istniejący dialog konsumuje allowedcontext.
+- Onefreshreview ses_e2f62d7dbffeXqfHB8oOSSD136:0Critical/1Important/0Minor.
+  Actualmapping bezFK mógł zmienić się równolegle. RED3insert/update/delete→GREEN3:
+  load_context lockmappingrows+populateexisting, _store_mapping parenttransactionlock
+  zapobiega phantominsert. Jednofixpass, bez drugiegoreview. Fullbackendpozmianie
+  2398PASS/0fail/error/skip na8ownednoportPG, dokładnyJUnitunion i425sourcehashmatch;
+  importerhash79afcb47… również zgodny. Frontend294sourcehashmatch.
+- Cleanup20własnychidlecontainersPASS bezforce/prune. Operatorcleanup zatrzymał się
+  bez mutacji przy docker top wymagającymPID; użyto pid,args. Sleep/init po SIGTERM
+  zwraca143 (nie błąd/OOM), PGexit0; exactownership/IDs/noports/sessioncount sprawdzone.
+- Rulings: minimalny parentlock w importerze mimo warunkowego zakresu planu;
+  FX/refund/full-edit nadal osobnafunkcja; review nie zastępuje fullsuite;
+  slashcommands niedostępne, użyto równoważnychkomend w ownedrunners.
+- Odbiór lokalny bez merge/push/deploy. Prywatnyledger
+  .superpowers/sdd/2026-11-12-imported-expense-recategorization/progress.md.
+  Brakmerge/push/deploy lub produkcyjnychmutacji; tylko własny no-porttestPG/runner.
+
+## 2026-11-12 — Audyt read-only ustawień kategoryzacji
+
+- User poprosił sprawdzić /settings/finances/categorization. Required4hostdocs odczytane.
+  Wiele aktywnych kont: nie zgadywano właściciela; użytkownik wskazał konto w czacie.
+  Email i dane konta nie trafiają do Git. Produkcja94211b2; kod aplikacji bez zmian.
+- Oddzielny proces w backendzie, REPEATABLEREAD/READONLY, te same handlery odczytu
+  settings/rules/AIsettings/usage +categories. Bez lifespan/logowania/providerów;
+  rollback i counts unchanged. Nie używano ani nie tworzono sesji użytkownika.
+- Stan: marker aktywny/expense/hierarchyvalid, rulesenabledtrue ale0reguł; AIserver/
+  config/fingerprint/consent/effective=true, blocked_reasonnull,5remainingcallsUTC,
+ 0event/jobs. WorkerARQready. Logi30min nie mają5xx kategoryzacji; zapisów testowych brak.
+- Publiczne SPA/health200,5API401anon,15distbyte-match, GET-onlybrowser375/1440PASS.
+  Freshvitest18PASS/5files i workflowreguł4E2EPASS z faktycznego deployed-dist.
+  Replayread-only bieżących ustawień2PASS375/1440: marker/AI/rules/status/editor/
+  confirmguards bez mutacji. Początkowe2błędy harnessESM/importpaths naprawiono
+  wyłącznie w prywatnym katalogu, nie produkcie.
+- Raport docs/audits/2026-11-12-categorization-settings-check.md; prywatne snapshoty/
+  screeny pozaGit /tmp/opencode/categorization-audit-20261112. Nie testowano realnego
+  providerrequest lub produkcyjnegozapisu; brak podstaw do twierdzenia pełnegoE2EAI.
+  Włączone reguły bez zapisanych reguł niczego nie przypiszą; historia i zwroty są wyłączone.
+
 ## 2026-11-12 — Ręczne zwroty do kategorii wydatkowych
 
 - User potwierdził małą zmianę: Zwrotwydatku/konto/kategoria/kwota, bez linku zakupu,
