@@ -2,6 +2,17 @@
 
 Backlog zadań ze statusami.
 
+## Wdrożenie ręcznych zwrotów —94211b2 (2026-11-12)
+
+- [x] Zgoda użytkownika, mainmergea4d4228/push/remotematch; appcodeexact94211b2.
+- [x] Freshfrontend655/2E2E/static/build, backend2375hashproof,6packagingproxyPASS.
+- [x]3offlineimages i mandatorynonroot10001import/readgatePASS.
+- [x] Safetyreview3Important naprawione RED6→GREEN7; lock/config/worker/rollback guards.
+- [x]503/drain/stop, backup bezretencji i isolatedrestore, podmiana3apps i read-onlysmoke.
+- [x]29kontroli/302.82sPASS, atomowemetadata verified-live, cleanupownclone/plaintext.
+- [x] Dokumentacja odbioru produkcyjnego; backup i rollback zachowane.
+- [ ] Read-only kontrola kolejnego dnia, bez testowych zwrotów danych użytkownika.
+
 ## Wdrożenie ścieżek kategorii — d09ee8a (2026-11-12)
 
 - [x] Zgoda użytkownika, mainFF/push i remoteSHA; zakres wyłącznie frontend.

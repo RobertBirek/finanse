@@ -2,6 +2,38 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Zatwierdzone main/push/deploy ręcznych zwrotów94211b2
+
+- User „scal, wypchnij do main i wdróż”. Required4hostdocs,/deploy/runbook/active
+  odczytane. Previousmix:backend-worker69ee8b7/frontendd09ee8a/schema84verified-live.
+  Nowyendpoint wymaga spójnego3apprelease, bez migracji/importu lub realnychrefundsmoke.
+- main0a3cb5b→a4d4228merge/push/remotematch.3docconflicts zachowują oba wpisy;
+  maindiff94211b2backend/frontend/ops puste, więc zatwierdzony appSHA bez zmian.
+- Freshfrontend655/static/build/2targetedE2EPASS.2375backend/655frontend/10E2E hashes
+  exactmatch z implementacji, w tym jawny101fixture-error→retryPASS i finalfocused24.
+  Nie ponawiano godzin backendu bez driftu. Dependencies/nginx/migrations/ops bez zmian.
+-3immutableofflineimages z rzeczywistych poprzednichruntime, fullCompose identyczny
+  poza3image/build. mandatoryverify_release nonroot10001:10001 exactIDsPASS;
+ 6packagingproxyPASS/11deselected (nie cały23proxyprojekt). Env/users/mounts/sieci bez zmian.
+- One safetyreview ses_e2fc1e473ffeb9XBjFjnjffXjg:3Important(workerreadyrollback,
+  mutableconfigrollback, concurrentmetadata). Jedna poprawkaoperatora RED6→GREEN7:
+  ARQcheck przedfrontendreopen, hash/fullrender przedrollback i pełny runtimeconfig
+  po rollback, deployment-wideflock i metadataCAS przedruntimechange. Preflightfail
+  nie uruchamia compose bez próbymaintenance. Bez zmiany kodu produktu/2review.
+- Deploymentwrapper /tmp/opencode/manual-refund-deploy-94211b2/deploy.py uruchomiony:
+ 503→readonlydrain→stop→freshbackupnoretention→ownrestore→3apps→readsmoke→300s→finish.
+  Wszystkie błędy po maintenance mają verifiedrollback do mix69/d09, bezDBrestore.
+  Dowody docelowo /opt/finanse/webapp/releases/manual-refund-94211b2/evidence.
+- FINAL wrapperexit0: freshbackup9fd14fcb… no-retention i restorechecksumPASS,
+  ownnoportcloneall76tablehash/uploads/schema84/ledger0/newORMreadonlyPASS.
+ 3apps podmienione, env/user/mounty/sieci i frozenretention przedotwarciem ingressPASS.
+- HTTPS200/auth401/distbyte-match, backendloopbackOpenAPIGET nowegoendpointu i
+  GET-onlybrowser375/1440PASS. Screeny obejrzane, bez overflow.29kontroli/302.82s,
+ 0ERROR/restartów,ledger0/workerready. DataIDs/starttime/restarts dokładnie jak przeddeploy.
+- Atomicactive94211b2/schema84verified-live; owncloneidle/stopExit0/rm/absence i plaintext
+  cleanupPASS bezforce/prune. Backup9fd14fcbf0214e2f103cdfb9d42fdd921e48097533f22b8f46d432724f688827
+  i rollbackmix69/d09 zachowane. Żadnej realnej operacji zwrotu lub importu.
+
 ## 2026-11-12 — Zatwierdzone main/push i frontend-only deploy ścieżek kategorii
 
 - User „scal, wypchnij do main i wdróż”, później „dokończ”. main493bf48→d09ee8aFF,

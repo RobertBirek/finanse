@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, 94211b2] — 2026-11-12 — Ręczne zwroty wydatków
+
+### Changed
+- Po zgodzie użytkownika scalenie i push maina4d4228 z kodem94211b2.
+- Spójny pakiet backend/worker/frontend, bez migracji schema84 lub zmian zależności.
+  Świeżyfrontend655/2targetedE2E/static/build, backend2375sourceproof i6packagingproxyPASS.
+- Nonrootimportgate trzech gotowych obrazówPASS. Safetyreview:3Important rozwiązane
+  RED6→GREEN7 w operatorze; zabezpieczony rollback i deployment-wide lock.
+- Backup bezretencji i własny restore76tabel/uploads/ledger0PASS. Podmieniono3apps,
+  HTTPS/auth/assets/OpenAPI/browserPASS,29kontroli przez302.82s bez błędów/restartów.
+  Active94211b2 verified-live, dataIDs/starttime/restarts bez zmian; ownclone/plaintext
+  usunięte, backup i rollback zachowane. Raport:
+  `docs/audits/2026-11-12-manual-expense-refund-production.md`.
+
 ## [Production, d09ee8a] — 2026-11-12 — Pełne ścieżki kategorii
 
 ### Changed
