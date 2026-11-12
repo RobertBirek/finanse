@@ -14,15 +14,16 @@ import { BillRegister } from "../components/finance/bills/BillRegister";
 import { BillDetail } from "../components/finance/bills/BillDetail";
 import { BillPaymentDialog } from "../components/finance/bills/BillPaymentDialog";
 import { BillCoverageDialog } from "../components/finance/bills/BillCoverageDialog";
+import { BillDeclarationDialog } from "../components/finance/bills/BillDeclarationDialog";
 import { ReceiptItemsPanel } from "../components/finance/receipts/ReceiptItemsPanel";
 import { useAuthStore } from "../stores/authStore";
 
 export function FinanceDocuments() {
   const [params, setParams] = useSearchParams();
   const [filters, setFilters] = useState<BillFilters>({ limit: 25, offset: 0 });
-  const [dialog, setDialog] = useState<"payment" | "coverage" | "items" | null>(
-    null,
-  );
+  const [dialog, setDialog] = useState<
+    "payment" | "coverage" | "items" | "declared_paid" | "payable" | null
+  >(null);
   const session = useAuthStore((s) => s.sessionVersion);
   const selectedId = params.get("bill");
   const bills = useBills(filters);
@@ -221,6 +222,7 @@ export function FinanceDocuments() {
             onPayment={() => setDialog("payment")}
             onCoverage={() => setDialog("coverage")}
             onReceipt={() => setDialog("items")}
+            onDeclaration={setDialog}
             onLifecycle={(nextLifecycle, confirmForecastEffect) =>
               lifecycle.mutate(
                 {
@@ -307,6 +309,14 @@ export function FinanceDocuments() {
         <p role="alert" className="mt-4 text-sm text-red-300">
           Nie udało się pobrać dokumentu. Wróć do rejestru i odśwież dane.
         </p>
+      ) : null}
+      {(dialog === "declared_paid" || dialog === "payable") && selected.data ? (
+        <BillDeclarationDialog
+          key={`${session}:${selected.data.id}:${dialog}`}
+          bill={selected.data}
+          declaration={dialog}
+          onClose={() => setDialog(null)}
+        />
       ) : null}
       {dialog === "payment" && selected.data ? (
         <BillPaymentDialog

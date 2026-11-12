@@ -2,6 +2,37 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, verified] — 2026-11-12 — Opłacenie faktury bez transakcji
+
+### Added
+- Osobna, wersjonowana i idempotentna komenda deklaracji opłacenia całej pozostałej
+  kwoty oraz cofnięcia; audyt przed/po, bez transakcji, alokacji i zmian sald.
+- Przycisk i potwierdzenie w rejestrze, jawny status deklaracyjny, osobne kwoty
+  „Do zapłaty” i „Pozostało do powiązania z księgą”. Bez migracji bazy.
+
+### Fixed
+- Deklaracyjnie opłacone dokumenty nie trafiają do pozycji do zapłaty ani ostrzeżeń
+  prognozy; zachowują zastąpienie wystąpienia cyklicznego i rzeczywiste alokacje.
+- Zmiana kwoty/waluty wymaga cofnięcia deklaracji, ogólna edycja nie omija komendy.
+  Konflikt wersji wymaga odświeżenia i nowej zgody; retry zachowuje tę samą intencję.
+- Testy na danych syntetycznych. Bez zmian danych użytkownika, merge/push/deploy.
+
+### Verification
+- Backend2351PASS/23proxyexcluded/0fail/error/skip,422sourcehash bez zmian;
+  frontend631PASS, E2E28PASS desktop/mobile, lint/types/buildPASS.
+- Jedno niezależne review:0uwag. Własne18kontenerów testowych usunięte po kontroli
+  ownership/idle/exactID, bezforce/prune. Raport `docs/audits/2026-11-12-bill-declaration-local.md`.
+
+## [Planned, not implemented] — 2026-11-12 — Rozliczenie dokumentu bez transakcji
+
+### Added
+- Po akceptacji zakresu: specyfikacja i plan2etapów dla deklaracji całej pozostałej
+  kwoty, statusu niezależnego od uzgodnienia księgi, audytu,undo i późniejszego linku.
+- Plan wykorzystuje istniejące `declared_paid`, bez migracji i fikcyjnej transakcji;
+  obejmuje APIguardy,wyłączenie opłaconej pozycji zprognozy i czytelny widok rejestru.
+- `docs/superpowers/plans/2026-11-12-bill-declaration-without-transaction.md`.
+  Plan następnie zatwierdzono i wykonano lokalnie (odbiór powyżej); danych użytkownika nie zmieniono.
+
 ## [Operations, 5dc84fe] — 2026-11-12 — Porównanie Velo i zatwierdzony przelew karty
 
 ### Added

@@ -2,6 +2,26 @@
 
 Backlog zadań ze statusami.
 
+## Deklaracja opłacenia — implementacja lokalna (2026-11-12)
+
+- [x] Użytkownik zatwierdził plan i wykonanie natywne w tej sesji.
+- [x] Backend/API: version/idempotency/owner/lifecycle guards, audit, undo, brak ledger writes.
+- [x] Frontend: odrębny dialog, retry/409/new consent, status i kwoty bez fikcyjnego uzgodnienia.
+- [x] Focused backend40, pełny backend2351/0fail/error/skip/23proxyexcluded;
+  frontend631, E2E28 desktop/mobile, lint/types/build, jedno review bez uwag.
+- [x] Odbiór lokalny, źródła bez driftu, cleanup18własnych kontenerów bezforce/prune.
+- [ ] Merge/push/deploy wyłącznie po osobnej zgodzie.
+
+## Rozliczenie bez transakcji — zakres zatwierdzony, plan do odbioru (2026-11-12)
+
+- [x] User zatwierdził całą pozostałą kwotę,bez częściowych deklaracji,bez transakcji
+  lub sald;status deklaracyjny,audit,undo,późniejszy link bez podwójnego rozliczenia.
+- [x] Rozpoznano existingdeclared_paid/version/idempotency/forecast; przygotowano
+  spec i2taskplan bez migracji. Etap planowania nie zmienia kodu lub danych.
+- [x] Potwierdzenie planu i metody wykonania: native+jednokońcowereview.
+- [x] Backend/API/audit/forecast i frontend/dialog/status — TDD/syntheticdata only.
+- [x] Pełne testy/lint/types/build i review; merge/push/deploy osobną decyzją.
+
 ## Przelew karty i zamknięcie sesji (2026-11-12)
 
 - [x] Odczytowe owner-scoped porównanie61wierszyVelo:44booking/3operation/3nearby/

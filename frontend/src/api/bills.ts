@@ -306,6 +306,28 @@ function useBillMutation<T>(
     onSuccess: () => invalidate(client, ledger),
   });
 }
+export function useSetBillPaymentDeclaration() {
+  return useBillMutation(
+    async ({
+      billId,
+      idempotencyKey,
+      ...data
+    }: {
+      billId: string;
+      expected_version: number;
+      declaration: "declared_paid" | "payable";
+      confirm_forecast_effect: true;
+      idempotencyKey: string;
+    }) =>
+      (
+        await api.post<BillResponse>(
+          `/finance/bills/${billId}/payment-declaration`,
+          data,
+          { headers: { "Idempotency-Key": idempotencyKey } },
+        )
+      ).data,
+  );
+}
 export function useAllocateBillPayment() {
   return useBillMutation(
     async ({

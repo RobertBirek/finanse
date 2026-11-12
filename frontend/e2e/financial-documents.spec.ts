@@ -1,6 +1,127 @@
 import { expect, test } from "@playwright/test";
 import { financialDocumentFixtures, ids } from "./financial-document-fixtures";
 
+test("declaration persists, disappears from obligations, and later real links are not doubled", async ({
+  page,
+}) => {
+  const api = await financialDocumentFixtures(page);
+  await page.goto(`/finances/documents?bill=${ids.bill}`);
+  await page
+    .getByRole("button", {
+      name: "Oznacz jako opłaconą bez transakcji",
+      exact: true,
+    })
+    .click();
+  const declaration = page.getByRole("dialog");
+  await expect(
+    declaration.getByText(/Nie powstanie transakcja ani wydatek/),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: test.info().outputPath("declaration-dialog.png"),
+  });
+  await declaration.getByRole("checkbox").check();
+  await declaration
+    .getByRole("button", { name: "Potwierdź oznaczenie" })
+    .click();
+  await expect(declaration).toHaveCount(0);
+  await page.reload();
+  const details = page.getByRole("region", { name: "Szczegóły dokumentu" });
+  await expect(
+    details.getByText("Opłacona deklaracyjnie — bez powiązania z księgą"),
+  ).toBeVisible();
+  await expect(
+    details.locator("dt", { hasText: /^Do zapłaty$/ }).locator(".."),
+  ).toContainText("0,00");
+  await expect(
+    details
+      .locator("dt", { hasText: "Pozostało do powiązania z księgą" })
+      .locator(".."),
+  ).toContainText("100,00");
+  expect(api.mutations.map(({ path }) => path)).toEqual([
+    `/api/finance/bills/${ids.bill}/payment-declaration`,
+  ]);
+  await page.goto("/finances/cashflow");
+  await expect(page.getByText("Faktura 100 — listopad")).toHaveCount(0);
+  await page.goto(`/finances/documents?bill=${ids.bill}`);
+  for (const amount of ["40.00", "60.00"]) {
+    await page
+      .getByRole("button", { name: "Powiąż płatność", exact: true })
+      .click();
+    const payment = page.getByRole("dialog", { name: "Rozlicz płatność" });
+    await payment.getByLabel("Kwota (PLN)").fill(amount);
+    await payment.getByRole("radio").check();
+    await payment
+      .getByRole("button", { name: "Powiąż płatność", exact: true })
+      .click();
+    await expect(payment).toHaveCount(0);
+  }
+  await expect(details.getByText("Rozliczona z księgą")).toBeVisible();
+  expect(api.mutations.map(({ path }) => path)).toEqual([
+    `/api/finance/bills/${ids.bill}/payment-declaration`,
+    `/api/finance/bills/${ids.bill}/allocations`,
+    `/api/finance/bills/${ids.bill}/allocations`,
+  ]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  api.assertClean();
+});
+
+test("undo after a partial real link restores only the remaining obligation", async ({
+  page,
+}) => {
+  const api = await financialDocumentFixtures(page);
+  await page.goto(`/finances/documents?bill=${ids.bill}`);
+  await page
+    .getByRole("button", { name: "Powiąż płatność", exact: true })
+    .click();
+  const payment = page.getByRole("dialog", { name: "Rozlicz płatność" });
+  await payment.getByLabel("Kwota (PLN)").fill("40.00");
+  await payment.getByRole("radio").check();
+  await payment
+    .getByRole("button", { name: "Powiąż płatność", exact: true })
+    .click();
+  await expect(payment).toHaveCount(0);
+  await page
+    .getByRole("button", {
+      name: "Oznacz jako opłaconą bez transakcji",
+      exact: true,
+    })
+    .click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByRole("checkbox").check();
+  await dialog.getByRole("button", { name: "Potwierdź oznaczenie" }).click();
+  await expect(dialog).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Cofnij oznaczenie opłacenia", exact: true })
+    .click();
+  dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByText(/Przywracasz do zapłaty pozostałe 60,00/),
+  ).toBeVisible();
+  await dialog.getByRole("checkbox").check();
+  await dialog.getByRole("button", { name: "Przywróć do zapłaty" }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.goto("/finances/cashflow");
+  const row = page.getByText("Faktura 100 — listopad");
+  await expect(row).toHaveCount(1);
+  await expect(row.locator("..")).toContainText("60,00 PLN");
+  expect(
+    api.mutations.filter(({ path }) => path.endsWith("/payment-declaration")),
+  ).toHaveLength(2);
+  expect(
+    api.mutations.filter(({ path }) => path.endsWith("/payments")),
+  ).toHaveLength(0);
+  api.assertClean();
+});
+
 for (const viewport of [375, 1440]) {
   test(`matching evidence and stale selection never creates a transaction at ${viewport}px`, async ({
     page,

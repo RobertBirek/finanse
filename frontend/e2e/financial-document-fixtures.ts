@@ -35,6 +35,7 @@ export async function financialDocumentFixtures(
     heifUploaded = false,
     receiptApproved = false;
   const invoiceTotalMinor = options.invoiceTotalMinor ?? 10000;
+  let declaration: "payable" | "declared_paid" = "payable";
   const bill = () => ({
     id: ids.bill,
     kind: "invoice",
@@ -50,7 +51,7 @@ export async function financialDocumentFixtures(
     payment_account_id: "a1",
     total_minor: invoiceTotalMinor,
     currency: "PLN",
-    declaration: "payable",
+    declaration,
     lifecycle: "active",
     review: "approved",
     version,
@@ -143,20 +144,24 @@ export async function financialDocumentFixtures(
               financial_document_id: null,
             },
           ]),
-      {
-        name: `Faktura ${invoiceTotalMinor / 100} — listopad`,
-        type: "expense",
-        due_date: "2026-11-05",
-        amount_pln: invoiceTotalMinor,
-        status: "due",
-        included_in_forecast: true,
-        actual_transaction_id: null,
-        source_key: "financial-document-november",
-        exclusion_reasons: [],
-        source: "financial_document",
-        scheduled_item_id: null,
-        financial_document_id: ids.bill,
-      },
+      ...(declaration === "declared_paid" || paid === invoiceTotalMinor
+        ? []
+        : [
+            {
+              name: `Faktura ${invoiceTotalMinor / 100} — listopad`,
+              type: "expense",
+              due_date: "2026-11-05",
+              amount_pln: invoiceTotalMinor - paid,
+              status: "due",
+              included_in_forecast: true,
+              actual_transaction_id: null,
+              source_key: "financial-document-november",
+              exclusion_reasons: [],
+              source: "financial_document",
+              scheduled_item_id: null,
+              financial_document_id: ids.bill,
+            },
+          ]),
       {
         name: "Abonament — grudzień",
         type: "expense",
@@ -436,6 +441,26 @@ export async function financialDocumentFixtures(
         body: req.postDataJSON(),
         key: req.headerValue("Idempotency-Key"),
       });
+    if (
+      path === `/api/finance/bills/${ids.bill}/payment-declaration` &&
+      method === "POST"
+    ) {
+      const body = req.postDataJSON() as {
+        expected_version: number;
+        declaration: "payable" | "declared_paid";
+        confirm_forecast_effect: boolean;
+      };
+      expect(body.expected_version).toBe(version);
+      expect(body.confirm_forecast_effect).toBe(true);
+      expect(Object.keys(body).sort()).toEqual([
+        "confirm_forecast_effect",
+        "declaration",
+        "expected_version",
+      ]);
+      declaration = body.declaration;
+      version++;
+      return route.fulfill({ json: bill() });
+    }
     if (
       path === `/api/finance/bills/${ids.bill}/allocations` &&
       method === "POST"

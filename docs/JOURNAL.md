@@ -2,6 +2,85 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Implementacja deklaracji opłacenia bez transakcji
+
+- Zgoda „tak” obejmuje zatwierdzony plan i natywne wykonanie; nie obejmuje deployu,
+  merge/push ani oznaczenia realnej faktury jako opłaconej. Required4hostdocs przeczytane.
+- Istniejący linked worktree feat/financial-document-workflow, BASE1b43f0d. Unrelated
+  dirtydocs/audity zachowane. Ruling: bez kolejnego worktree zgodnie z using-git-worktrees;
+  koszt: wspólna historia gałęzi, mitigacja przez explicit staging i review zakresu.
+- TDD: backendRED21FAIL (brak endpointu i PATCHbypass), GREEN40PASS z nowym rollbackaudit
+  testem. FrontendRED3FAIL/missing helper+dialog, GREEN19focused; full630PASS.
+  Ruff/mypy192/ESLint/tsc/buildPASS. Pełny backend i E2E jeszcze w toku.
+- Komenda POSTpayment-declaration wykorzystuje existingdeclared_paid i commandreceipt;
+  expected_version/ownerlocks/audit/undo, bez migracji lub sztucznej wpłaty. Forecastexcludes
+  paid bez warningów, coverage pozostaje. GenericPATCH nie zmienia deklaracjiapproved,
+  total/currency declaredpaid wymagają jawnego undo. Początkowe approve bez zmian.
+- UI: helper payable0/unlinkedreal, pełne realallocation ma pierwszeństwo; modalcałejreszty,
+  retryidenticalkey,409refetch i nowacheckboxzgoda; zmiana bill/session blokuje submit.
+- Ruling: niezależne testy/frontend przygotowywane podczas bramek backendu; commitbackend
+  dopiero po gates. Koszt: możliwe dostosowanie konsumenta, APIshape już zgodny ze spec.
+- RunnerPython3.12/zgodnerequirements; własny PG bez hostportów/sieci zewnętrznej,
+  wyłącznie syntetyczna finanse_test. Początkowy foregroundbaseline timeout nie jestPASS.
+  PGDataFileImmediateSync spowalniał setup; przeniesiono własny scratchPG na tmpfs.
+  Pierwszy runnerPID1sleep nie obsłużył SIGTERM: dockerstop zakończył go137 po timeout;
+  PG zakończony0. Bez rm-f/prune lub wpływu na produkcję. Nowy runner używa --init.
+- Ledger i surowe logi we własnym .superpowers/sdd/2026-11-12-bill-declaration-without-transaction/.
+  Instrukcja docs/operations/financial-documents.md. Jedno końcowe review przed odbiorem.
+- Końcowy read-onlyreview ses_e30892741ffeA1j2SI0aMSufFP:0Critical/0Important/0Minor,
+  declinedempty, bez drugiego review.28E2E desktop/mobilePASS, screeny375/1440 obejrzane.
+- Dodatkowy TDDcase:409 z tą samą wersją po odświeżeniu — RED1FAIL/7PASS; decisionEpoch
+  zapewnia nowy klucz przy nowej zgodzie, a retry sieciowe zachowuje stary. Finalgatesw toku.
+- Pełny backend wznowiono po wykryciu wymaganej roli migracyjnej/flag wfixture.
+  Niepełny poprzedni przebieg przerwanySIGINT, nie zaliczony. Własny scratchrole
+  bank_import_task_<hex>/CREATEDB i migracyjneenv, bez dostępu do produkcji.
+- Finalfrontend631PASS/E2E28PASS, lint/types/buildPASS. Review bez usterek.
+- Ruling: pełny backend2351testów (23proxy wykluczone) podzielono na8 własnych,
+  niezależnych PG/runnerów bezportów; każdy nodeID dokładnie raz, JUnit totals i frozen
+  sourcehash obowiązkowe. Koszt: brak jednego serial-orderprzebiegu, oszczędzony długi
+  czas oczekiwania. Niedokończone serialpróby nie liczą się jakoPASS. Taskdoneledger
+  wykorzysta rzeczywistą świeżą komendę shardów zamiast odpalać pełny zestaw drugi raz;
+  koszt: ręczny wpis statusu, mitigacja przez logs/XML/sourcefreeze.
+- Shardy:7grup/2057PASS, ósma przerwana przed wykonaniem na niedopasowanym nodeID.
+  Istniejący testOCR parametryzuje gzip.compress bez mtime:ID zawiera bieżący timestamp.
+  Ponowienie tylko294testów tej grupy wybiera funkcję i jawnie odrzuca2stabilnecases
+  należące do innych shardów; źródła testów/app nie zmienione. Końcowy gate wymaga
+  dokładnie2351JUnit/0fail/error/skip i niezmienionych hashy, bez zaliczenia abortów.
+- FINAL: ostatnia294PASS/2jawne deselect (te2cases w innychgrupach); całkowita rozłączna
+  kolekcja2351PASS/0failure/error/runtime-skips,23standardproxyexcluded,422hash bezdriftu.
+  Frontend631 iE2E28PASS, freshRuff/mypy192PASS,ESLint/tsc/buildPASS. Gate zamknięty.
+- Własne18kontenerów (8PG+8runner ioryginalnyPG+runner) usunięte po exactID/label/
+  idle/nohostports/exitnot137/absencecheck, bezforce/prune. Wcześniejsza pierwsza para
+  setup również usunięta; exit137 pierwszegoPID1sleep ujawniony, nie maskowany.
+- Raport docs/audits/2026-11-12-bill-declaration-local.md zachowuje wszystkie rulings,
+  odrzucone próby i końcowe dowody. Gałąź i unrelated dirtydocs/audity zachowane;
+  stagingCHANGELOG/TASKS/JOURNAL obejmuje tylko wpisy tej funkcji. Brak produkcyjnych
+  mutacji, merge/push/deploy. Następny krok: osobna decyzja o integracji/wdrożeniu.
+
+## 2026-11-12 — Zaplanowanie rozliczenia deklaracyjnego bez księgowania
+
+- User zapytał gdzieOCRfaktury/jakrozliczać,po opisie poprosił możliwość beztransakcji.
+  Zaakceptował przedstawiony zakres:fullremaining,declarepaidnotledger,excludeforecast,
+  audit/undo/laterrealallocationnodoublecount;bezpartialmanualamounts.
+- Writingplans: istniejącyFinancialDocument.declaration declared_paid wystarcza,
+  noDBmigration. paid_minor/remaining/reconciliation pozostają realallocations.
+  Frontend osobnedozapłaty/unlinked/status;fullrealallocation ma pierwszeństwo,
+  partialrealallocation konsumujeresztę deklarowaną,bez dodawania fictitiouspayments.
+- Plan komendyPOSTpayment-declaration,expectedversion/idempotency/confirmforecast,
+  ownerlocks/auditoldnew. Cofnięciejawniepayable;chroniony total/currency dopókideclared.
+  Forecastpomija declared_paid bezfałszywychexclusions/dueentries;coveragezachowane.
+- Spec docs/superpowers/specs/2026-11-12-bill-declaration-without-transaction-design.md;
+  plan docs/superpowers/plans/2026-11-12-bill-declaration-without-transaction.md.
+ 2tasks backend/foregroundUI+tests,przedimplementacją weryfikacjaodrębnegoworktree.
+  Nativezjednymfinalreview rekomendowany,metodairzeczywistyplanoczekująnapotwierdzenie.
+- Nie edytowano kodu aplikacji,nie uruchamiano testów/commit/push/deploy/migracji,
+  nie oznaczono istniejącejfaktury usera jakoopłaconej. Lokalneprywatnedowody i dirtydocs/
+  audity wcześniejszychetapów pozostają nietknięte. Spec/planbezPII i kwotrzeczywistych.
+- Buildercheckspec ses_e30b3af48ffeMPNj9L6630F8Z9: genericPATCHbypassguard addedtoplan;
+  FXquestion rozstrzygnięto jako existingPLNlinkrestriction,nienowe rozliczanieFX.
+  DeklaracjeEUR/USD możliwe bezledger,linkEUR/USD nadalunsupported;kosztbraknowejfunkcji,
+  nieregresja. Pozostałe kwestieallocation/coverage/bezmigracji potwierdzone.
+
 ## 2026-11-12 — Zatwierdzony przelew z karty, bez planu; porównanie z księgą
 
 - Integracja wykonana: main/origin4d2cf21→619f903FF/push,ls-remoteexactPASS;

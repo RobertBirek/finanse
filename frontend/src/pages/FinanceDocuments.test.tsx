@@ -59,11 +59,13 @@ describe("FinanceDocuments register", () => {
   it("separates declared paid from partial reconciliation and renders the remaining currency amount", async () => {
     renderRegister();
     expect(
-      await screen.findByText(/Deklarowano opłacenie/),
+      await screen.findByText(
+        /Opłacona deklaracyjnie — częściowo powiązana z księgą/,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Uzgodnienie: partial/)).toBeInTheDocument();
     expect(
-      screen.getByText((_, node) => node?.textContent === "60,00 €"),
+      screen.getByText((_, node) => node?.textContent === "0,00 €"),
     ).toBeInTheDocument();
   });
 
@@ -71,6 +73,15 @@ describe("FinanceDocuments register", () => {
     renderRegister([{ ...bill, id: "unknown", currency: null }]);
     expect((await screen.findAllByText("—")).length).toBe(2);
     expect(screen.queryByText("100,00 zł")).not.toBeInTheDocument();
+  });
+
+  it("does not mark a declared-paid historical invoice as overdue", async () => {
+    renderRegister([{ ...bill, due_date: "2000-01-01" }]);
+    await screen.findByText(/Opłacona deklaracyjnie/);
+    expect(screen.queryByText(/Zaległe/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Dostawca/ }),
+    ).toBeInTheDocument();
   });
 
   it("sends review, declaration, date and query filters and resets pagination", async () => {

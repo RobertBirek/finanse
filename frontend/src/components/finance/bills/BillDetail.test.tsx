@@ -54,7 +54,9 @@ describe("BillDetail", () => {
       />,
     );
 
-    expect(screen.getByText("declared_paid")).toBeInTheDocument();
+    expect(
+      screen.getByText("Opłacona deklaracyjnie — częściowo powiązana z księgą"),
+    ).toBeInTheDocument();
     expect(screen.getByText("partial")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Archiwizuj" }));
     expect(onLifecycle).not.toHaveBeenCalled();
@@ -136,5 +138,28 @@ describe("BillDetail", () => {
       screen.getByRole("button", { name: "Potwierdź zmianę stanu" }),
     );
     expect(onLifecycle).toHaveBeenCalledWith("archived", true);
+  });
+
+  it("offers a separate declaration action and shows zero payable, not zero ledger remainder", () => {
+    const onDeclaration = vi.fn();
+    render(
+      <BillDetail
+        bill={bill}
+        onClose={vi.fn()}
+        onPayment={vi.fn()}
+        onCoverage={vi.fn()}
+        onLifecycle={vi.fn()}
+        onUnlink={vi.fn()}
+        onDeclaration={onDeclaration}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Cofnij oznaczenie opłacenia" }),
+    );
+    expect(onDeclaration).toHaveBeenCalledWith("payable");
+    expect(
+      screen.getByText("Pozostało do powiązania z księgą"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^0,00\s*zł$/)).toBeInTheDocument();
   });
 });

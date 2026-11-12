@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { BillResponse } from "../../../api/bills";
+import { billPaymentPresentation } from "./billPaymentPresentation";
 
 const amount = (value: number, currency: string) =>
   new Intl.NumberFormat("pl-PL", { style: "currency", currency }).format(
@@ -26,9 +27,10 @@ export function BillRegister({
   return (
     <div className="space-y-2">
       {bills.map((bill) => {
+        const payment = billPaymentPresentation(bill);
         const overdue =
           bill.due_date &&
-          bill.remaining_minor > 0 &&
+          payment.payableMinor > 0 &&
           bill.due_date < new Date().toISOString().slice(0, 10);
         return (
           <article
@@ -48,11 +50,8 @@ export function BillRegister({
                 className={`mt-1 text-xs ${overdue ? "text-red-300" : "text-gray-400"}`}
               >
                 {date(bill.issue_date)} · {overdue ? "Zaległe: " : "Termin: "}
-                {date(bill.due_date)} ·{" "}
-                {bill.declaration === "declared_paid"
-                  ? "Deklarowano opłacenie"
-                  : "Bez deklaracji opłacenia"}{" "}
-                · Uzgodnienie: {bill.reconciliation}
+                {date(bill.due_date)} · {payment.statusLabel} · Uzgodnienie:{" "}
+                {bill.reconciliation}
               </p>
             </div>
             <dl className="grid grid-cols-2 gap-x-5 text-right text-xs">
@@ -65,11 +64,11 @@ export function BillRegister({
                 </dd>
               </div>
               <div>
-                <dt className="text-gray-500">Pozostało</dt>
+                <dt className="text-gray-500">Do zapłaty</dt>
                 <dd className="font-mono text-white">
                   {bill.total_minor == null || !bill.currency
                     ? "—"
-                    : amount(bill.remaining_minor, bill.currency)}
+                    : amount(payment.payableMinor, bill.currency)}
                 </dd>
               </div>
             </dl>

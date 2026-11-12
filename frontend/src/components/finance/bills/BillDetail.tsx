@@ -4,6 +4,7 @@ import {
   useDocumentPreview,
 } from "../../../api/documents";
 import { type BillResponse } from "../../../api/bills";
+import { billPaymentPresentation } from "./billPaymentPresentation";
 
 const amount = (value: number | null, currency: string | null) =>
   value == null || currency == null
@@ -76,6 +77,7 @@ export function BillDetail({
   onPayment,
   onCoverage,
   onReceipt,
+  onDeclaration,
   onLifecycle,
   onUnlink,
   actionsDisabled = false,
@@ -85,6 +87,7 @@ export function BillDetail({
   onPayment: () => void;
   onCoverage: () => void;
   onReceipt?: () => void;
+  onDeclaration?: (declaration: "declared_paid" | "payable") => void;
   onLifecycle: (
     lifecycle: BillResponse["lifecycle"],
     confirmForecastEffect?: true,
@@ -93,6 +96,7 @@ export function BillDetail({
   actionsDisabled?: boolean;
 }) {
   const currency = bill.currency;
+  const payment = billPaymentPresentation(bill);
   const [pendingAction, setPendingAction] = useState<
     | { kind: "lifecycle"; lifecycle: BillResponse["lifecycle"] }
     | { kind: "unlink"; allocationId: string }
@@ -119,11 +123,11 @@ export function BillDetail({
           <dd className="font-mono text-white">
             {bill.total_minor == null
               ? "—"
-              : amount(bill.total_minor, currency)}
+              : amount(payment.payableMinor, currency)}
           </dd>
         </div>
         <div>
-          <dt className="text-gray-500">Pozostało</dt>
+          <dt className="text-gray-500">Pozostało do powiązania z księgą</dt>
           <dd className="font-mono text-white">
             {amount(bill.remaining_minor, currency)}
           </dd>
@@ -138,10 +142,10 @@ export function BillDetail({
         </div>
         <div>
           <dt className="text-gray-500">Deklaracja</dt>
-          <dd className="text-white">{bill.declaration}</dd>
+          <dd className="text-white">{payment.statusLabel}</dd>
         </div>
       </dl>
-      {bill.forecast_exclusion_reasons.length ? (
+      {!payment.declared && bill.forecast_exclusion_reasons.length ? (
         <p className="mt-4 text-sm text-amber-300">
           Pozycja nie jest uwzględniona w prognozie:{" "}
           {bill.forecast_exclusion_reasons.join(", ")}.
@@ -195,6 +199,26 @@ export function BillDetail({
         )}
       </section>
       <div className="mt-5 flex flex-wrap gap-2">
+        {onDeclaration ? (
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={
+              actionsDisabled ||
+              bill.review !== "approved" ||
+              bill.lifecycle !== "active" ||
+              bill.remaining_minor <= 0 ||
+              !currency
+            }
+            onClick={() =>
+              onDeclaration(payment.declared ? "payable" : "declared_paid")
+            }
+          >
+            {payment.declared
+              ? "Cofnij oznaczenie opłacenia"
+              : "Oznacz jako opłaconą bez transakcji"}
+          </button>
+        ) : null}
         {onReceipt ? (
           <button
             type="button"
