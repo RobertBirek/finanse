@@ -2,6 +2,29 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Zatwierdzone main/push i frontend-only deploy ścieżek kategorii
+
+- User „scal, wypchnij do main i wdróż”, później „dokończ”. main493bf48→d09ee8aFF,
+  push i exactremoteSHA. Zmiana nie wymaga API: tylko frontendd09ee8a, backend/worker
+  69ee8b7/schema84 bez przebudowy lub restartu. Required4docs i/deployrunbook odczytane.
+- Świeże648vitest/6targeteddesktop-mobileE2E/ESLint/tsc/buildPASS, wcześniejsze80E2E
+  sourcehashmatch. API/deps/nginx/ops bez zmian. Backend nie powtarzany bez driftu.
+- Immutableprepare_release/offlinefrontendbuild nginxpermissionsPASS; fullrender
+  zgodny poza frontendimage/build. Nie osłabiano config/env/user/mountów/sieci.
+- Szyfrowanybackup bezretencji9eaf1fcc…; tool120s przerwał restore, wznowiono ten sam
+  snapshot z kontrolą hash. Ownno-network/no-portclone restore76tabel/uploadarchive,
+  schema84/ledger0PASS. Produkcyjnych writerów nie zatrzymywano przy frontend-only.
+- Jedno safetyreview ses_e301b4e99ffebchn9pCMn61SDe:2Important (finalmixedmetadata,
+  verifiedrollback) rozwiązano RED3KeyError→GREEN3PASS w prywatnym operatorze.
+  DeclinedtojudgeNone. Finalizacja wymaga wszystkich dowodów i obserwacji.
+- Frontendpodmieniony; HTTPS200/auth401/15assetsbyte-match i GET-onlybrowser375/1440PASS.
+  Screeny obejrzane;5innychkontenerówID/image/starttime/restarts/mounty bez zmian.
+  Minimum300s obserwacjiPASS:0ERROR/restartów, ledger0 i workerready.
+  Atomowemetadata frontendd09ee8a/backend-worker69ee8b7 verified-live. Ownclone
+  idle/stopExit0/rm/absencePASS, plaintextrestore usunięty bezforce/prune.
+  Backup i obrazy rollbacku zachowane. Prywatnedowody /opt/finanse/webapp/releases/category-selects-d09ee8a/evidence.
+  Publicznyraport docs/audits/2026-11-12-category-select-paths-production.md.
+
 ## 2026-11-12 — Pełne ścieżki i sortowanie wszystkich wyborów kategorii
 
 - User zatwierdził plan: wszystkie finansowe selecty, pełna wielopoziomowa ścieżka

@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, d09ee8a] — 2026-11-12 — Pełne ścieżki kategorii
+
+### Changed
+- Po zgodzie użytkownika main fast-forward i push `d09ee8a`; wymieniono wyłącznie
+  frontend. Backend/worker69ee8b7 i schema84 bez zmian, bez restartu usług danych.
+- Świeże648testów,6targetedE2E, lint/types/buildPASS. Backup bez retencji i izolowany
+  restore76tabel/uploads/ledger0PASS. HTTPS/auth/15assets/browser375/1440PASS.
+- Minimum300s obserwacjiPASS: brak błędów/restartów, ledger0 i workerready.
+  Atomowe metadane verified-live; własny klon/plaintext usunięte, backup i rollback zachowane.
+  Raport `docs/audits/2026-11-12-category-select-paths-production.md`.
+
 ## [Local, verified] — 2026-11-12 — Jednolite wybory kategorii
 
 ### Changed

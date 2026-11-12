@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Wdrożenie ścieżek kategorii — d09ee8a (2026-11-12)
+
+- [x] Zgoda użytkownika, mainFF/push i remoteSHA; zakres wyłącznie frontend.
+- [x] Świeże648vitest/6E2E/static/build; zgodne źródła wcześniejszego80E2E.
+- [x] Backup bez retencji, no-port/no-network restore76tabel/upload archive/ledger0.
+- [x] Niezmienny obraz i fullCompose delta wyłącznie frontend image/build.
+- [x] Podmiana frontendu, HTTPS/auth/15assets/browser375/1440,5innych kontenerów bez zmian.
+- [x] Minimum300s obserwacjiPASS, atomowe active metadata verified-live i cleanup własnego klonu/plaintext.
+- [ ] Read-only kontrola kolejnego dnia, bez mutacji kategorii i transakcji.
+
 ## Jednolite ścieżki kategorii w selectach (2026-11-12)
 
 - [x] Zatwierdzony zakres: pełna ścieżka ` - `, sortowanie rosnące po polsku,
