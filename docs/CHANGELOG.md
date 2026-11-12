@@ -19,7 +19,8 @@ Wszystkie istotne zmiany w projekcie.
 - Produkcja verified-live5dc/schema84 zgodna ze źródłami i15distHTTPS, runtimeerrors0,
   ARQready,6serviceIDs/restarts bez zmian. Ponowny deploy/migracje zbędne.
 - Raport `docs/audits/2026-11-12-card-transfer-and-ledger-comparison.md`;
-  szczegóły umowy i receipt pozaGit. Scalenie/push main zatwierdzone.
+  szczegóły umowy i receipt pozaGit. FF/pushmain619f903 i remoteexactSHA potwierdzone;
+  dalszy commit domyka wyłącznie statusy dokumentacji, bez nowego wydania runtime.
 
 ## [Review, read-only] — 2026-11-12 — Nowe dokumenty w udostępnionym folderze
 

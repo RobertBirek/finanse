@@ -85,7 +85,8 @@ obecnych w pakiecie zgodnych bajtowo, wszystkie15dist zgodne przezHTTPS. Backend
 worker, frontend i3usługi danych zachowały IDs/images/starttime, restarty0.
 Public health/login200, anonimowe finance401, ARQreadinessPASS; runtimeERROR0.
 Metadata release'u pozostają `verified-live`5dc84fe/schema84, bez udawania nowego
-builda dokumentacyjnej rewizji. FF/push main zatwierdzone; wynik integracji w Git.
+builda dokumentacyjnej rewizji. **FF/push main4d2cf21→619f903 wykonane**, dokładnySHA
+potwierdzony przez `ls-remote`. Kolejny commit domyka jedynie statusy dokumentacji.
 
 Cleanup: po kontroli ownership/exactID/network/mount/idle usunięto2własne kontenery,
 sieć i wolumen oraz lokalną plaintextkopię restore i credentiale klonu. Bezforce,

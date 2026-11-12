@@ -4,6 +4,11 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ## 2026-11-12 — Zatwierdzony przelew z karty, bez planu; porównanie z księgą
 
+- Integracja wykonana: main/origin4d2cf21→619f903FF/push,ls-remoteexactPASS;
+  7zmienionychplików wyłączniedocs. Runtime5dc/sourcebyteproof unchanged; ponowne
+  wdrożenie no-op. Następujący commit tylko domyka statusyintegracji; gałąź/worktree
+  zachowane,bo3niezwiązaneauditsdirty nie należądo cleanup tej operacji.
+
 - User poprosił porównanie,dodanieobu kredytów,parametrów,scalenie/pushmain/deploy.
   Q7 jużistnieje,więc brakduplikatu. Po wskazaniu brakubankfirstdue wybrał
   „Przelew teraz, plan później”, zdatązporozumienia. Zgoda nie obejmuje 11Veloimportów.

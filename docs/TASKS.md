@@ -14,7 +14,8 @@ Backlog zadań ze statusami.
   tylko własne,bezforce/prune. Oryginały i szyfrowany backup zachowane.
 - [x]9operator/21focusedbackend/617frontendPASS, runnerlint/mypy191 iESLint/tscPASS.
   Źródła zgodne zlive5dc;15distHTTPS/health/auth/ARQ/errors0 i6serviceIDs bez zmian.
-- [~] FF/pushmain zatwierdzone; wyłącznie dokumentacja, deployment no-op po liveproof.
+- [x] FF/pushmain619f903 potwierdzone przez ls-remote; wyłącznie dokumentacja,
+  deployment no-op po liveproof. Domknięcie statusów jest kolejnym commitem dokumentacji.
 - [ ] Bankowy termin pierwszejraty/harmonogram i odrębne dodanieplanu karty;
   uzgodnienie11Velo oraz3dat osobno,bez domyślnego księgowania.
 
