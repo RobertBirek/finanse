@@ -10,6 +10,7 @@ import app.audit.models
 import app.documents.models
 import app.documents.job_models
 import app.finance.models
+import app.finance.annotation_models
 import app.finance.imports.models
 import app.finance.loan_schedule_models
 import app.finance.rule_models
