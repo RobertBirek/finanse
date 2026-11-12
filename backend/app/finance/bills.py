@@ -414,6 +414,17 @@ async def update_bill(
         if bill.version != data.expected_version:
             raise RuntimeError("version_conflict")
         values = data.model_dump(exclude_unset=True, exclude={"expected_version"})
+        if (
+            bill.review == "approved"
+            and "declaration" in values
+            and values["declaration"] != bill.declaration
+        ):
+            raise ValueError("use_payment_declaration_command")
+        if bill.declaration == "declared_paid" and any(
+            field in values and values[field] != getattr(bill, field)
+            for field in ("total_minor", "currency")
+        ):
+            raise ValueError("clear_payment_declaration_before_amount_change")
         coverage = await db.scalar(
             select(RecurringOccurrenceCoverage)
             .where(RecurringOccurrenceCoverage.financial_document_id == bill.id)

@@ -72,6 +72,14 @@ class BillLifecycleUpdate(BaseModel):
     confirm_forecast_effect: Literal[True] | None = None
 
 
+class BillDeclarationChange(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    expected_version: StrictInt = Field(ge=1)
+    declaration: Literal["declared_paid", "payable"]
+    confirm_forecast_effect: Literal[True]
+
+
 class AllocationCreate(BaseModel):
     version: StrictInt = Field(ge=1)
     posting_id: uuid.UUID

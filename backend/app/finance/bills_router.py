@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.finance.bill_coverage import decide_coverage, get_coverage_candidates, unlink_coverage
+from app.finance.bill_declarations import set_bill_payment_declaration
 from app.finance.bill_payments import (
     allocate_payment,
     get_payment_candidates,
@@ -27,6 +28,7 @@ from app.finance.bills_schemas import (
     AllocationCreate,
     BillApprove,
     BillCandidatePage,
+    BillDeclarationChange,
     BillFilters,
     BillLifecycleUpdate,
     BillPage,
@@ -241,6 +243,25 @@ async def unlink_payment_endpoint(
             allocation_id,
             expected_version,
             context=_context(idempotency_key),
+        )
+        await db.commit()
+        return response
+    except (LookupError, RuntimeError, ValueError) as error:
+        await db.rollback()
+        raise _error(error)
+
+
+@router.post("/{bill_id}/payment-declaration", response_model=BillResponse)
+async def payment_declaration_endpoint(
+    bill_id: uuid.UUID,
+    data: BillDeclarationChange,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> BillResponse:
+    try:
+        response = await set_bill_payment_declaration(
+            db, current_user.id, bill_id, data, context=_context(idempotency_key)
         )
         await db.commit()
         return response

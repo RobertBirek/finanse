@@ -129,6 +129,8 @@ async def project_bill_cashflows(
     changes: dict[date, int] = {}
     exclusions: list[str] = []
     for bill in bills:
+        if bill.declaration == "declared_paid":
+            continue
         paid = int(
             await db.scalar(
                 select(func.coalesce(func.sum(DocumentPaymentAllocation.amount_minor), 0)).where(
