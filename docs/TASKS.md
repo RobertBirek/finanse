@@ -2,6 +2,19 @@
 
 Backlog zadań ze statusami.
 
+## Nowe dokumenty bankowe — przegląd źródeł (2026-11-12)
+
+- [x] Na prośbę użytkownika odczyt wcześniej udostępnionego folderuDrive:50plików,
+  8nowychID; bez nowej integracji, logowania lub synchronizacji produktu.
+- [x]8oryginałów/hashes zachowane prywatnie.2PDFVelo identyczne, umowaQ7 duplikat,
+  5wierszyRevolut zawarte we wcześniejszymCSV. Brak automatycznej deduplikacji księgi.
+- [x] Parserexact5dc source-only/nonroot/networknone:Velo61/Revolut5kontrolePASS;
+  kontener usuniętybezforce, zero produkcyjnych odczytów/zapisów/APIstaging.
+- [x] Warunki porozumienia „Przelew na raty” przejrzane; plan w istniejącym limicie,
+  nie nowy niezależny dług. Regulamin szyfrowany nieodczytany; bez zgadywania rat/dat.
+- [ ] Osobny zakres: porównanieVelo zksięgą owner-scoped i weryfikacja wykonania
+  przelewu/wyciągu karty oraz bankowej tabeli rat; każdy zapis wymaga osobnej zgody.
+
 ## Wydanie importerów A+B — wdrożone, verified-live (2026-11-12)
 
 - [x] Po osobnym „tak”: fixNginx z trwałym proxytestem, bez poszerzania zwykłegoAPI.

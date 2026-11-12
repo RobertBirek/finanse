@@ -2,6 +2,33 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Read-only przegląd nowych źródełDrive i porozumienia karty
+
+- User poprosił „sprawdź mój dysk google...nowe wyciągi...nowy kredyt w karcie”.
+  Jawnie ograniczono do odczytu/porównania, bez księgowania/zakładania/aktywacji.
+  Required4/opt docs readinorder; hostdocs nadal preparedP, więc uwzględniono lokalny
+  raportwdrożenia i rzeczywiste metadata verified-live5dc. Nie wykonywano nowego deployu.
+- MCP nie udostępniaDrive, default rcloneconfig brak, composio whoami bez output;
+  nie inicjowano OAuth. Odnaleziono wcześniejszy link udostępnionego folderu w prywatnym
+  fetch_sources.py; bezpośredniGoogleHTTPS odczyt, bezEXA lub innychpośredników.
+- Folder50records,42oldID/8newID; nowe pobrane doE=/tmp/opencode/
+  drive-statements-review-20261112-Du0lKmnZ, originals/extracted/hashprivate0600/0700.
+ 2newVeloPDF byte-identical; uploadedconsolidationcontract SHAidentical to Q7contract.
+  Revolut5fullrow exactmatches woldPLNCSV; PDFOctober odpowiadaCSV. Żadnego uznania
+  duplikatu źródła za potwierdzone księgowanie lub automatycznego scalania transakcji.
+- Nowe porozumieniecardplan: parametry/dataprywatne verifiedtextanchors/integerchecks;
+  wramachexistinglimit, zmiennaAPR, finalinstalmentmaydiffer i duefromcardstatement.
+  Brak bankdetailedschedule lub potwierdzenia wykonania przelewu w tym porozumieniu.
+  Zaszyfrowanyregulamin notdecrypted; tylko źródła bezmodelowania nowegodługu.
+- Offlineparser ownexact5dcimage/uid10001/networknone/readonly/noenvnomount, źródłaprzez
+  stdin:Pypdf→Velo61rows wszystkiebalance/date/debit/credit/closingchecksPASS;
+  Revolut5checksPASS,warnings timezoneabsent/openingderived,PDFconfirmsopening.
+  Kontenerstop/rm exactID/label bezforce/absentPASS.8oryginałów rehashPASS. NoSQL,
+  ASGI/worker/session/APIstaging/DBreadwrite/postings/activation. Parser/produkt bez zmian.
+- Sanitizowanyaudit docs/audits/2026-11-12-shared-bank-documents-review.md, bezPII/
+  bankIDs/kwotumowy wGit. Dalszy etap wymaga wyciągu/potwierdzenia karty i owner-scoped
+  porównania zksięgą; userapproval osobno przedmutacją. Oryginały i stareaudits zachowane.
+
 ## 2026-11-12 — Importery A+B5dc84fe wdrożone i zweryfikowane
 
 - ZgodaDquestion „Tak, pełny etap D”+„dokończ”:main4d2cf21FF/pushverified,

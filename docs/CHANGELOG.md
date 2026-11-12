@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Review, read-only] — 2026-11-12 — Nowe dokumenty w udostępnionym folderze
+
+### Added
+- Przegląd8nowychplików spośród50widocznych: identyczne2PDFVelo,5wierszyRevolut
+  pokrywających się ze starszymCSV, ponowna kopia umowyQ7 oraz nowe porozumienie
+  ratalne w ramach limitu karty. Bez importu lub aktywacji.
+- Izolowane parsery exact5dc/nonroot/networknone:Velo61wierszy iRevolut5 zkontrolamiPASS;
+  oryginały/hashes prywatne, kontener usuniętybezforce, produkcja nietknięta.
+- Raport `docs/audits/2026-11-12-shared-bank-documents-review.md`; szczegóły umowy
+  pozaGit. Brak potwierdzonego wykonania przelewu i szczegółowej tabeli rat.
+
 ## [Production, 5dc84fe] — 2026-11-12 — Importery wyciągów i harmonogramów A+B
 
 ### Changed
