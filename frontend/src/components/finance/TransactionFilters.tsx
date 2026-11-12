@@ -1,7 +1,7 @@
 import { useState, type SelectHTMLAttributes } from "react";
 import type { Account, Category } from "../../api/finance";
 import { SEARCH_FIELDS, TRANSACTION_TYPES } from "../../lib/transactionSearch";
-import { categoryPath } from "../../lib/categories";
+import { categoryOptions } from "../../lib/categories";
 
 export function TransactionFilters({
   search,
@@ -88,9 +88,9 @@ export function TransactionFilters({
                     Wybrana kategoria — nazwa niedostępna
                   </option>
                 )}
-              {categories?.map((c) => (
+              {categoryOptions(categories ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
-                  {categoryPath(c.id, categories)}
+                  {c.label}
                   {c.is_active === false ? " (archiwalna)" : ""}
                 </option>
               ))}

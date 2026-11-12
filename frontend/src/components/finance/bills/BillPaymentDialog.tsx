@@ -13,6 +13,7 @@ import {
 import { useAccounts, useCategories } from "../../../api/finance";
 import { Dialog } from "../../Dialog";
 import { BillCandidateSummary } from "./BillCandidateSummary";
+import { categoryOptions } from "../../../lib/categories";
 
 const unavailableText = {
   document_inactive: "Dokument nie jest aktywny. Nie można powiązać płatności.",
@@ -451,11 +452,11 @@ export function BillPaymentDialog({
               onChange={(e) => setCategory(e.target.value)}
             >
               <option value="">Wybierz kategorię</option>
-              {categories.data
-                ?.filter((item) => item.is_active && item.type === "expense")
+              {categoryOptions(categories.data ?? [])
+                .filter((item) => item.is_active && item.type === "expense")
                 .map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.name}
+                    {item.label}
                   </option>
                 ))}
             </select>

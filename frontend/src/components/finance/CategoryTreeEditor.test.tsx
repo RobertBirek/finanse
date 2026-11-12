@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { categorySelectFixture } from "../../test/categoryFixtures";
 import { describe, expect, it, vi } from "vitest";
 import { CategoryTreeEditor } from "./CategoryTreeEditor";
 
@@ -13,6 +14,28 @@ vi.mock("../../api/finance", () => ({
 }));
 
 describe("CategoryTreeEditor", () => {
+  it("sorts full parent paths while excluding self, descendants and other types", () => {
+    updateCategory.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    deleteCategory.mockReturnValue({ isPending: false });
+    render(
+      <CategoryTreeEditor
+        categories={categorySelectFixture}
+        onAddChild={vi.fn()}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj kategorię Dom" }),
+    );
+    const select = screen.getByLabelText("Kategoria nadrzędna");
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Brak rodzica", "Auto (archiwalna)", "Auto - Zamek"]);
+    expect(
+      within(select).queryByRole("option", { name: /Dom|Pensja/ }),
+    ).not.toBeInTheDocument();
+  });
   it("blocks invalid typed category HEX then saves only corrected black and can reset inheritance", () => {
     const mutate = vi.fn();
     updateCategory.mockReturnValue({ mutate, isPending: false });

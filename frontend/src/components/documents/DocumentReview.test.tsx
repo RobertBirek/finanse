@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { categorySelectFixture } from "../../test/categoryFixtures";
 import { describe, expect, it, vi } from "vitest";
 import type { DocumentReview as DocumentReviewData } from "../../api/documents";
 import { DocumentReview } from "./DocumentReview";
@@ -89,7 +90,14 @@ vi.mock("../../api/bills", () => ({
 vi.mock("../../api/finance", () => ({
   useCategories: () => ({
     data: [
-      { id: "category-1", name: "Zakupy", type: "expense", is_active: true },
+      {
+        id: "category-1",
+        name: "Zakupy",
+        parent_id: null,
+        type: "expense",
+        is_active: true,
+      },
+      ...categorySelectFixture,
     ],
   }),
   useAccounts: () => ({
@@ -109,6 +117,23 @@ function renderReview() {
 }
 
 describe("DocumentReview", () => {
+  it("uses sorted full category paths even if ancestors are archived", () => {
+    renderReview();
+    const select = screen.getByLabelText("Kategoria");
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual([
+      "Nie wybieraj teraz",
+      "Auto - Zamek",
+      "Dom - Gaz",
+      "Dom - Woda",
+      "Zakupy",
+    ]);
+    fireEvent.change(select, { target: { value: "water" } });
+    expect(select).toHaveValue("water");
+  });
   it("does not animate archived pending history as current work", () => {
     const previous = apiState.review;
     apiState.archived = true;

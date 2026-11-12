@@ -5,6 +5,13 @@ export function categoryPath(
   categories: readonly Category[],
 ): string {
   const byId = new Map(categories.map((category) => [category.id, category]));
+  return categoryNames(id, byId).join(" → ");
+}
+
+function categoryNames(
+  id: string,
+  byId: ReadonlyMap<string, Category>,
+): string[] {
   const parts: string[] = [];
   const seen = new Set<string>();
   let current = byId.get(id);
@@ -13,7 +20,28 @@ export function categoryPath(
     parts.unshift(current.name);
     current = current.parent_id ? byId.get(current.parent_id) : undefined;
   }
-  return parts.join(" → ");
+  return parts;
+}
+
+const categoryCollator = new Intl.Collator("pl", { sensitivity: "base" });
+
+/** Sort a copied list of choices using full ancestry, including unavailable parents. */
+export function categoryOptions(
+  categories: readonly Category[],
+  hierarchy: readonly Category[] = categories,
+): (Category & { label: string })[] {
+  const byId = new Map(
+    [...hierarchy, ...categories].map((category) => [category.id, category]),
+  );
+  return categories
+    .map((category) => ({
+      ...category,
+      label: categoryNames(category.id, byId).join(" - "),
+    }))
+    .sort(
+      (a, b) =>
+        categoryCollator.compare(a.label, b.label) || a.id.localeCompare(b.id),
+    );
 }
 
 export function eligibleCategoryParents(

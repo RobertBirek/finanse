@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ScheduledItemForm } from "./ScheduledItemForm";
+import { categorySelectFixture } from "../../test/categoryFixtures";
 
 const hooks = vi.hoisted(() => ({
   useCreateScheduledFinanceItem: vi.fn(),
@@ -72,6 +73,21 @@ const categories: Array<{
 ];
 
 describe("ScheduledItemForm", () => {
+  it("keeps full archived-parent paths after filtering scheduled expense choices", () => {
+    render(
+      <ScheduledItemForm
+        mode="create"
+        accounts={accounts}
+        categories={categorySelectFixture}
+      />,
+    );
+    expect(
+      within(screen.getByLabelText("Kategoria"))
+        .getAllByRole("option")
+        .slice(1)
+        .map((option) => option.textContent),
+    ).toEqual(["Auto - Zamek", "Dom - Gaz", "Dom - Woda"]);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     hooks.useCreateScheduledFinanceItem.mockReturnValue({

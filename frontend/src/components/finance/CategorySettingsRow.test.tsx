@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { categorySelectFixture } from "../../test/categoryFixtures";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { CategoryRow } from "./CategorySettingsRow";
@@ -37,6 +38,23 @@ function props(
 }
 
 describe("CategoryRow deletion safety", () => {
+  it("shows sorted full eligible parent paths in the legacy editor without allowing cycles", () => {
+    render(
+      <CategoryRow
+        {...props({
+          category: categorySelectFixture.find((c) => c.id === "home")!,
+          categories: categorySelectFixture,
+          editing: true,
+        })}
+      />,
+    );
+    const select = screen.getByLabelText("Kategoria nadrzędna");
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["brak", "Auto", "Auto - Zamek", "Pensja"]);
+  });
   it("keeps the conflict warning for a category with records", () => {
     render(<CategoryRow {...props()} />);
     expect(

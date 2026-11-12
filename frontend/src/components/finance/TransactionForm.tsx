@@ -435,6 +435,7 @@ export function TransactionForm({
             <CategoryPicker
               id="tx-category"
               categories={filteredCategories}
+              hierarchyCategories={categories}
               value={categoryId}
               onChange={setCategoryId}
               type={type}

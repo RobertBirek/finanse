@@ -8,6 +8,7 @@ import {
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FinanceAccounts } from "./FinanceAccounts";
+import { categorySelectFixture } from "../test/categoryFixtures";
 
 function render(ui: React.ReactNode) {
   return baseRender(ui, { wrapper: MemoryRouter });
@@ -94,6 +95,29 @@ function createCategoryForm() {
 }
 
 describe("FinanceAccounts", () => {
+  it("sorts the new-category parent selector by the full path, keeping archived parents available", () => {
+    hooks.useCategories.mockReturnValue({
+      data: categorySelectFixture,
+      isLoading: false,
+      isError: false,
+    });
+    render(<FinanceAccounts section="categories" />);
+    const select = createCategoryForm().getByLabelText("Kategoria nadrzędna");
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual([
+      "brak",
+      "Auto",
+      "Auto - Zamek",
+      "Dom",
+      "Dom - Gaz",
+      "Dom - Stara",
+      "Dom - Woda",
+      "Pensja",
+    ]);
+  });
   it("links a source account to import as a suggestion rather than creating a payment", () => {
     render(<FinanceAccounts section="accounts" />);
     expect(

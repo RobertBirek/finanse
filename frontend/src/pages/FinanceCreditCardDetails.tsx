@@ -8,6 +8,7 @@ import { CardAllocations } from "../components/finance/CardAllocations";
 import { CardEstimate } from "../components/finance/CardEstimate";
 import { CardRemoveRecord } from "../components/finance/CardRemoveRecord";
 import { formatPLN } from "../lib/format";
+import { categoryOptions } from "../lib/categories";
 
 const money = (name: string, label: string, value?: number): CardField => ({
   name,
@@ -31,9 +32,9 @@ function CardDetails({
 }) {
   const categories = useCategories();
   const [chargeMode, setChargeMode] = useState("");
-  const expenseOptions = (categories.data ?? [])
+  const expenseOptions = categoryOptions(categories.data ?? [])
     .filter((item) => item.type === "expense" && item.is_active)
-    .map((item) => ({ value: item.id, label: item.name }));
+    .map((item) => ({ value: item.id, label: item.label }));
   const targetOptions = [
     ...card.statements.map((item) => ({
       value: `statement:${item.id}`,

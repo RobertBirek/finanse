@@ -1,5 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { categorySelectFixture } from "../../../test/categoryFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import api from "../../../lib/api";
 import { BillPaymentDialog } from "./BillPaymentDialog";
@@ -17,6 +24,8 @@ const bill = {
 afterEach(() => vi.restoreAllMocks());
 function renderDialog() {
   vi.spyOn(api, "get").mockImplementation((url) => {
+    if (url === "/finance/categories")
+      return Promise.resolve({ data: categorySelectFixture } as never);
     if (String(url).includes("candidates"))
       return Promise.resolve({
         data: {
@@ -59,6 +68,21 @@ function renderDialog() {
 }
 
 describe("BillPaymentDialog", () => {
+  it("offers only active expense categories with sorted full paths for new payment", async () => {
+    renderDialog();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zarejestruj płatność" }),
+    );
+    const select = screen.getByLabelText("Kategoria");
+    await within(select).findByRole("option", { name: "Dom - Gaz" });
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Wybierz kategorię", "Auto - Zamek", "Dom - Gaz", "Dom - Woda"]);
+    fireEvent.change(select, { target: { value: "gas" } });
+    expect(select).toHaveValue("gas");
+  });
   it("shows existing candidates, requires forecast acknowledgement, and says linking does not send a transfer", async () => {
     renderDialog();
     expect(

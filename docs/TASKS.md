@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Jednolite ścieżki kategorii w selectach (2026-11-12)
+
+- [x] Zatwierdzony zakres: pełna ścieżka ` - `, sortowanie rosnące po polsku,
+  wszystkie finansowe wybory kategorii, bez zmiany danych i ograniczeń wyboru.
+- [x] Wspólny builder, pełny kontekst dla prefiltrowanych formularzy, migracja
+  wspólnego pickera i natywnych selectów, również wszystkich wyborów rodzica.
+- [x] TDDhelper/consumers,117focused i648pełnyvitest, ESLint/tsc/buildPASS.
+- [x] Desktop/mobile Playwright80PASS i jedno niezależne review bez uwag.
+- [x] Dokumentacja i lokalna implementacja; integracja/wdrożenie wymagają osobnej zgody.
+
 ## Wydanie deklaracji opłacenia —69ee8b7 (2026-11-12)
 
 - [x] Zgoda użytkownika: scal, wypchnij main i wdróż; brak zgody na mutacje faktur.

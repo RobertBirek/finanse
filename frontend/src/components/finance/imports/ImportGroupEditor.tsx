@@ -12,6 +12,7 @@ import {
 import { ImportAccountMapping } from "./ImportAccountMapping";
 import { ImportCardHeader } from "./ImportCardHeader";
 import { sourceMoney } from "./importPresentation";
+import { categoryOptions } from "../../../lib/categories";
 
 export function ImportGroupEditor({
   batchId,
@@ -85,6 +86,7 @@ export function ImportGroupEditor({
     action === "link" ? (rows[0]?.id ?? null) : null,
   );
   const internal = kind === "transfer" || kind === "exchange";
+  const categoryChoices = categoryOptions(categories);
   const existingPayment = useImportExistingTransaction(
     batchId,
     action === "link" ? existing || null : null,
@@ -232,7 +234,7 @@ export function ImportGroupEditor({
                   onChange={(event) => setCategory(event.target.value)}
                 >
                   <option value="">Wybierz kategorię</option>
-                  {categories
+                  {categoryChoices
                     .filter(
                       (item) =>
                         item.is_active &&
@@ -241,7 +243,7 @@ export function ImportGroupEditor({
                     )
                     .map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.name}
+                        {item.label}
                       </option>
                     ))}
                 </select>
@@ -256,11 +258,11 @@ export function ImportGroupEditor({
                   onChange={(event) => setFeeCategory(event.target.value)}
                 >
                   <option value="">Wybierz kategorię kosztu</option>
-                  {categories
+                  {categoryChoices
                     .filter((item) => item.is_active && item.type === "expense")
                     .map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.name}
+                        {item.label}
                       </option>
                     ))}
                 </select>

@@ -2,6 +2,35 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Pełne ścieżki i sortowanie wszystkich wyborów kategorii
+
+- User zatwierdził plan: wszystkie finansowe selecty, pełna wielopoziomowa ścieżka
+  `Dom - Gaz` i polskie sortowanie po całej etykiecie. Bez zmian danych/ID/eligibility.
+  Required4hostdocs przeczytane, existinglinkedworktree od493bf48 bez zmian appsource;
+  zachowano unrelated dirtydocs/audity. Ta zgoda nie obejmuje kolejnego wdrożenia.
+- Plan docs/superpowers/plans/2026-11-12-category-select-paths.md, ledger własnego
+  .superpowers/sdd/2026-11-12-category-select-paths. Jedno zadanie, wykonanie natywne.
+- categoryOptions(visible,hierarchy) tworzy nowe kopie opcji i label z pełnego drzewa,
+  sortuje Intl.Collatorpl/base; istniejące categoryPath breadcrumbs poza selectami
+  bez zmian. Cykle/brak przodka bez zapętlenia. Wspólny CategoryPicker zachowuje
+  selected/query/archived/type/excluded zachowanie, dodany hierarchyCategories context.
+- TransactionForm/ScheduledItemForm przekazują pełną hierarchię obok dotychczasowej
+  listy dopuszczonych opcji. W przeciwnym razie aktywne dziecko archiwalnego rodzica
+  traciło ścieżkę. Natywne filtry,documents/billpayment/import2/creditcard i3parentselectors
+  używają tego samego buildera. DocumentReview typ przywrócony do pełnego Category[].
+- Baseline631PASS. REDhelper/picker9FAIL/1PASS→GREEN12; consumers9FAIL/94PASS i
+  scheduled1FAIL/3PASS→GREEN117focused. Pełnyfrontend648PASS/107files, lint/types/buildPASS.
+  Build ma istniejące ostrzeżenie >500kB. Backend/ops bez zmian, nie uruchamiano
+  domyślnej bazy testowej lub ponownie backendu2351 dla zmiany frontend-only.
+- FINAL Playwright9dotkniętychspeców desktop/mobile80PASS. Pierwszy78PASS/2FAIL:
+  wyłącznie testselector implicitlabel w filtrze; snapshot miał poprawne opcje,
+  poprawiono locator na rolęcombobox, nie produkt. Pełny ponowny80PASS, bez ukrytych failów.
+- Jedno świeże review ses_e303a1810ffeAMh6eWbvWSOrxi:0Critical/Important/Minor,
+  Declinedtojudgepuste. Screeny375/1440 obejrzane, bez horizontaloverflow.
+  Raport docs/audits/2026-11-12-category-select-paths-local.md. Bez zmian produkcji,
+  merge/push/deploy. Jawny staging obejmuje wyłącznie funkcję i3nowe wpisy docs;
+  unrelateddirtydocs/audity pozostają poza commitem. Następny etap: decyzja o integracji.
+
 ## 2026-11-12 — Zatwierdzone scalenie, push i wdrożenie deklaracji faktury
 
 - User: „scal, wypchnij do main i wdróż”. Zakres69ee8b7/3appservices, bez migracji,

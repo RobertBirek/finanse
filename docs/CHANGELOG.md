@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, verified] — 2026-11-12 — Jednolite wybory kategorii
+
+### Changed
+- Pełne ścieżki w finansowych selectach, np. `Dom - Gaz`, sortowane rosnąco po
+  całej etykiecie zgodnie z polskim alfabetem. Jedna logika dla wspólnego pickera
+  i natywnych formularzy transakcji, dokumentów, płatności, importów, kart i rodziców.
+- Ścieżki zachowują archiwalnych/przefiltrowanych przodków. ID, dostępne wybory,
+  placeholdery, wyszukiwanie i ograniczenia rodziców pozostają bez zmian.
+- Frontend648PASS, E2E80PASS desktop/mobile, lint/types/buildPASS; jedno review bez uwag. Bez backendu,
+  migracji, zmian kategorii w bazie, merge/push lub wdrożenia.
+
 ## [Production, 69ee8b7] — 2026-11-12 — Deklaracyjne opłacenie faktury
 
 ### Changed

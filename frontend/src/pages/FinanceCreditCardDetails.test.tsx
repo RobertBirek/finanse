@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { FinanceCreditCardDetails } from "./FinanceCreditCardDetails";
+import { categorySelectFixture } from "../test/categoryFixtures";
 
 const hooks = vi.hoisted(() => ({
   useAccounts: vi.fn(),
@@ -108,6 +109,21 @@ function openCard() {
     </MemoryRouter>,
   );
 }
+
+it("uses sorted full expense category names for card charges", () => {
+  hooks.useCategories.mockReturnValue({ data: categorySelectFixture });
+  openCard();
+  fireEvent.change(screen.getByLabelText("Sposób zapisania kosztu"), {
+    target: { value: "new" },
+  });
+  const select = screen.getByLabelText("Kategoria kosztu");
+  expect(
+    within(select)
+      .getAllByRole("option")
+      .slice(1)
+      .map((option) => option.textContent),
+  ).toEqual(["Auto - Zamek", "Dom - Gaz", "Dom - Woda"]);
+});
 
 it("opens bank import for the current card without creating another card account", () => {
   openCard();

@@ -11,7 +11,7 @@ import {
 } from "../api/finance";
 import { AccountRow } from "../components/finance/AccountSettingsRow";
 import { CategoryTreeEditor } from "../components/finance/CategoryTreeEditor";
-import { categoryPath } from "../lib/categories";
+import { categoryOptions } from "../lib/categories";
 import {
   categoryColorMap,
   entityColor,
@@ -480,9 +480,9 @@ export function FinanceAccounts({
                   onChange={(event) => setCategoryParentId(event.target.value)}
                 >
                   <option value="">brak</option>
-                  {categories.map((option) => (
+                  {categoryOptions(categories).map((option) => (
                     <option key={option.id} value={option.id}>
-                      {categoryPath(option.id, categories)}
+                      {option.label}
                     </option>
                   ))}
                 </select>

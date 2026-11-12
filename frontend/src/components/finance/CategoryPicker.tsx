@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import type { Category } from "../../api/finance";
-import { categoryPath } from "../../lib/categories";
+import { categoryOptions } from "../../lib/categories";
 
 export function CategoryPicker({
   id,
   label = "Kategoria",
   categories,
+  hierarchyCategories = categories,
   value,
   onChange,
   type,
@@ -16,6 +17,7 @@ export function CategoryPicker({
   id: string;
   label?: string;
   categories: Category[];
+  hierarchyCategories?: readonly Category[];
   value: string;
   onChange: (value: string) => void;
   type?: Category["type"];
@@ -26,18 +28,19 @@ export function CategoryPicker({
   const [query, setQuery] = useState("");
   const options = useMemo(() => {
     const selected = categories.find((category) => category.id === value);
-    return categories.filter(
+    return categoryOptions(categories, hierarchyCategories).filter(
       (category) =>
         (retainSelectedOption && category.id === selected?.id) ||
         ((!type || category.type === type) &&
           !excludedIds?.has(category.id) &&
           (includeInactive || category.is_active !== false) &&
-          categoryPath(category.id, categories)
+          category.label
             .toLocaleLowerCase("pl")
             .includes(query.toLocaleLowerCase("pl"))),
     );
   }, [
     categories,
+    hierarchyCategories,
     includeInactive,
     query,
     type,
@@ -66,7 +69,7 @@ export function CategoryPicker({
         <option value="">Wybierz kategorię</option>
         {options.map((category) => (
           <option key={category.id} value={category.id}>
-            {categoryPath(category.id, categories)}
+            {category.label}
             {category.is_active === false ? " (archiwalna)" : ""}
           </option>
         ))}

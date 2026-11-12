@@ -185,6 +185,7 @@ export function ScheduledItemForm({
         <CategoryPicker
           id="item-category"
           categories={filteredCategories}
+          hierarchyCategories={categories}
           value={categoryId}
           onChange={setCategoryId}
           type={type}

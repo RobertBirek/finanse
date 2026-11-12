@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { localTodayIso } from "../../lib/date";
 import { TransactionForm } from "./TransactionForm";
+import { categorySelectFixture } from "../../test/categoryFixtures";
 
 const hooks = vi.hoisted(() => ({
   useAccounts: vi.fn(),
@@ -75,6 +76,20 @@ const categories = [
 ];
 
 describe("TransactionForm", () => {
+  it("keeps archived ancestors in labels even though they are not selectable", () => {
+    hooks.useCategories.mockReturnValue({
+      data: categorySelectFixture,
+      isLoading: false,
+      isError: false,
+    });
+    render(<TransactionForm />);
+    expect(
+      within(screen.getByLabelText("Kategoria"))
+        .getAllByRole("option")
+        .slice(1)
+        .map((option) => option.textContent),
+    ).toEqual(["Auto - Zamek", "Dom - Gaz", "Dom - Woda"]);
+  });
   it("keeps Friday purchase and Monday booking separate without a conflicting legacy date", () => {
     render(<TransactionForm />);
     fireEvent.change(screen.getByLabelText("Konto"), {

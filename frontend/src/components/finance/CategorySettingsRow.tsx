@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { Category, CategoryUpdateInput } from "../../api/finance";
 import { apiErrorDetail, isConflict } from "./accountSettings";
+import { categoryOptions } from "../../lib/categories";
 
 const CATEGORY_DELETE_CONFLICT_MESSAGE =
   "Kategoria ma zapisy — zdezaktywuj ją zamiast usuwać";
@@ -251,9 +252,9 @@ export function CategoryRow({
                 onChange={(event) => setDraftParentId(event.target.value)}
               >
                 <option value="">brak</option>
-                {parentOptions.map((option) => (
+                {categoryOptions(parentOptions, categories).map((option) => (
                   <option key={option.id} value={option.id}>
-                    {option.name}
+                    {option.label}
                   </option>
                 ))}
               </select>

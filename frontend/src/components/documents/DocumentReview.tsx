@@ -20,7 +20,8 @@ import {
   useRestoreDocument,
   documentArchiveError,
 } from "../../api/documents";
-import { useAccounts, useCategories } from "../../api/finance";
+import { useAccounts, useCategories, type Category } from "../../api/finance";
+import { categoryOptions } from "../../lib/categories";
 import { Dialog } from "../Dialog";
 import type { AxiosError } from "axios";
 import { useReviewForm, type ReviewForm } from "./useReviewForm";
@@ -486,7 +487,7 @@ function ReviewForm({
   provenance: Record<string, string>;
   onSubmit: () => void;
   pending: boolean;
-  categories: { id: string; name: string; type: string; is_active: boolean }[];
+  categories: Category[];
   accounts: { id: string; name: string; is_active: boolean }[];
 }) {
   return (
@@ -537,11 +538,11 @@ function ReviewForm({
           className="input mt-1 w-full"
         >
           <option value="">Nie wybieraj teraz</option>
-          {categories
+          {categoryOptions(categories)
             .filter((item) => item.is_active && item.type === "expense")
             .map((item) => (
               <option key={item.id} value={item.id}>
-                {item.name}
+                {item.label}
               </option>
             ))}
         </select>

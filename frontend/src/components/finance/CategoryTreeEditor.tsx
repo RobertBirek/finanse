@@ -4,7 +4,7 @@ import {
   useUpdateCategory,
   type Category,
 } from "../../api/finance";
-import { categoryPath, eligibleCategoryParents } from "../../lib/categories";
+import { categoryOptions, eligibleCategoryParents } from "../../lib/categories";
 import { apiErrorDetail, isConflict } from "./accountSettings";
 import {
   categoryColorMap,
@@ -228,9 +228,9 @@ export function CategoryTreeEditor({
                 onChange={(event) => setParentId(event.target.value)}
               >
                 <option value="">Brak rodzica</option>
-                {parentOptions.map((item) => (
+                {categoryOptions(parentOptions, categories).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {categoryPath(item.id, categories)}
+                    {item.label}
                     {item.is_active ? "" : " (archiwalna)"}
                   </option>
                 ))}
