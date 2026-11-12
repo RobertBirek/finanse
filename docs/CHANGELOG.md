@@ -2,6 +2,16 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Planned, not implemented] — 2026-11-12 — Opisowe oznaczenia transakcji
+
+### Added
+- Zakres zatwierdzony w czacie: własny opis bez nadpisania bankowego, notatka,
+  wielokrotnego użytku tagi tworzone podczas edycji i opcjonalny istniejący projekt.
+- Specyfikacja i4taskplan do akceptacji, bez implementacji lub migracji:
+  `docs/superpowers/plans/2026-11-12-transaction-annotations.md`.
+- Buildercheck2pytania rozstrzygnięte przez istniejącąspecyfikację: opisowe oznaczenia
+  dla wszystkich własnych źródeł, projekt przez canonicalproject_id; bez praw do księgi.
+
 ## [Local, verified] — 2026-11-12 — Kategorie importowanych wydatków
 
 ### Changed

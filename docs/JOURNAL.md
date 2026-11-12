@@ -2,6 +2,24 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Uzgodnienie opisowych oznaczeń transakcji
+
+- User zapytał o dodatkowe edycje; wybrał opis własny/notatkę/tagi/istniejącyprojekt,
+  następnie potwierdził swobodne tworzenie tagów w edytorze i ponowne używanie.
+  Bez kwot/kont/dat/importrefs; sourceopis zachowany, audyt. Bez zgody na deploy.
+- Design docs/superpowers/specs/2026-11-12-transaction-annotations-design.md i plan
+  docs/superpowers/plans/2026-11-12-transaction-annotations.md, bez implementacji.
+  Autor proponuje osobne PostgreSQLannotation/tag/link, canonicalexistingproject_id,
+  FKprojectSETNULL zpreflight, batchedreads/search i dedykowaną wersjonowanąkomendę.
+  Limityconfig200/5000/60/20 to propozycjaautora, nie wypowiedź użytkownika.
+- Buildercheck ses_e2f4bfff6ffeA1wc6z7CVKW59V: pytania o eligibilitysources i osobny
+  projectlink mają odpowiedź już wspec: każde własne źródło/typ, tylko narrative;
+  istniejącyproject_id z bieżącym widokiem projektu, bez duplikacji. Brak pytań
+  wymagających dodatkowej decyzji użytkownika. Plan do przeglądu i zgody na wykonanie.
+- Poprzednia kategoryzacja zakończona lokalnym4bf966f:2398backend/656frontend/8E2E,
+  cleanup20testcontainers. Źródła nie były zmieniane w trakcie suite. Ten plan
+  może wystartować dopiero po akceptacji, preferowane wykonanie natywne+1review.
+
 ## 2026-11-12 — Ręczna kategoryzacja importowanych wydatków
 
 - User zgłosił komunikatprotectedhistory podczas zmiany kategorii, zaakceptował

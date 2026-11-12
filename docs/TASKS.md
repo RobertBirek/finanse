@@ -2,6 +2,15 @@
 
 Backlog zadań ze statusami.
 
+## Opis, notatka, tagi i projekt transakcji (2026-11-12)
+
+- [x] User zatwierdził zakres i tworzenie tagów w edytorze, z ponownym użyciem.
+- [x] Design i4taskplan, buildercheck: pytania już rozstrzygnięte wspec (allsources
+  narrativeonly; istniejący project_id bez duplikacji).
+- [ ] Zatwierdzenie technicznego planu/defaults i metody wykonania.
+- [ ] Modele/migracja, owner/version/snapshot/idempotency/audit, odczyty/search iUI.
+- [ ] Pełne testy/lint/types/build/E2E i jedno review; wyłącznie lokalnie.
+
 ## Ręczna zmiana kategorii importowanych wydatków (2026-11-12)
 
 - [x] Uzgodniony zakres: tylko ręczna kategoria dodatniego wydatku PLN, bez kwot/

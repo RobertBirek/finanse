@@ -69,6 +69,9 @@ Plan: `docs/superpowers/plans/2026-11-12-imported-expense-recategorization.md`.
   do wykonawcy i wymaga dowodu przed commitem.
 - Slashcommands nie są dostępne przez narzędzia tej sesji. Użyto równoważnych
   komend pytest/vitest/lint/types/build wyłącznie w odseparowanych środowiskach.
+- Pełny backend rozdzielono na8rozłącznych grup plików po normalnej kolekcji
+  conftest; dokładneJUnitcases i hashe dowodzą kompletności. Koszt wobec serialrun:
+  mniejsze pokrycie zależności od kolejności między plikami.
 
 ## Integracja
 
