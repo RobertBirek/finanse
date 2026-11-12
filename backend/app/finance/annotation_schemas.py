@@ -62,6 +62,8 @@ class AnnotationUpdate(BaseModel):
         if value is None:
             return None
         value = value.strip()
+        if "\0" in value:
+            raise ValueError("Tekst zawiera niedozwolony znak.")
         limit = (
             settings.FINANCE_ANNOTATION_TITLE_MAX_CHARS
             if info.field_name == "display_description"
@@ -79,7 +81,7 @@ class AnnotationUpdate(BaseModel):
         result: dict[str, str] = {}
         for value in values:
             name, key = normalize_tag(value)
-            if not name or len(name) > settings.FINANCE_TAG_NAME_MAX_CHARS:
+            if not name or "\0" in name or len(name) > settings.FINANCE_TAG_NAME_MAX_CHARS:
                 raise ValueError("Tag jest pusty lub zbyt długi.")
             result.setdefault(key, name)
         return list(result.values())

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.finance.annotation_router import router as annotation_router
 from app.finance.bills_router import router as bills_router
 from app.finance.categorization_router import router as categorization_router
 from app.finance.credit_card_router import router as credit_card_router
@@ -90,6 +91,7 @@ from app.identity.models import User
 from app.identity.router import get_current_user
 
 router = APIRouter()
+router.include_router(annotation_router)
 router.include_router(import_router)
 router.include_router(credit_card_router)
 router.include_router(loan_router)
