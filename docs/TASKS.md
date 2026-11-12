@@ -2,6 +2,22 @@
 
 Backlog zadań ze statusami.
 
+## Przelew karty i zamknięcie sesji (2026-11-12)
+
+- [x] Odczytowe owner-scoped porównanie61wierszyVelo:44booking/3operation/3nearby/
+  11bez kandydata. Brak automatycznych deduplikatów, zapisów wyciągu lub korekt historii.
+- [x] Q7 już istnieje:59rat/1spłata; zachowano całość bez duplikowania umowy.
+- [x] User wybrał „Przelew teraz, plan później”: zapis1transfer/2postings/1audit
+  zparametrami. Bez planu,rat,opłat,odsetek/zmianlimitów. Data jawniezatwierdzona.
+- [x] Backup bezretencji/restoredclone/exactimagecommit+blockedrepeat,75retention,
+  exactbalances i niezależny readonlyledger0PASS; cleanup2containers/1network/1volume
+  tylko własne,bezforce/prune. Oryginały i szyfrowany backup zachowane.
+- [x]9operator/21focusedbackend/617frontendPASS, runnerlint/mypy191 iESLint/tscPASS.
+  Źródła zgodne zlive5dc;15distHTTPS/health/auth/ARQ/errors0 i6serviceIDs bez zmian.
+- [~] FF/pushmain zatwierdzone; wyłącznie dokumentacja, deployment no-op po liveproof.
+- [ ] Bankowy termin pierwszejraty/harmonogram i odrębne dodanieplanu karty;
+  uzgodnienie11Velo oraz3dat osobno,bez domyślnego księgowania.
+
 ## Nowe dokumenty bankowe — przegląd źródeł (2026-11-12)
 
 - [x] Na prośbę użytkownika odczyt wcześniej udostępnionego folderuDrive:50plików,
@@ -12,8 +28,9 @@ Backlog zadań ze statusami.
   kontener usuniętybezforce, zero produkcyjnych odczytów/zapisów/APIstaging.
 - [x] Warunki porozumienia „Przelew na raty” przejrzane; plan w istniejącym limicie,
   nie nowy niezależny dług. Regulamin szyfrowany nieodczytany; bez zgadywania rat/dat.
-- [ ] Osobny zakres: porównanieVelo zksięgą owner-scoped i weryfikacja wykonania
-  przelewu/wyciągu karty oraz bankowej tabeli rat; każdy zapis wymaga osobnej zgody.
+- [x] Osobna zgoda na porównanieVelo zksięgą i przelew teraz; opisane wyżej.
+- [ ] Wyciąg/potwierdzenie bankowego wykonania i bankowa tabela rat karty pozostają
+  brakującymi dowodami; brak zgody na zgadywanie rat lub automatyczne księgowanieVelo.
 
 ## Wydanie importerów A+B — wdrożone, verified-live (2026-11-12)
 

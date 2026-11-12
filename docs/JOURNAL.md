@@ -2,6 +2,46 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-12 — Zatwierdzony przelew z karty, bez planu; porównanie z księgą
+
+- User poprosił porównanie,dodanieobu kredytów,parametrów,scalenie/pushmain/deploy.
+  Q7 jużistnieje,więc brakduplikatu. Po wskazaniu brakubankfirstdue wybrał
+  „Przelew teraz, plan później”, zdatązporozumienia. Zgoda nie obejmuje 11Veloimportów.
+- E=/tmp/opencode/finance-config-20261112-vBoVbkka. Wreadonlyowner-scopeddiscovery
+  potwierdzonoQ7/59rat/1spłata, istniejącąkartę i rachunekVELOBANK, braklistopadowego
+  kandydata nowegoprzelewu. Velo61=44booking+amount/3operation/3nearby/11no-candidate;
+  to niepotwierdzone automatyczne duplikaty,nie zmieniano dat/transakcji.
+- Request/sourcedocSHA i banktermsprywatne. Audit przechowuje parametry i jawny
+  brak niezależnegobookingproof; regularrata może różnićsięodostatniej,zmiennaAPR.
+- Jedno safetyreview ses_e314ac597ffeeRBmU0PtoIIJKz:NO-GO3blokady. ExactrequestSHA
+  przypięto woperatorze przedDBimport, liveimageID+OCIrevision+frozencid mandatory,
+  globalsnapshot tylko count/SHA obliczanewPG, bezrawforeignrows. RED3FAIL→8PASS;
+  podstawowe5guards wcześniej14assertionfail→GREEN5. Bezdrugiegoreview.
+- Freshbackup e775c54b8c2911fdf5c984406f067b27e0402ca513440072fcc699c72265ee35
+  bezretencji,checksumverify irestore wyłącznie ownPG/internalnetwork/nohostports.
+  Pierwszyklon zatrzymany przedzapisem naORDERBYargument string_agg. RegressionRED1→
+  GREEN9, samecloneownappreplaced; finalcommit/75retention/balances/rejectedretryPASS.
+  Digestoperatora a0b7a9d8b166bd254e53a21f15c77d285c8a32c68640d2a7d95229c8c220ac95.
+- Produkcja SINGLEinvoke przez istniejące create_transaction+log_event wSERIALIZABLE,
+  domainlocks/exactrequest/runtimehash/rehearsalproof:1transfer/2postings/1audit.
+  Budgetimpactfalse/net0,75oldhashesexact, balancesdeltaonly2accounts. Parametry wAudit,
+  opisoperacji mawarunki.0nowychkont/umów/planów/rat/config;Q7historianietknięta.
+  Freshreadonlysession niezależniepotwierdza commit/audit/ledger0/Q7/59/1/noCardPlan.
+- Świeże21focusedbackendPASS/35deselected,617frontend/lint/tscPASS,9pureoperatorPASS.
+  Passlibcryptwarning. HostRuff0.16.2→3DTZ007 w3niezmienionychparserach; wymagany
+  >=0.17.1:runner0.17.4lintPASS,mypy191PASS;hostmypy nieuruchomiony po set-e.
+  Nie twierdzimy,że rerunowano pełnybackend2329/build; appsource bez zmian.
+- Liveproof752backend/frontendtracked=5dcGit,446packagedsourcesexact,15distHTTPS;
+ 6prodserviceIDs/images/starttime/restart0unchanged,health/login200/finance401,
+  backendworkerfrontendERROR0/arq--checkPASS. Kod/ops/schema bez zmian więc ponowny
+  deploy no-op,bez restartów/migracji/metadatareleaseedits. FF/pushmain zatwierdzone.
+- Cleanupown2containers/1network/1volume idle/label/exactID/mountPASS,noforce/prune;
+  rawrestore i cloneenvdeleted, encryptedbackup i useroriginalszachowane.
+  Durableprivateevidence=/opt/finanse/webapp/maintenance/card-transfer-20261112-vBoVbkka/.
+  Sanitizowanyreport docs/audits/2026-11-12-card-transfer-and-ledger-comparison.md.
+- Dalsze: bankfirstdue/schedulecardplan, osobne11Velo/3dates i nextdayreadonlyfollowup.
+  Niezwiązane3dirtyaudits nietknięte. Brak automatycznejaktywacji lubmasowegoimportu.
+
 ## 2026-11-12 — Read-only przegląd nowych źródełDrive i porozumienia karty
 
 - User poprosił „sprawdź mój dysk google...nowe wyciągi...nowy kredyt w karcie”.

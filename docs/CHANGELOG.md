@@ -2,6 +2,25 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Operations, 5dc84fe] — 2026-11-12 — Porównanie Velo i zatwierdzony przelew karty
+
+### Added
+- Porównanie61wierszyVelo z księgą owner-scoped:44booking/3operation/3nearby/11bez
+  kandydata; bez automatycznego księgowania lub korekt dat.
+- Po wyborze „Przelew teraz, plan później”: jeden transfer z istniejącej karty do
+  rachunku bieżącego,2postings/zero budgetimpact i atomowy audit zparametrami.
+  Q7/59rat/1spłata zachowane, bez nowych kont/planów/rat lub zmiany limitu.
+
+### Changed
+- Backup bezretencji i własny restore/exactimagepróba+blockedrepeatPASS;
+  produkcyjna retencja75tabel, exact2balances, niezależny readonlyledger0PASS.
+- Operator9/backendfocused21/frontend617PASS, zgodny Ruff/mypy iESLint/tscPASS;
+  opisano hostRuff3DTZ007 i naprawioną przedzapisem próbęklonu. Źródła aplikacji bez zmian.
+- Produkcja verified-live5dc/schema84 zgodna ze źródłami i15distHTTPS, runtimeerrors0,
+  ARQready,6serviceIDs/restarts bez zmian. Ponowny deploy/migracje zbędne.
+- Raport `docs/audits/2026-11-12-card-transfer-and-ledger-comparison.md`;
+  szczegóły umowy i receipt pozaGit. Scalenie/push main zatwierdzone.
+
 ## [Review, read-only] — 2026-11-12 — Nowe dokumenty w udostępnionym folderze
 
 ### Added
