@@ -2,6 +2,21 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Local, verified] — 2026-11-12 — Opis i oznaczenia transakcji
+
+### Added
+- Osobny formularz własnego opisu, notatki, swobodnie tworzonych i ponownie
+  używanych tagów oraz projektu. Oryginalny opis bankowy, kwoty, konta, daty
+  i referencje importu pozostają; również dla płatności chronionych.
+- Dedykowany zapis owner/version/snapshot/idempotency/audit, batchodczyty
+  i wyszukiwanie; oryginał nadal dostępny dla reguł/importów. Addytywna migracja
+  3254a4781542 z preflight projektów, bez uruchamiania na produkcji.
+- Backend2429PASS (jawna aktualizacja starego kontraktu testowego i retry10),
+  frontend667PASS/E2E6PASS375/1440/static/buildPASS. Jedno review: uwaga o legacyAPI
+  rozstrzygnięta według jawnej zgodności wpisów ręcznych; dodatkowe10regresjiPASS.
+  Cleanup18ownkontenerów, bez merge/push/deploy. Migracja wyłącznie testowa.
+  Raport `docs/audits/2026-11-12-transaction-annotations-local.md`.
+
 ## [Planned, not implemented] — 2026-11-12 — Opisowe oznaczenia transakcji
 
 ### Added

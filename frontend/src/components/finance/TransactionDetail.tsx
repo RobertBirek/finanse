@@ -59,8 +59,18 @@ export function TransactionDetail({
               </button>
             ) : null}
             <p className="text-white [overflow-wrap:anywhere]">
-              {query.data.description}
+              {query.data.effective_description || query.data.description}
             </p>
+            {query.data.annotations?.display_description ? (
+              <p className="text-sm text-gray-400 [overflow-wrap:anywhere]">
+                Oryginalny opis: {query.data.description}
+              </p>
+            ) : null}
+            {query.data.annotations?.note ? (
+              <p className="whitespace-pre-wrap text-sm text-gray-300 [overflow-wrap:anywhere]">
+                {query.data.annotations.note}
+              </p>
+            ) : null}
             <p className="text-sm text-gray-400">
               <TransactionDateLabel transaction={query.data} />
               {TRANSACTION_TYPES[query.data.type]} · Źródło: {query.data.source}

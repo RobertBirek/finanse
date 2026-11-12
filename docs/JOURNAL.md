@@ -20,6 +20,49 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   cleanup20testcontainers. Źródła nie były zmieniane w trakcie suite. Ten plan
   może wystartować dopiero po akceptacji, preferowane wykonanie natywne+1review.
 
+### Realizacja po zgodzie użytkownika
+
+- User potwierdził plan+native+1review. Workspace .superpowers/sdd/2026-11-12-transaction-annotations,
+  BASE8c6e79d, istniejący linkedworktree; żadnych zmian produkcji lub unrelateddirtydocs.
+- Task1commit951a981: annotation/tag/link, canonicalprojectFKSETNULL i preflight,
+  configdefaults/schematy. Redmissingmodule/migration3→8PASSpowtórzone, Ruff/mypy195PASS.
+  Autogen3254a4781542 parent84fdbd10aa18; usunięty unrelatedindexdrift, FKorder poprawiony.
+- ORMlazyraise zamiast globaleselectin dla kompatybilności oldschemamigrationtools;
+  publiczne odczyty będą batched wTask3. Responseoriginal_description/project_name
+  bez duplikacjiDB. Projektlock przedtxnrow zgodnie zFKSETNULLdeleteorder.
+- Task2RED18→firstGREEN17/2fixtureMissingGreenlet; testhelperinspect.identity usuwa
+  expiredIDread po rollback. Dedykowaneendpointy/receipty/audit/strictNULguard,
+  sourcelegacyPATCH chroniimport. Ruff/mypy197PASS, finaltaskgate w toku.
+- Własny no-portPG i runner, hexrolebank_import_task_aee20261112 wymaganymigrationfixture;
+  początkowy idle runner normalniestop/rm/replaced. Pełny odbiór/cleanup dopiero na końcu.
+  Raport docs/audits/2026-11-12-transaction-annotations-local.md.
+
+### Etap odczytów i UI
+
+- Task2c094fdc gate32PASS (własne19pluscrossdomain), Task3read/search846962b gate28PASS.
+  Backendfull2426PASS/3starycontractFAIL: testbankimportu dopuszczał sourcesdescription
+  rewrite. Zaktualizowano tylko tę funkcję na denial+overlay, całyplik10PASS,
+  AST pozostałychfunkcji/fixtures i444sourcehash bez driftu. ExactJUnitunion2429PASS.
+- UIhook/dialog strictpayload, frozencontext+sessionguard, idempotencykeyretry,
+  taglocaluntilsave, legacydataeditor osobno. REDpendingbackdrop→Dialogbusy;
+  REDFastAPI422arrayReactcrash→unknowndetailtypetest. Focused18PASS.
+- Frontendfinal667PASS109plików,ESLint/tsc/buildPASS. E2Efinal6PASS375/1440
+  (annotations/importedcategory/split), realAPI0. Projektselect explicitlabeluseId
+  po wykryciu exactlabeltextu zoptions; amountselector DOMtrace dowodzi braku
+  whitespace między textnode/span, końcowy anchoredregex sprawdza pełną kwotę.
+- Screeny obejrzane bez horizontaloverflow; mobileformularz scrolluje. Jeden final
+  review ses_e2e7ef90dffeu351PXrWjRvqAt zakończony:0Critical/1Important/0Minor/Declinednone.
+  Important stwierdza oldPATCHmanualFX/loan descriptioneditable; sprawdzono explicit
+  spec43legacyAPImanualretained i istniejącytestloan-narrative200. Ruling: nie
+  dodawaćglobalnejblokady ręcznieautorskiegoopisu, nakładka nie poszerza tegoAPI;
+  protectedimportsource nadaldenied. Koszt: legacyklient może nadal edytować własny
+  ręcznyopis FX/loan; globalfreeze wymaga osobnejzgody. No newdefect/bezfixpass,
+  bez nowychkodzmian po verifiedsuite. Finding/ruling jawny wraporcie i finalu.
+- Dodatkowe10regresji scopePASS, finalpowtórzonyfrontend667PASS109plików. Finalproof
+  backend2429exactJUnit/444hash+frontend667/299hash+6E2E/static/buildPASS. Cleanup18ownidle
+  containers po ownership/IDs/noports/zeroDBclients, runnerexit143/PGexit0, bezforce/prune.
+  Odbiór do finalnego lokalnego commitu; bez merge/push/deploy lub produkcyjnejmigracji.
+
 ## 2026-11-12 — Ręczna kategoryzacja importowanych wydatków
 
 - User zgłosił komunikatprotectedhistory podczas zmiany kategorii, zaakceptował

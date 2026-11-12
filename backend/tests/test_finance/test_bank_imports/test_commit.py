@@ -173,10 +173,32 @@ async def test_source_evidence_protects_imported_payment_identity(
             await update_transaction(
                 db_session, owner.id, result.transaction_ids[0], TransactionUpdate(**change)
             )
-    await update_transaction(
+    # Narrative overlays replace the old permission to rewrite bank evidence.
+    with pytest.raises(ValueError, match="Oryginalny opis importu"):
+        await update_transaction(
+            db_session,
+            owner.id,
+            result.transaction_ids[0],
+            TransactionUpdate(description="Reviewed description"),
+        )
+    from app.finance.annotation_schemas import AnnotationUpdate
+    from app.finance.annotations import get_annotations, update_annotations
+
+    context = await get_annotations(db_session, owner.id, result.transaction_ids[0])
+    updated = await update_annotations(
         db_session,
         owner.id,
         result.transaction_ids[0],
-        TransactionUpdate(description="Reviewed description"),
+        AnnotationUpdate(
+            display_description="Reviewed description",
+            note=None,
+            tags=[],
+            project_id=None,
+            expected_version=context.version,
+            expected_context_snapshot=context.context_snapshot,
+        ),
+        idempotency_key="descriptive-overlay",
     )
+    assert updated.display_description == "Reviewed description"
+    assert updated.original_description == context.original_description
     assert (await db_session.get(ImportBatch, case.batch_id)).version == 3

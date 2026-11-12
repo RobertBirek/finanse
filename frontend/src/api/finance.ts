@@ -99,6 +99,9 @@ export interface PostingInput {
 }
 
 export interface Transaction {
+  annotations?:
+    import("./transactionAnnotations").TransactionAnnotations | null;
+  effective_description?: string;
   assignment_origin?: AssignmentOrigin | null;
   id: string;
   transaction_date: string;
