@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.finance.annotation_reads import attach_annotations
 from app.finance.annotation_router import router as annotation_router
 from app.finance.bills_router import router as bills_router
 from app.finance.categorization_router import router as categorization_router
@@ -204,6 +205,7 @@ async def get_account_transactions(
     txns = await attach_assignment_origins(
         db, current_user.id, list(result.unique().scalars().all())
     )
+    await attach_annotations(db, current_user.id, txns)
 
     return [TransactionResponse.model_validate(t) for t in txns]
 
@@ -269,7 +271,11 @@ async def create_transaction_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        return await create_transaction(db, current_user.id, data)
+        return (
+            await attach_annotations(
+                db, current_user.id, [await create_transaction(db, current_user.id, data)]
+            )
+        )[0]
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
@@ -343,7 +349,11 @@ async def create_exchange_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        return await create_exchange_transaction(db, current_user.id, data)
+        return (
+            await attach_annotations(
+                db, current_user.id, [await create_exchange_transaction(db, current_user.id, data)]
+            )
+        )[0]
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
@@ -359,7 +369,11 @@ async def create_expense_refund_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> FinancialTransaction:
     try:
-        return await create_manual_expense_refund(db, current_user.id, data)
+        return (
+            await attach_annotations(
+                db, current_user.id, [await create_manual_expense_refund(db, current_user.id, data)]
+            )
+        )[0]
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
@@ -395,7 +409,7 @@ async def update_transaction_endpoint(
         raise HTTPException(status_code=code, detail=str(e))
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
-    return txn
+    return (await attach_annotations(db, current_user.id, [txn]))[0]
 
 
 @router.patch("/transactions/{transaction_id}/dates", response_model=TransactionResponse)
@@ -411,7 +425,7 @@ async def update_transaction_dates_endpoint(
         return JSONResponse(status_code=409, content={"code": error.code, "detail": str(error)})
     if txn is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    return txn
+    return (await attach_annotations(db, current_user.id, [txn]))[0]
 
 
 @router.delete("/transactions/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -542,7 +556,9 @@ async def confirm_scheduled_finance_item(
             status_code=status.HTTP_404_NOT_FOUND, detail="Scheduled item not found"
         )
     return ScheduledFinanceConfirmationResponse(
-        transaction=TransactionResponse.model_validate(transaction)
+        transaction=TransactionResponse.model_validate(
+            (await attach_annotations(db, current_user.id, [transaction]))[0]
+        )
     )
 
 
