@@ -1,5 +1,9 @@
 # Osoby i darowizny — integracja i przerwane wdrożenie
 
+**Aktualizacja:** po odrębnie zatwierdzonym planie app-only wdrożenie zakończono.
+Aktualny stan opisuje `2026-11-13-people-gifts-apponly-production.md`.
+Poniżej zachowano historyczny odbiór pierwotnej, przerwanej procedury.
+
 ## Stan końcowy
 
 **Nowe wydanie NIE jest wdrożone.** Scalenie i push są zakończone. Produkcja działa

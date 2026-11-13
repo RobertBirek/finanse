@@ -2,6 +2,45 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-13 — Osoby/darowizny wdrożone app-only; trwały klon zachowany
+
+- User zatwierdził nowy6stepplan po rollbackach i polecił permanentny klon.
+  Aktywne3apps `e0e746e`/funkcjonalny79011bc, schema2c bez migracji. Main merge6b6d4f9
+  i późniejsze docs5bad1b9 mają dokładne drzewa produktu. Nie korygowano7darowizn,
+  kategorii, sald; brak A2/B lub testowych mutacji produkcji.
+- Nowy standalone operator `/tmp/opencode/people-gifts-apponly-e0e746e/` bez funkcji
+  migracyjnej. Pinnedmanifest, lokalny SHA-pinned drain, backup/helper z approvedGit,
+  exact3imagecontents/nonroot10001/ComposePASS. Jeden review2Critical4Important:
+  poprawki sourcepin/finalverifier/currentobservation/datauptime; RED→GREEN.
+- Przed outage nowy onlinebackup/restore81tablehash/uploads, realASGI anon401/owned200,
+  realcandidate3apps i old3apps rollbackPASS. Klonowy nginxreadonlyoverlay tylko
+  backend→loopback. Sandboxdisabledproviders zmienia tylko3clonepolicies+audit;
+  reszta tabel/ledger identyczne. Produkcyjny retention nadal ALL81 exact.
+- Pierwszy app-onlyrun: runtime+29checks300.97s/0error PASS, lecz publisher źle
+  potraktował niepustą mapę zerowych counters. Auto approllback udowodniony.
+  Rzeczywisty receipt odtworzony w helperze+całym publisherze shadowfilesystem
+  RED2→GREEN;12operator testsPASS. Nowa próba freshfence/backup/restore/observation.
+- FINALpipeline sh_1d4c3b6c2001oRng5D4SadfgOJ EXIT0.3apps exacte0, env/users/mounts/
+  networks i dataID/StartedAt/restarts bez zmian,81tables/uploads przed ingressPASS.
+  HTTPS200/auth401/GETcontract/staticbytes/browser375/1440/workerreadyPASS.
+  29kontroli304.07s: backend/worker/frontend0errors/0restarts; ledger0.
+  Active atomicverified-live z aktualnąobserwacją. Finalverifier w transakcji i fresh
+  po jobiePASS. Backup5b32e0599ba03c4823ba27a17f7528b8d52b3db98d6c24fe351802aaa1cbb13f
+  i db3rollback zachowane, brak retention/prune. Raw/input plaintext usunięte.
+- NIE USUWAĆ `finanse-people-gifts-certification-pg` ani namedvolume
+  `finanse_people_gifts_certification_pgdata`: explicituserretention, networknone/noports,
+  restartunless-stopped,4retainedcertifyDBs. Inventory/README poza/tmp:
+  `/opt/finanse/webapp/clones/people-gifts-certification/`. Zawiera prywatne dane.
+- Dowody trwałe w `/opt/finanse/webapp/releases/people-gifts-e0e746e/evidence-apponly/`;
+  raport `docs/audits/2026-11-13-people-gifts-apponly-production.md`. Oryginalny raport
+  przerwanego rollout jest historią, nie bieżącym statusem.
+- CI43410274033 frontendfailed npm audit7vulns(6moderate/1high), backendcancelled;
+  manifests unchanged.3baselineDTZ007/5extra generatedmigrationstyle nierozwiązane.
+  Nie twierdzić CIgreen. Następnie readonlynextday i osobny plan dependencies/lint;
+  A2/B nadal tylko po osobnych preview/zgodach. Metadata uses cooperativeflock+rename,
+  nie kernelCAS przeciw root omijającemu lock. Dodatkowyfencedrestore kosztuje outage,
+  ale nie zastępuje pełnego testu przed maintenance; brak odłożonych Minors.
+
 ## 2026-11-13 — Main osób/darowizn wypchnięty; rollout wstrzymany po rollbacku
 
 - User zatwierdził merge/push/deploy i „dokończ”. Main `6b6d4f9` wypchnięty,

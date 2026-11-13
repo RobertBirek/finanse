@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Production, e0e746e] — 2026-11-13 — Osoby i historia darowizn
+
+### Added
+- Profile osób i historia darowizn są aktywne na produkcji, bez dublowania transakcji
+  i bez korekt siedmiu historycznych wpływów. Trwały izolowany klon PostgreSQL
+  zachowany na polecenie użytkownika: osobny wolumen, networknone, bez portów.
+
+### Changed
+- Zatwierdzony app-only rollout tych samych obrazów e0e746e na istniejącym schema2c,
+  bez ponownej migracji. Fresh backup/restore, dokładne retention81tabel/uploads,
+  nonroot/imagecontent/GETcontract i rzeczywisty sandbox3apps+rollback PASS.
+- Po naprawie publishera zweryfikowanej rzeczywistym receipt RED→GREEN i12testami:
+  HTTPS/auth/assets/browser/worker PASS,29kontroli/304.07s,0błędów/restartów.
+  Atomowe verified-live i dwukrotny final verifier. Backup/rollback zachowane,
+  plaintext usunięty; stały klon i4bazy NIE usunięte.
+- Raport `docs/audits/2026-11-13-people-gifts-apponly-production.md`.
+  Zastany lint i npm audit nadal wymagają osobnych prac; brak deklaracji CIgreen.
+
 ## [Main pushed; deployment paused] — 2026-11-13 — Osoby i darowizny
 
 ### Changed

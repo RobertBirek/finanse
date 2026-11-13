@@ -2,7 +2,7 @@
 
 Backlog zadań ze statusami.
 
-## Wdrożenie osób i darowizn — wstrzymane (2026-11-13)
+## Wdrożenie osób i darowizn — zakończone app-only (2026-11-13)
 
 - [x] Jawna zgoda, merge/push main `6b6d4f9`, exact app trees `e0e746e`.
 - [x] Świeże 677 frontend / 4 E2E / lint zmienionego app/tests / mypy205 / build;
@@ -11,13 +11,16 @@ Backlog zadań ze statusami.
   nowe tabele puste; brak korekt siedmiu historycznych wpływów.
 - [x] Automatyczny rollback poprzednich obrazów po błędzie operatora, świeże
   HTTPS200/auth401/ledger0/data IDs+uptime bez zmian; cleanup własnego klonu/plaintext.
-- [~] Nowe wydanie NIE jest aktywne. Po trzech błędach operatora wymagany nowy plan
-  app-only na istniejącym schema2c, test kontraktu GET bez requestBody przed outage,
-  następnie osobna decyzja użytkownika o kontynuacji. Raport produkcyjny w audits.
-- [ ] Domknąć runtime smoke, 300s obserwacji i atomowe verified-live dopiero po
-  udanym app-only rollout. Nie ponawiać migracji ani używać starego frozenproof.
+- [x] Nowy plan app-only zatwierdzony, e0e746e aktywne na istniejącym schema2c;
+  brak ponownej migracji. Test kontraktu GET offline/clone/live bez requestBody.
+- [x] Freshbackup/restore81tabel, prawdziwy sandbox3apps+rollback przed maintenance,
+ 12testów operatora, runtime/browser/worker,29kontroli304.07s/0errors/restarts,
+  atomowe verified-live i ponowny final verifier. Raport app-only w audits.
+- [x] Trwały klon PG na polecenie użytkownika: własny wolumen/networknone/noports,
+  zachowane4bazy; NIE usuwać w cleanup. Inventory `/opt/finanse/webapp/clones/people-gifts-certification/`.
+- [ ] Read-only kontrola następnego dnia; bez testowych powiązań darowizn w produkcji.
 - [ ] Pilny osobny plan zależności: CI43410274033 frontend FAILED npm audit7vulns;
-  backend CI przy odczycie w toku. Zastane 3 RuffDTZ007 nadal nie naprawione.
+  backend CI CANCELLED. Zastane 3 RuffDTZ007 nadal nie naprawione.
 
 ## Wdrożenie kategorii importów i oznaczeń —db3a4b3 (2026-11-12)
 
@@ -67,7 +70,8 @@ Backlog zadań ze statusami.
   bez włączania zastanych zmian dokumentacji do commitu tej funkcji.
 - [ ] Osobno rozstrzygnąć3 zastane błędy RuffDTZ007 w parserach ING/Revolut/Velo.
 - [x] Osobna zgoda na merge/push/deploy/migrację uzyskana; main wypchnięty,
-  migracja wykonana, aplikacja wycofana do starych obrazów — patrz stan powyżej.
+  migracja wykonana; po historycznych rollbackach aplikacja wdrożona zatwierdzonym
+  nowym planem app-only — patrz odbiór produkcyjny powyżej.
 - [ ] A2: nowy readonly preview kategorii income i powiązań, dopiero potem zgoda
   na korektę historyczną. NIE wykonywać starej konwersji przychodów na transfery.
 - [ ] B: ewentualne osobne zamówienie pożyczek osobistych i alokacji rat.
