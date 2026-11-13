@@ -2,6 +2,23 @@
 
 Backlog zadań ze statusami.
 
+## Wdrożenie osób i darowizn — wstrzymane (2026-11-13)
+
+- [x] Jawna zgoda, merge/push main `6b6d4f9`, exact app trees `e0e746e`.
+- [x] Świeże 677 frontend / 4 E2E / lint zmienionego app/tests / mypy205 / build;
+  packaging6, nonroot10001 i integralność trzech gotowych obrazów PASS.
+- [x] Backup/restore klonu, produkcyjna addytywna `2c77e935ee39`, zachowane 79 tabel,
+  nowe tabele puste; brak korekt siedmiu historycznych wpływów.
+- [x] Automatyczny rollback poprzednich obrazów po błędzie operatora, świeże
+  HTTPS200/auth401/ledger0/data IDs+uptime bez zmian; cleanup własnego klonu/plaintext.
+- [~] Nowe wydanie NIE jest aktywne. Po trzech błędach operatora wymagany nowy plan
+  app-only na istniejącym schema2c, test kontraktu GET bez requestBody przed outage,
+  następnie osobna decyzja użytkownika o kontynuacji. Raport produkcyjny w audits.
+- [ ] Domknąć runtime smoke, 300s obserwacji i atomowe verified-live dopiero po
+  udanym app-only rollout. Nie ponawiać migracji ani używać starego frozenproof.
+- [ ] Pilny osobny plan zależności: CI43410274033 frontend FAILED npm audit7vulns;
+  backend CI przy odczycie w toku. Zastane 3 RuffDTZ007 nadal nie naprawione.
+
 ## Wdrożenie kategorii importów i oznaczeń —db3a4b3 (2026-11-12)
 
 - [x] User zgoda na merge/push/deploy; main9e17435 pushed i exactappcode.
@@ -49,7 +66,8 @@ Backlog zadań ze statusami.
 - [x] Cleanup wszystkich własnych testDB; dokumentacja odbioru selektywnie,
   bez włączania zastanych zmian dokumentacji do commitu tej funkcji.
 - [ ] Osobno rozstrzygnąć3 zastane błędy RuffDTZ007 w parserach ING/Revolut/Velo.
-- [ ] Osobna zgoda na merge/push/deploy/migrację. Dane produkcyjne bez zmian.
+- [x] Osobna zgoda na merge/push/deploy/migrację uzyskana; main wypchnięty,
+  migracja wykonana, aplikacja wycofana do starych obrazów — patrz stan powyżej.
 - [ ] A2: nowy readonly preview kategorii income i powiązań, dopiero potem zgoda
   na korektę historyczną. NIE wykonywać starej konwersji przychodów na transfery.
 - [ ] B: ewentualne osobne zamówienie pożyczek osobistych i alokacji rat.

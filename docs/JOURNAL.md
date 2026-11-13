@@ -2,6 +2,37 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-13 — Main osób/darowizn wypchnięty; rollout wstrzymany po rollbacku
+
+- User zatwierdził merge/push/deploy i „dokończ”. Main `6b6d4f9` wypchnięty,
+  dokładny appcode `e0e746e`/funkcjonalny79011bc. Zastane dirty docs feature-worktree
+  pozostają nietknięte; trzy konflikty main zachowały oba wpisy.
+- Świeże677vitest/4E2E/statyka/build/6packagingproxy i nonroot10001 import PASS.
+  Backend2468 dowód bez driftu. Pełny lint3baselineDTZ007; wymuszony lint migracji5style
+  poza standardowym app/tests. CI43410274033 frontend failed audit7vulns(6moderate/1high),
+  backend w toku; lockfiles exact z poprzednią produkcją, nie twierdzić CIgreen.
+- Jeden safetyreview0Critical/2Important/0Minor. Poprawiono integralność emitowanych
+  źródeł oraz3realimagecontents i późną kontrolę metadata. RED2→GREEN2+5guardPASS.
+  Metadata atomicrename pod advisoryflock, NIE kernelCAS przeciw niekooperującemu root.
+- Trzy próby: (1) osadzony probe indentation, clone-only SELECT FOR SHARE niezgodny
+  z READ ONLY — poprawione, REDcompile→GREEN/REALclone, bezDML; (2) backup selector
+  zakładał jedną historyczną kopię prefiksu — nowa różnica before/afterIDs, RED→GREEN,
+  REALsnapshotselection,9operatorPASS; (3) migracja2c i3apps przeszły, lecz GET smoke
+  błędnie oczekiwał requestBody. Każda próba ma udowodniony automatyczny rollback.
+- OBECNIE: stare aplikacje `db3a4b3`, nowy schema `2c77e935ee39`, metadata
+  `rollback-verified-live`. HTTPS200/auth401, ledger0, dwie nowe tabele puste,
+ 79 starych tabel bez zmian podczas migracji, dataID/StartedAt/restarts bez zmian.
+- Final backup `76e5f56cae5bdbe7b7737c07c57b2d14812b573b009769a688c6365a51ed2223`
+  zweryfikowany restore; snapshoty wszystkich prób/rollback obrazy zachowane.
+  Własny klon idle/stop/rm/absence i plaintext/env cleanup zakończone bezprune.
+- Prywatne dowody `/tmp/opencode/people-gifts-deploy-e0e746e/paused-runtime-proof.json`,
+  attempt-1/2 i pełny pakiet. Raport `docs/audits/2026-11-13-people-gifts-production.md`.
+- STOP po trzech błędach operatora, nie czwarta ślepa próba. Zapytać o krótszy
+  app-only plan na już zmigrowanym schema2c z offline testem GET/responses/auth
+  przed maintenance, freshbackup/restore i300s obserwacji. NIE ponawiać migracji,
+  nie korygować historii, nie wykonywać testowych mutacji produkcji. Nowe osoby
+  NIE są jeszcze aktywne na stronie; merge/push nie oznacza udanego deployu.
+
 ## 2026-11-12 — Zatwierdzone main/push/deploy kategorii i oznaczeń db3a4b3
 
 - User „scal, wypchnij do main i wdróż”.4requireddocs,/deploycommand/runbook/active

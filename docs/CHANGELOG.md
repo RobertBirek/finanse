@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Main pushed; deployment paused] — 2026-11-13 — Osoby i darowizny
+
+### Changed
+- Scalenie i push `6b6d4f9`; zatwierdzone drzewa aplikacji `e0e746e` bez zmian.
+- Addytywna migracja `2c77e935ee39` wykonana po świeżym backup/restore klonu;
+  79 starych tabel zachowanych, nowe tabele puste, księga bez naruszeń.
+- Nowa aplikacja NIE pozostaje wdrożona: po błędzie asercji GET/requestBody
+  operator automatycznie przywrócił poprzednie obrazy `db3a4b3` na nowym schemacie.
+  HTTPS działa; status `rollback-verified-live`. Po trzech błędach operatora STOP
+  przed kolejną próbą. Dane finansowe i siedem darowizn bez korekt.
+- Raport: `docs/audits/2026-11-13-people-gifts-production.md`. Pełny lint/CI nadal
+  nie są zielone; zastane DTZ007 i 7 podatności npm pozostają osobnymi zadaniami.
+
 ## [Production, db3a4b3] — 2026-11-12 — Kategorie importów i oznaczenia transakcji
 
 ### Changed
