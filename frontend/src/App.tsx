@@ -12,6 +12,8 @@ import { Calendar } from "./pages/Calendar";
 import { Finances } from "./pages/Finances";
 import { FinanceAccounts } from "./pages/FinanceAccounts";
 import { FinanceTransactions } from "./pages/FinanceTransactions";
+import { FinancePeople } from "./pages/FinancePeople";
+import { FinancePersonDetails } from "./pages/FinancePersonDetails";
 import { FinanceCashflow } from "./pages/FinanceCashflow";
 import { FinanceBudgets } from "./pages/FinanceBudgets";
 import { FinanceReports } from "./pages/FinanceReports";
@@ -69,6 +71,11 @@ export default function App() {
           element={<FinanceBudgets configure={false} />}
         />
         <Route path="/finances/reports" element={<FinanceReports />} />
+        <Route path="/finances/people" element={<FinancePeople />} />
+        <Route
+          path="/finances/people/:personId"
+          element={<FinancePersonDetails />}
+        />
         <Route path="/finances/documents" element={<FinanceDocuments />} />
         <Route path="/finances/imports" element={<FinanceImports />} />
         <Route
