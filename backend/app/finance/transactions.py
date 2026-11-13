@@ -235,6 +235,11 @@ async def update_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID, data: TransactionUpdate
 ) -> FinancialTransaction | None:
     await lock_document_mutations(db, user_id)
+    from app.finance.person_guards import guard_person_gift_change
+
+    await guard_person_gift_change(
+        db, user_id, transaction_id, set(data.model_dump(exclude_unset=True))
+    )
     await guard_allocated_transaction_change(
         db, user_id, transaction_id, data.model_dump(exclude_unset=True)
     )
@@ -322,6 +327,9 @@ async def delete_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID
 ) -> bool:
     await lock_document_mutations(db, user_id)
+    from app.finance.person_guards import guard_person_gift_change
+
+    await guard_person_gift_change(db, user_id, transaction_id, {"delete"})
     await guard_allocated_transaction_change(db, user_id, transaction_id, {"delete": True})
     txn = (
         await db.execute(

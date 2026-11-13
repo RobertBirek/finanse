@@ -36,6 +36,24 @@ Backlog zadań ze statusami.
 - [x] Minimum300s obserwacjiPASS, atomowe active metadata verified-live i cleanup własnego klonu/plaintext.
 - [ ] Read-only kontrola kolejnego dnia, bez mutacji kategorii i transakcji.
 
+## Realizacja osób i darowizn — etap A (2026-11-13)
+
+- [x] Zgoda na natywne wykonanie A, modele i migracja bez backfillu.
+- [x] Polecenia osoby/link/unlink, owner lock, CAS/snapshoty, audyt/receipty.
+- [x] Ochrona linked gifts, konto informacyjne bez zmiany salda.
+- [x] Paginowana historia, agregaty, API i UI, 677 frontend/4 UI E2E PASS.
+- [x] Jeden review całości: Important bypass korekty waluty potwierdzony RED,
+  poprawiony guardem;24 testy guard/currency PASS. Brak pozostałych findings.
+- [x] Końcowa pełna kolekcja backendu2468PASS, cztery grupy617, pełna rozłączna
+  unia i frozen-source proof79011bc. Pełny UI201PASS/1planowyskip.
+- [x] Cleanup wszystkich własnych testDB; dokumentacja odbioru selektywnie,
+  bez włączania zastanych zmian dokumentacji do commitu tej funkcji.
+- [ ] Osobno rozstrzygnąć3 zastane błędy RuffDTZ007 w parserach ING/Revolut/Velo.
+- [ ] Osobna zgoda na merge/push/deploy/migrację. Dane produkcyjne bez zmian.
+- [ ] A2: nowy readonly preview kategorii income i powiązań, dopiero potem zgoda
+  na korektę historyczną. NIE wykonywać starej konwersji przychodów na transfery.
+- [ ] B: ewentualne osobne zamówienie pożyczek osobistych i alokacji rat.
+
 ## Opis, notatka, tagi i projekt transakcji (2026-11-12)
 
 - [x] User zatwierdził zakres i tworzenie tagów w edytorze, z ponownym użyciem.

@@ -11,12 +11,22 @@ from app.finance import (
     entities,
     ledger_validation,
     loans,
+    people,
+    person_reads,
     queries,
     reporting,
     transactions,
 )
 
 get_account = queries.get_account
+create_person = people.create_person
+update_person = people.update_person
+link_gift = people.link_gift
+unlink_gift = people.unlink_gift
+get_person = person_reads.get_person
+list_people = person_reads.list_people
+get_person_summary = person_reads.get_person_summary
+get_person_gifts = person_reads.get_person_gifts
 get_accounts = queries.get_accounts
 get_transaction = queries.get_transaction
 get_transactions = queries.get_transactions

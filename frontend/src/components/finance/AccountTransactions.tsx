@@ -13,6 +13,7 @@ import { TransactionDateLabel } from "./TransactionDateLabel";
 import { TransactionDatesDialog } from "./TransactionDatesDialog";
 import { TransactionCategorizationDialog } from "./TransactionCategorizationDialog";
 import { CardAccountSummary } from "./CardAccountSummary";
+import { AccountPersonLink } from "./AccountPersonLink";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -87,6 +88,9 @@ export function AccountTransactions({ accounts }: AccountTransactionsProps) {
             </div>
             {selected.type === "credit_card" && selected.currency === "PLN" ? (
               <CardAccountSummary accountId={selected.id} />
+            ) : null}
+            {!selected.is_budget_account ? (
+              <AccountPersonLink accountId={selected.id} />
             ) : null}
             <h3 className="mb-3 text-sm font-medium text-gray-400">
               Transakcje

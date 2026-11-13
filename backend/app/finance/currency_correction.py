@@ -229,7 +229,10 @@ async def apply_correction(
     async with db.begin_nested():
         await lock_document_mutations(db, user_id)
         account, transactions = await _load(db, user_id, plan.account_id, lock=True)
+        from app.finance.person_guards import guard_person_gift_change
+
         for transaction in transactions:
+            await guard_person_gift_change(db, user_id, transaction.id, {"currency"})
             await guard_allocated_transaction_change(
                 db, user_id, transaction.id, {"currency": "EUR"}
             )

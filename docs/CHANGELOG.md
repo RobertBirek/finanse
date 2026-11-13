@@ -44,6 +44,22 @@ Wszystkie istotne zmiany w projekcie.
   Atomowe metadane verified-live; własny klon/plaintext usunięte, backup i rollback zachowane.
   Raport `docs/audits/2026-11-12-category-select-paths-production.md`.
 
+## [Local, verified] — 2026-11-13 — Osoby i historia darowizn
+
+### Added
+- Profile osób, historia i backendowe sumy darowizn, przypisywanie/odpinanie
+  darczyńcy bez duplikowania transakcji i bez zmiany sald. Skrót z istniejącego
+  konta informacyjnego nie zastępuje jego rzeczywistego salda.
+- Owner-safe modele i addytywna migracja 2c77e935ee39, CAS/snapshoty/audyt/receipty,
+  ochrona powiązanych wpływów także przed istniejącą korektą waluty.
+- Pełny backend2468/ frontend677 PASS, cały UI201PASS +1planowyskip, statyka/build
+  i niezależny review z poprawką RED→GREEN. Pełny Ruff nadal ma3 wcześniejsze
+  DTZ007 w nietkniętych parserach; lint zmienionych plików i mypy205 PASS.
+  Brak wdrożenia, produkcyjnej migracji i zmian danych finansowych. Pożyczki i
+  korekta dawnych kategorii są oddzielnymi etapami, nie częścią tego wdrożenia.
+- Raport `docs/audits/2026-11-13-people-gifts-verification.md` zawiera ograniczenia,
+  decyzje wykonawcze, manifest końcowej kolekcji i warunki osobnych zgód.
+
 ## [Local, verified] — 2026-11-12 — Opis i oznaczenia transakcji
 
 ### Added

@@ -20,6 +20,7 @@ from app.finance.import_router import router as import_router
 from app.finance.loan_router import router as loan_router
 from app.finance.manual_refunds import create_manual_expense_refund
 from app.finance.models import FinancialTransaction, Posting
+from app.finance.person_router import router as person_router
 from app.finance.proposals_router import router as proposals_router
 from app.finance.receipt_read_router import router as receipt_read_router
 from app.finance.receipt_router import router as receipt_router
@@ -93,6 +94,7 @@ from app.identity.router import get_current_user
 
 router = APIRouter()
 router.include_router(annotation_router)
+router.include_router(person_router)
 router.include_router(import_router)
 router.include_router(credit_card_router)
 router.include_router(loan_router)

@@ -7,6 +7,7 @@ import { TransactionDateLabel } from "./TransactionDateLabel";
 import { QueryFeedback } from "../QueryFeedback";
 import { Dialog } from "../Dialog";
 import { AssignmentOriginLabel } from "./AssignmentOriginLabel";
+import { PersonGiftDialog } from "./PersonGiftDialog";
 
 export function TransactionDetail({
   id,
@@ -21,6 +22,7 @@ export function TransactionDetail({
 }) {
   const query = useTransaction(id);
   const [categorizing, setCategorizing] = useState(false);
+  const [personEditing, setPersonEditing] = useState(false);
   return (
     <Dialog
       label="Szczegóły transakcji"
@@ -43,6 +45,21 @@ export function TransactionDetail({
       >
         {query.data && (
           <div className="space-y-4">
+            {personEditing ? (
+              <PersonGiftDialog
+                key={id}
+                transactionId={id}
+                onClose={() => setPersonEditing(false)}
+              />
+            ) : null}
+            {query.data.type === "income" ? (
+              <button
+                className="btn-secondary"
+                onClick={() => setPersonEditing(true)}
+              >
+                Darczyńca i powiązanie
+              </button>
+            ) : null}
             {categorizing ? (
               <TransactionCategorizationDialog
                 id={id}
