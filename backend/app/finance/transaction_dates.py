@@ -84,6 +84,9 @@ async def set_transaction_dates(
 
     try:
         await guard_transaction(db, user_id, transaction_id)
+        from app.finance.person_guards import guard_person_gift_change
+
+        await guard_person_gift_change(db, user_id, transaction_id, {"dates"})
     except ValueError as error:
         raise TransactionDateError("date_protected", str(error)) from error
     mapped = await db.scalar(

@@ -58,6 +58,9 @@ async def _update_account(
     # Serialize all account edits with it before any account/ledger row locks.
     await lock_document_mutations(db, user_id)
     update_data = data.model_dump(exclude_unset=True, exclude={"credit_card"})
+    from app.finance.person_guards import guard_person_reference_account_change
+
+    await guard_person_reference_account_change(db, user_id, account_id, update_data)
     if "currency" in update_data:
         existing = await get_account(db, user_id, account_id)
         if existing is not None and update_data["currency"] != existing.currency:
@@ -100,6 +103,9 @@ async def _update_account(
 
 async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.UUID) -> bool:
     await lock_document_mutations(db, user_id)
+    from app.finance.person_guards import guard_person_reference_account_change
+
+    await guard_person_reference_account_change(db, user_id, account_id, {"delete": True})
     await guard_bill_account_change(db, user_id, account_id, {"delete": True})
     account = await get_account(db, user_id, account_id)
     if account is None:
