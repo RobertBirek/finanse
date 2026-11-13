@@ -2,6 +2,40 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-13 — Etap A: osoby i darowizny, odbiór lokalny
+
+- Po „tak” użytkownika wykonanie natywne zaakceptowanej spec/plan2026-11-12.
+  Istniejący linked worktree feat/financial-document-workflow, baza db3a4b3;
+  zastane dirty docs zachowane, brak zgody na prod/deploy/A2/B.
+- Commity 1feb2af modele/migracja;4259ea3 komendy;10d95eb guardy;417a12d API;
+  7209ed8 UI. FinancePerson nie jest Account; link to metadata, summary liczy
+  jedną nogę bankową, reference_account_id jest skrótem, nie księgowaniem.
+- TDD: modele7/migracja1/komendy16/guardy9/API3/read2; istniejące loans23.
+  Frontend677/110plików, tsc/eslint/build,4 Playwrightdesktop/mobile375/1440PASS.
+  UI E2E używa fixtureAPI/produkcjnego buildu; backend osobno real PostgreSQL.
+- Jeden read-only review ses_e2be0d190ffedxWw2ZQAQ4WJ92:1Important bypass przez
+  currency_correction. Potwierdzony testem RED→GREEN; guard przed mutacją,24 testy
+  guard/currency PASS. Bez ponownego review;0Critical/Minor.
+- Baseline backend2422+7migrationPASS; pierwszy interpreter był starym symlinkiem.
+  Nie aktualizowano zależności sharedvenv; użyto zgodnego scratchvenv. Fullmypy205
+  i lint zmienionych plików PASS;3 wcześniejsze RuffDTZ007 w parserach poza zakresem.
+- Pełny końcowy backend uruchomiony na4 własnych no-network PG, disjoint collection
+  proof i frozen-source guard. Ledger `.superpowers/sdd/2026-11-12-finance-people-gifts/`.
+  Nie sprawdzać backgroundjob przez polling. Czekać na automatyczny completion.
+- A2 i B wyłącznie opisane; brak fresh prodpreview lub finansowych zapisów.
+  Po pełnym wyniku: raport `docs/audits/2026-11-13-people-gifts-verification.md`,
+  zachować dowody, sprzątnąć wyłącznie własne zasoby, osobna decyzja o integracji.
+- Rozszerzony cały UI E2E201PASS/1planowyskip mobilnego przypadku na desktopie,
+  0failed. Backend runner-v1 odrzucony:2333PASS/135setupERROR brak podkatalogowych
+  fixtures przy file-list shard, dodatkowo nodeid gzip ma mtime. V2: pełna kolekcja
+  przed podziałem, canonical identity parent/originalname/paramindices; dwa collecty
+  2468zgodne +fixturecanaryPASS. Ponowienie całego backendu, źródło nadal79011bc.
+- Finalny V2 zakończony:2468PASS/0error/0skip,4×617, unia manifestów pełna,
+  rozłączna i sourcefrozen79011bc. Odrzucony V1 nie jest dowodem PASS. Dowody:
+  `/tmp/opencode/people-gifts-stage-a-20261113-x33_jtbi/`. Raport odbioru jw.
+- Sprzątnięto wszystkie własne testDB; worktree pozostaje do decyzji użytkownika.
+  Dokumentacja odbioru selektywnie, bez zastanych dirty docs. Bez merge/push/deploy.
+
 ## 2026-11-12 — Uzgodnienie opisowych oznaczeń transakcji
 
 - User zapytał o dodatkowe edycje; wybrał opis własny/notatkę/tagi/istniejącyprojekt,
