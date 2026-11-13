@@ -123,3 +123,31 @@ async def test_waiting_mutations_observe_committed_person_state(db_session, test
     await db_session.commit()
     result = await asyncio.wait_for(task, 15)
     assert isinstance(result, ValueError)
+
+
+async def test_linked_gift_blocks_currency_correction_without_changing_money(
+    db_session, monkeypatch
+):
+    from app.finance.currency_correction import apply_correction, preview_correction
+    from app.finance.nbp_rates import NbpRateProvider
+    from app.finance.person_reads import get_person_summary
+    from tests.test_finance.test_currency_correction import Rates
+    from tests.test_finance.test_people import ledger
+
+    monkeypatch.setattr(NbpRateProvider, "get_rate", Rates.get_rate)
+    owner, txn, bank, _ = await gift(db_session)
+    bank.source = "actual"
+    txn.source = "actual"
+    await db_session.commit()
+    bank_id, txn_id = bank.id, txn.id
+    # The correction can have been approved BEFORE the gift attribution.
+    plan = await preview_correction(db_session, owner, bank_id, Rates())
+    p = await person(db_session, owner)
+    await link(db_session, owner, txn_id, p.id)
+    before = await ledger(db_session)
+    summary = await get_person_summary(db_session, owner, p.id)
+    with pytest.raises(ValueError, match="osob"):
+        await apply_correction(db_session, owner, plan, approved_digest=plan.digest())
+    assert await ledger(db_session) == before
+    assert (await service.get_account(db_session, owner, bank_id)).currency == "PLN"
+    assert await get_person_summary(db_session, owner, p.id) == summary
