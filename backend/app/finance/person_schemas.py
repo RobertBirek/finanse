@@ -47,3 +47,20 @@ class PersonPage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class PersonLinkContext(BaseModel):
+    transaction_id: uuid.UUID
+    snapshot: str
+    person: PersonResponse | None
+    eligible: bool
+    reason: str | None
+
+
+class GiftUnlinkRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_transaction_snapshot: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class GiftLinkRequest(GiftUnlinkRequest):
+    person_id: uuid.UUID
