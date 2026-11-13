@@ -4,6 +4,8 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.finance.schemas import TransactionResponse
+
 
 class PersonCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -64,3 +66,17 @@ class GiftUnlinkRequest(BaseModel):
 
 class GiftLinkRequest(GiftUnlinkRequest):
     person_id: uuid.UUID
+
+
+class PersonSummary(BaseModel):
+    person_id: uuid.UUID
+    gift_count: int
+    received_gifts_pln: int
+    received_by_currency: dict[str, int]
+
+
+class PersonGiftPage(BaseModel):
+    items: list[TransactionResponse]
+    total: int
+    limit: int
+    offset: int
