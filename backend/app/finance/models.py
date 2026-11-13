@@ -31,6 +31,7 @@ from app.finance.imports import models as _bank_import_models  # noqa: F401
 class Account(Base):
     __tablename__ = "accounts"
     __table_args__ = (
+        UniqueConstraint("id", "user_id", name="uq_account_id_owner"),
         CheckConstraint(
             "color IS NULL OR color ~ '^#[0-9A-F]{6}$'",
             name="ck_accounts_color_hex",
@@ -590,3 +591,6 @@ class Posting(Base):
     )
     account: Mapped["Account"] = relationship("Account", back_populates="postings")
     category: Mapped["Category"] = relationship("Category", back_populates="postings")
+
+
+from app.finance import person_models as _person_models  # noqa: F401 - register metadata
