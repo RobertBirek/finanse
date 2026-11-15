@@ -43,6 +43,56 @@ def assert_backend_workflow(workflow: dict[str, Any]) -> None:
     for job in (static, tests, gate):
         assert job["timeout-minutes"] == 20
         assert _action(job, "actions/checkout@v4")["with"]["fetch-depth"] == 0
+    collect, inventory = _runner(static, "collect")
+    assert collect["timeout-minutes"] == 1
+    assert _flag(inventory, "--timeout-seconds") == "40"
+    assert _flag(inventory, "--commit") == "$GITHUB_SHA"
+    assert _flag(inventory, "--output") == "$RUNNER_TEMP/ci-manifest/manifest.json"
+    command = shlex.split(collect["run"].replace("\\\n", " "), comments=True)
+    # Root creates only the namespace; Python must run as the original runner.
+    assert command[:12] == [
+        "sudo",
+        "--",
+        "unshare",
+        "--net",
+        "--",
+        "setpriv",
+        "--reuid=$(id -u)",
+        "--regid=$(id -g)",
+        "--init-groups",
+        "--no-new-privs",
+        "--",
+        "env",
+    ]
+    assert command[12] == "-i"
+    python_index = command.index("$(command -v python)")
+    variables = dict(word.split("=", 1) for word in command[13:python_index])
+    assert variables == {
+        "PATH": "$PATH",
+        "HOME": "$HOME",
+        "LD_LIBRARY_PATH": "${LD_LIBRARY_PATH:-}",
+        **{
+            key: f"${key}"
+            for key in (
+                "ENVIRONMENT",
+                "TEST_DATABASE_URL",
+                "DATABASE_URL",
+                "REDIS_URL",
+                "SECRET_KEY",
+                "OPENAI_API_KEY",
+                "LLM_API_KEY",
+                "PYTHONDONTWRITEBYTECODE",
+            )
+        },
+    }
+    assert command[python_index + 1 : python_index + 5] == [
+        "-B",
+        "-m",
+        "ci_tools.runner",
+        "collect",
+    ]
+    for key in ("TEST_DATABASE_URL", "DATABASE_URL"):
+        assert urlsplit(static["env"][key]).port == 9
     strategy = tests["strategy"]
     assert strategy["fail-fast"] is False
     assert 1 <= strategy["max-parallel"] <= 3

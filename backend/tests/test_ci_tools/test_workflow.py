@@ -36,6 +36,35 @@ def test_yaml_parser_is_required_by_existing_dependency() -> None:
 
 
 @pytest.mark.parametrize(
+    "original,replacement",
+    [
+        ("sudo -- unshare --net", "unshare --user --map-root-user --net"),
+        ("--net", ""),
+        ('--reuid="$(id -u)"', "--reuid=0"),
+        ('--regid="$(id -g)"', "--regid=0"),
+        ("--no-new-privs", ""),
+        ("env -i", "env"),
+        ("--timeout-seconds 40", "--timeout-seconds 400"),
+    ],
+)
+def test_inventory_rejects_unsafe_namespace_or_credentials(
+    workflow: dict[str, Any], original: str, replacement: str
+) -> None:
+    from tests.test_ci_tools.workflow_assertions import assert_backend_workflow
+
+    config = copy.deepcopy(workflow)
+    collect = next(
+        s
+        for s in config["jobs"]["backend_static"]["steps"]
+        if "ci_tools.runner collect" in s.get("run", "")
+    )
+    assert original in collect["run"]
+    collect["run"] = collect["run"].replace(original, replacement)
+    with pytest.raises(AssertionError):
+        assert_backend_workflow(config)
+
+
+@pytest.mark.parametrize(
     "mutation",
     [
         "check_name",
