@@ -17,24 +17,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    name: Backend tests and static checks
+  backend_static:
+    name: Backend static checks and inventory
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: finanse
-          POSTGRES_PASSWORD: finanse
-          POSTGRES_DB: finanse_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U finanse -d finanse_test"
-          --health-interval 5s --health-timeout 5s --health-retries 12
     env:
-      TEST_DATABASE_URL: postgresql+asyncpg://finanse:finanse@127.0.0.1:5432/finanse_test
-      ENVIRONMENT: development
+      TEST_DATABASE_URL: postgresql+asyncpg://synthetic:synthetic@127.0.0.1:9/no_db_collection
+      DATABASE_URL: postgresql+asyncpg://synthetic:synthetic@127.0.0.1:9/no_db_collection
+      REDIS_URL: redis://127.0.0.1:9/0
+      ENVIRONMENT: test
+      SECRET_KEY: synthetic-ci-collection
       OPENAI_API_KEY: ""
       LLM_API_KEY: ""
       PYTHONDONTWRITEBYTECODE: "1"
@@ -43,44 +35,167 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-python@v5
+        timeout-minutes: 1
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: python -m pip install -r requirements.txt ruff==0.17.1 mypy==2.4.0
+        timeout-minutes: 3
       - run: python -m pip check
-      - run: ruff check app tests
-      - run: mypy app
-      - name: Check isolated PostgreSQL before running tests
+      - run: ruff check app tests ci_tools
+      - run: mypy app ci_tools
+      - name: Collect current checkout without running fixtures
+        timeout-minutes: 1
         run: |
+          unshare --user --map-root-user --net -- \
+            python -B -m ci_tools.runner collect \
+              --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/ci-manifest/manifest.json" \
+              --timeout-seconds 40
+      - uses: actions/upload-artifact@v4
+        if: always()
+        timeout-minutes: 1
+        with:
+          name: backend-manifest
+          path: ${{ runner.temp }}/ci-manifest/
+          if-no-files-found: error
+          retention-days: 7
+
+  backend_tests:
+    name: Backend tests (${{ matrix.group }})
+    needs: backend_static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        group: [ordinary-1, ordinary-2, ordinary-3, ordinary-4, ordinary-5, ordinary-6, legacy, proxy]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          # Test-only role; each job creates its own ephemeral cluster.
+          POSTGRES_USER: bank_import_task_c1
+          POSTGRES_PASSWORD: synthetic-ci
+          POSTGRES_DB: finanse_test
+        ports: ["127.0.0.1:5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bank_import_task_c1 -d finanse_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://bank_import_task_c1:synthetic-ci@127.0.0.1:5432/finanse_test
+      DATABASE_URL: postgresql+asyncpg://bank_import_task_c1:synthetic-ci@127.0.0.1:5432/finanse_test
+      BANK_IMPORT_MIGRATION_DATABASE_URL: postgresql+asyncpg://bank_import_task_c1:synthetic-ci@127.0.0.1:5432/finanse_test
+      BANK_IMPORT_MIGRATIONS_ALLOWED: owned_no_port_runner
+      ENVIRONMENT: test
+      SECRET_KEY: synthetic-ci-tests
+      OPENAI_API_KEY: ""
+      LLM_API_KEY: ""
+      PYTHONDONTWRITEBYTECODE: "1"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Start preparation budget
+        working-directory: ${{ runner.temp }}
+        run: echo "CI_PREP_STARTED=$(date +%s)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        timeout-minutes: 1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        timeout-minutes: 1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r requirements.txt
+        timeout-minutes: 3
+      - uses: actions/download-artifact@v4
+        timeout-minutes: 1
+        with:
+          name: backend-manifest
+          path: ${{ runner.temp }}/ci-manifest
+      - name: Preparation and owned PostgreSQL preflight
+        timeout-minutes: 1
+        run: |
+          test "$(( $(date +%s) - CI_PREP_STARTED ))" -le 300
           python - <<'PY'
           import asyncio
+          import os
           import asyncpg
           async def check():
-              connection = await asyncpg.connect('postgresql://finanse:finanse@127.0.0.1:5432/finanse_test')
+              url = os.environ['TEST_DATABASE_URL'].replace('postgresql+asyncpg:', 'postgresql:', 1)
+              connection = await asyncpg.connect(url, timeout=5)
+              assert await connection.fetchval("SELECT current_user") == "bank_import_task_c1"
+              assert await connection.fetchval("SELECT current_database()") == "finanse_test"
+              assert await connection.fetchval("SELECT count(*) FROM pg_tables WHERE schemaname='public'") == 0
               await connection.close()
           asyncio.run(check())
           PY
-      - run: pytest -q --junitxml=test-results.xml
-      - name: Disposable proxy and container limit contracts
-        run: pytest -q -m proxy tests/test_documents/test_proxy_upload.py tests/test_documents/test_parser_container.py tests/test_document_hardening.py
-      - name: Reject skipped tests, including unavailable integration database
+      - name: Run one serial group with bounded teardown
+        timeout-minutes: 13
         run: |
-          python - <<'PY'
-          import xml.etree.ElementTree as ET
-          report = ET.parse('test-results.xml')
-          skipped = report.findall('.//testcase/skipped')
-          if skipped:
-              raise SystemExit(f'Unexpected skipped tests: {len(skipped)}')
-          PY
+          python -B -m ci_tools.runner run \
+            --manifest "$RUNNER_TEMP/ci-manifest/manifest.json" \
+            --group "${{ matrix.group }}" \
+            --output "$RUNNER_TEMP/backend-artifacts/${{ matrix.group }}" \
+            --timeout-seconds 720
+      - uses: actions/upload-artifact@v4
+        if: always()
+        timeout-minutes: 1
+        with:
+          name: backend-result-${{ matrix.group }}
+          path: ${{ runner.temp }}/backend-artifacts/
+          if-no-files-found: error
+          retention-days: 7
+
+  backend:
+    # Preserve the existing required check name and job ID.
+    name: Backend tests and static checks
+    needs: [backend_static, backend_tests]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-manifest
+          path: ${{ runner.temp }}/ci-manifest
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: backend-result-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/backend-results
+      - name: Reject missing jobs, phases, reports and skipped tests
+        working-directory: backend
+        env:
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: |
+          printf '%s' "$CI_NEEDS" > "$RUNNER_TEMP/needs.json"
+          python -B -m ci_tools.runner verify \
+            --manifest "$RUNNER_TEMP/ci-manifest/manifest.json" \
+            --results "$RUNNER_TEMP/backend-results" --needs "$RUNNER_TEMP/needs.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: backend-test-results
-          path: backend/test-results.xml
+          name: backend-gate-inputs
+          path: ${{ runner.temp }}/needs.json
+          if-no-files-found: error
           retention-days: 7
 
   frontend:
