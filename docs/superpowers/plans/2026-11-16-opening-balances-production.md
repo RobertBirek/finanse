@@ -21,16 +21,16 @@ schema `2c77e935ee39`.
 
 ## Kroki
 
-1. [~] Scalić aktualny main, zachować obie historie dokumentacji; lint/types/test
+1. [x] Scalić aktualny main, zachować obie historie dokumentacji; lint/types/test
    wynikowego drzewa. Aplikacja BO pozostaje identyczna z testowanym `ee21930`.
-2. [ ] Commit i zwykły push `HEAD:main`; potwierdzić pełne CI tej rewizji.
-3. [ ] Przygotować wersjonowane obrazy, offline nonroot proof i zgodny rollback;
+2. [x] Commit `45bcf88` i zwykły push `HEAD:main`; CI43937664943,11/11PASS.
+3. [x] Przygotować wersjonowane obrazy, offline nonroot proof i zgodny rollback;
    sandbox bez providerów, bez operacji na produkcji.
-4. [ ] Świeży szyfrowany backup, restore do własnego nowego no-port klonu,
+4. [x] Świeży szyfrowany backup, restore do własnego nowego no-port klonu,
    realna migracja i retencja wszystkich starych tabel/uploads.
-5. [ ] Maintenance/drain, ponowny backup i retencja pod blokadą zapisów,
+5. [x] Maintenance/drain, ponowny backup i retencja pod blokadą zapisów,
    migracja dokładnej rewizji i spójne wdrożenie trzech aplikacji.
-6. [ ] HTTPS/auth/readonly BO/runtime/worker/logs, obserwacja, atomowa publikacja
+6. [x] HTTPS/auth/readonly BO/runtime/worker/logs, obserwacja, atomowa publikacja
    metadanych dopiero po sukcesie; docs i cleanup własnych zasobów.
 
 Dowody operacyjne: `/tmp/opencode/opening-balances-deploy-20261116/`.

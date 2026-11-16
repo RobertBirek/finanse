@@ -2,14 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Integracja i wdrożenie zatwierdzone; w toku] — 2026-11-16 — BO
+## [Production, 45bcf88] — 2026-11-16 — BO każdego konta
 
 ### Changed
-- Użytkownik zatwierdził push main, spójny rollout trzech aplikacji, backup/restore
-  i migrację `efaf78432563` z BO=0 bez zmiany sald/historii. Plan:
-  `docs/superpowers/plans/2026-11-16-opening-balances-production.md`.
-- Integracja `ee21930` z `d8b676f` zachowuje nowe zabezpieczenia testDB.
-  Produkcja pozostaje na `e0e746e`/schema2c do przejścia bramek wydania.
+- Main `45bcf88` zawiera BO i aktualne zabezpieczenia testDB; CI43937664943:
+  11/11PASS. Backend, worker i frontend działają na tej samej rewizji.
+- Migracja `efaf78432563` zainicjalizowała BO=0 wszystkich istniejących kont
+  bez zmiany sald, historii,81starych tabel/struktur i uploads.
+- Backup/restore, nonroot/content/config i sandbox/rollback PASS. Po dwóch
+  bezpiecznych rollbackach operatora końcowy app-only rollout na schemaefaf
+  zakończony:306.52s obserwacji,0runtimeerrors/restarts,HTTPS/API/worker/browserPASS.
+- Aktywny release i prywatne dowody w `webapp/releases/opening-balances-45bcf88/`.
+  Zachowano backupy/rollback; usunięto tylko własny klon/wolumen/plaintext staging.
+  Raport: `docs/audits/2026-11-16-opening-balances-production.md`.
 
 ## [Lokalnie zweryfikowane; bez wdrożenia] — 2026-11-16 — BO każdego konta
 

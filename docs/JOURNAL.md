@@ -2,7 +2,7 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
-## 2026-11-16 — Zatwierdzone wydanie BO; przygotowanie
+## 2026-11-16 — BO wdrożone:45bcf88/schemaefaf
 
 - User polecił pushmain/deploy, następnie zatwierdził sześć kroków wraz z
   migracją BO=0 i przerwą. Feature `ee21930`, remote main `d8b676f`; merge
@@ -15,6 +15,45 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Plan: `superpowers/plans/2026-11-16-opening-balances-production.md`.
   Nowe prywatne dowody: `/tmp/opencode/opening-balances-deploy-20261116/`.
   Brak produkcyjnej migracji lub przełączenia na tym etapie.
+- Update: push45bcf88 bezforce,CI43937664943/11jobsPASS. Obrazy z existinge0runtime,
+  nonroot10001/content/configPASS; aplikacjaBO dokładnie jak ee21930.
+  Onlineencryptedbackup/restore, realnamigracja i retencja81starychtabel/struktur
+  PASS. Rzeczywistysandbox3noweapps+3stareimageIDsrollbackPASS,bezhostportów.
+  Operator11regresjiPASS; guardoptimize, zakresfingerprintu i kolejnośćrollback
+  po review poprawione przedmaintenance. Rolloutfenced uruchomiony, wynikjeszcze
+  oczekiwany; nie uznawać przygotowania za prodPASS.
+- Pierwszyrollout zatrzymał się PRZEDmigracją: strictcrossDBconstrainttext
+  różnił się po pg_restore przezarrayvarchar→textcast. Wszystkie81datarowhash
+  i resztastruktur identyczne. Realnyparserroundtrip originalCHECK naTEMPclone
+  potwierdził równoważność; nie usunięto checków. Rollbackoldapps wykonałsię,
+  końcowaasercja envlistorder okazałasię fałszywa, mapywszystkichwartości identyczne.
+  ObydwafixyRED→GREEN,13operatorPASS. Staryruntime/worker/HTTPS200/auth401/schema2c
+  potwierdzone;prodniezmigrowana. attempt-1zachowany, kontrolowanapowtórka z
+  nowymbackupem w toku, zakres45bcf88/efaf bez zmian.
+- Attempt2: migracjaefafWYKONANA,81oldtables/structures/uploads exact i
+  allzeroBO/ledger0PASS. Nowybackendworkerreadiness/readonlyPASS. Frontendstage
+  zatrzymany na unsupportedComposecreate--no-deps; rollback3oldimagesPASS,
+  schemaefafzachowana, żadnepodwójneBO/downgrade/restoreprod.
+  SupportedCLIup--no-start--no-deps--no-build sprawdzonehelp iRED→GREENregresją.
+  attempt2archiwumzachowane; trzecirollout app-only,nowefencedbackup/restore
+  schemaefaf i82tablesretention, BEZpowtórkimigracji. Wynikoczekiwany.
+- Lokalne końcowe testy:lint/mypy215/tscPASS, domyślnyVitest706PASS/1znany
+  flakyDocumentList(useEffectrace). Pełnapowtórka--maxWorkers2:707PASS135.58s.
+  Nieukrywamyfailure ani nietwierdzimyfixa; osobnybacklog. CI45bcf88 nadal11/11PASS.
+- Finalapp-onlyPASS: backend/worker/frontend45bcf88, schemaefaf pozostawiona,
+  bez ponownej migracji. Świeży backup/restore82tabel, readonlyAPI, workercheck,
+  HTTPS/assets/auth401 i306.52s obserwacji0runtimeerrors/restartsPASS.
+- Browserprodukcyjny375/1440anonPASS, oba screenshotyobejrzane. Ownerrouteprobe
+  ma jawny dependencyoverride; to nie test cookies/logowania. Nie wykonywano
+  produkcyjnych prób zapisu BO lub innych mutacji użytkownika.
+- Active-release.json opublikowany atomowo pod deploylock, verified-live.
+  Release `/opt/finanse/webapp/releases/opening-balances-45bcf88/`,
+  root-only evidence/. FinishcertificationPASS, własnyPG/wolumen i wszystkie
+  rawrestorestaging(online/fenced/attempt1/2)usunięte. Backups/oldimages zachowane.
+  Stałyprywatnyklon,usługidanych iinne worktree nietknięte.
+- Raport `audits/2026-11-16-opening-balances-production.md` opisuje oba wcześniejsze
+  rollbacki, wyniki i ryzyko oldapp po nonzeroBO. Kolejny krok: tylko docs commit/
+  push, bez restartu; ewentualny późniejszy rollback wymaga stopwriters i oceny BO.
 
 ## 2026-11-16 — BO każdego konta; lokalnie zweryfikowane, bez wdrożenia
 

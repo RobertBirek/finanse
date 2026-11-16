@@ -5,11 +5,15 @@ Backlog zadań ze statusami.
 ## Wdrożenie BO (2026-11-16)
 
 - [x] Zgoda na main/deploy, dokładną addytywną migrację i krótką przerwę.
-- [~] Integracja `ee21930`+main`d8b676f`, kontrole i push bez force.
-- [ ] Pełne CI nowej rewizji, obrazy/nonroot proof i rollback.
-- [ ] Świeży backup/restore, retencja na nowym klonie; zachowany prywatny klon nietknięty.
-- [ ] Maintenance/drain, backup, migracja BO=0 i trzy aplikacje.
-- [ ] Runtime/readonly/obserwacja, metadane, dokumentacja i własny cleanup.
+- [x] Integracja `ee21930`+main`d8b676f`, kontrole i push`45bcf88` bez force.
+- [x] CI43937664943/11jobsPASS, obrazy/nonroot/content/config proof.
+- [x] Świeży backup/restore, retencja81tabel na nowym klonie i sandbox3apps+rollbackPASS.
+- [x] Maintenance/drain, backup, migracja BO=0 i trzy aplikacje.
+- [x] Migracjaefaf:81starychtabel/struktur/uploads bez zmian,BO=0/ledger0PASS.
+- [x] Po dwóch bezpiecznych rollbackach końcowe app-only na schemaefaf, bez powtórki migracji.
+- [x] Runtime/readonly/306.52s obserwacji/browser375/1440, metadane i własny cleanup.
+- [x] Końcowy raport i push dokumentacji bez zmiany wdrożonych obrazów.
+- [ ] Osobno: usunąć wyścig useEffect w starym DocumentList.test; nie naprawiano podczas wydania.
 
 ## Bilans otwarcia każdego konta (2026-11-16)
 
