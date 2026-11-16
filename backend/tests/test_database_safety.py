@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -330,3 +332,308 @@ async def test_permit_publish_is_complete_and_no_clobber(
         await safety.issue_ci_permit(URL, path, CONTEXT)
     assert path.read_bytes() == b"concurrent-existing-permit"
     assert not list(tmp_path.glob("*.tmp"))
+
+
+def lifecycle_module(entry: str) -> Any:
+    if entry == "global":
+        from tests import conftest
+
+        return conftest
+    if entry == "category":
+        from tests.test_finance import category_tree_database
+
+        return category_tree_database
+    if entry == "colors":
+        from tests.test_finance import test_entity_colors
+
+        return test_entity_colors
+    if entry == "migration":
+        from tests import migration_fixtures
+
+        return migration_fixtures
+    from tests.test_identity import test_sessions
+
+    return test_sessions
+
+
+def request_for(*, integration: bool = True) -> Any:
+    return SimpleNamespace(
+        node=SimpleNamespace(get_closest_marker=lambda _: object() if integration else None)
+    )
+
+
+def install_permit(monkeypatch: pytest.MonkeyPatch, path: Path) -> None:
+    for key, value in environment(path).items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("TEST_DATABASE_URL", URL)
+    monkeypatch.setenv("BANK_IMPORT_MIGRATION_DATABASE_URL", URL)
+    monkeypatch.setenv("BANK_IMPORT_MIGRATIONS_ALLOWED", "owned_no_port_runner")
+
+
+def lifecycle_generator(entry: str, fixture: Any) -> Any:
+    if entry in {"global", "category"}:
+        return fixture.test_database.__wrapped__(request_for())
+    if entry == "colors":
+        return fixture.color_db_session.__wrapped__()
+    return fixture.owned_migration_database.__wrapped__()
+
+
+@pytest.mark.parametrize("entry", ["global", "category", "colors", "migration", "alembic"])
+async def test_all_lifecycle_entries_refuse_before_io(
+    monkeypatch: pytest.MonkeyPatch, entry: str
+) -> None:
+    safety = module()
+    fixture = lifecycle_module(entry)
+    attempts: list[str] = []
+
+    def forbidden(*args: Any, **kwargs: Any) -> None:
+        attempts.append("io")
+        raise AssertionError("Fixture reached I/O without a permit")
+
+    monkeypatch.delenv("ADVISOR_TEST_DB_PERMIT", raising=False)
+    monkeypatch.setenv("TEST_DATABASE_URL", URL)
+    monkeypatch.setenv("BANK_IMPORT_MIGRATION_DATABASE_URL", URL)
+    monkeypatch.setenv("BANK_IMPORT_MIGRATIONS_ALLOWED", "owned_no_port_runner")
+    if hasattr(fixture, "TEST_DATABASE_URL"):
+        monkeypatch.setattr(fixture, "TEST_DATABASE_URL", URL)
+    if hasattr(fixture, "create_async_engine"):
+        monkeypatch.setattr(fixture, "create_async_engine", forbidden)
+    monkeypatch.setattr(safety.asyncpg, "connect", forbidden)
+    if entry == "alembic":
+        monkeypatch.setattr(fixture.subprocess, "run", forbidden)
+    with pytest.raises(safety.DatabaseSafetyError):
+        if entry == "alembic":
+            result = fixture.run_alembic("upgrade", "head")
+            if inspect.isawaitable(result):
+                await result
+        else:
+            await anext(lifecycle_generator(entry, fixture))
+    assert attempts == []
+
+
+async def test_unit_fixture_does_not_load_permit_or_connect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixture = lifecycle_module("global")
+    monkeypatch.delenv("ADVISOR_TEST_DB_PERMIT", raising=False)
+    generator = fixture.test_database.__wrapped__(request_for(integration=False))
+    assert await anext(generator) is None
+    await generator.aclose()
+
+
+class AsyncContext:
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+    async def __aenter__(self) -> Any:
+        return self.value
+
+    async def __aexit__(self, *args: object) -> None:
+        return None
+
+
+class FakeSQLConnection:
+    def __init__(self, events: list[str], *, fail_setup: bool = False) -> None:
+        self.events = events
+        self.row = observation()
+        self.fail_setup = fail_setup
+
+    async def execute(self, statement: Any) -> Any:
+        sql = str(statement)
+        if "current_database()" in sql:
+            self.events.append("identity")
+            return SimpleNamespace(mappings=lambda: SimpleNamespace(one=lambda: dict(self.row)))
+        self.events.append(sql)
+        return None
+
+    async def run_sync(self, function: Any) -> None:
+        self.events.append(function.__name__)
+        if function.__name__ == "create_all" and self.fail_setup:
+            raise RuntimeError("setup failure")
+
+
+class FakeEngine:
+    def __init__(self, events: list[str], *, fail_setup: bool = False) -> None:
+        self.connection = FakeSQLConnection(events, fail_setup=fail_setup)
+        self.closed = False
+
+    def begin(self) -> AsyncContext:
+        return AsyncContext(self.connection)
+
+    async def dispose(self) -> None:
+        self.closed = True
+
+
+@pytest.mark.parametrize("entry", ["global", "category", "colors"])
+@pytest.mark.parametrize("phase", ["success", "setup_failure", "identity_cleanup", "body_failure"])
+async def test_lifecycle_checks_before_ddl_and_releases_resources(
+    permit_file: Path, monkeypatch: pytest.MonkeyPatch, entry: str, phase: str
+) -> None:
+    safety = module()
+    fixture = lifecycle_module(entry)
+    install_permit(monkeypatch, permit_file)
+    if hasattr(fixture, "TEST_DATABASE_URL"):
+        monkeypatch.setattr(fixture, "TEST_DATABASE_URL", URL)
+    events: list[str] = []
+    engines: list[FakeEngine] = []
+
+    def create_engine(*args: Any, **kwargs: Any) -> FakeEngine:
+        engine = FakeEngine(events, fail_setup=phase == "setup_failure")
+        engines.append(engine)
+        return engine
+
+    monkeypatch.setattr(fixture, "create_async_engine", create_engine)
+    if entry == "colors":
+        session = SimpleNamespace(execute=AsyncMock())
+        monkeypatch.setattr(
+            fixture,
+            "async_sessionmaker",
+            lambda *a, **kw: lambda: AsyncContext(session),
+        )
+    from app import database as app_database
+
+    previous = (app_database.engine, app_database.async_session_factory)
+    generator = lifecycle_generator(entry, fixture)
+    if phase == "setup_failure":
+        with pytest.raises(RuntimeError, match="setup failure"):
+            await anext(generator)
+    else:
+        await anext(generator)
+        if phase == "identity_cleanup":
+            for engine in engines:
+                engine.connection.row["nonce"] = "c" * 32
+            with pytest.raises(safety.DatabaseSafetyError):
+                await generator.aclose()
+        elif phase == "body_failure":
+            with pytest.raises(RuntimeError, match="body failure"):
+                await generator.athrow(RuntimeError("body failure"))
+        else:
+            await generator.aclose()
+    drops = [event for event in events if event == "drop_all" or event.startswith("DROP SCHEMA")]
+    if phase in {"setup_failure", "identity_cleanup"}:
+        assert drops == []
+    else:
+        assert len(drops) == 1
+    for index, event in enumerate(events):
+        if event in {"create_all", "drop_all"} or event.startswith(
+            ("CREATE SCHEMA", "DROP SCHEMA")
+        ):
+            assert index > 0 and events[index - 1] == "identity", events
+    assert engines and all(engine.closed for engine in engines)
+    assert (app_database.engine, app_database.async_session_factory) == previous
+
+
+class FakeMigrationAdmin(FakePostgres):
+    def __init__(self) -> None:
+        super().__init__()
+        self.child = FakePostgres()
+        self.child.row["oid"] = 54321
+        self.child.row["nonce"] = None
+
+    async def execute(self, query: str, *args: Any) -> None:
+        self.executed.append(query)
+        if query.startswith("CREATE DATABASE"):
+            self.child.row["database"] = query.split('"')[1]
+
+    async def fetchval(self, query: str, *args: Any) -> Any:
+        if "pg_stat_activity" in query:
+            return 0
+        if "SELECT oid FROM pg_database" in query:
+            return self.child.row["oid"]
+        return await super().fetchval(query, *args)
+
+
+def install_migration_connect(monkeypatch: pytest.MonkeyPatch, admin: FakeMigrationAdmin) -> None:
+    async def connect(*args: Any, **kwargs: Any) -> FakePostgres:
+        return admin if kwargs.get("database") == "finanse_test" else admin.child
+
+    monkeypatch.setattr(module().asyncpg, "connect", connect)
+
+
+@pytest.mark.parametrize("field", ["database", "oid", "system_identifier", "role"])
+async def test_migrate_rechecks_child_before_each_spawn(
+    permit_file: Path, monkeypatch: pytest.MonkeyPatch, field: str
+) -> None:
+    fixture = lifecycle_module("migration")
+    install_permit(monkeypatch, permit_file)
+    admin = FakeMigrationAdmin()
+    install_migration_connect(monkeypatch, admin)
+    process = SimpleNamespace(returncode=0, communicate=AsyncMock(return_value=(b"ok", None)))
+    spawn = AsyncMock(return_value=process)
+    import asyncio
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    generator = lifecycle_generator("migration", fixture)
+    database = await anext(generator)
+    await database.migrate("upgrade", "head")
+    previous = admin.child.row[field]
+    admin.child.row[field] = "wrong"
+    try:
+        with pytest.raises(module().DatabaseSafetyError):
+            await database.migrate("downgrade", "base")
+        assert spawn.await_count == 1
+    finally:
+        admin.child.row[field] = previous
+        await generator.aclose()
+    assert admin.closed and admin.child.closed
+
+
+async def test_parent_rechecked_before_scratch_drop(
+    permit_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture = lifecycle_module("migration")
+    install_permit(monkeypatch, permit_file)
+    admin = FakeMigrationAdmin()
+    install_migration_connect(monkeypatch, admin)
+    generator = lifecycle_generator("migration", fixture)
+    await anext(generator)
+    admin.row["oid"] = 99
+    with pytest.raises(module().DatabaseSafetyError):
+        await generator.aclose()
+    assert not any(sql.startswith("DROP DATABASE") for sql in admin.executed)
+    assert admin.closed and admin.child.closed
+
+
+async def test_alembic_refuses_identity_failure_before_subprocess(
+    permit_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture = lifecycle_module("alembic")
+    install_permit(monkeypatch, permit_file)
+    pg = FakePostgres()
+    pg.row["oid"] = 99
+    monkeypatch.setattr(module().asyncpg, "connect", AsyncMock(return_value=pg))
+    spawn = AsyncMock(side_effect=AssertionError("Unverified target reached subprocess"))
+    monkeypatch.setattr(fixture.subprocess, "run", spawn)
+    with pytest.raises(module().DatabaseSafetyError):
+        await fixture.run_alembic("upgrade", "head")
+    spawn.assert_not_called()
+    assert pg.closed
+
+
+@pytest.mark.parametrize("change", ["database", "host", "query"])
+async def test_migration_and_alembic_targets_are_bound(
+    permit_file: Path, monkeypatch: pytest.MonkeyPatch, change: str
+) -> None:
+    fixture = lifecycle_module("migration")
+    install_permit(monkeypatch, permit_file)
+    admin = FakeMigrationAdmin()
+    install_migration_connect(monkeypatch, admin)
+    generator = lifecycle_generator("migration", fixture)
+    database = await anext(generator)
+    url = database.url
+    if change == "database":
+        url = url.replace(database.identity.name, "finanse_test")
+    elif change == "host":
+        url = url.replace("127.0.0.1", "production")
+    else:
+        url += "?host=production"
+    import asyncio
+
+    spawn = AsyncMock(side_effect=AssertionError("Foreign URL reached subprocess"))
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    try:
+        with pytest.raises(module().DatabaseSafetyError):
+            await replace(database, url=url).migrate("upgrade", "head")
+        spawn.assert_not_awaited()
+    finally:
+        await generator.aclose()

@@ -17,10 +17,16 @@ def test_application_registers_audit_event_in_metadata():
     assert "audit_events" in Base.metadata.tables
 
 
-def test_default_test_database_url_keeps_approved_fallback():
+def test_legacy_default_is_only_an_address_not_lifecycle_permission():
     assert DEFAULT_TEST_DATABASE_URL == (
         "postgresql+asyncpg://finanse:finanse@localhost:5432/finanse_test"
     )
+    import pytest
+
+    from tests.database_safety import DatabaseSafetyError, load_permit
+
+    with pytest.raises(DatabaseSafetyError):
+        load_permit(DEFAULT_TEST_DATABASE_URL, {})
 
 
 def test_docker_test_database_url_is_safe():

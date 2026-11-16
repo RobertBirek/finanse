@@ -101,6 +101,7 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://bank_import_task_c1:synthetic-ci@127.0.0.1:5432/finanse_test
       BANK_IMPORT_MIGRATION_DATABASE_URL: postgresql+asyncpg://bank_import_task_c1:synthetic-ci@127.0.0.1:5432/finanse_test
       BANK_IMPORT_MIGRATIONS_ALLOWED: owned_no_port_runner
+      ADVISOR_TEST_DB_GROUP: ${{ matrix.group }}
       ENVIRONMENT: test
       SECRET_KEY: synthetic-ci-tests
       OPENAI_API_KEY: ""
@@ -142,10 +143,15 @@ jobs:
         timeout-minutes: 1
         run: |
           test "$(( $(date +%s) - CI_PREP_STARTED ))" -le 300
+          export ADVISOR_TEST_DB_COMMIT="$(git rev-parse HEAD)"
+          permit_dir="$(mktemp -d "$RUNNER_TEMP/advisor-test-db.XXXXXXXX")"
+          export ADVISOR_TEST_DB_PERMIT="$permit_dir/permit.json"
           python - <<'PY'
           import asyncio
           import os
+          from pathlib import Path
           import asyncpg
+          from tests.database_safety import issue_ci_permit
           async def check():
               url = os.environ['TEST_DATABASE_URL'].replace('postgresql+asyncpg:', 'postgresql:', 1)
               connection = await asyncpg.connect(url, timeout=5)
@@ -153,8 +159,15 @@ jobs:
               assert await connection.fetchval("SELECT current_database()") == "finanse_test"
               assert await connection.fetchval("SELECT count(*) FROM pg_tables WHERE schemaname='public'") == 0
               await connection.close()
+              await issue_ci_permit(
+                  os.environ['TEST_DATABASE_URL'],
+                  Path(os.environ['ADVISOR_TEST_DB_PERMIT']),
+                  os.environ,
+              )
           asyncio.run(check())
           PY
+          echo "ADVISOR_TEST_DB_PERMIT=$ADVISOR_TEST_DB_PERMIT" >> "$GITHUB_ENV"
+          echo "ADVISOR_TEST_DB_COMMIT=$ADVISOR_TEST_DB_COMMIT" >> "$GITHUB_ENV"
       - name: Run one serial group with bounded teardown
         timeout-minutes: 13
         run: |
