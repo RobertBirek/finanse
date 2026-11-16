@@ -172,6 +172,8 @@ import json, os, sys
 from pathlib import Path
 root = Path({str(project)!r})
 args = sys.argv[1:]
+if args[:3] == ["-I", "-B", "-c"] and "advisor-dev-python" in args[3]:
+    os.execv({sys.executable!r}, [{sys.executable!r}, *args])
 with (root / "python.jsonl").open("a") as stream:
     stream.write(json.dumps(args) + "\\n")
 preflight = len(args) > 2 and args[2].endswith("/ops/dev_environment.py")
@@ -267,6 +269,17 @@ def test_command_requires_absolute_explicit_python(
     assert result.returncode != 0
     assert not (command_project / "python.jsonl").exists()
     assert not (command_project / "npm.json").exists()
+
+
+@pytest.mark.parametrize("check", ["test", "lint", "typecheck"])
+@pytest.mark.parametrize("program", ["/bin/true", "/bin/echo"])
+def test_commands_reject_non_python_program(
+    command_project: Path, check: str, program: str
+) -> None:
+    result = run_command(command_project, check, {"ADVISOR_DEV_PYTHON": program})
+    assert result.returncode != 0, "A successful non-Python program is not a backend check"
+    assert not (command_project / "npm.json").exists()
+    assert not (command_project / "sudo.json").exists()
 
 
 @pytest.mark.parametrize("check", ["test", "lint", "typecheck"])

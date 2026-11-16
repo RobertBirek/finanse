@@ -6,7 +6,10 @@ odziedziczonych zmiennych Git oraz globalnego/systemowego configu.
 
 Wskaż **bezwzględną ścieżkę** istniejącego interpretera przez
 `ADVISOR_DEV_PYTHON`. Agent ma zapytać o nią, jeśli jej nie podano; nie wyszukuje
-zastępstwa w PATH lub `.venv`. Każdy prompt zawiera jeden kompletny blok Bash.
+zastępstwa w PATH lub `.venv`. Komendy sprawdzają odpowiedź sondy Python 3.12+
+przed preflight; sam wykonywalny plik (np. `/bin/true`) nie wystarcza.
+To wykrycie pomyłki w ścieżce, nie uwierzytelnienie złośliwego programu
+celowo udającego interpreter. Każdy prompt zawiera jeden kompletny blok Bash.
 Nie przenoś zmiennych między osobnymi wywołaniami narzędzi.
 
 ## Preflight
