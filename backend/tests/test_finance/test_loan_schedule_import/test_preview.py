@@ -83,7 +83,9 @@ async def test_preview_owner_currency_and_card_target_guards(
         elif target == "card":
             account.type = "credit_card"
         else:
-            account.user_id = other_owner.id
+            from tests.opening_balance_fixtures import change_zero_opening_account_owner
+
+            await change_zero_opening_account_owner(db_session, account, other_owner.id)
         await db_session.flush()
     with pytest.raises(ImportError) as caught:
         await prepare_schedule_preview(db_session, owner.id, case.batch.id, request)

@@ -19,6 +19,7 @@ from app.finance.annotation_schemas import (
 from app.finance.categorization_context import digest
 from app.finance.document_guards import lock_document_mutations
 from app.finance.models import FinanceCommandReceipt, FinancialTransaction
+from app.finance.opening_balance_guards import guard_opening_balance_transaction
 from app.work.models import Project
 
 ACTION = "update_transaction_annotations"
@@ -161,6 +162,10 @@ async def update_annotations(
         is None
     ):
         raise LookupError("Transaction not found")
+    try:
+        await guard_opening_balance_transaction(db, owner, transaction_id)
+    except ValueError as error:
+        raise AnnotationError("opening_balance_protected", str(error)) from error
     await db.execute(
         select(
             func.pg_advisory_xact_lock(

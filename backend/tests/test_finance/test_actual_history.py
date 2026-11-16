@@ -437,7 +437,9 @@ async def test_locked_validation_requires_the_exact_owned_source_absent_transact
     elif fault == "foreign-account":
         account = await db_session.scalar(select(Account))
         assert account is not None
-        account.user_id = uuid.uuid4()
+        from tests.opening_balance_fixtures import change_zero_opening_account_owner
+
+        await change_zero_opening_account_owner(db_session, account, uuid.uuid4())
     elif fault in {"foreign-category", "foreign-group"}:
         category = await db_session.scalar(
             select(Category).where(

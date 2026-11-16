@@ -8,8 +8,13 @@ import api from "../lib/api";
 import { useAuthStore } from "../stores/authStore";
 import type { AssignmentOrigin } from "./categorization";
 import type { CardConfig, CardSettings } from "./creditCards";
+import type {
+  OpeningBalanceInput,
+  OpeningBalanceView,
+} from "./openingBalances";
 
 export interface Account {
+  opening_balance?: OpeningBalanceView | null;
   credit_card?: CardSettings | null;
   color?: string | null;
   id: string;
@@ -106,7 +111,7 @@ export interface Transaction {
   id: string;
   transaction_date: string;
   description: string;
-  type: "income" | "expense" | "transfer" | "exchange";
+  type: "income" | "expense" | "transfer" | "exchange" | "opening_balance";
   is_pending: boolean;
   project_id: string | null;
   source: string;
@@ -474,6 +479,7 @@ export function useCreateAccount() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (account: {
+      opening_balance?: OpeningBalanceInput;
       credit_card?: CardConfig;
       color?: string | null;
       name: string;
@@ -489,10 +495,7 @@ export function useCreateAccount() {
       const { data } = await api.post<Account>("/finance/accounts", account);
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["finance", "accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["finance", "credit-cards"] });
-    },
+    onSuccess: () => invalidateAccountMutationQueries(queryClient),
   });
 }
 

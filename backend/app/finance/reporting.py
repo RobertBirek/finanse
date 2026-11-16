@@ -30,7 +30,8 @@ async def get_financial_summary(
     selected_month, selected_year, month_start, month_end = _month_bounds(month, year)
 
     # One grouped balance query replaces two queries per active budget account.
-    accounts = await get_accounts(db, user_id)
+    # Summary needs ledger totals, not the account editor's BO projection.
+    accounts = await get_accounts(db, user_id, include_opening=False)
     account_balances = [
         {
             "id": str(account.id),

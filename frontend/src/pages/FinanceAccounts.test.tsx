@@ -95,6 +95,41 @@ function createCategoryForm() {
 }
 
 describe("FinanceAccounts", () => {
+  it.each([
+    ["123,45", 12345],
+    ["-123,45", -12345],
+    ["0", 0],
+  ])("sends signed BO %s atomically with the account", (amount, minor) => {
+    render(<FinanceAccounts section="accounts" />);
+    fireEvent.change(createAccountForm().getByLabelText("Nazwa"), {
+      target: { value: "BO bank" },
+    });
+    fireEvent.change(createAccountForm().getByLabelText("Kwota BO (PLN)"), {
+      target: { value: amount },
+    });
+    fireEvent.change(createAccountForm().getByLabelText("Data BO"), {
+      target: { value: "2026-11-16" },
+    });
+    fireEvent.submit(screen.getByRole("form", { name: "Nowe konto" }));
+    expect(hooks.useCreateAccount().mutate).toHaveBeenCalledOnce();
+    expect(hooks.useCreateAccount().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        opening_balance: { amount_minor: minor, date: "2026-11-16" },
+      }),
+      expect.anything(),
+    );
+  });
+  it("rejects fractional grosze even through a direct form submit", () => {
+    render(<FinanceAccounts section="accounts" />);
+    fireEvent.change(createAccountForm().getByLabelText("Nazwa"), {
+      target: { value: "BO bank" },
+    });
+    fireEvent.change(createAccountForm().getByLabelText("Kwota BO (PLN)"), {
+      target: { value: "1,234" },
+    });
+    fireEvent.submit(screen.getByRole("form", { name: "Nowe konto" }));
+    expect(hooks.useCreateAccount().mutate).not.toHaveBeenCalled();
+  });
   it("sorts the new-category parent selector by the full path, keeping archived parents available", () => {
     hooks.useCategories.mockReturnValue({
       data: categorySelectFixture,

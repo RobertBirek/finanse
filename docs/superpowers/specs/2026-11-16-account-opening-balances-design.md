@@ -13,7 +13,7 @@
 - Implementacja i migracyjne próby lokalne. Bez wdrożenia, produkcyjnej
   migracji, zerowania sald ani korekt dawnych bilansów Actual.
 
-## Proponowane decyzje wykonawcze — do akceptacji z planem
+## Decyzje wykonawcze — zatwierdzone z planem w rozmowie
 
 1. Osobny rekord `AccountOpeningBalance` identyfikuje BO konta. Zawiera właściciela,
    konto, datę, wersję oraz opcjonalny odnośnik do transakcji BO. Nie przechowuje

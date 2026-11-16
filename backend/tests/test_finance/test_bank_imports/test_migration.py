@@ -8,9 +8,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.documents.models import Document
-from app.finance.entities import create_account
-from app.finance.models import ActualImportMapping
-from app.finance.schemas import AccountCreate, PostingCreate, TransactionCreate
+from app.finance.models import Account, ActualImportMapping
+from app.finance.schemas import PostingCreate, TransactionCreate
 from app.finance.transactions import create_transaction
 from tests.migration_fixtures import MigrationDatabase
 
@@ -47,12 +46,12 @@ async def seed_legacy_finance(database: MigrationDatabase, owner: uuid.UUID) -> 
     engine = create_async_engine(database.url)
     try:
         async with async_sessionmaker(engine, expire_on_commit=False)() as db:
-            payer = await create_account(
-                db, owner, AccountCreate(name="Synthetic payer", type="checking")
-            )
-            debt = await create_account(
-                db, owner, AccountCreate(name="Synthetic debt", type="credit")
-            )
+            # The current service requires the later BO table. Seed historical
+            # columns only; exercising current account creation is not this test's job.
+            payer = Account(user_id=owner, name="Synthetic payer", type="checking")
+            debt = Account(user_id=owner, name="Synthetic debt", type="credit")
+            db.add_all([payer, debt])
+            await db.flush()
             transfer = await create_transaction(
                 db,
                 owner,

@@ -8,9 +8,11 @@ Backlog zadań ze statusami.
 - [x] Osobny natywny worktree od lokalnego origin/main c960d9c; odczyt aktualnych docs.
 - [x] Uzyskać ADVISOR_DEV_PYTHON i osobną zgodę na własną syntetyczną testDB.
 - [x] Baseline25backend/677frontend; model i retencyjna migracja —3testy/lint/mypy206PASS.
-- [x] Komendy/guardy BO —22focusedPASS, lint i mypy209PASS; pełna regresja nadal przed nami.
-- [ ] Frontend — TDD, bez traktowania partialbackendu jako odbioru całości.
-- [ ] Pełne testy i jedno review; dopiero potem lokalny odbiór.
+- [x] Komendy/guardy BO —22focusedPASS; dodatkowe3regresje annotations po review.
+- [x] Frontend —707PASS,205pełnyE2EPASS+1expectedskip;4screenshoty375/1440obejrzane.
+- [x] Jedno review: Importantannotations, poprawione3RED→3GREEN; bez drugiego review.
+- [x] Pełny backend po review: V3,2632PASS/0skip, wszystkie8CIgrup od nowa.
+- [x] Końcowe lint/types/test i lokalny odbiór; cleanup4własnych PG bez force/prune.
 - [ ] Osobna zgoda na merge/push/deploy i produkcyjne zerowe BO.
 
 ## Endpoint staging OCR — lokalna poprawka (2026-11-16)

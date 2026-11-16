@@ -19,6 +19,12 @@ import {
 } from "../lib/financeColors";
 import { FinanceColorPicker } from "../components/finance/FinanceColorPicker";
 import { CreditCardFields } from "../components/finance/CreditCardFields";
+import { OpeningBalanceFields } from "../components/finance/OpeningBalanceFields";
+import {
+  openingBalanceDraft,
+  openingBalancePayload,
+} from "../lib/openingBalances";
+import { localTodayIso } from "../lib/date";
 import {
   cardDraft,
   cardConfig,
@@ -67,6 +73,8 @@ export function FinanceAccounts({
   const [accountColor, setAccountColor] = useState<string | null>(null);
   const [accountType, setAccountType] = useState("checking");
   const [accountCurrency, setAccountCurrency] = useState("PLN");
+  const [openingDraft, setOpeningDraft] = useState(() => openingBalanceDraft());
+  const openingInput = openingBalancePayload(openingDraft, accountCurrency);
   const [accountBudget, setAccountBudget] = useState(true);
   const [bankName, setBankName] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
@@ -91,6 +99,7 @@ export function FinanceAccounts({
   function handleCreateAccount(event: FormEvent) {
     event.preventDefault();
     if (!isValidFinanceColor(accountColor)) return;
+    if (!openingInput || createAccount.isPending) return;
     const configuration =
       accountType === "credit_card" ? cardConfig(cardTerms, 0) : null;
     if (accountType === "credit_card" && !configuration) {
@@ -104,6 +113,10 @@ export function FinanceAccounts({
         ...(accountColor ? { color: accountColor.toUpperCase() } : {}),
         type: accountType,
         currency: accountCurrency,
+        // An untouched blank BO uses the server's canonical zero/today defaults.
+        ...(openingDraft.amount.trim() || openingDraft.date !== localTodayIso()
+          ? { opening_balance: openingInput }
+          : {}),
         ...(configuration ? { credit_card: configuration } : {}),
         ...(!accountBudget ? { is_budget_account: false } : {}),
         ...(accountType !== "cash"
@@ -126,6 +139,7 @@ export function FinanceAccounts({
           setAccountColor(null);
           setAccountType("checking");
           setAccountCurrency("PLN");
+          setOpeningDraft(openingBalanceDraft());
           setAccountBudget(true);
           setBankName("");
           setAccountHolder("");
@@ -303,12 +317,20 @@ export function FinanceAccounts({
                 type="submit"
                 className="btn-primary"
                 disabled={
-                  createAccount.isPending || !isValidFinanceColor(accountColor)
+                  createAccount.isPending ||
+                  !isValidFinanceColor(accountColor) ||
+                  !openingInput
                 }
               >
                 Dodaj konto
               </button>
             </div>
+            <OpeningBalanceFields
+              value={openingDraft}
+              onChange={setOpeningDraft}
+              currency={accountCurrency}
+              disabled={createAccount.isPending}
+            />
             {accountType === "credit_card" ? (
               <CreditCardFields
                 value={cardTerms}

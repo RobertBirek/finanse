@@ -235,3 +235,83 @@ async def test_dates_payment_gift_and_loan_paths_reject_opening(db_session):
         )
     context = await load_context(db_session, owner, txn.id)
     assert not context.eligibility().allowed
+
+
+@pytest.mark.parametrize("path", ["service", "api", "receipt"])
+async def test_opening_annotations_project_and_tags_are_readonly_without_any_writes(
+    db_session, path
+):
+    from app.audit.models import AuditEvent
+    from app.finance.annotation_models import FinanceTag, TransactionAnnotation, TransactionTag
+    from app.finance.annotation_schemas import AnnotationUpdate
+    from app.finance.annotations import ACTION, get_annotations, update_annotations
+    from app.finance.categorization_context import digest
+    from app.finance.models import FinanceCommandReceipt
+    from app.finance.opening_balance_models import AccountOpeningBalance
+    from app.work.models import Project
+    from tests.test_finance.test_account_currency import client_for
+
+    db = db_session
+    owner = await owner_record(db)
+    account = await opening_account(db, owner, -10000)
+    row = await db.scalar(
+        select(AccountOpeningBalance).where(AccountOpeningBalance.account_id == account.id)
+    )
+    txn_id = row.transaction_id
+    project = Project(user_id=owner, name="Must not link BO", status="active")
+    db.add(project)
+    await db.flush()
+    ctx = await get_annotations(db, owner, txn_id)
+    data = AnnotationUpdate(
+        display_description="Unsupported BO title",
+        note="Unsupported BO note",
+        tags=["Unsupported BO tag"],
+        project_id=project.id,
+        expected_version=ctx.version,
+        expected_context_snapshot=ctx.context_snapshot,
+    )
+    if path == "receipt":
+        db.add(
+            FinanceCommandReceipt(
+                user_id=owner,
+                action=ACTION,
+                key="deny-bo",
+                request_hash=digest({"transaction_id": txn_id, **data.model_dump(mode="json")}),
+                entity_id=txn_id,
+                response_json=ctx.model_dump(mode="json"),
+            )
+        )
+    await db.commit()
+
+    async def snapshot():
+        result = {}
+        for model in [
+            FinancialTransaction,
+            Posting,
+            FinanceTag,
+            TransactionTag,
+            TransactionAnnotation,
+            FinanceCommandReceipt,
+            AuditEvent,
+            AccountOpeningBalance,
+        ]:
+            result[model.__tablename__] = [
+                dict(r._mapping)
+                for r in (await db.execute(select(model.__table__).order_by(model.id))).all()
+            ]
+        return result
+
+    before = await snapshot()
+    if path == "api":
+        async with client_for(db, owner) as client:
+            response = await client.put(
+                f"/api/finance/transactions/{txn_id}/annotations",
+                json=data.model_dump(mode="json"),
+                headers={"Idempotency-Key": "deny-bo"},
+            )
+            assert response.status_code == 409, response.text
+            assert "BO" in response.text or "otwarcia" in response.text
+    else:
+        with pytest.raises(ValueError, match="BO|otwarcia"):
+            await update_annotations(db, owner, txn_id, data, idempotency_key="deny-bo")
+    assert await snapshot() == before

@@ -2,19 +2,27 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Plan zatwierdzony; przygotowanie] — 2026-11-16 — BO każdego konta
+## [Lokalnie zweryfikowane; bez wdrożenia] — 2026-11-16 — BO każdego konta
 
 ### Added
-- Zatwierdzony plan BO dodatniego/ujemnego/zerowego, edycji wyłącznie bez innych
-  transakcji i zerowych rekordów istniejących kont bez zmiany ich sald/historii.
-- Po osobnej zgodzie: własny syntetyczny PG16 bez portów. Model BO i addytywna
-  migracja efaf78432563 z zerowym backfillem, retencją historii i blokadą downgrade
-  nonzero; 3 testy RED→GREEN, lint i mypy206 PASS. Implementacja komend/UI trwa.
-  Bez produkcyjnej migracji, danych użytkownika lub wdrożenia.
-- Backend BO lokalnie: podpisane kwoty PLN/EUR/USD, atomowy zapis konta,
-  edycja z wersją/idempotencją/audytem i blokadą innych transakcji. 22 focused
-  testy PASS, w tym dwa rzeczywiste wyścigi i ochrona powiązań. Pełny odbiór
-  i interfejs nadal w toku; to nie jest deklaracja wdrożonej funkcji.
+- BO dodatnie/ujemne/zerowe, data i kurs PLN/EUR/USD przy tworzeniu konta.
+  Osobny edytor ma wersję, idempotencję i audyt; inne transakcje, także pending,
+  blokują zmianę. BO wpływa na saldo, nie przychody, wydatki lub budżety.
+- Addytywna migracja `efaf78432563` inicjalizuje istniejące konta zerowymi
+  rekordami BO bez zmiany ich sald/historii. Zero nie tworzy transakcji.
+
+### Fixed
+- Ochrona BO obejmuje zwykłe operacje transakcji, techniczną kategorię oraz
+  oznaczenia/projekt/tagi. Lukę annotations z jednego review naprawiono 3 RED→GREEN.
+- Podsumowanie zachowuje dotychczasowy limit trzech zapytań.
+
+### Verified
+- Pełny backend po review: 2632 PASS, bez skipów lub brakujących faz;
+  frontend 707 PASS; browser 205 PASS i 1 dotychczasowy expectedskip.
+- Komendy lint/typecheck/test i build PASS. Cztery screenshoty 375/1440 obejrzane.
+  Własne cztery bezportowe PG usunięte po sprawdzeniu tożsamości i bezczynności.
+- Bez merge/push, migracji produkcyjnej lub zmian sald użytkownika.
+  Raport: `docs/audits/2026-11-16-account-opening-balances-local.md`.
 
 ## [Lokalne, zweryfikowane] — 2026-11-16 — Właściwy endpoint staging OCR
 

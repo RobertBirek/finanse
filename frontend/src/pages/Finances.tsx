@@ -278,7 +278,9 @@ export function Finances() {
                           <strong>{t.description}</strong>
                           <small>
                             <TransactionDateLabel transaction={t} />
-                            {TRANSACTION_TYPES[t.type]}
+                            {t.type === "opening_balance"
+                              ? "Bilans otwarcia"
+                              : TRANSACTION_TYPES[t.type]}
                           </small>
                         </span>
                         <span className="finance-transaction-amount">

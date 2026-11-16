@@ -165,7 +165,9 @@ async def test_refund_owner_active_type_and_currency_guards(db_session, invalid)
     db = db_session
     owner, account, category = await setup(db)
     if invalid == "other_account":
-        account.user_id = uuid.uuid4()
+        from tests.opening_balance_fixtures import change_zero_opening_account_owner
+
+        await change_zero_opening_account_owner(db, account, uuid.uuid4())
     elif invalid == "other_category":
         category.user_id = uuid.uuid4()
     elif invalid == "income":

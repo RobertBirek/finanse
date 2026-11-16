@@ -198,6 +198,30 @@ describe("AccountTransactions", () => {
     expect(screen.getByRole("button", { name: "Usuń" })).toBeInTheDocument();
   });
 
+  it("labels BO explicitly and links to the account instead of ordinary ledger mutations", () => {
+    useAccountTransactions.mockReturnValue({
+      data: [
+        {
+          ...incomeTransaction,
+          type: "opening_balance",
+          source: "opening_balance",
+          description: "Start",
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    render(<AccountTransactions accounts={accounts} />);
+    fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));
+    expect(screen.getByText(/Bilans otwarcia/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "BO konta" })).toHaveAttribute(
+      "href",
+      "/settings/finances/accounts?edit=budget-account",
+    );
+    for (const name of ["Opis i oznaczenia", "Edytuj datę", "Usuń"])
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+  });
+
   it("keeps legacy date editing separate and never overwrites a source description", () => {
     useAccountTransactions.mockReturnValue({
       data: [incomeTransaction],

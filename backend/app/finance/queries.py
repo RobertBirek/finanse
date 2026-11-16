@@ -84,7 +84,9 @@ def _account_rows(user_id: uuid.UUID):
     )
 
 
-async def get_accounts(db: AsyncSession, user_id: uuid.UUID) -> list[Account]:
+async def get_accounts(
+    db: AsyncSession, user_id: uuid.UUID, *, include_opening: bool = True
+) -> list[Account]:
     from app.finance.opening_balances import attach_opening_balances
 
     result = await db.execute(_account_rows(user_id).order_by(Account.name, Account.id))
@@ -95,7 +97,8 @@ async def get_accounts(db: AsyncSession, user_id: uuid.UUID) -> list[Account]:
         account._balance_source = int(balance_source)
         account.can_change_currency = bool(can_change_currency)
         accounts.append(account)
-    await attach_opening_balances(db, user_id, accounts)
+    if include_opening:
+        await attach_opening_balances(db, user_id, accounts)
     return accounts
 
 

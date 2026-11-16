@@ -1,5 +1,6 @@
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   splitAccounts,
   useAccountTransactions,
@@ -222,6 +223,7 @@ export function TransactionList({
   }, [updateMutation.isSuccess, updateMutation.variables, editingId]);
 
   function startEdit(transaction: Transaction) {
+    if (transaction.type === "opening_balance") return;
     setEditingId(transaction.id);
     setEditDate(transaction.transaction_date);
   }
@@ -231,6 +233,7 @@ export function TransactionList({
   }
 
   function saveEdit(transaction: Transaction) {
+    if (transaction.type === "opening_balance") return;
     updateMutation.mutate({
       id: transaction.id,
       ...(transaction.date_metadata ? {} : { transaction_date: editDate }),
@@ -238,6 +241,7 @@ export function TransactionList({
   }
 
   function removeTransaction(transaction: Transaction) {
+    if (transaction.type === "opening_balance") return;
     if (window.confirm(`Usunąć transakcję "${transaction.description}"?`)) {
       deleteMutation.mutate(transaction.id);
     }
@@ -303,7 +307,8 @@ export function TransactionList({
           posting && sourceCurrency !== "PLN"
             ? `Równowartość: ${formatPLN(posting.base_amount_pln)} PLN`
             : null;
-        const isEditing = editingId === transaction.id;
+        const isOpening = transaction.type === "opening_balance";
+        const isEditing = editingId === transaction.id && !isOpening;
         const isUpdating =
           updateMutation.isPending &&
           updateMutation.variables?.id === transaction.id;
@@ -420,7 +425,7 @@ export function TransactionList({
               ) : null}
               <p className="text-xs text-gray-500">
                 <TransactionDateLabel transaction={transaction} />
-                {transaction.type}
+                {isOpening ? "Bilans otwarcia" : transaction.type}
                 {accounts &&
                   posting &&
                   ` · ${accounts.find((account) => account.id === posting.account_id)?.name ?? "Konto archiwalne"}`}
@@ -437,14 +442,24 @@ export function TransactionList({
               )}
             </p>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="btn-secondary px-3 py-1.5 text-sm"
-                disabled={isDeleting}
-                onClick={() => setAnnotationTarget(transaction.id)}
-              >
-                Opis i oznaczenia
-              </button>
+              {isOpening && posting?.account_id ? (
+                <Link
+                  className="btn-secondary px-3 py-1.5 text-sm"
+                  to={`/settings/finances/accounts?edit=${encodeURIComponent(posting.account_id)}`}
+                >
+                  BO konta
+                </Link>
+              ) : null}
+              {!isOpening ? (
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1.5 text-sm"
+                  disabled={isDeleting}
+                  onClick={() => setAnnotationTarget(transaction.id)}
+                >
+                  Opis i oznaczenia
+                </button>
+              ) : null}
               {transaction.type === "expense" ? (
                 <button
                   type="button"
@@ -477,22 +492,26 @@ export function TransactionList({
                   Szczegóły
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => startEdit(transaction)}
-                disabled={isDeleting}
-                className="btn-secondary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Edytuj datę
-              </button>
-              <button
-                type="button"
-                onClick={() => removeTransaction(transaction)}
-                disabled={isDeleting}
-                className="btn-danger px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Usuń
-              </button>
+              {!isOpening ? (
+                <button
+                  type="button"
+                  onClick={() => startEdit(transaction)}
+                  disabled={isDeleting}
+                  className="btn-secondary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Edytuj datę
+                </button>
+              ) : null}
+              {!isOpening ? (
+                <button
+                  type="button"
+                  onClick={() => removeTransaction(transaction)}
+                  disabled={isDeleting}
+                  className="btn-danger px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Usuń
+                </button>
+              ) : null}
             </div>
             {rowDeleteError ? (
               <p className="w-full text-xs text-red-400">{rowDeleteError}</p>

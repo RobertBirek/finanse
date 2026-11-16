@@ -5,6 +5,7 @@ import { ACCOUNT_TYPES, apiErrorDetail, isConflict } from "./accountSettings";
 import { entityColor, isValidFinanceColor } from "../../lib/financeColors";
 import { FinanceColorPicker } from "./FinanceColorPicker";
 import { CreditCardFields } from "./CreditCardFields";
+import { AccountOpeningBalance } from "./AccountOpeningBalance";
 import {
   cardDraft,
   cardConfig,
@@ -326,6 +327,7 @@ export function AccountRow({
           )}
         </div>
       </div>
+      <AccountOpeningBalance key={account.id} account={account} />
       {editing ? (
         <div className="mt-3 space-y-3">
           <FinanceColorPicker

@@ -1,5 +1,6 @@
 import { useTransaction, type Account, type Category } from "../../api/finance";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { TransactionCategorizationDialog } from "./TransactionCategorizationDialog";
 import { TRANSACTION_TYPES } from "../../lib/transactionSearch";
 import { formatPLN } from "../../lib/format";
@@ -90,8 +91,19 @@ export function TransactionDetail({
             ) : null}
             <p className="text-sm text-gray-400">
               <TransactionDateLabel transaction={query.data} />
-              {TRANSACTION_TYPES[query.data.type]} · Źródło: {query.data.source}
+              {query.data.type === "opening_balance"
+                ? "Bilans otwarcia"
+                : TRANSACTION_TYPES[query.data.type]}{" "}
+              · Źródło: {query.data.source}
             </p>
+            {query.data.type === "opening_balance" ? (
+              <Link
+                className="btn-secondary inline-block"
+                to={`/settings/finances/accounts?edit=${encodeURIComponent(query.data.postings.find((p) => p.account_id)?.account_id ?? "")}`}
+              >
+                BO konta
+              </Link>
+            ) : null}
             <AssignmentOriginLabel origin={query.data.assignment_origin} />
             <p className="text-sm text-gray-400">
               Status: {query.data.is_pending ? "Oczekująca" : "Zaksięgowana"}
@@ -102,7 +114,9 @@ export function TransactionDetail({
                   <p className="text-white [overflow-wrap:anywhere]">
                     {p.account_id
                       ? `Konto: ${accounts.find((a) => a.id === p.account_id)?.name ?? "Nazwa niedostępna"}`
-                      : `Kategoria: ${categories.find((c) => c.id === p.category_id)?.name ?? "Nazwa niedostępna"}`}
+                      : query.data.type === "opening_balance"
+                        ? "Techniczny zapis bilansu otwarcia"
+                        : `Kategoria: ${categories.find((c) => c.id === p.category_id)?.name ?? "Nazwa niedostępna"}`}
                   </p>
                   <dl className="grid gap-1 mt-2 text-gray-300">
                     <div>

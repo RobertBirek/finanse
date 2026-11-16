@@ -8,7 +8,11 @@
 
 **Tech Stack:** FastAPI, SQLAlchemy async, PostgreSQL 16, Alembic, React, TypeScript, TanStack Query, pytest, Vitest, Playwright.
 
-**Spec:** `docs/superpowers/specs/2026-11-16-account-opening-balances-design.md` — wymagania użytkownika zatwierdzone w czacie; proponowane decyzje wykonawcze wymagają akceptacji tego planu.
+**Spec:** `docs/superpowers/specs/2026-11-16-account-opening-balances-design.md` — wymagania i decyzje wykonawcze zatwierdzone w czacie; wykonanie Native.
+
+**Wynik:** lokalnie zweryfikowane. Backend2632PASS, frontend707PASS, E2E205PASS/1expectedskip.
+Raport i odstępstwa: `docs/audits/2026-11-16-account-opening-balances-local.md`.
+Bez merge/push/deploy i bez produkcyjnego backfillu.
 
 ## Global Constraints
 
@@ -30,11 +34,11 @@
 
 ## Przygotowanie wykonania
 
-- [ ] Utworzyć osobny worktree przez `using-git-worktrees`, bez zmiany istniejących worktree/klonów.
+- [x] Utworzyć osobny worktree przez `using-git-worktrees`, bez zmiany istniejących worktree/klonów.
   Odczyt 2026-11-16: lokalny `main=593a232`, lokalny `origin/main=c960d9c`
   (13 commitów nowszy; diff finansowych plików opisanych w planie pusty).
   Wybrać zatwierdzoną bazę, przeczytać jej AGENTS/CHANGELOG/TASKS/JOURNAL.
-- [ ] Potwierdzić działający bezpieczny runner oraz baseline. Nie aktualizować sharedvenv,
+- [x] Potwierdzić działający bezpieczny runner oraz baseline. Nie aktualizować sharedvenv,
   nie używać zachowanego prywatnego klonu certyfikacyjnego. Jeśli brak własnej dopuszczonej
   testowej bazy, uzyskać zgodę na własny PostgreSQL bez portów zamiast omijać safety guard.
 
@@ -52,21 +56,21 @@
 - Produces: częściowy unikalny indeks kategorii technicznej `(user_id) WHERE source='opening_balance'`.
   Kategoria tworzona leniwie przez Task 2, nie przez backfill.
 
-- [ ] **Step 1: Write failing model/migration tests.**
+- [x] **Step 1: Write failing model/migration tests.**
   `test_opening_balance_owner_and_uniqueness`: drugie BO konta i link do obcej transakcji
   odrzucone; rollback nie usuwa prawidłowego BO.
   `test_opening_backfill_preserves_history`: seed kont wszystkich typów/walut,
   aktywne/nieaktywne, historyczne postings i istniejące opisy `[BO]`; po realnym
   Alembic UP dokładnie jeden zerowy rekord na konto, data=`opened_at`,
   `transaction_id=None`, stare wiersze i oba salda identyczne.
-- [ ] **Step 2: Run targeted tests**, oczekiwany RED z braku modeli/migracji, nie z konfiguracji DB.
-- [ ] **Step 3: Implement models; generate `/migration "account opening balances"`** wyłącznie
+- [x] **Step 2: Run targeted tests**, oczekiwany RED z braku modeli/migracji, nie z konfiguracji DB.
+- [x] **Step 3: Implement models; generate `/migration "account opening balances"`** wyłącznie
   na własnej bazie. Migracja backfilluje rekordy BO przez INSERT SELECT, bez transakcji,
   kategorii technicznej lub modyfikacji starych tabel poza nowym indeksem.
   Downgrade odmawia usunięcia zapisanych niezerowych BO; żadnych destrukcyjnych prób
   na bazie użytkownika. Rejestracja modelu musi działać także w CLI Alembic.
-- [ ] **Step 4: Run tests to GREEN**; sprawdzić wygenerowany SQL, brak obcego driftu schematu.
-- [ ] **Step 5: Commit** `feat: dodaj model i zerową inicjalizację bilansów otwarcia`
+- [x] **Step 4: Run tests to GREEN**; sprawdzić wygenerowany SQL, brak obcego driftu schematu.
+- [x] **Step 5: Commit** `feat: dodaj model i zerową inicjalizację bilansów otwarcia`
   dopiero po lint/typecheck/test gate dotyczących zadania.
 
 ### Task 2: Księgowanie, odczyt, edycja i serwerowe blokady BO
@@ -97,7 +101,7 @@
 - Wewnętrzna transakcja `type/source=opening_balance` nie jest dodawana do dozwolonych
   `TransactionCreate.type`; tylko serwis BO konstruuje dokładny kształt.
 
-- [ ] **Step 1: Write failing financial/API tests.**
+- [x] **Step 1: Write failing financial/API tests.**
   Parametry `125050`, `-125050`, `0`: saldo źródłowe równe BO, PLN zgodny z kursem,
   signed suma=0, dokładnie 2 postings dla nonzero / 0 dla zero, income/expense/budget
   bez zmian. Dla EUR/USD kurs `4.123456`, oba znaki i HALF_EVEN; brak kursu nonzero
@@ -105,8 +109,8 @@
   Tworzenie konta/karty i BO jest atomowe, zwraca od razu poprawne saldo.
   Wszystkie domenowe ścieżki tworzenia konta, także importer Actual, tworzą BO=0
   domyślnie bez nowej transakcji i bez ingerencji w importowaną historię.
-- [ ] **Step 2: Run targeted financial tests to confirmed RED.**
-- [ ] **Step 3: Implement initialization/reads/command.**
+- [x] **Step 2: Run targeted financial tests to confirmed RED.**
+- [x] **Step 3: Implement initialization/reads/command.**
   Dodatnie BO: credit konta / debit kategorii; ujemne odwrotnie.
   Techniczna kategoria typu transfer `source=opening_balance`, bez wybieralności,
   zwykłej edycji/usunięcia i bez ręcznego użycia nawet przez znane ID.
@@ -117,7 +121,7 @@
   Niezmienione BO również podlega blokadzie historii; stary version daje409.
   Wersjonowane zerowanie usuwa wyłącznie dedykowany własny BO po weryfikacji kształtu.
   Nie dodawać BO do publicznego `AccountUpdate`; dedykowany endpoint jest jedyną edycją.
-- [ ] **Step 4: Write failing guard/race tests.**
+- [x] **Step 4: Write failing guard/race tests.**
   `test_pending_and_net_zero_history_block_edit`: oczekująca albo kompensujące transakcje blokują.
   `test_only_linked_opening_is_excluded`: podobny opis/source/type nie omija warunku.
   `test_first_posting_races_opening_edit`: dwa rzeczywiste połączenia DB, oba porządki;
@@ -127,11 +131,11 @@
   kategoryzacja, dokument, darowizna, spłata i techniczna kategoria odrzucone bez zmian.
   `test_zero_opening_allows_empty_account_delete_and_currency_rules`: brak regresji;
   nonzero blokuje zmianę waluty; nowa waluta przy zerowym BO nie zostawia starej wyceny.
-- [ ] **Step 5: Confirm RED, add guards and run GREEN.**
+- [x] **Step 5: Confirm RED, add guards and run GREEN.**
   Zachować wspólny porządek blokad; nie wykonywać N+1 odczytów BO.
   Domyślny przepływ zwykłych/AI/importowanych transakcji nie dostaje uprawnień BO.
   Dodać regresje sald kart i prognozy, starych importów Actual i kont archiwalnych.
-- [ ] **Step 6: Run backend lint/types/tests**, commit
+- [x] **Step 6: Run backend lint/types/tests**, commit
   `feat: księguj i chroń edycję bilansu otwarcia konta`.
 
 ### Task 3: Formularze, czytelny BO i odbiór całości
@@ -154,7 +158,7 @@
 - Produces: signed kwota + data, warunkowy kurs EUR/USD nonzero; czyste pola tekstowe
   parsowane do groszy bez mnożenia IEEE754 i bez cichego zaokrąglania.
 
-- [ ] **Step 1: Write failing UI tests.**
+- [x] **Step 1: Write failing UI tests.**
   Kwoty `123,45`, `-123,45`, `0`, puste→0; data domyślna lokalna;
   `1,234` odrzucone, bezwzględne limity/APIprecision sprawdzone.
   Formularz tworzenia przesyła jeden request konto+BO.
@@ -163,19 +167,19 @@
   Zapis BO ma własną akcję, nie zapisuje niepowiązanych draftów danych konta/karty.
   W409 odświeżenie i ponowna zgoda; błąd sieci zachowuje key, zmiana sesji/konta
   blokuje starego handlera; sukces odświeża konta/salda/raporty/prognozę/karty.
-- [ ] **Step 2: Run relevant Vitest tests to confirmed RED.**
-- [ ] **Step 3: Implement fields, hook and editors** zgodnie z istniejącym Tailwind/UI.
+- [x] **Step 2: Run relevant Vitest tests to confirmed RED.**
+- [x] **Step 3: Implement fields, hook and editors** zgodnie z istniejącym Tailwind/UI.
   BO=0 jest trwałym stanem, nie brakiem danych. `opening_balance` w odczytanej
   transakcji jest wyświetlany jako „Bilans otwarcia”, nie „Transfer” lub „Przychód”;
   bez zwykłego przycisku usunięcia/edycji, z odnośnikiem do BO konta.
-- [ ] **Step 4: Run UI tests to GREEN; Playwright375/1440**:
+- [x] **Step 4: Run UI tests to GREEN; Playwright375/1440**:
   nowa karta z ujemnym BO, zwykłe konto z dodatnim, zero, edycja i409.
   Obejrzeć screenshoty, sprawdzić brak overflow i dostępność etykiet/klawiatury.
-- [ ] **Step 5: Full verification** `/lint`, `/typecheck`, `/test`, frontend build,
+- [x] **Step 5: Full verification** `/lint`, `/typecheck`, `/test`, frontend build,
   dotknięte E2E i test realnej migracji/retencji; nie deklarować PASS ze starego zestawu.
   Jeden świeży niezależny review całości; uwagi odtwarzać testem przed poprawką.
   Zachować wyniki, source hashes i jawne ograniczenia środowiska.
-- [ ] **Step 6: Update docs and commit**
+- [x] **Step 6: Update docs and commit**
   `feat: dodaj formularze bilansu otwarcia i bezpieczną edycję`.
   Status „lokalnie zweryfikowane” dopiero po wynikach; osobna zgoda na merge/push/deploy
   i produkcyjny backfill. Sprzątać tylko własne zasoby testowe po kontroli tożsamości.

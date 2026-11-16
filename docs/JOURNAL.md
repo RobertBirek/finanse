@@ -2,35 +2,50 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
-## 2026-11-16 — Start zatwierdzonej implementacji BO; bramka środowiska
+## 2026-11-16 — BO każdego konta; lokalnie zweryfikowane, bez wdrożenia
 
-- User zaakceptował plan BO i Native. Utworzono natywny izolowany worktree
-  account-opening-balances i przeniesiono sesję. Baza istniejącego origin/main
-  c960d9c, bez fetch/main/push. Pozostałe worktree i prywatny klon nietknięte.
-- Plan/spec 2026-11-16-account-opening-balances skopiowane z zatwierdzonych
-  dokumentów; pre-flight Task1→2→3 bez konfliktów. Ledger w
-  `.superpowers/sdd/2026-11-16-account-opening-balances/progress.md`.
-- Aktualne docs z bazy zawierają nowe devchecks: użytkownik musi podać
-  ADVISOR_DEV_PYTHON, pełne testy DB wymagają osobnej zgody na nową syntetyczną
-  bazę i dowodu własności przed fixture. Wstrzymano się przed testami/kodem.
-  Nie używać certyfikacyjnego klonu danych użytkownika. Brak migracji i deployu.
-- Następnie: uzyskać ścieżkę i zgodę; preflight, baseline, task-start1 i TDD.
-  Nie deklarować zaimplementowanego BO lub ustawienia czegokolwiek na produkcji.
-- Wznowienie: user zgodził się na własny syntetyczny PostgreSQL bez portów i wybór
-  interpretera przez agenta. Wybrany istniejący backend-test-env20261114 przechodzi
-  3preflight, bez aktualizacji sharedvenv. ExactID/label/networknone/tmpfs guard
-  przed każdym nsenter test run. Prywatny trwały klon i produkcja nietknięte.
-- Baseline25backend/677frontendPASS. Pierwszy backend foreground przerwany limitem
-  120s nie zaliczony; pełny nowy run25PASS109.88s. RED modeli2 i migracji1,
-  oddzielny downgradeRED1; GREEN3PASS23.16s, lint i mypy206PASS.
-  Wygenerowana efaf78432563 po2c; usunięto wyłącznie unrelated indexdrift.
-  Task1 lokalny; Task2/3 nadal niewykonane. Brak migracji produkcyjnej.
-- Task2: core13RED, potem naprawiona jawna korelacja EXISTS/Posting, osobne3REDguardów;
-  final22focusedPASS102.11s, lint i mypy209PASS. Zero bez transakcji/audytu finansowego,
-  każdy nonzero init i każda edycja audytowane; podpisana kwota wynika tylko z nogi konta.
-  Ukryta/protected kategoria transfer nie jest dodatkowym kontem. Typeguardy
-  dokument/gift/loan/date/kategoryzacja zachowane i przetestowane zamiast duplikowania.
-  Task3/frontend i pełne bramki nadal przed nami. Produkcja i jej BO bez zmian.
+- Użytkownik zatwierdził spec/plan `2026-11-16-account-opening-balances`,
+  wykonanie Native, osobną syntetyczną bazę bez portów i wybór Pythona przez agenta.
+  Worktree: `account-opening-balances`, baza lokalnego `origin/main=c960d9c`.
+  Nie zmienialiśmy main, produkcji, prywatnego klonu ani pozostałych worktree.
+- Interpreter `/tmp/opencode/backend-test-env-20261114/run-302e8d4cb8/venv/bin/python`
+  przeszedł trzy preflight. Bez aktualizacji wspólnych środowisk. Runner przed
+  każdym testem sprawdza exactID, etykietę, networknone, brak portów i mounty
+  własnego PG; dopiero potem przechodzi do jego namespace.
+- Model/migracja: commit `6f5f51e`, Alembic `efaf78432563` po `2c77e935ee39`.
+  Zera to rekordy BO bez transakcji; nonzero czerpie kwotę wyłącznie z postings.
+  Backfill zachowuje starą księgę. Audyt obejmuje nonzero init i każdą edycję.
+- Komendy/guardy: commit `975e77f`. BO ma wersję, idempotencję i blokadę innych
+  transakcji, także pending. Techniczna kategoria transfer pozostaje ukryta
+  i chroniona. Zachowaliśmy istniejące typeguardy dokumentów/darowizn/rat/dat.
+- Baseline: 25 backend i 677 frontend PASS. Pierwszy przerwany foreground run
+  backendu nie liczy się jako PASS. Modele/migracja: 3 PASS po RED; komendy,
+  waluty, karta, prognoza i dwa rzeczywiste wyścigi: 22 focused PASS.
+- Frontend ma pola kwoty ze znakiem, daty i kursu, osobny edytor BO oraz
+  readonly linki w transakcjach. Retry zachowuje key,409 wymaga odczytu i nowej
+  zgody, zmiana sesji blokuje stare handlery. Pełny Vitest:707 PASS.
+  Pełny browser:205 PASS i1dotychczasowy expectedskip; nowe BO:4 PASS.
+  Obejrzałem4screenshoty375/1440. Build PASS ze starym warningiem bundla>500kB.
+- Pełne przebiegi V1/V2 ujawniły cztery stare fixture niezgodne z BO i problemy
+  własnego środowiska (WAL/tmpfs oraz brak obrazu proxy). Poprawki zachowały
+  asercje i mocne FK;4regresje PASS. Ustawiłem max_wal64/min32/checkpoint30s
+  tylko własnym PG. Nie osłabiłem cleanup guard po przejściowym błędzie zamykania
+  scratch DB; ponowny test przeszedł. Zachowaliśmy limit3SELECT w summary,
+  pomijając tam nieużywaną projekcję BO;6targeted PASS.
+- Jeden readonly review `ses_e1a81f29cffeJA7Pr6SzD0fv8w`:0Critical/1Important/0Minor.
+  Luka annotations pozwalała przypisać BO projekt/tagi. Dodałem guard przed replay
+  i zapisami:3RED→3GREEN, z identycznymi snapshotami8tabel. Bez drugiego review.
+- Końcowy V3 wykonał wszystkie8CIgrup od nowa na4własnych no-portPG,
+  bez reuse i failfast:2632 PASS,0skip, wszystkie fazy i ID zgodne z manifestem.
+  Fingerprint źródeł potwierdzony ponownie przed cleanup. Komenda `/test`:
+  kolekcja offline i707Vitest PASS65.13s; lint/typecheck PASS(mypy215/tsc).
+- Usunąłem4własne PG wyłącznie po exactID/label/network/ports/tmpfs/idle check.
+  Bez force/prune, stop exit0 i brak kontenerów potwierdzone. Nie usunąłem
+  żadnego wspólnego obrazu, wolumenu, worktree ani prywatnego klonu.
+  Następny krok wymaga zgody użytkownika: integracja/PR i osobno wydanie,
+  backup/restore oraz produkcyjny zerowy backfill. Produkcyjne konta bez zmian.
+  Raport: `audits/2026-11-16-account-opening-balances-local.md`.
+  Ledger: `.superpowers/sdd/2026-11-16-account-opening-balances/progress.md`.
 
 ## 2026-11-16 — Mała poprawka adresu staging OCR i regresja offline
 
