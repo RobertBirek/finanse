@@ -2,6 +2,15 @@
 
 Backlog zadań ze statusami.
 
+## Stabilizacja testu DocumentList (2026-11-16)
+
+- [x] Zgoda na test i trzy wpisy dokumentacji, bez aplikacji lub deployu.
+- [x] RCA: obecność pola nie oznacza zakończenia inicjalizacji wartości w useEffect.
+- [x] Czekać na pełną asercję wartości; kontrola błędnej wartości daje FAIL.
+- [x] 6/6powtórek,707VitestPASS,lint/types/kolekcja offlinePASS; review bez uwag.
+- [x] Lokalny odbiór i commit testu/dokumentacji.
+- [ ] Push lub wdrożenie wymagają osobnej decyzji; zmiana testu nie wymaga deployu aplikacji.
+
 ## Wdrożenie BO (2026-11-16)
 
 - [x] Zgoda na main/deploy, dokładną addytywną migrację i krótką przerwę.
@@ -13,7 +22,7 @@ Backlog zadań ze statusami.
 - [x] Po dwóch bezpiecznych rollbackach końcowe app-only na schemaefaf, bez powtórki migracji.
 - [x] Runtime/readonly/306.52s obserwacji/browser375/1440, metadane i własny cleanup.
 - [x] Końcowy raport i push dokumentacji bez zmiany wdrożonych obrazów.
-- [ ] Osobno: usunąć wyścig useEffect w starym DocumentList.test; nie naprawiano podczas wydania.
+- [x] Osobno: synchronizacja starego DocumentList.test; lokalnie zweryfikowana powyżej.
 
 ## Bilans otwarcia każdego konta (2026-11-16)
 

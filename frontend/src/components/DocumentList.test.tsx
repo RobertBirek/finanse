@@ -32,7 +32,9 @@ it("opens a toast-linked review even when the document is outside the current li
   expect(
     await screen.findByRole("dialog", { name: "Sprawdź dane dokumentu" }),
   ).toBeVisible();
-  expect(await screen.findByLabelText("Sprzedawca")).toHaveValue("Synthetic");
+  await waitFor(() =>
+    expect(screen.getByLabelText("Sprzedawca")).toHaveValue("Synthetic"),
+  );
   fireEvent.click(screen.getByRole("button", { name: "Zamknij" }));
   await waitFor(() =>
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),

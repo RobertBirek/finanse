@@ -2,6 +2,28 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-16 — Mała poprawka oczekiwania testu DocumentList
+
+- Użytkownik zatwierdził plan: test i dokumentacja, bez zmian aplikacji,
+  zależności, DB/Docker, push lub deployu. Baza9b55f76 w istniejącym izolowanym
+  host-owned worktree na detachedHEAD; brak nowego worktree.
+- useReviewForm zaczyna od pustego supplier_name i stosuje sugestie w useEffect.
+  findByLabelText czekało tylko na istnienie inputa. Wcześniej dwa pełne
+  rzeczywiste RED706/707 z wartością pustą zamiast Synthetic; logi w dowodach wydania.
+  Nowy baseline707PASS62.78s i6focusedPASS: to niestabilność, nie stała awaria.
+- Jedyna zmiana testu: `await waitFor` obejmuje `getByLabelText` i `toHaveValue("Synthetic")`.
+  Brak sleepów, nowych timeoutów, retrytestu lub osłabienia oczekiwanej wartości.
+  Kontrola mutacyjna Wrong daje oczekiwanyFAIL; fixture przywrócona.
+- Jeden readonly review: bez uwag Critical/Important/Minor. Reviewer nie uruchamiał
+  testów; wykonawca potwierdził6/6powtórek i707VitestPASS57.45s, Ruff/ESLint,
+  mypy215/tsc i kolekcję offline backendu. Nie uruchamiano test bodies backendu
+  ani fixtureDB. Zmieniono wyłącznie1test i3docs.
+- Dowody archiwizowane w `/tmp/opencode/document-list-wait-20261116-evidence.tar.gz`
+  wraz z SHA256; zawierają oba wcześniejsze pełneRED, baseline, mutationRED,
+  powtórki i końcowe kontrole. Nie deklarujemy deterministycznego odtworzenia
+  starego wyścigu w tej małej sesji: nowy baseline był zielony.
+- Produkcja45bcf88/schemaefaf pozostaje bez zmian. Lokalny commit bez push/deploy;
+  integracja wymaga odrębnej decyzji, ponowne wydanie aplikacji nie jest potrzebne.
 ## 2026-11-16 — BO wdrożone:45bcf88/schemaefaf
 
 - User polecił pushmain/deploy, następnie zatwierdził sześć kroków wraz z

@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Lokalnie zweryfikowane] — 2026-11-16 — Synchronizacja testu DocumentList
+
+### Fixed
+- Test otwarcia dokumentu spoza bieżącej listy czeka na wartość „Synthetic”,
+  nie tylko pojawienie się pola. Zachowane asercje wartości, zamknięcia dialogu
+  i braku zapisu; bez zmian kodu aplikacji lub timeoutów.
+- Kontrola mutacyjna z błędnym dostawcą powoduje FAIL; po przywróceniu fixture
+  6/6 powtórek i pełne707Vitest PASS. Ruff/ESLint, mypy215/tsc oraz kolekcja
+  offline backendu PASS. Jeden readonly review bez uwag.
+- Bez push, DB/Docker lub wdrożenia; kod aplikacji pozostał bez zmian.
+
 ## [Production, 45bcf88] — 2026-11-16 — BO każdego konta
 
 ### Changed
