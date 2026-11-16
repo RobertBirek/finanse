@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Lokalne, bez publikacji] — 2026-11-16 — Kontrole bieżącego worktree
+
+### Added
+- Odczytowy preflight zależności oraz prompty poleceń: jawny Python, root bieżącego
+  worktree i domyślna kolekcja backendu bez fixture DB.
+- 43 testy kontraktu; razem z istniejącymi testami ci_tools: 120 PASS.
+
+### Changed
+- Minimum SDK w pyproject wyrównane do istniejącego pinu OpenAI 2.54.0.
+- Lokalne commity helpera `5378508` i komend `7e4dad8`. Po zatwierdzonym wznowieniu
+  pełny mypy PASS. Po jednym readonly review poprawiono fałszywy sukces
+  dla wykonywalnego pliku niebędącego Pythonem (`f2124e5`): 6 RED→GREEN,
+  końcowo 120 testów, pełny lint i mypy 212 plików PASS.
+- Odłożona drobna uwaga: odziedziczony `LD_LIBRARY_PATH` kolekcji nie jest
+  walidowany jako część wybranego środowiska.
+- Zakres: 7 plików funkcjonalnych plus plan i 3 wpisy sesji, 11 plików.
+  Bez push, CI, DB, migracji i deployu.
+
 ## [Main, f6fefd7] — 2026-11-16 — CI-health
 
 ### Fixed

@@ -2,6 +2,24 @@
 
 Backlog zadań ze statusami.
 
+## Kontrole developerskie bieżącego worktree — gotowe lokalnie (2026-11-16)
+
+- [x] Readonly przegląd starej gałęzi: aplikacja i migracje odpowiadają main;
+  nie scalać całej gałęzi ani nie przenosić A2/pilota DB.
+- [x] Przygotować [plan](superpowers/plans/2026-11-16-worktree-dev-checks.md):
+  root/interpreter/preflight, kolekcja offline i aktualizacja minimum SDK.
+- [x] Zatwierdzić plan oraz realizację Native w osobnym worktree od aktualnego main.
+- [x] TDD helpera i rzeczywistych bloków komend, bez zależności testów od instalacji
+  Ruff/mypy w grupach backend CI. Bez powrotu do starego userns/workflow.
+- [x] Lokalna walidacja po poprawce review: 120 testów i pełny lint PASS,
+  pełny mypy 212 plików PASS; budżet 127.85/180 s.
+- [x] Lokalne commity helpera i komend `5378508`, `7e4dad8`.
+- [x] Jeden readonly review i kontrola zakresu. Important: odrzucać programy
+  niebędące Pythonem; 6 regresji RED→GREEN, commit `f2124e5`.
+- [ ] Opcjonalne: jawnie zweryfikowany/nieprzekazywany `LD_LIBRARY_PATH` kolekcji;
+  Minor z review, odłożony bez rozszerzenia zakresu.
+- [ ] Osobna zgoda na push/draft PR i jego standardowy CI; bez merge/deployu.
+
 ## CI-health — zakończone na main (2026-11-16)
 
 - [x] Scalić wyłącznie 15 plików CI-health przez PR #6; `main` wskazuje `f6fefd7`.

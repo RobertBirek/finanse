@@ -2,6 +2,84 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-16 — Dev checks domknięte lokalnie po jednym review
+
+- Użytkownik zatwierdził wznowienie i poprosił o przejście do nowych funkcji.
+  Ustalono granicę: domknąć tylko ten zakres; A2, pilot DB i cały pozostały backlog
+  nie blokują niezwiązanych funkcji użytkowych. Bez kolejnej rundy porządków.
+- Pełny mypy app/ci_tools/helper PASS: 211 plików, 8.69 s. Ponownie wszystkie
+  114 testów PASS i pełny lint PASS; budżet kumulatywny 106.25/180 s.
+- Lokalny commit komend/testów/dokumentacji `7e4dad8`, po helperze `5378508`.
+  Jeden końcowy review readonly zlecony; bez push/CI/DB/Docker/frontend run/deploy.
+- Next: zakończyć review i commit wpisów sesji. Publikacja nadal wymaga osobnej
+  zgody; potem można wybrać mały pionowy zakres nowej funkcji.
+- Użytkownik następnie potwierdził, że chce dokończyć istotne porządki i ulepszenia
+  aktualnego kodu. Nie oznacza to zgody na scalenie całej starej gałęzi:
+  po domknięciu tego zakresu oddzielić realne problemy od opcjonalnych ulepszeń
+  i przedstawić uzasadniony kolejny zakres do zatwierdzenia.
+- Review: Important — `/bin/true` i `/bin/echo` mogły dawać pozorny sukces
+  backendu. Potwierdzone 6 regresjami RED; dodano sondę Python 3.12+ z kontrolą
+  dokładnego wyniku przed preflight. GREEN, commit `f2124e5`.
+- Końcowa walidacja: 120 PASS (43 nowe + 77 ci_tools), pełny lint PASS,
+  mypy app/ci_tools/helper/test 212 plików PASS. Budżet 127.85/180 s.
+  Bez kolejnego review: poprawkę pokrywają RED→GREEN i cały zatwierdzony zakres testów.
+- Minor odłożony: ambient `LD_LIBRARY_PATH` nie jest wiązany/zweryfikowany z
+  wybranym środowiskiem. Bez rozszerzenia zakresu. Jawnie przyjęte ograniczenia:
+  root caller nadal UID 0, importy czytają host files, child pytest ma `-B`, nie `-I`;
+  to netns dla zaufanego checkoutu, nie sandbox niezaufanego kodu.
+- Gotowy lokalny kandydat obejmuje 11 plików; stare worktree zachowane.
+  Nie wykonano push/CI/DB/Docker/frontend tests/merge/deploy.
+  Kolejny krok: zgoda na publikację oraz osobno wybór rzeczywiście potrzebnych
+  pozostałych porządków. A2/pilot DB nie są częścią tego zakresu.
+
+## 2026-11-16 — Implementacja dev checks; STOP po timeout pełnego mypy
+
+- Użytkownik zatwierdził lokalny plan Native, bez push/CI. Nowy worktree
+  `worktree-dev-checks`, gałąź `chore/worktree-dev-checks`, baza `fccf5d1`.
+  Stare worktree i niezacommitowane notatki zachowane.
+- TDD helpera: 12 RED → 12 GREEN. Read-only CLI waliduje repo-root, wersję Pythona,
+  bezpośrednie zależności, requirements i wybrane narzędzie. SDK floor 2.54.0;
+  piny bez zmian. Ruff i mypy helpera/testu PASS, lokalny commit `5378508`.
+- TDD komend: 25 RED → GREEN. Prompty używają bieżącego root, jawnego interpretera,
+  preflight i zatrzymania na błędzie; `/test` tylko kolekcja w netns oraz Vitest.
+  Bez instalacji, autofix i zmian app/workflow/ci_tools/conftest/requirements.
+- Rzeczywista kolekcja syntetycznego repo wymagała 8 testów, nie jednego:
+  obecny validator odrzuca pustą grupę. Fixture ma minimalny inventory wszystkich
+  8 grup; nie zmieniono runnera, izolacji lub zakresu funkcjonalnego. Test
+  zastępuje granicę uprawnień, nie dowodzi izolacji kernela.
+- 37 nowych testów + 77 istniejących ci_tools = 114 PASS, bez skip/error.
+  Pełny Ruff dla app/tests/ci_tools/helper PASS. Pełny mypy app/ci_tools/helper
+  przerwał limit wywołania shell 30 s, zanim zadziałał pozostały budżet walidacji.
+  Brak wyniku mypy; nie deklarować pełnego typecheck PASS. STOP bez ponowienia.
+  Rozliczono konserwatywnie ~82/180 s, brak pozostawionych własnych procesów mypy.
+- Nie powstał drugi commit ani końcowy review. Komendy, rozszerzone testy i docs
+  pozostają lokalnym WIP. Brak DB/Docker/pełnej suity domenowej/frontend run,
+  push, CI, merge lub deployu. Walidacja frontendowych wywołań używa doubles;
+  kod i zależności frontendu nie zostały zmienione.
+- Następny krok: zgoda na wznowienie pełnego mypy z limitem wywołania odpowiadającym
+  pozostałemu budżetowi, potem końcowy readonly review i lokalne commity.
+  Artefakty i licznik: `/tmp/opencode/worktree-dev-checks-impl-20261116/run-01/`.
+
+## 2026-11-16 — Plan kontroli worktree-local, jeszcze bez implementacji
+
+- Po readonly audycie użytkownik polecił kontynuować przygotowanie planu.
+  Aktualny main `fccf5d1`; lokalny checkout `095a03e` ma identyczne drzewo.
+- [Plan](superpowers/plans/2026-11-16-worktree-dev-checks.md) obejmuje 7 plików
+  funkcjonalnych. Plan i trzy wpisy sesji dają maksymalnie 11 plików jednego PR;
+  nie przewidujemy kolejnego osobnego PR porządkującego te notatki.
+- Dopasowania względem starego kodu: zachować `ci_tools` w lint/typecheck,
+  użyć obecnego runnera kolekcji i sudo/netns/drop-privileges, nie kopiować
+  nieprzywilejowanego userns ani zakładać Ruff/mypy w matrix jobach.
+- Metadane SDK mają odpowiadać istniejącemu pinowi 2.54.0; bez zmiany requirements,
+  aplikacji, zależności frontendu, workflow, conftest, A2, pilota DB lub OCR staging.
+- Na tym etapie zapisano wyłącznie plan i wpisy dokumentacji. Bez uruchamiania
+  testów/DB, instalacji, commitów, push, CI lub deployu; stare worktree zachowano.
+- Po readonly przeglądzie planu doprecyzowano repo-root i układ metadanych pod
+  `backend/` oraz dokładny czysty env dla wszystkich odczytów Git, także SHA.
+  Nie rozszerzono zakresu implementacji ani uprawnień.
+- Następny krok: zatwierdzenie planu i proponowanej realizacji Native. Publikacja,
+  merge oraz wdrożenie nie są domyślną konsekwencją zgody na planowanie.
+
 ## 2026-11-16 — CI-health na main; dokumentacja w osobnym PR
 
 - Cel: usunąć blokery CI bez przenoszenia starej, 124-plikowej gałęzi.
