@@ -136,6 +136,11 @@ for (const theme of ["light", "dark"]) {
       entity: "account",
       data: { color: "#000000" },
     });
+    // The mock changes before its response reaches React Query and closes editing.
+    await expect(page).toHaveURL((url) => !url.searchParams.has("edit"));
+    await expect(
+      page.getByRole("button", { name: "Edytuj konto Eurokonto" }),
+    ).toBeVisible();
     await page.reload();
     await page.getByRole("button", { name: "Edytuj konto Eurokonto" }).click();
     await expect(
@@ -167,6 +172,9 @@ for (const theme of ["light", "dark"]) {
       .getByRole("button", { name: "Zapisz kategorię Dom", exact: true })
       .click();
     await expect.poll(() => rootColor).toBe("#2563EB");
+    await expect(
+      page.getByRole("button", { name: "Edytuj kategorię Dom", exact: true }),
+    ).toBeVisible();
     await page.reload();
     await page
       .getByRole("button", { name: "Edytuj kategorię Prąd", exact: true })
@@ -196,6 +204,9 @@ for (const theme of ["light", "dark"]) {
       .getByRole("button", { name: "Zapisz kategorię Prąd", exact: true })
       .click();
     await expect.poll(() => childColor).toBe("#EA580C");
+    await expect(
+      page.getByRole("button", { name: "Edytuj kategorię Prąd", exact: true }),
+    ).toBeVisible();
     await page.goto("/finances/reports");
     await expect(
       page.getByRole("img", { name: "Wydatki: Dom", exact: true }),
@@ -218,6 +229,9 @@ for (const theme of ["light", "dark"]) {
       .getByRole("button", { name: "Zapisz kategorię Prąd", exact: true })
       .click();
     await expect.poll(() => childColor).toBeNull();
+    await expect(
+      page.getByRole("button", { name: "Edytuj kategorię Prąd", exact: true }),
+    ).toBeVisible();
     await page.reload();
     await page
       .getByRole("button", { name: "Edytuj kategorię Prąd", exact: true })
