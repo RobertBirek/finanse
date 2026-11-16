@@ -2,6 +2,16 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Plan zatwierdzony; przygotowanie] — 2026-11-16 — BO każdego konta
+
+### Added
+- Zatwierdzony plan BO dodatniego/ujemnego/zerowego, edycji wyłącznie bez innych
+  transakcji i zerowych rekordów istniejących kont bez zmiany ich sald/historii.
+- Po osobnej zgodzie: własny syntetyczny PG16 bez portów. Model BO i addytywna
+  migracja efaf78432563 z zerowym backfillem, retencją historii i blokadą downgrade
+  nonzero; 3 testy RED→GREEN, lint i mypy206 PASS. Implementacja komend/UI trwa.
+  Bez produkcyjnej migracji, danych użytkownika lub wdrożenia.
+
 ## [Lokalne, zweryfikowane] — 2026-11-16 — Właściwy endpoint staging OCR
 
 ### Fixed

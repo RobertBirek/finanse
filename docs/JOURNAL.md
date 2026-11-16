@@ -2,6 +2,30 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-16 — Start zatwierdzonej implementacji BO; bramka środowiska
+
+- User zaakceptował plan BO i Native. Utworzono natywny izolowany worktree
+  account-opening-balances i przeniesiono sesję. Baza istniejącego origin/main
+  c960d9c, bez fetch/main/push. Pozostałe worktree i prywatny klon nietknięte.
+- Plan/spec 2026-11-16-account-opening-balances skopiowane z zatwierdzonych
+  dokumentów; pre-flight Task1→2→3 bez konfliktów. Ledger w
+  `.superpowers/sdd/2026-11-16-account-opening-balances/progress.md`.
+- Aktualne docs z bazy zawierają nowe devchecks: użytkownik musi podać
+  ADVISOR_DEV_PYTHON, pełne testy DB wymagają osobnej zgody na nową syntetyczną
+  bazę i dowodu własności przed fixture. Wstrzymano się przed testami/kodem.
+  Nie używać certyfikacyjnego klonu danych użytkownika. Brak migracji i deployu.
+- Następnie: uzyskać ścieżkę i zgodę; preflight, baseline, task-start1 i TDD.
+  Nie deklarować zaimplementowanego BO lub ustawienia czegokolwiek na produkcji.
+- Wznowienie: user zgodził się na własny syntetyczny PostgreSQL bez portów i wybór
+  interpretera przez agenta. Wybrany istniejący backend-test-env20261114 przechodzi
+  3preflight, bez aktualizacji sharedvenv. ExactID/label/networknone/tmpfs guard
+  przed każdym nsenter test run. Prywatny trwały klon i produkcja nietknięte.
+- Baseline25backend/677frontendPASS. Pierwszy backend foreground przerwany limitem
+  120s nie zaliczony; pełny nowy run25PASS109.88s. RED modeli2 i migracji1,
+  oddzielny downgradeRED1; GREEN3PASS23.16s, lint i mypy206PASS.
+  Wygenerowana efaf78432563 po2c; usunięto wyłącznie unrelated indexdrift.
+  Task1 lokalny; Task2/3 nadal niewykonane. Brak migracji produkcyjnej.
+
 ## 2026-11-16 — Mała poprawka adresu staging OCR i regresja offline
 
 - Zgoda użytkownika na lokalną poprawkę: 2 pliki testowe i te 3 wpisy sesji.

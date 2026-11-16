@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,6 +23,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 from app.finance import credit_card_models as _credit_card_models
 from app.finance import loan_schedule_models as _loan_schedule_models  # noqa: F401
+from app.finance import opening_balance_models as _opening_balance_models  # noqa: F401
 from app.finance import receipt_models as _receipt_models  # noqa: F401
 from app.finance import receipt_read_models as _receipt_read_models  # noqa: F401
 from app.finance.annotation_models import TransactionAnnotation, TransactionTag
@@ -89,6 +91,12 @@ class Account(Base):
 class Category(Base):
     __tablename__ = "categories"
     __table_args__ = (
+        Index(
+            "uq_opening_balance_category_owner",
+            "user_id",
+            unique=True,
+            postgresql_where=text("source = 'opening_balance'"),
+        ),
         CheckConstraint(
             "color IS NULL OR color ~ '^#[0-9A-F]{6}$'",
             name="ck_categories_color_hex",

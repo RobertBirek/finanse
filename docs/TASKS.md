@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Bilans otwarcia każdego konta (2026-11-16)
+
+- [x] Zatwierdzić spec/plan i realizację Native z jednym końcowym review.
+- [x] Osobny natywny worktree od lokalnego origin/main c960d9c; odczyt aktualnych docs.
+- [x] Uzyskać ADVISOR_DEV_PYTHON i osobną zgodę na własną syntetyczną testDB.
+- [x] Baseline25backend/677frontend; model i retencyjna migracja —3testy/lint/mypy206PASS.
+- [ ] Komendy/guardy i frontend — TDD.
+- [ ] Pełne testy i jedno review; dopiero potem lokalny odbiór.
+- [ ] Osobna zgoda na merge/push/deploy i produkcyjne zerowe BO.
+
 ## Endpoint staging OCR — lokalna poprawka (2026-11-16)
 
 - [x] Zgoda na 2 pliki testowe i 3 wpisy sesji, bez DB/Docker/aplikacji/workflow.
