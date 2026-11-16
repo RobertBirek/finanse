@@ -8,7 +8,8 @@ Backlog zadań ze statusami.
 - [x] Osobny natywny worktree od lokalnego origin/main c960d9c; odczyt aktualnych docs.
 - [x] Uzyskać ADVISOR_DEV_PYTHON i osobną zgodę na własną syntetyczną testDB.
 - [x] Baseline25backend/677frontend; model i retencyjna migracja —3testy/lint/mypy206PASS.
-- [ ] Komendy/guardy i frontend — TDD.
+- [x] Komendy/guardy BO —22focusedPASS, lint i mypy209PASS; pełna regresja nadal przed nami.
+- [ ] Frontend — TDD, bez traktowania partialbackendu jako odbioru całości.
 - [ ] Pełne testy i jedno review; dopiero potem lokalny odbiór.
 - [ ] Osobna zgoda na merge/push/deploy i produkcyjne zerowe BO.
 

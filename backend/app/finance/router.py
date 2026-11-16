@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +20,8 @@ from app.finance.import_router import router as import_router
 from app.finance.loan_router import router as loan_router
 from app.finance.manual_refunds import create_manual_expense_refund
 from app.finance.models import FinancialTransaction, Posting
+from app.finance.opening_balance_schemas import OpeningBalanceUpdate, OpeningBalanceView
+from app.finance.opening_balances import update_opening_balance
 from app.finance.person_router import router as person_router
 from app.finance.proposals_router import router as proposals_router
 from app.finance.receipt_read_router import router as receipt_read_router
@@ -146,6 +148,22 @@ async def get_account_endpoint(
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
     return account
+
+
+@router.put("/accounts/{account_id}/opening-balance", response_model=OpeningBalanceView)
+async def update_account_opening_balance_endpoint(
+    account_id: uuid.UUID,
+    data: OpeningBalanceUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str, Header(min_length=1, max_length=255)],
+) -> OpeningBalanceView:
+    try:
+        return await update_opening_balance(db, current_user.id, account_id, data, idempotency_key)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 @router.patch("/accounts/{account_id}", response_model=AccountResponse)

@@ -71,6 +71,8 @@ async def _validate_transaction_postings(
             raise ValueError("Category not found")
         if category is not None and not category.is_active:
             raise ValueError("Category is inactive")
+        if category is not None and category.source == "opening_balance":
+            raise ValueError("Techniczna kategoria BO jest chroniona.")
 
         source_currency = str(posting.source_currency).upper()
         if source_currency not in SUPPORTED_CURRENCIES:

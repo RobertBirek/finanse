@@ -63,6 +63,14 @@ class Account(Base):
     )
 
     @property
+    def opening_balance(self) -> object | None:
+        return getattr(self, "_opening_balance", None)
+
+    @opening_balance.setter
+    def opening_balance(self, value: object | None) -> None:
+        self._opening_balance = value
+
+    @property
     def balance_pln(self) -> int:
         return getattr(self, "_balance", 0)
 

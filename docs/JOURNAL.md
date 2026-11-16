@@ -25,6 +25,12 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   oddzielny downgradeRED1; GREEN3PASS23.16s, lint i mypy206PASS.
   Wygenerowana efaf78432563 po2c; usunięto wyłącznie unrelated indexdrift.
   Task1 lokalny; Task2/3 nadal niewykonane. Brak migracji produkcyjnej.
+- Task2: core13RED, potem naprawiona jawna korelacja EXISTS/Posting, osobne3REDguardów;
+  final22focusedPASS102.11s, lint i mypy209PASS. Zero bez transakcji/audytu finansowego,
+  każdy nonzero init i każda edycja audytowane; podpisana kwota wynika tylko z nogi konta.
+  Ukryta/protected kategoria transfer nie jest dodatkowym kontem. Typeguardy
+  dokument/gift/loan/date/kategoryzacja zachowane i przetestowane zamiast duplikowania.
+  Task3/frontend i pełne bramki nadal przed nami. Produkcja i jej BO bez zmian.
 
 ## 2026-11-16 — Mała poprawka adresu staging OCR i regresja offline
 

@@ -62,6 +62,9 @@ async def _create_transaction(
     allow_manual_refund: bool = False,
     import_dates: tuple[date | None, date] | None = None,
 ) -> FinancialTransaction:
+    if data.source == "opening_balance":
+        raise ValueError("Bilans otwarcia wymaga dedykowanej komendy BO.")
+    await lock_document_mutations(db, user_id)
     # Only trusted import code explicitly opts into preserving source-category
     # reversals. Client-controlled `source` never disables validation.
     if allow_manual_refund and (
@@ -235,6 +238,9 @@ async def update_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID, data: TransactionUpdate
 ) -> FinancialTransaction | None:
     await lock_document_mutations(db, user_id)
+    from app.finance.opening_balance_guards import guard_opening_balance_transaction
+
+    await guard_opening_balance_transaction(db, user_id, transaction_id)
     from app.finance.person_guards import guard_person_gift_change
 
     await guard_person_gift_change(
@@ -327,6 +333,9 @@ async def delete_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID
 ) -> bool:
     await lock_document_mutations(db, user_id)
+    from app.finance.opening_balance_guards import guard_opening_balance_transaction
+
+    await guard_opening_balance_transaction(db, user_id, transaction_id)
     from app.finance.person_guards import guard_person_gift_change
 
     await guard_person_gift_change(db, user_id, transaction_id, {"delete"})

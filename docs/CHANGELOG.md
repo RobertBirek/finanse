@@ -11,6 +11,10 @@ Wszystkie istotne zmiany w projekcie.
   migracja efaf78432563 z zerowym backfillem, retencją historii i blokadą downgrade
   nonzero; 3 testy RED→GREEN, lint i mypy206 PASS. Implementacja komend/UI trwa.
   Bez produkcyjnej migracji, danych użytkownika lub wdrożenia.
+- Backend BO lokalnie: podpisane kwoty PLN/EUR/USD, atomowy zapis konta,
+  edycja z wersją/idempotencją/audytem i blokadą innych transakcji. 22 focused
+  testy PASS, w tym dwa rzeczywiste wyścigi i ochrona powiązań. Pełny odbiór
+  i interfejs nadal w toku; to nie jest deklaracja wdrożonej funkcji.
 
 ## [Lokalne, zweryfikowane] — 2026-11-16 — Właściwy endpoint staging OCR
 

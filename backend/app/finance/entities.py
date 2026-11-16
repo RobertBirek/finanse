@@ -21,25 +21,29 @@ SUPPORTED_CURRENCIES = {"PLN", "EUR", "USD"}
 
 
 async def create_account(db: AsyncSession, user_id: uuid.UUID, data: AccountCreate) -> Account:
+    from app.finance.opening_balances import initialize_opening_balance, opening_values
+
     currency = data.currency.upper()
     if currency not in SUPPORTED_CURRENCIES:
         raise ValueError("Unsupported currency")
-    account = Account(
-        user_id=user_id, **data.model_dump(exclude={"currency", "credit_card"}), currency=currency
-    )
-    if data.credit_card is not None:
-        from app.finance.credit_cards import save_config
+    opening_values(currency, data.opening_balance)
+    await lock_document_mutations(db, user_id)
+    async with db.begin_nested():
+        account = Account(
+            user_id=user_id,
+            **data.model_dump(exclude={"currency", "credit_card", "opening_balance"}),
+            currency=currency,
+        )
+        db.add(account)
+        await db.flush()
+        if data.credit_card is not None:
+            from app.finance.credit_cards import save_config
 
-        await lock_document_mutations(db, user_id)
-        async with db.begin_nested():
-            db.add(account)
-            await db.flush()
             await save_config(db, user_id, account.id, data.credit_card)
-        return account
-    db.add(account)
-    await db.flush()
-    account.can_change_currency = True
-    return account
+        await initialize_opening_balance(db, user_id, account, data.opening_balance)
+    result = await get_account(db, user_id, account.id)
+    assert result is not None
+    return result
 
 
 async def update_account(
@@ -158,6 +162,8 @@ async def _validate_category_parent(
         ).scalar_one_or_none()
         if parent is None:
             raise ValueError("Parent category not found")
+        if parent.source == "opening_balance":
+            raise ValueError("Techniczna kategoria BO jest chroniona.")
         if parent.type != category_type:
             raise ValueError("Parent category type must match category type")
         parent_id = parent.parent_id
@@ -173,7 +179,9 @@ async def create_category(db: AsyncSession, user_id: uuid.UUID, data: CategoryCr
 
 async def get_categories(db: AsyncSession, user_id: uuid.UUID) -> list[Category]:
     result = await db.execute(
-        select(Category).where(Category.user_id == user_id).order_by(Category.name)
+        select(Category)
+        .where(Category.user_id == user_id, Category.source != "opening_balance")
+        .order_by(Category.name)
     )
     return list(result.scalars().all())
 
@@ -187,6 +195,8 @@ async def update_category(
     category = result.scalar_one_or_none()
     if category is None:
         return None
+    if category.source == "opening_balance":
+        raise ValueError("Techniczna kategoria BO jest chroniona.")
     update_data = data.model_dump(exclude_unset=True)
     if any(update_data.get(key, True) is None for key in ("name", "type", "is_active")):
         raise ValueError("Category name, type and is_active cannot be null")
@@ -227,6 +237,8 @@ async def delete_category(db: AsyncSession, user_id: uuid.UUID, category_id: uui
     category = result.scalar_one_or_none()
     if category is None:
         return False
+    if category.source == "opening_balance":
+        raise ValueError("Techniczna kategoria BO jest chroniona.")
     from app.finance.models import FinancialDocument
 
     bill = await db.execute(

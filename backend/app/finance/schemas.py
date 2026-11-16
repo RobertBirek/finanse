@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from app.finance.account_validation import normalize_bic, normalize_iban
 from app.finance.annotation_schemas import AnnotationResponse
 from app.finance.credit_card_schemas import CardConfig, CardSettings
+from app.finance.opening_balance_schemas import OpeningBalanceInput, OpeningBalanceView
 from app.finance.rule_schemas import AssignmentOrigin
 
 
@@ -17,6 +18,7 @@ def normalize_color(value: str | None) -> str | None:
 
 
 class AccountCreate(BaseModel):
+    opening_balance: OpeningBalanceInput = Field(default_factory=OpeningBalanceInput)
     name: str = Field(min_length=1, max_length=200)
     type: str = Field(pattern=r"^(checking|savings|cash|credit|credit_card|investment)$")
     currency: str = Field(default="PLN", min_length=3, max_length=3)
@@ -49,6 +51,13 @@ class AccountCreate(BaseModel):
 
 
 class AccountUpdate(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def forbid_opening_balance_patch(cls, value: object) -> object:
+        if isinstance(value, dict) and "opening_balance" in value:
+            raise ValueError("Użyj dedykowanej edycji BO.")
+        return value
+
     name: str | None = Field(default=None, min_length=1, max_length=200)
     currency: str | None = Field(default=None, min_length=3, max_length=3)
     type: str | None = Field(
@@ -94,6 +103,7 @@ class AccountUpdate(BaseModel):
 
 
 class AccountResponse(BaseModel):
+    opening_balance: OpeningBalanceView | None = None
     id: uuid.UUID
     user_id: uuid.UUID
     name: str
