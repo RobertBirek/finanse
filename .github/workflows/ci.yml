@@ -131,6 +131,13 @@ jobs:
         with:
           name: backend-manifest
           path: ${{ runner.temp }}/ci-manifest
+      - name: Prepare local proxy test images
+        if: matrix.group == 'proxy'
+        timeout-minutes: 2
+        run: |
+          docker pull nginx:alpine
+          docker pull python:3.12-alpine
+          docker image inspect nginx:alpine python:3.12-alpine > /dev/null
       - name: Preparation and owned PostgreSQL preflight
         timeout-minutes: 1
         run: |

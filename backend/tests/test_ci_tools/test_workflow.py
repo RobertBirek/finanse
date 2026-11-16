@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import copy
+import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +37,86 @@ def test_yaml_parser_is_required_by_existing_dependency() -> None:
         if line and not line.startswith("#")
     ]
     assert any(r.name == "uvicorn" and "standard" in r.extras for r in required)
+
+
+@pytest.mark.parametrize("failure", ["", "nginx:alpine", "python:3.12-alpine", "inspect"])
+def test_proxy_preparation_populates_fresh_store_and_fails_closed(
+    workflow: dict[str, Any], tmp_path: Path, failure: str
+) -> None:
+    """Run the workflow's actual shell; stub only the external Docker boundary."""
+    steps = workflow["jobs"]["backend_tests"]["steps"]
+    preparation = [s for s in steps if s.get("name") == "Prepare local proxy test images"]
+    assert len(preparation) == 1, "A fresh hosted runner needs explicit image preparation"
+    docker = tmp_path / "docker"
+    docker.write_text(
+        f"#!{sys.executable}\n"
+        "import json, os, sys\n"
+        "from pathlib import Path\n"
+        "args = sys.argv[1:]\n"
+        "with Path('calls.jsonl').open('a') as log: log.write(json.dumps(args)+'\\n')\n"
+        "store = Path('store.json')\n"
+        "images = json.loads(store.read_text()) if store.exists() else []\n"
+        "if args[:1] == ['pull']:\n"
+        "    if args[1] == os.environ['FAILURE']: sys.exit(1)\n"
+        "    images.append(args[1]); store.write_text(json.dumps(images))\n"
+        "elif args[:2] == ['image', 'inspect']:\n"
+        "    if os.environ['FAILURE'] == 'inspect': sys.exit(1)\n"
+        "    assert all(image in images for image in args[2:])\n"
+        "    print(json.dumps([{'Id':'sha256:'+str(i)} for i in args[2:]]))\n"
+        "else: sys.exit(2)\n"
+    )
+    docker.chmod(0o700)
+    process = subprocess.run(
+        ["/bin/bash", "-eu", "-c", preparation[0]["run"]],
+        check=False,
+        cwd=tmp_path,
+        env={"PATH": str(tmp_path) + os.pathsep + "/usr/bin:/bin", "FAILURE": failure},
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    calls = [json.loads(line) for line in (tmp_path / "calls.jsonl").read_text().splitlines()]
+    expected = [["pull", "nginx:alpine"], ["pull", "python:3.12-alpine"]]
+    if failure == "nginx:alpine":
+        assert calls == expected[:1] and process.returncode == 1
+    elif failure == "python:3.12-alpine":
+        assert calls == expected and process.returncode == 1
+    else:
+        assert calls == expected + [["image", "inspect", "nginx:alpine", "python:3.12-alpine"]]
+        assert process.returncode == (1 if failure else 0)
+    if not failure:
+        assert json.loads((tmp_path / "store.json").read_text()) == [
+            "nginx:alpine",
+            "python:3.12-alpine",
+        ]
+
+
+@pytest.mark.parametrize(
+    "mutation", ["missing", "unconditional", "wrong_group", "timeout", "late", "missing_python"]
+)
+def test_proxy_preparation_contract_rejects_unsafe_configuration(
+    workflow: dict[str, Any], mutation: str
+) -> None:
+    from tests.test_ci_tools.workflow_assertions import assert_backend_workflow
+
+    config = copy.deepcopy(workflow)
+    steps = config["jobs"]["backend_tests"]["steps"]
+    images = next(s for s in steps if s.get("name") == "Prepare local proxy test images")
+    if mutation == "missing":
+        steps.remove(images)
+    elif mutation == "unconditional":
+        images["if"] = "always()"
+    elif mutation == "wrong_group":
+        images["if"] = "matrix.group == 'legacy'"
+    elif mutation == "timeout":
+        images["timeout-minutes"] = 20
+    elif mutation == "late":
+        steps.remove(images)
+        steps.append(images)
+    else:
+        images["run"] = images["run"].replace("docker pull python:3.12-alpine\n", "")
+    with pytest.raises(AssertionError):
+        assert_backend_workflow(config)
 
 
 @pytest.mark.parametrize(

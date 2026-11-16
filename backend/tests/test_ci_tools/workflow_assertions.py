@@ -98,6 +98,24 @@ def assert_backend_workflow(workflow: dict[str, Any]) -> None:
     assert 1 <= strategy["max-parallel"] <= 3
     groups = strategy["matrix"]["group"]
     assert len(groups) == len(GROUPS) and set(groups) == set(GROUPS)
+    steps = tests["steps"]
+    prepare = [step for step in steps if step.get("name") == "Prepare local proxy test images"]
+    assert len(prepare) == 1
+    images = prepare[0]
+    assert images["if"] in ("matrix.group == 'proxy'", "${{ matrix.group == 'proxy' }}")
+    assert images["timeout-minutes"] == 2
+    commands = [shlex.split(line) for line in images["run"].splitlines() if line.strip()]
+    assert commands == [
+        ["docker", "pull", "nginx:alpine"],
+        ["docker", "pull", "python:3.12-alpine"],
+        ["docker", "image", "inspect", "nginx:alpine", "python:3.12-alpine", ">", "/dev/null"],
+    ]
+    preflight = next(
+        s for s in steps if s.get("name") == "Preparation and owned PostgreSQL preflight"
+    )
+    download = _action(tests, "actions/download-artifact@v4")
+    assert steps.index(download) < steps.index(images) < steps.index(preflight)
+    assert 'test "$(( $(date +%s) - CI_PREP_STARTED ))" -le 300' in preflight["run"]
     pg = tests["services"]["postgres"]
     assert pg["image"] == "postgres:16-alpine"
     assert pg["ports"] == ["127.0.0.1:5432:5432"]
