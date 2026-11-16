@@ -2,6 +2,16 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Main; bez zmiany produkcji] — 2026-11-16 — Poprawka testu DocumentList
+
+### Changed
+- Po zgodzie użytkownika poprawkę `d3a8a88` wypchnięto bez force do main.
+  Kontrole przed push:707VitestPASS58.91s, Ruff/ESLint, mypy215/tsc i kolekcja
+  offline backendu PASS. Wynik zdalnego CI należy odczytywać dla dokładnego commita.
+- Diff względem aktywnego wydania obejmuje tylko test i dokumentację, więc nie
+  budowano identycznych obrazów i nie restartowano usług. Readonly kontrola
+  potwierdziła HTTPS200/auth401, worker i schemaefaf; produkcja nadal45bcf88.
+
 ## [Lokalnie zweryfikowane] — 2026-11-16 — Synchronizacja testu DocumentList
 
 ### Fixed

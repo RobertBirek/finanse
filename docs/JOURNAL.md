@@ -2,6 +2,21 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-16 — DocumentList na main; wydanie aplikacji niepotrzebne
+
+- Użytkownik polecił pushmain/deploy po lokalnej poprawce. Przed push sprawdzono
+  remote9b55f76 i czyste d3a8a88; bez nowych zmian main lub konfliktów.
+- Wspierane komendy ponowione: lintPASS, mypy215/tscPASS, kolekcja offline
+  backenduPASS i707VitestPASS58.91s. Zwykły fast-forward pushd3a8a88, bezforce.
+- Dowód diffu z live45bcf88: wyłącznie docs i frontendowy pliktestowy.
+  Nie ma nowych bajtów aplikacji do wydania; nie uruchamiano build/deploy,
+  restartów, backupów, migracji lub mutacji danych tylko po to, by zmienić label.
+- Readonly runtime: dokładne3imageIDs/revisions/state/restarts/mounty zgodne
+  z aktywnymi metadanymi, HTTPS200/auth401, ARQcheckPASS i schemaefaf.
+  Produkcja45bcf88 pozostaje aktywna. Nie utożsamiać tej kontroli z nowym deployem.
+- Dowody: `/tmp/opencode/document-list-main-20261116/`. Po końcowym docs-only
+  push sprawdzić dokładne zdalneCI; wynik lokalny nie zastępuje GitHub workflow.
+
 ## 2026-11-16 — Mała poprawka oczekiwania testu DocumentList
 
 - Użytkownik zatwierdził plan: test i dokumentacja, bez zmian aplikacji,

@@ -9,7 +9,9 @@ Backlog zadań ze statusami.
 - [x] Czekać na pełną asercję wartości; kontrola błędnej wartości daje FAIL.
 - [x] 6/6powtórek,707VitestPASS,lint/types/kolekcja offlinePASS; review bez uwag.
 - [x] Lokalny odbiór i commit testu/dokumentacji.
-- [ ] Push lub wdrożenie wymagają osobnej decyzji; zmiana testu nie wymaga deployu aplikacji.
+- [x] Po osobnej zgodzie pushmain`d3a8a88`, świeże707Vitest/lint/types/collectionPASS.
+- [x] Zgodność runtime potwierdzona readonly; brak kodu aplikacji do wydania,
+  bez restartów lub migracji. Zdalne CI sprawdzać dla końcowej rewizji.
 
 ## Wdrożenie BO (2026-11-16)
 
