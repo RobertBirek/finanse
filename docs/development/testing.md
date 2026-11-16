@@ -80,3 +80,60 @@ Istniejący katalog `.opencode/command/` jest obsługiwany w OpenCode V2.
 Prompty przeładowują się automatycznie; bez restartu serwisu i bez shell
 substitution omijającego kontrolę uprawnień agenta.
 Źródło: [OpenCode Commands](https://opencode.ai/docs/commands).
+
+## Pozwolenie na lifecycle DB testów
+
+Sama nazwa `finanse_test`, localhost i prawidłowy port **nie są pozwoleniem**
+na tworzenie lub usuwanie schematu. Mutujące fixture wymagają
+`ADVISOR_TEST_DB_PERMIT`; brak/obcy/uszkodzony permit to błąd przed utworzeniem
+fixture engine, połączeniem DB lub subprocess Alembic, a nie SKIP.
+
+Dotyczy to globalnej fixture, nadpisania fixture kategorii, niezależnej fixture
+kolorów oraz migracji. Sam filtr `-m "not integration"` nie gwarantuje braku DB:
+część testów kolorów ma własną fixture bez tego markera. Do kontroli offline
+wybieraj konkretne pliki/przypadki jednostkowe; `/test` nadal robi kolekcję.
+Importy aplikacji mogą tworzyć leniwe obiekty engine; to nie połączenie DB
+ani przyznanie pozwolenia dla wybranego celu fixture.
+
+### Kto wydaje pozwolenie
+
+W tym zakresie tylko zaufany job `backend_tests` w istniejącym GitHub Actions:
+ma nowy ephemeral PostgreSQL dla swojej grupy. Po dotychczasowym preflight
+weryfikuje pusty public i tożsamość bazy, ustawia losowy znacznik w komentarzu
+`finanse_test`, następnie publikuje dokładnie jeden prywatny plik0600 w nowym
+katalogu0700 pod `$RUNNER_TEMP`. Eksportuje jego absolutną ścieżkę oraz SHA
+checkoutu dopiero po sukcesie. Nie nadpisuje istniejącego permitu.
+Tryb0600 jest wymuszany na otwartym deskryptorze niezależnie od umask runnera.
+
+Pozwolenie zawiera ścisły cel (driver/host/port/database/role), OID, właściciela,
+system_identifier klastra, znacznik oraz run/attempt/job/group/commit. Nie zawiera
+hasła DB lub danych użytkownika. To przejściowy artefakt operacyjny, nie źródło
+prawdy aplikacji. Fakty PostgreSQL są odczytywane przed DDL/cleanup; niezgodność
+lub brak praw do odczytu oznacza odmowę. Znacznik komentarza jest publicznie
+odczytywalny, nie jest tajnym credentialem.
+
+Migracje zachowują istniejącą zgodę runnera i nową UUID scratch DB. Sprawdzają
+jej zapamiętany OID/rolę/klaster przed każdym subprocess migracji i ponawiają
+kontrolę parent przed usunięciem scratch. Sesje/Alembic osobno sprawdzają cel
+i tożsamość przez krótkie połączenie tylko do odczytu przed uruchomieniem procesu.
+
+### Lokalnie: odmowa, nie obejście
+
+Nie ma lokalnego issuera/provisionera w tej zmianie. Nie twórz ręcznie permitu
+z istniejącej bazy, nie kopiuj go z poprzedniego joba, nie ustawiaj `CI=true`
+lub `GITHUB_ACTIONS=true` jako obejścia. Lokalny prawdziwy pilot nowej syntetycznej
+bazy wymaga osobnego planu i zgody. Bazy produkcyjne i zachowane klony nigdy nie
+są automatycznie adoptowane jako fixture.
+
+Po odmowie nie uruchamiaj cleanup „ręcznie”. Przy zmianie tożsamości guard
+zostawia schemat zamiast usuwać obcy cel. Brak współbieżności xdist/reuse jest
+zamierzony. Ochrona dotyczy pomyłki operatora w zaufanym runnerze, nie złośliwego
+kodu tego samego UID lub administratora PostgreSQL podmieniającego zasoby.
+
+### Zakres lokalnego dowodu
+
+Regresje używają fake DB/engine i prawdziwych generatorów fixture. Pozwalają
+sprawdzić odmowę przed I/O, kolejność identity/DDL, sprzątanie zasobów i redakcję
+błędów, ale **nie poświadczają działania na realnym PostgreSQL**.
+Po osobnej zgodzie standardowe CI musi potwierdzić pozytywną ścieżkę na swoich
+nowych serwisach i pełne grupy bez skipów; lokalne wyniki nie zastępują tego gate.
