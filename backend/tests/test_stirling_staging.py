@@ -16,6 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 from pypdf import PdfReader
 
 from app import worker
+from app.documents import ocr_pipeline
 
 COMPOSE = Path(__file__).resolve().parents[2] / "ops/stirling/staging.compose.yaml"
 
@@ -131,7 +132,9 @@ def test_actual_stirling_nonroot_ocr_and_shutdown(tmp_path, monkeypatch):
             assert "pol" in languages.splitlines() and "eng" in languages.splitlines()
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 64)
             monkeypatch.setattr(
-                worker, "STIRLING_IMG_TO_PDF_URL", f"http://{address}:8080/api/v1/convert/img/pdf"
+                ocr_pipeline,
+                "STIRLING_IMG_TO_PDF_URL",
+                f"http://{address}:8080/api/v1/convert/img/pdf",
             )
 
             async def convert_image(path, content):

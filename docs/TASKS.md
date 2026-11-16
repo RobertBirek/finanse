@@ -2,7 +2,30 @@
 
 Backlog zadań ze statusami.
 
-## Kontrole developerskie bieżącego worktree — gotowe lokalnie (2026-11-16)
+## Endpoint staging OCR — lokalna poprawka (2026-11-16)
+
+- [x] Zgoda na 2 pliki testowe i 3 wpisy sesji, bez DB/Docker/aplikacji/workflow.
+- [x] Dwie regresje błędnego adresu RED → GREEN po podmianie w `ocr_pipeline`.
+- [x] 18 testów offline PASS (regresja, klient OCR, worker), Ruff i mypy 2 plików
+  PASS; budżet walidacji 56.14/60 s.
+- [x] Jeden readonly review bez uwag, domknięcie dokumentacji i lokalny commit.
+- [ ] Push/CI/merge lub właściwy staging Docker wymagają odrębnej zgody.
+
+## Pozostałe porządki — kwalifikacja odczytowa (2026-11-16)
+
+- [x] Potwierdzić main `5c41538` i zielone CI po PR #8; porównywać aktualne drzewo.
+- [x] Ocenić pozostałe znane kandydaty bez testów, DB/Docker lub zmian kodu.
+- [x] Zatwierdzić mały fix adresu staging OCR i regresję offline:
+  `test_stirling_staging.py` podmienia kopię stałej w workerze, a wywoływana
+  funkcja czyta globalną z `ocr_pipeline`. Dwa pliki testowe plus wpisy sesji;
+  bez rzeczywistego Docker/OCR gate, aplikacji, conftest lub workflow.
+- [ ] Osobny plan fail-closed ownership guard dla lokalnych fixture DB przed
+  bezpośrednim pełnym pytest. Localhost i nazwa finanse_test nie dowodzą własności;
+  obecne zabezpieczenia ephemeral CI i kolekcji offline zachować.
+- [ ] Rozstrzygnąć LD_LIBRARY_PATH i DTZ007 bez narzucania fikcyjnej strefy CSV.
+- [ ] A2/pilot DB nadal wymagają oddzielnych decyzji; nie przenosić starej gałęzi.
+
+## Kontrole developerskie bieżącego worktree — zakończone na main (2026-11-16)
 
 - [x] Readonly przegląd starej gałęzi: aplikacja i migracje odpowiadają main;
   nie scalać całej gałęzi ani nie przenosić A2/pilota DB.
@@ -18,7 +41,9 @@ Backlog zadań ze statusami.
   niebędące Pythonem; 6 regresji RED→GREEN, commit `f2124e5`.
 - [ ] Opcjonalne: jawnie zweryfikowany/nieprzekazywany `LD_LIBRARY_PATH` kolekcji;
   Minor z review, odłożony bez rozszerzenia zakresu.
-- [ ] Osobna zgoda na push/draft PR i jego standardowy CI; bez merge/deployu.
+- [x] Osobna zgoda, push/draft PR #8, potem zgoda na ready/merge:
+  `5c41538`, PR CI 43844812912 i main CI 43849753879 po 11/11 jobów PASS.
+  Bez deployu.
 
 ## CI-health — zakończone na main (2026-11-16)
 
@@ -29,8 +54,8 @@ Backlog zadań ze statusami.
   jeden E2E skip pozostaje jawny.
 - [x] Zweryfikować pobrane manifesty, dzienniki, JUnit i statusy jobów; max job 406 s.
 - [x] Skondensować notatki do [raportu](audits/2026-11-16-ci-health.md) i dokumentów sesji.
-- [~] Osobny docs-only PR; bez zmian kodu, merge i deployu w tym etapie.
-- [ ] Po osobnej zgodzie porównać starą dużą gałąź z main tylko do odczytu
+- [x] Osobny docs-only PR #7 scalony jako `fccf5d1`, CI zielone; bez deployu.
+- [x] Po osobnej zgodzie porównać starą dużą gałąź z main tylko do odczytu
   i wybrać następny mały zakres. Nie scalać jej w całości.
 
 W tej sesji nie wdrażano aplikacji ani nie zmieniano danych produkcyjnych.
