@@ -2,6 +2,53 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-16 — Mała poprawka adresu staging OCR i regresja offline
+
+- Zgoda użytkownika na lokalną poprawkę: 2 pliki testowe i te 3 wpisy sesji.
+  Istniejący izolowany worktree, nowa gałąź `fix/stirling-staging-endpoint`
+  z main `5c41538`. Bez nowego repo planu/spec lub osobnego docs-only PR.
+- Test AST odczytuje jeden rzeczywisty monkeypatch z test_stirling_staging,
+  wykonuje tylko tę instrukcję i wywołuje helper przez dotychczasowy alias workera.
+  Dwa adresy dokumentacyjne, wszystkie żądania httpx.MockTransport, bez HTTP,
+  fixture DB, Docker lub wywołania funkcji całego testu stagingowego.
+- RED2: żądanie trafiało pod kontrolny wrong-endpoint.invalid. Poprawiono
+  target podmiany z workera na ocr_pipeline, zgodnie z globals helpera.
+  Końcowo 18 testów offline PASS (nowa regresja + klient OCR + worker),
+  lint i mypy obu zmienionych plików PASS; budżet 56.14/60 s.
+- Jawny wąski noqa S102: exec dotyczy wybranej instrukcji z zaufanego pliku
+  testowego repo, nie danych użytkownika. Nie uruchamia całego modułu stagingu.
+- Jeden końcowy review readonly: bez uwag Critical/Important/Minor; potwierdzona
+  właściwa regresja adresu i odtwarzanie monkeypatch. Brak zmian aplikacji, conftest, workflow,
+  zależności, startu usług, DB, Docker, push, CI, merge lub deployu.
+  To dowód poprawnego przekierowania endpointu, nie certyfikacja OCR/geometrii
+  lub uprawnień rzeczywistego kontenera. Pełny staging wymaga osobnej zgody.
+- Uwaga pozostawiona poza oceną review: faktyczny Docker/OCR gate. Nie rozstrzygamy
+  jego gotowości na podstawie testu offline; koszt pomylenia zakresów to brak
+  wykrycia problemów rzeczywistego runtime, więc nie deklarujemy certyfikacji.
+- Ledger/budżet: `/tmp/opencode/stirling-staging-endpoint-20261116/run-01/`.
+
+## 2026-11-16 — Ocena dalszych porządków po scaleniu PR #8
+
+- Użytkownik zatwierdził publikację i osobno merge. PR #8 scalony `5c41538`,
+  drzewo zgodne z `ed72a99`; PR CI43844812912 i main CI43849753879:11/11 PASS.
+  Bez deployu i zmian starych worktree. Nowa zgoda: ocenić potrzebne dalsze porządki.
+- Ocena wyłącznie statyczna: test OCR podmienia worker.STIRLING_IMG_TO_PDF_URL,
+  podczas gdy importowana funkcja ma globals w ocr_pipeline. Rekomendowany
+  mały fix z regresją offline, bez startowania Docker lub odpytywania usług.
+  Nie deklarować wykonania prawdziwego OCR gate na podstawie zielonego CI.
+- Większy istotny temat: globalna fixture DB weryfikuje adres/port/nazwę, potem
+  create_all/drop_all, bez lokalnego dowodu własności. Osobny plan bezpieczeństwa
+  przed pełnym lokalnym pytest; obecne ephemeral CI i offline /test zachować.
+- Minor LD_LIBRARY_PATH nadal odłożony. DTZ007: ING/Velo zwracają date;
+  Revolut jawnie ostrzega o braku strefy i zachowuje źródłowe strings. Nie
+  dopisywać UTC lub zmieniać dat tylko dla lintera. Historyczny task nadal otwarty.
+- A2 i stary pilot DB nie są zwykłym małym PR; brak przenoszenia lub wykonywania.
+  Raport: `/tmp/opencode/remaining-cleanup-review-20261116/report.md`.
+- W tej ocenie nie uruchomiono testów, aplikacji, lint/typecheck, DB, Docker,
+  nowego CI, commitów, push lub deployu. Tylko te trzy lokalne wpisy sesji
+  pozostają do włączenia do następnego zatwierdzonego zakresu; bez nowego
+  osobnego docs-only PR. Następny krok: zatwierdzić fix OCR z regresją offline.
+
 ## 2026-11-16 — Dev checks domknięte lokalnie po jednym review
 
 - Użytkownik zatwierdził wznowienie i poprosił o przejście do nowych funkcji.

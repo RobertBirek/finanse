@@ -2,6 +2,32 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Lokalne, zweryfikowane] — 2026-11-16 — Właściwy endpoint staging OCR
+
+### Fixed
+- Test staging OCR podmienia adres konwersji w `ocr_pipeline`, gdzie funkcja
+  odczytuje stałą, zamiast w kopii importowanej do workera.
+- Regresja offline wykonuje rzeczywistą podmianę z testu stagingowego i sprawdza
+  URL żądania prawdziwego helpera przez MockTransport: 2 RED → GREEN.
+
+### Added
+- Powiązane kontrole offline: 18 testów PASS, lint i mypy obu plików PASS.
+  Bez wykonania rzeczywistego stagingu/OCR, DB, Docker, push, CI lub deployu.
+  Jeden readonly review bez uwag Critical/Important/Minor.
+
+## [Main, 5c41538; ocena lokalna] — 2026-11-16 — Domknięcie dev checks i kolejne porządki
+
+### Changed
+- PR #8 scalony jako `5c41538`; PR CI 43844812912 oraz main CI 43849753879:
+  11/11 jobów PASS. Bez wdrożenia; stare worktree zachowane.
+- Odczytowa ocena pozostałych prac: błędny cel monkeypatch adresu konwersji
+  w staging teście OCR; osobne ryzyko braku ownership guard lokalnej fixture DB.
+  Nie wykonywano testów lub operacji na usługach w tym przeglądzie.
+- Następny mały zakres zatwierdzony lokalnie: poprawka testu OCR i regresja
+  offline, bez Docker, zmian aplikacji, globalnego conftest i workflow.
+- Te lokalne wpisy dołączyć do następnego zatwierdzonego zakresu;
+  nie tworzyć osobnego docs-only PR wyłącznie dla odbioru PR #8.
+
 ## [Lokalne, bez publikacji] — 2026-11-16 — Kontrole bieżącego worktree
 
 ### Added
