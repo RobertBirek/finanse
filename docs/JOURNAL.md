@@ -2,6 +2,20 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-16 — Zatwierdzone wydanie BO; przygotowanie
+
+- User polecił pushmain/deploy, następnie zatwierdził sześć kroków wraz z
+  migracją BO=0 i przerwą. Feature `ee21930`, remote main `d8b676f`; merge
+  tylko w naszym host-owned worktree. Konflikty wyłącznie3docs, oba wpisy zachowane.
+- Aktualny main dodaje CIpermit/identityguard testDB. Nie tworzymy ręcznie
+  permitu lokalnego; standardowe kontrole lokalnie, pełna realna testDB w CI.
+- Live nadal `e0e746e`, schema `2c77e935ee39`, aktywny override
+  `/opt/finanse/webapp/releases/people-gifts-e0e746e/compose.active.yaml`.
+  Nie stosować bareCompose; zachować bieżące user10001/mounty/hardening.
+- Plan: `superpowers/plans/2026-11-16-opening-balances-production.md`.
+  Nowe prywatne dowody: `/tmp/opencode/opening-balances-deploy-20261116/`.
+  Brak produkcyjnej migracji lub przełączenia na tym etapie.
+
 ## 2026-11-16 — BO każdego konta; lokalnie zweryfikowane, bez wdrożenia
 
 - Użytkownik zatwierdził spec/plan `2026-11-16-account-opening-balances`,
@@ -46,6 +60,65 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   backup/restore oraz produkcyjny zerowy backfill. Produkcyjne konta bez zmian.
   Raport: `audits/2026-11-16-account-opening-balances-local.md`.
   Ledger: `.superpowers/sdd/2026-11-16-account-opening-balances/progress.md`.
+## 2026-11-16 — Lokalne guardy lifecycle DB, bez rzeczywistego PostgreSQL
+
+- Użytkownik zatwierdził Native/offline, nie realne DB/push/CI. Nowa gałąź
+  `fix/test-database-ownership-guard` w istniejącym izolowanym worktree, od c960d9c.
+- Task1 helper/issuer/identity:53 RED→53 GREEN, commit `e70ec0b`.
+  Permit prywatny/nadpisanie zabronione, ścisły cel i kontekst run/group/commit,
+  fixed SQL identity i COMMENT z serwerowym literalem, nonce nie jest sekretem.
+- Task2 wejścia root/category/colors/migrations/Alembic i CIpreflight:
+  23 RED→GREEN, dodatkowe próby podmiany celu i odmowy subprocess, commit `d3d09ba`.
+  Zachowane role/porty/grupy/limity CI; issuer tylko nowego już utworzonego joba.
+  Alembic helper async, blocking subprocess wykonany przez asyncio.to_thread.
+- Zatwierdzona selekcja offline po review177 PASS; pełny Ruff app/tests/ci_tools PASS.
+  Mypy9 zmienionych plików PASS z follow-imports=silent/ignore-missing-imports
+  (brak stubów asyncpg), uwaga o istniejącym nietypowanym body i ostrzeżenie
+  DeprecationWarning passlib/crypt jawne. Bez obchodzenia kontroli lub skipowania.
+- Fixture generatory i flow są rzeczywiste, połączenia/engine/procesy zastąpione
+  atrapami. Proces nadrzędny pytest ma audit hook odrzucający socket.connect.
+  Brak rzeczywistej DB/DDL/Docker/push/CI/merge/deploy; budżet131.56/180s.
+- Jeden readonly review: bez Critical/Important. Uwaga Minor o umask została
+  potraktowana jako problem niezawodności kontraktu0600: faktyczny mode000 pod
+  umask0777 potwierdzony RED, fchmod deskryptora daje GREEN i całą selekcję177PASS;
+  commit `abffa64`. Bez drugiego review; brak odłożonych findings tego przeglądu.
+- Lokalny provisioner i
+  test pozytywny na realnym PostgreSQL nie są dostarczone ani certyfikowane.
+  Następny gate po zgodzie na publikację: standardowe CI na nowych własnych usługach.
+- Przyjęte granice review: złośliwy same-UID/adminPG i TOCTOU poza modelem;
+  realny PostgreSQL nieoceniany offline; końcowe docs sprawdzone przez autora,
+  nie niezależnie przez reviewera. Nie sugerować sandboxa lub certyfikacji runtime.
+- Ledger `/tmp/opencode/test-db-ownership-impl-20261116/run-01/`, zakres max15plików.
+
+## 2026-11-16 — Plan ochrony lifecycle DB po odbiorze OCR na main
+
+- PR #9 scalony po zgodach użytkownika jako `c960d9c`, drzewo zgodne z `81f6bdb`.
+  PR CI43855673004 i main CI43858583429: 11/11 PASS. Bez deployu/actual OCR.
+- Następna zgoda użytkownika obejmuje przygotowanie planu ochrony lokalnych
+  testów DB, bez połączeń do istniejących baz. Plan w superpowers/plans,
+  jeden readonly review bezpieczeństwa/wykonalności zakończony.
+- Inwentaryzacja wykazała, że sam guard globalnego conftest nie wystarczy:
+  kategorie nadpisują fixture, kolory mają własny lifecycle bez obowiązkowego
+  integration marker, migracje tworzą child DB, a sesje uruchamiają Alembic.
+- Propozycja: prywatny permit danego uruchomienia bez credentiali, domyślna
+  odmowa przed I/O, rzeczywista identity PostgreSQL przed DDL i teardown.
+  Początkowo issuer tylko w już istniejącym nowym ephemeral jobie CI.
+  Brak lokalnego provisionera jest jawną odmową testów mutujących, nie trybem
+  „ufaj localhost”. Unit/collect pozostają offline i nie wymagają permitu.
+- Stary owned_schema_pilot nie jest rozwiązaniem tej bramki: opt-in reuse
+  zostawia dotychczasowy fallback; nie kopiować helpera lub conftest.
+  Bez planowania TRUNCATE, przyspieszania suite lub wdrożeń.
+- Zakres proponowany15 plików łącznie. Ta sesja: tylko plan i wpisy sesji,
+  bez implementacji, testów, importów aplikacji, DB, Docker, commitów, push/CI.
+  Zgoda na planowanie nie upoważnia do CREATE/DROP, nawet syntetycznego środowiska.
+- Następny krok: uwagi review i zatwierdzenie planu oraz jawnego wpływu na
+  lokalne testy. Artefakty `/tmp/opencode/test-db-ownership-plan-20261116/run-01/`.
+- Trzy Important uwagi planu uwzględnione: COMMENT wykorzystuje stałą nazwę bazy
+  i serwerowy quote_literal z parametrem SELECT; `MigrationDatabase.migrate()`
+  sprawdza immutable child identity przed każdym spawn; final permit powstaje
+  atomowo/exclusive w nowym prywatnym katalogu i nie nadpisuje istniejącego pliku.
+  Przypisano nazwane testy odmów. Komentarz nonce nie jest tajnym credentialem.
+  Nadal brak implementacji, uruchomienia testów lub połączeń DB.
 
 ## 2026-11-16 — Mała poprawka adresu staging OCR i regresja offline
 

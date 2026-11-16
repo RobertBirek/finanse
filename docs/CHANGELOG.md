@@ -2,6 +2,15 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Integracja i wdrożenie zatwierdzone; w toku] — 2026-11-16 — BO
+
+### Changed
+- Użytkownik zatwierdził push main, spójny rollout trzech aplikacji, backup/restore
+  i migrację `efaf78432563` z BO=0 bez zmiany sald/historii. Plan:
+  `docs/superpowers/plans/2026-11-16-opening-balances-production.md`.
+- Integracja `ee21930` z `d8b676f` zachowuje nowe zabezpieczenia testDB.
+  Produkcja pozostaje na `e0e746e`/schema2c do przejścia bramek wydania.
+
 ## [Lokalnie zweryfikowane; bez wdrożenia] — 2026-11-16 — BO każdego konta
 
 ### Added
@@ -23,6 +32,29 @@ Wszystkie istotne zmiany w projekcie.
   Własne cztery bezportowe PG usunięte po sprawdzeniu tożsamości i bezczynności.
 - Bez merge/push, migracji produkcyjnej lub zmian sald użytkownika.
   Raport: `docs/audits/2026-11-16-account-opening-balances-local.md`.
+## [Lokalne, zweryfikowane offline] — 2026-11-16 — Ochrona lifecycle baz testowych
+
+### Added
+- [Plan guardów DB](superpowers/plans/2026-11-16-test-database-ownership-guard.md):
+  domyślna odmowa bez pozwolenia uruchomienia, tożsamość PostgreSQL przed DDL
+  i cleanup, osobne wejścia kategorii/kolorów/migracji oraz Alembic.
+- Pierwszy etap zakłada pozwolenie tylko dla nowego ephemeral serwisu CI;
+  lokalny provisioner/pilot DB i reuse pozostają poza zakresem.
+- Po readonly review doprecyzowano SQL COMMENT, kontrolę child DB przed każdym
+  subprocess migracji i jednorazową publikację permit bez nadpisywania.
+- Po zgodzie wdrożono lokalnie helper/issuer oraz bramki global/category/colors/
+  migration/Alembic. Commity `e70ec0b`, `d3d09ba`.
+- Walidacja offline177 PASS, pełny Ruff backendu PASS, mypy9 zmienionych plików
+  PASS; zastane ostrzeżenie passlib/crypt i uwaga mypy pozostają jawne.
+- Jeden readonly review: bez Critical/Important. Zgłoszony problem uprawnień
+  permitu pod restrykcyjnym umask poprawiony RED→GREEN (`abffa64`).
+
+### Changed
+- PR #9 scalony jako `c960d9c`; PR CI43855673004 i main CI43858583429:
+  po 11/11 jobów PASS. Bez deployu i rzeczywistego Docker/OCR stagingu.
+- Implementacja i weryfikacja lokalne używają atrap DB, bez rzeczywistych połączeń,
+  DDL, Docker, push, nowego CI lub wdrożenia. Pozytywna ścieżka realnego
+  PostgreSQL wymaga osobno zatwierdzonego standardowego CI przed merge.
 
 ## [Lokalne, zweryfikowane] — 2026-11-16 — Właściwy endpoint staging OCR
 

@@ -9,6 +9,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from tests.database_safety import load_permit, verify_sqlalchemy
+
 DEFAULT_TEST_DATABASE_URL = "postgresql+asyncpg://finanse:finanse@localhost:5432/finanse_test"
 SAFE_TEST_DATABASE_HOSTS = {"localhost", "127.0.0.1"}
 SAFE_TEST_DATABASE_PORTS = {5432, 55432}
@@ -76,11 +78,7 @@ async def test_database(request):
         yield None
         return
 
-    if not is_safe_test_database_url(TEST_DATABASE_URL):
-        pytest.skip(
-            "Unsafe TEST_DATABASE_URL: integration schema create/drop requires a local "
-            "PostgreSQL database named finanse_test on port 5432 or 55432"
-        )
+    permit = load_permit(TEST_DATABASE_URL, os.environ)
 
     from app import database as app_database
     from app.database import Base
@@ -90,13 +88,16 @@ async def test_database(request):
     previous_engine = app_database.engine
     previous_session_factory = app_database.async_session_factory
     try:
-        engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+        engine = create_async_engine(
+            TEST_DATABASE_URL, echo=False, connect_args={"timeout": 5, "command_timeout": 5}
+        )
         app_database.engine = engine
         app_database.async_session_factory = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
         try:
             async with engine.begin() as conn:
+                await verify_sqlalchemy(conn, permit)
                 await conn.run_sync(Base.metadata.create_all)
             schema_created = True
         except (OperationalError, OSError) as exc:
@@ -117,6 +118,7 @@ async def test_database(request):
             try:
                 if schema_created:
                     async with engine.begin() as conn:
+                        await verify_sqlalchemy(conn, permit)
                         await conn.run_sync(Base.metadata.drop_all)
             finally:
                 await engine.dispose()

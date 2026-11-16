@@ -116,6 +116,14 @@ def assert_backend_workflow(workflow: dict[str, Any]) -> None:
     download = _action(tests, "actions/download-artifact@v4")
     assert steps.index(download) < steps.index(images) < steps.index(preflight)
     assert 'test "$(( $(date +%s) - CI_PREP_STARTED ))" -le 300' in preflight["run"]
+    assert tests["env"].get("ADVISOR_TEST_DB_GROUP") == "${{ matrix.group }}"
+    assert 'export ADVISOR_TEST_DB_COMMIT="$(git rev-parse HEAD)"' in preflight["run"]
+    assert 'mktemp -d "$RUNNER_TEMP/advisor-test-db.XXXXXXXX"' in preflight["run"]
+    assert "await issue_ci_permit(" in preflight["run"]
+    assert '>> "$GITHUB_ENV"' in preflight["run"]
+    assert preflight["run"].index("await issue_ci_permit(") < preflight["run"].index(
+        'echo "ADVISOR_TEST_DB_PERMIT='
+    )
     pg = tests["services"]["postgres"]
     assert pg["image"] == "postgres:16-alpine"
     assert pg["ports"] == ["127.0.0.1:5432:5432"]
