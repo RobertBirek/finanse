@@ -2,6 +2,24 @@
 
 Backlog zadań ze statusami.
 
+## Ochrona lokalnych fixture DB — gotowe lokalnie offline (2026-11-16)
+
+- [x] Inwentaryzacja create/drop globalnej fixture, overrides kategorii/kolorów,
+  parent/child migracji i osobnego subprocess Alembic; bez połączeń DB.
+- [x] [Proponowany plan](superpowers/plans/2026-11-16-test-database-ownership-guard.md):
+  11 plików funkcjonalnych/operacyjnych + plan i 3 wpisy sesji, maksymalnie15.
+- [x] Jeden readonly review planu; doprecyzować SQL COMMENT, identity przed każdym
+  Alembic child migration i publikację permit bez nadpisania istniejącego pliku.
+- [x] Zatwierdzić plan i nowy kontrakt: brak pozwolenia to błąd przed I/O, lokalne
+  testy mutujące DB nie zostają automatycznie odblokowane; unit/collect bez DB.
+- [x] Native/TDD offline, zachowane ephemeral CI i istniejące guardy migracji:
+  `e70ec0b`, `d3d09ba`; po poprawce review końcowo177 PASS,
+  pełny Ruff PASS i mypy9 plików PASS, budżet131.56/180s.
+- [x] Jeden readonly review bezpieczeństwa, poprawka umask0600 RED→GREEN (`abffa64`)
+  i lokalne domknięcie docs. Bez otwartych findings z tego review.
+- [ ] Osobne zgody na push/CI, ewentualny prawdziwy nowy lokalny klaster i merge.
+  Nie przenosić starego pilota schema reuse ani nie włączać fallbacku.
+
 ## Endpoint staging OCR — lokalna poprawka (2026-11-16)
 
 - [x] Zgoda na 2 pliki testowe i 3 wpisy sesji, bez DB/Docker/aplikacji/workflow.
@@ -9,7 +27,9 @@ Backlog zadań ze statusami.
 - [x] 18 testów offline PASS (regresja, klient OCR, worker), Ruff i mypy 2 plików
   PASS; budżet walidacji 56.14/60 s.
 - [x] Jeden readonly review bez uwag, domknięcie dokumentacji i lokalny commit.
-- [ ] Push/CI/merge lub właściwy staging Docker wymagają odrębnej zgody.
+- [x] Zgody, PR #9 i merge `c960d9c`; PR CI43855673004 i main CI43858583429:
+  11/11 jobów PASS, bez deployu.
+- [ ] Właściwy staging Docker/OCR nie był wykonywany; wymaga osobnej zgody.
 
 ## Pozostałe porządki — kwalifikacja odczytowa (2026-11-16)
 

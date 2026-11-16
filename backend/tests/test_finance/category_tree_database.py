@@ -24,6 +24,7 @@ from app.finance.models import (
 from app.identity.models import User
 from app.main import app as _app  # noqa: F401 - register full metadata, no lifespan
 from tests.conftest import is_safe_test_database_url
+from tests.database_safety import load_permit, verify_sqlalchemy
 from tests.test_finance.category_tree_cases import cases, uid
 
 
@@ -66,29 +67,45 @@ async def test_database(request: pytest.FixtureRequest) -> AsyncIterator[AsyncEn
         return
     url = os.environ["TEST_DATABASE_URL"]
     assert is_safe_test_database_url(url), "Refusing non-local/non-test schema lifecycle"
+    permit = load_permit(url, os.environ)
     schema = "category_tree_test_" + uuid4().hex
-    admin = create_async_engine(url, echo=False)
-    engine = create_async_engine(
-        url, echo=False, connect_args={"server_settings": {"search_path": schema}}
-    )
+    admin = create_async_engine(url, echo=False, connect_args={"timeout": 5, "command_timeout": 5})
+    engine = None
     created = False
     try:
+        engine = create_async_engine(
+            url,
+            echo=False,
+            connect_args={
+                "timeout": 5,
+                "command_timeout": 5,
+                "server_settings": {"search_path": schema},
+            },
+        )
         async with admin.begin() as db:
+            await verify_sqlalchemy(db, permit)
             await db.execute(text(f'CREATE SCHEMA "{schema}"'))
-        created = True
         async with engine.begin() as db:
+            await verify_sqlalchemy(db, permit)
             await db.run_sync(Base.metadata.create_all)
             await db.execute(
                 text("CREATE TABLE alembic_version (version_num varchar(32) PRIMARY KEY)")
             )
             await db.execute(text("INSERT INTO alembic_version VALUES ('7b57f2f0bde6')"))
+        created = True
         yield engine
     finally:
-        await engine.dispose()
-        if created:
-            async with admin.begin() as db:
-                await db.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
-        await admin.dispose()
+        try:
+            if engine is not None:
+                await engine.dispose()
+        finally:
+            try:
+                if created:
+                    async with admin.begin() as db:
+                        await verify_sqlalchemy(db, permit)
+                        await db.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+            finally:
+                await admin.dispose()
 
 
 async def seed_owner(db: AsyncSession, *, source_tree: bool = True) -> UUID:

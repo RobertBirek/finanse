@@ -37,6 +37,7 @@ from app.finance.service import (
 from app.identity.router import get_current_user
 from app.main import app
 from tests.conftest import is_safe_test_database_url
+from tests.database_safety import load_permit, verify_sqlalchemy
 
 
 @pytest_asyncio.fixture
@@ -46,26 +47,38 @@ async def color_db_session() -> AsyncGenerator[AsyncSession]:
     )
     if not is_safe_test_database_url(database_url):
         raise ValueError("Unsafe color test database")
+    permit = load_permit(database_url, os.environ)
     schema = f"account_category_colors_{uuid.uuid4().hex}"
     engine = create_async_engine(
-        database_url, pool_pre_ping=True, connect_args={"server_settings": {"search_path": schema}}
+        database_url,
+        pool_pre_ping=True,
+        connect_args={
+            "timeout": 5,
+            "command_timeout": 5,
+            "server_settings": {"search_path": schema},
+        },
     )
     created = False
     try:
         async with engine.begin() as connection:
+            await verify_sqlalchemy(connection, permit)
             await connection.execute(text(f'CREATE SCHEMA "{schema}"'))
-            created = True
             await connection.execute(text(f'SET search_path TO "{schema}"'))
+            await verify_sqlalchemy(connection, permit)
             await connection.run_sync(Base.metadata.create_all)
+        created = True
         session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
         async with session_factory() as session:
             await session.execute(text(f'SET search_path TO "{schema}"'))
             yield session
     finally:
-        if created:
-            async with engine.begin() as connection:
-                await connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
-        await engine.dispose()
+        try:
+            if created:
+                async with engine.begin() as connection:
+                    await verify_sqlalchemy(connection, permit)
+                    await connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        finally:
+            await engine.dispose()
 
 
 def test_color_schemas_accept_only_canonical_hex_or_null() -> None:

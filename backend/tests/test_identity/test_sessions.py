@@ -16,15 +16,20 @@ from app.identity.models import Session, User
 from app.identity.service import create_session, get_active_session, revoke_session
 from app.work.schemas import ProjectCreate
 from app.work.service import create_project
+from tests.database_safety import load_permit, verify_target
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 SESSION_REVISION = "c9d8e7f6a5b4"
 SESSION_PREDECESSOR = "1dbfe88dfb1b"
 
 
-def run_alembic(*arguments: str) -> None:
+async def run_alembic(*arguments: str) -> None:
+    url = os.environ["TEST_DATABASE_URL"]
+    permit = load_permit(url, os.environ)
+    await verify_target(url, permit)
     environment = os.environ | {"DATABASE_URL": os.environ["TEST_DATABASE_URL"]}
-    subprocess.run(
+    await asyncio.to_thread(
+        subprocess.run,
         [sys.executable, "-m", "alembic", *arguments],
         cwd=BACKEND_DIR,
         env=environment,
@@ -34,8 +39,8 @@ def run_alembic(*arguments: str) -> None:
     )
 
 
-def test_run_alembic_uses_current_interpreter_and_test_database(monkeypatch):
-    from unittest.mock import Mock
+async def test_run_alembic_uses_current_interpreter_and_test_database(monkeypatch):
+    from unittest.mock import AsyncMock, Mock
 
     run = Mock()
     database_url = "postgresql+asyncpg://finanse:finanse@127.0.0.1:5432/finanse_test"
@@ -43,8 +48,15 @@ def test_run_alembic_uses_current_interpreter_and_test_database(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "must-not-be-used")
     monkeypatch.setattr(subprocess, "run", run)
     monkeypatch.setattr(sys, "executable", "/isolated-python/bin/python")
+    permit = object()
+    load = Mock(return_value=permit)
+    verify = AsyncMock()
+    monkeypatch.setattr(sys.modules[__name__], "load_permit", load)
+    monkeypatch.setattr(sys.modules[__name__], "verify_target", verify)
 
-    run_alembic("stamp", SESSION_REVISION)
+    await run_alembic("stamp", SESSION_REVISION)
+    load.assert_called_once_with(database_url, os.environ)
+    verify.assert_awaited_once_with(database_url, permit)
 
     run.assert_called_once_with(
         ["/isolated-python/bin/python", "-m", "alembic", "stamp", SESSION_REVISION],
@@ -191,8 +203,8 @@ async def test_authenticated_transaction_holds_session_lock_until_domain_mutatio
 
 @pytest.mark.integration
 async def test_server_side_session_migration_backfills_legacy_rows_and_cycles(db_session):
-    run_alembic("stamp", SESSION_REVISION)
-    run_alembic("downgrade", SESSION_PREDECESSOR)
+    await run_alembic("stamp", SESSION_REVISION)
+    await run_alembic("downgrade", SESSION_PREDECESSOR)
     predecessor_columns, predecessor_indexes = await get_session_schema(db_session)
     assert predecessor_columns["token_hash"] == ("character varying", "NO", 255)
     assert "csrf_token_hash" not in predecessor_columns
@@ -220,7 +232,7 @@ async def test_server_side_session_migration_backfills_legacy_rows_and_cycles(db
         )
     await db_session.commit()
 
-    run_alembic("upgrade", SESSION_REVISION)
+    await run_alembic("upgrade", SESSION_REVISION)
     rows = (
         await db_session.execute(
             text("SELECT token_hash, csrf_token_hash, revoked_at FROM sessions ORDER BY id")
@@ -249,7 +261,7 @@ async def test_server_side_session_migration_backfills_legacy_rows_and_cycles(db
             )
 
     await db_session.rollback()
-    run_alembic("downgrade", SESSION_PREDECESSOR)
+    await run_alembic("downgrade", SESSION_PREDECESSOR)
     downgraded_columns, downgraded_indexes = await get_session_schema(db_session)
     assert downgraded_columns["token_hash"] == ("character varying", "NO", 255)
     assert "csrf_token_hash" not in downgraded_columns
@@ -257,7 +269,7 @@ async def test_server_side_session_migration_backfills_legacy_rows_and_cycles(db
     assert "last_seen_at" not in downgraded_columns
     assert "ix_sessions_token_hash" not in downgraded_indexes
 
-    run_alembic("upgrade", SESSION_REVISION)
+    await run_alembic("upgrade", SESSION_REVISION)
     upgraded_again_columns, upgraded_again_indexes = await get_session_schema(db_session)
     assert upgraded_again_columns["token_hash"] == ("character varying", "NO", 64)
     assert upgraded_again_columns["csrf_token_hash"] == ("character varying", "NO", 64)
