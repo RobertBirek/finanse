@@ -256,6 +256,7 @@ def _publish(directory: int, name: str, permit: DatabasePermit) -> None:
     )
     try:
         with os.fdopen(descriptor, "w") as stream:
+            os.fchmod(stream.fileno(), 0o600)
             json.dump(asdict(permit), stream)
             stream.flush()
             os.fsync(stream.fileno())

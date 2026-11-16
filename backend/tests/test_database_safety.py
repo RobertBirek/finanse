@@ -267,6 +267,23 @@ async def test_comment_uses_fixed_database_and_server_quoted_nonce(
     safety.check_identity(safety.load_permit(URL, environment(path)), pg.row)
 
 
+async def test_permit_mode_is_0600_even_with_restrictive_umask(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    safety = module()
+    tmp_path.chmod(0o700)
+    pg = FakePostgres(fresh=True)
+    monkeypatch.setattr(safety.asyncpg, "connect", AsyncMock(return_value=pg))
+    path = tmp_path / "permit.json"
+    previous = os.umask(0o777)
+    try:
+        await safety.issue_ci_permit(URL, path, CONTEXT)
+    finally:
+        os.umask(previous)
+    assert path.stat().st_mode & 0o777 == 0o600
+    safety.check_identity(safety.load_permit(URL, environment(path)), pg.row)
+
+
 @pytest.mark.parametrize("symlink", [False, True])
 async def test_issuer_refuses_existing_destination_before_io(
     permit_file: Path, monkeypatch: pytest.MonkeyPatch, symlink: bool
