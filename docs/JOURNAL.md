@@ -2,6 +2,30 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-16 — CI-health na main; dokumentacja w osobnym PR
+
+- Cel: usunąć blokery CI bez przenoszenia starej, 124-plikowej gałęzi.
+  Wyodrębniono 14 plików; po diagnozie E2E zakres wzrósł do 15.
+- PR #6 obejmuje `77bb8f6`, `4eb40a7` i `38cddaa`. Po zgodzie użytkownika
+  scalono go przez GitHub jako `f6fefd7`; drzewo odpowiada zielonemu PR CI.
+- Backend: kolekcja w netns, osiem grup, dziennik faz i gate odrzucający
+  brakujące wyniki lub skipy. Hosted userns odrzucał `uid_map`; sudo tworzy
+  netns, a setpriv obniża uprawnienia przed Pythonem. Obrazy proxy pobiera
+  etap przygotowania; fixture nadal używa lokalnych image IDs i `--pull=never`.
+- Frontend: `follow-redirects@1.16.3`, override `minimatch@11.0.8`;
+  E2E czeka na zamknięcie edycji przed reload, bez zmiany timeoutów lub retry.
+- [Main CI 43820787352](https://github.com/RobertBirek/finanse/actions/runs/43820787352):
+  attempt 1 PASS, 11 jobów, backend 2559/2559 w zakresie CI,
+  frontend 677 testów i 201 E2E PASS / 1 skip, audit 0. Max job 406 s.
+  Ponowna walidacja pobranych raportów i gate PASS.
+- Zakres dowodu i wcześniejsze blokery opisuje [raport](audits/2026-11-16-ci-health.md).
+  Nie wdrażano aplikacji, nie zmieniano danych i nie kasowano starych worktree.
+- Po zgodzie na docs-only PR utworzono osobny worktree od main `f6fefd7`.
+  Skrócono notatki do czterech plików; oryginalne lokalne notatki zachowano.
+  Ten etap nie obejmuje merge ani deployu.
+- Następna sesja: osobna decyzja o docs PR i ewentualny readonly przegląd starej
+  gałęzi. Nie uznawać bieżącego lint PASS za zamknięcie zadania Ruff DTZ007.
+
 ## 2026-11-13 — Osoby/darowizny wdrożone app-only; trwały klon zachowany
 
 - User zatwierdził nowy6stepplan po rollbackach i polecił permanentny klon.

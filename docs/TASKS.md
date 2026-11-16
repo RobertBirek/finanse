@@ -2,6 +2,23 @@
 
 Backlog zadań ze statusami.
 
+## CI-health — zakończone na main (2026-11-16)
+
+- [x] Scalić wyłącznie 15 plików CI-health przez PR #6; `main` wskazuje `f6fefd7`.
+- [x] Potwierdzić zielone CI PR i main: 11/11 jobów, 2559/2559 testów backendu
+  w zakresie CI, bez błędów, skipów i brakujących faz.
+- [x] Potwierdzić frontend: audit 0, lint/typecheck/build, 677 testów i 201 E2E PASS;
+  jeden E2E skip pozostaje jawny.
+- [x] Zweryfikować pobrane manifesty, dzienniki, JUnit i statusy jobów; max job 406 s.
+- [x] Skondensować notatki do [raportu](audits/2026-11-16-ci-health.md) i dokumentów sesji.
+- [~] Osobny docs-only PR; bez zmian kodu, merge i deployu w tym etapie.
+- [ ] Po osobnej zgodzie porównać starą dużą gałąź z main tylko do odczytu
+  i wybrać następny mały zakres. Nie scalać jej w całości.
+
+W tej sesji nie wdrażano aplikacji ani nie zmieniano danych produkcyjnych.
+Osobny punkt dotyczący 3 błędów Ruff DTZ007 w parserach pozostaje otwarty;
+zielony lint w bieżącej konfiguracji CI nie rozstrzyga tego zadania.
+
 ## Wdrożenie osób i darowizn — zakończone app-only (2026-11-13)
 
 - [x] Jawna zgoda, merge/push main `6b6d4f9`, exact app trees `e0e746e`.
@@ -19,8 +36,9 @@ Backlog zadań ze statusami.
 - [x] Trwały klon PG na polecenie użytkownika: własny wolumen/networknone/noports,
   zachowane4bazy; NIE usuwać w cleanup. Inventory `/opt/finanse/webapp/clones/people-gifts-certification/`.
 - [ ] Read-only kontrola następnego dnia; bez testowych powiązań darowizn w produkcji.
-- [ ] Pilny osobny plan zależności: CI43410274033 frontend FAILED npm audit7vulns;
-  backend CI CANCELLED. Zastane 3 RuffDTZ007 nadal nie naprawione.
+- [x] Zależności i CI: stan wyjściowy CI43410274033 miał frontend audit 7 podatności
+  i anulowany backend. Na main `f6fefd7` audit 0 i backend gate PASS; bez deployu.
+  Osobne zadanie 3 błędów Ruff DTZ007 pozostaje otwarte.
 
 ## Wdrożenie kategorii importów i oznaczeń —db3a4b3 (2026-11-12)
 
@@ -30,9 +48,9 @@ Backlog zadań ze statusami.
 - [x] Maintenance/drain/freshbackupnoretention100dc2a9…, ownedrestore/migration/rollbackcompat.
 - [x] Produkcyjna325,3apps, readsmoke/browser375/1440,29kontroli303.60s/atomicverified-live.
 - [x] Cleanupownclone/plaintext i dokumentacja odbioru, bez mutacji danych finansowych.
-- [ ] PILNE: audyt/aktualizacja zależności frontendowych. GitHubCI43306569775
-  npm audit:7podatności(6moderate/1high), follow-redirectsGHSA-mrwp-f3q8-3g9p,
-  minimatchGHSA-g3hv-75wg-m249 i devtoolchain. Nie stosować auditfix--force bez planu.
+- [x] Audyt zależności frontendowych na main: od 7 podatności w CI43306569775
+  do 0 na `f6fefd7`, po kontrolowanych zmianach zależności. Bez `audit fix --force`
+  i bez wdrożenia; [odbiór CI-health](audits/2026-11-16-ci-health.md).
 - [ ] Read-only kontrola następnego dnia; backendGitHubCI niepotwierdzony przy odbiorze.
 
 ## Wdrożenie ręcznych zwrotów —94211b2 (2026-11-12)

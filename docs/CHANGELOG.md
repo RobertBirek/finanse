@@ -2,6 +2,19 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Main, f6fefd7] — 2026-11-16 — CI-health
+
+### Fixed
+- Scalono [PR #6](https://github.com/RobertBirek/finanse/pull/6): podział backendu
+  na osiem grup, kolekcja offline, kontrola raportów i przygotowanie obrazów proxy.
+- Poprawiono zależności frontendu i synchronizację testu E2E kolorów finansowych.
+  Audit zgłosił 0 podatności; nie wykonano wdrożenia.
+
+### Added
+- Potwierdzono CI na `main`: 11 jobów PASS, 2559 testów backendu w zakresie CI,
+  677 testów frontendu oraz 201 E2E PASS i 1 skip. Każdy job trwał poniżej 20 min.
+- [Raport CI-health](audits/2026-11-16-ci-health.md) z linkami do przebiegów i zakresem dowodu.
+
 ## [Production, e0e746e] — 2026-11-13 — Osoby i historia darowizn
 
 ### Added
