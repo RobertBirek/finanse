@@ -2,7 +2,7 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
-## 2026-11-17 — Wykonanie planu preflightu Native, etap policy
+## 2026-11-17 — Wykonanie planu preflightu Native, policy i CLI
 
 - Po akceptacji planu/Native użytkownik polecił samodzielnie dobrać środowisko,
   także z możliwością instalacji. Wybrany istniejący izolowany Python:
@@ -17,7 +17,12 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Task1:39testów oczekiwanie braku modułuRED→GREEN, czysta klasyfikacja/AST.
   Ruff/mypy nowych plikówPASS; /lint /typecheck i kolekcjaPASS,707Vitest60.59sPASS.
   Nie uruchamiano fixtureDB, prawdziwego Docker/PG, odczytów produkcji lub push.
-  CLI/procedura/final review nadal przed nami; nie jest to produkcyjny odbiór.
+- Task2:45CLItestówRED(brak pliku)→GREEN, następnie2edgeRED→GREEN: dependencies
+  nie mogą udawać linii i nested migrations nie mogą znikać z grafu. V1 odrzuca
+  te formaty; brak prób auto-naprawy. 51CLI+39policy oraz43powiązaneunit=133PASS.
+  Lint/typecheck/kolekcjaPASS,707Vitest55.85sPASS; brak prawdziwegoDocker/PG.
+  Adapter active metadata proponowany i testowany syntetycznie, nie produkcyjnie.
+  Procedura/finalreview jeszcze przed nami; to nie jest gotowość do deployu.
 
 ## 2026-11-16 — Plan readonly preflightu; bez kodu
 

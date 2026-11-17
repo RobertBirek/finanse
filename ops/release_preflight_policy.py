@@ -107,6 +107,12 @@ def parse_lineage(sources: dict[str, str]) -> dict[str, str | None]:
                 target, value = statement.targets[0], statement.value
             elif isinstance(statement, ast.AnnAssign):
                 target, value = statement.target, statement.value
+            if (
+                isinstance(target, ast.Name)
+                and target.id in {"branch_labels", "depends_on"}
+                and (not isinstance(value, ast.Constant) or value.value is not None)
+            ):
+                raise PreflightInputError("migration_ast_invalid")
             if isinstance(target, ast.Name) and target.id in {
                 "revision",
                 "down_revision",

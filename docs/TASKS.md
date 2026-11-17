@@ -8,7 +8,7 @@ Backlog zadań ze statusami.
 - [x] Wybrano istniejący izolowany Python; preflight test/lint/typecheck PASS.
 - [x] Baseline lint/types, kolekcja backendu i 707 Vitest PASS.
 - [x] Czysta polityka/AST: 39 testów offline RED→GREEN.
-- [ ] Readonly CLI i regresje granicy Git/Compose/PG na syntetycznych danych.
+- [x] Readonly CLI; 51 testów granicy Git/Compose/PG na syntetycznych danych.
 - [ ] Procedura, końcowe kontrole i jeden świeży review.
 - [ ] Osobna zgoda na push/CI, produkcyjny odbiór adaptera i rzeczywisty preflight.
 

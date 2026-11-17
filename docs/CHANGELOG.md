@@ -2,14 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Lokalnie; etap 1/3] — 2026-11-17 — Polityka preflightu wydania
+## [Lokalnie; etap 2/3] — 2026-11-17 — Readonly preflight wydania
 
 ### Added
 - Czysta klasyfikacja źródeł i liniowego grafu migracji, bez I/O lub uprawnień
   do wdrożenia. Oddzielne rewizje usług, blokada nieznanych ścieżek i zmian
   historycznych migracji; już wykonany head nie proponuje ponownego backfillu.
-- 39 testów offline RED→GREEN. CLI i włączenie do procedury w kolejnych etapach.
-  Brak zmian produkcyjnych, aplikacyjnych lub zależności.
+- CLI `ops/release_preflight.py --check`: przypięty Git, inventory SHA256,
+  zgodność aktualnych usług z metadanymi, capabilities Compose i stały readonly
+  SELECT schematu. Brak apply, automatycznej adopcji inventory lub logów sekretów.
+- 39 testów policy i 51 CLI offline; 133 nowych/powiązanych unit PASS, Ruff/mypy
+  nowych modułów PASS, pełne lint/types/kolekcja i 707 Vitest PASS. Procedura
+  i final review nadal do wykonania. Bez produkcji, aplikacji lub zależności.
 
 ## [Projekt i plan; bez implementacji] — 2026-11-16 — Readonly preflight wydania
 
