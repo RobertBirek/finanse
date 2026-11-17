@@ -75,12 +75,15 @@ def identity(info: os.stat_result) -> tuple[int, ...]:
     )
 
 
-def read_regular(path: Path, *, private: bool = False) -> bytes:
+def read_regular(
+    path: Path, *, private: bool = False, max_bytes: int | None = None
+) -> bytes:
     """Read stable bytes from one regular inode; never repair permissions."""
     path = absolute(path)
     try:
         before = path.lstat()
         require(stat.S_ISREG(before.st_mode), "trust_file_invalid")
+        require(max_bytes is None or before.st_size <= max_bytes, "input_size_limit")
         with os.fdopen(
             os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb"
         ) as f:
@@ -95,7 +98,10 @@ def read_regular(path: Path, *, private: bool = False) -> bytes:
                     and parent.st_uid in {0, os.geteuid()},
                     "trust_permissions_invalid",
                 )
-            content = f.read()
+            require(
+                max_bytes is None or opened.st_size <= max_bytes, "input_size_limit"
+            )
+            content = f.read() if max_bytes is None else f.read(max_bytes + 1)
             require(
                 len(content) == opened.st_size
                 and identity(os.fstat(f.fileno())) == identity(opened)

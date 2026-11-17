@@ -12,6 +12,10 @@ Wszystkie istotne zmiany w projekcie.
   ograniczony output/timeout i jeden lokalny SELECT jako jawny UID:GID PG
   w czystym env.18regresjiRED→GREEN;135preflightofflinePASS. Nadal moduł
   biblioteczny, nie przełączenie CLI lub sprawdzenie faktycznego uwierzytelnienia.
+- Task3: prywatny snapshot faktycznie konsumowanych Compose/env, walidacja
+  YAML bez konstruktorów, zachowane anchory/tagi/merge i project_directory,
+  odmowa obcych zależności i bezpieczny cleanup.30regresji;165offlinePASS.
+  Stabilny import policy w testach usuwa fałszywe różnice klas wyjątków.
 
 ## [Plan napraw preflight; bez implementacji] — 2026-11-17
 

@@ -24,6 +24,16 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   przed exec. Brak realnegoPG/Dockera, CLI V1 jeszcze bez przełączenia.
 - Task2przedcommit: kanoniczne lint/types/kolekcja/719VitestPASS,
   Ruff/mypy4opsPASS. Regresje timeout/sekret/-O zachowane z wcześniejszego CLI.
+- Task2commit415a420/task-done135PASS. Task3:26RED absentmodule, dodatkowe
+  2REDpinmetadata/1REDscratch-dollar/1REDmissingparser;30snapshotów/regresji.
+  Fake consumer naprawdę czyta przekazane kopie po zmianie oryginałów; dawne
+  bajty zachowane i raport blokowany, własne pliki usunięte. Tagi/aliasy/merge
+  i względne bind/build paths zachowane, żaden bind source nie jest odczytywany.
+- Pełne testy ujawniły2fałszywe niezgodności klas wyjątków przez reload fixture
+  policy; zastąpiono importem stabilnym bez zmiany asercji.165offlinePASS49.48s.
+  Rulings w ledgerze: wcześniejsza poprawka fixture oraz odmowa scratch z $,
+  żeby Compose nie interpolował ścieżki snapshotu do innego pliku.
+- Task3przedcommit: kanoniczne lint/types/kolekcja/719Vitest oraz Ruff/mypy5opsPASS.
 
 ## 2026-11-17 — Projekt zatwierdzony; plan6zadań gotowy do przeglądu
 

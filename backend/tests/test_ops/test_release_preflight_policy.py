@@ -1,23 +1,17 @@
 """A false no_rollout or repeated backfill must be rejected without any I/O."""
 
-import importlib.util
-import sys
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[3] / "ops/release_preflight_policy.py"
+from tests.test_ops.preflight_fixtures import module
 
 
 @pytest.fixture
 def policy() -> Any:
-    spec = importlib.util.spec_from_file_location("release_preflight_policy", SCRIPT)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return module("release_preflight_policy")
 
 
 @pytest.fixture
