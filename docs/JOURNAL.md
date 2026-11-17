@@ -34,6 +34,19 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   Rulings w ledgerze: wcześniejsza poprawka fixture oraz odmowa scratch z $,
   żeby Compose nie interpolował ścieżki snapshotu do innego pliku.
 - Task3przedcommit: kanoniczne lint/types/kolekcja/719Vitest oraz Ruff/mypy5opsPASS.
+- Task3commitea39eee/task-done165PASS. Task4:23RED nowych kontraktów, dodatkowo
+  6REDzłychtypów proof/witness, potem194offlinePASS69.93s. Realne syntetyczneGit,
+  bez Dockera/DB. Każda para service/path musi odpowiadać dokładnym old/new
+  mode/blob/contentSHA i niezmienionym candidate/baselines/checkerbundle.
+- Rulings Task4 w ledgerze: VerifiedToolingScope niesie teraz także candidate,
+  niemutowalną mapę baseline i bundlehash; ReleaseFacts optionalbundlehash,
+  żeby nie przenieść zweryfikowanego witness do innego kontekstu. Dla zwykłych
+  runtimepaths zachowano GitID/mode bez dekodowania binarnych assetów doUTF8;
+  SHA256 treści jest dodatkowym świadkiem wyłącznie kwalifikowanego tooling.
+- CLI nadal V1, żadne proof/approval/metadata nie powstały na produkcji.
+  Kontrole Task4 przed commitem, następnie Task5 bootstrap i kompletna integracja.
+- Task4kontrole zakończone exit0: lint/mypy220/tsc/kolekcja/719Vitest
+  i dodatkowe Ruff/mypy6opsPASS. Nie jest to odbiór nowego CLI, jeszcze niewłączonego.
 
 ## 2026-11-17 — Projekt zatwierdzony; plan6zadań gotowy do przeglądu
 

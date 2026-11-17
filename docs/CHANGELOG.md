@@ -16,6 +16,9 @@ Wszystkie istotne zmiany w projekcie.
   YAML bez konstruktorów, zachowane anchory/tagi/merge i project_directory,
   odmowa obcych zależności i bezpieczny cleanup.30regresji;165offlinePASS.
   Stabilny import policy w testach usuwa fałszywe różnice klas wyjątków.
+- Task4: dokładny dowód review związany z Git/candidate/baseline/checker;
+  niezatwierdzone ops/CI nadal blocked, ścieżki pozostają w diffie i raporcie.
+ 29nowych regresji,194offlinePASS. Osobny bootstrap/integracja jeszcze przed nami.
 
 ## [Plan napraw preflight; bez implementacji] — 2026-11-17
 

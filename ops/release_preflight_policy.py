@@ -13,6 +13,21 @@ REVISION = re.compile(r"[A-Za-z0-9_-]{1,128}")
 TEST_PATH = re.compile(r"frontend/src/(?:[^/]+/)*[^/]+\.test\.tsx?")
 STAGE_FLAGS = frozenset({"--no-start", "--no-deps", "--no-build"})
 CONFIG_GATE = ("external_configuration_scope_review",)
+CHECKER_SOURCE_PATHS = frozenset(
+    {
+        "ops/release_preflight.py",
+        "ops/release_preflight_policy.py",
+        "ops/release_preflight_trust.py",
+        "ops/release_preflight_exec.py",
+        "ops/release_preflight_snapshot.py",
+        "ops/release_preflight_review.py",
+        "ops/preflight_launcher.py",
+        "ops/prepare_preflight_bundle.py",
+        "ops/preflight-requirements.txt",
+    }
+)
+TOOLING_PATHS = CHECKER_SOURCE_PATHS | {".opencode/command/deploy.md"}
+DIGEST = re.compile(r"[0-9a-f]{64}")
 APP_GATES = (
     "approval",
     "ci_build",
@@ -33,6 +48,26 @@ class PreflightInputError(ValueError):
 
 
 @dataclass(frozen=True)
+class SourceChange:
+    service: str
+    path: str
+    before_mode: str | None
+    before_blob: str | None
+    after_mode: str | None
+    after_blob: str | None
+    after_sha256: str | None
+
+
+@dataclass(frozen=True)
+class VerifiedToolingScope:
+    proof_sha256: str
+    changes: tuple[SourceChange, ...]
+    candidate: str
+    service_revisions: tuple[tuple[str, str], ...]
+    checker_bundle_sha256: str
+
+
+@dataclass(frozen=True)
 class ReleaseFacts:
     candidate: str
     service_revisions: dict[str, str]
@@ -43,6 +78,8 @@ class ReleaseFacts:
     compose_up_flags: frozenset[str]
     ancestry_ok: bool
     historical_migration_changed: bool
+    tooling_scope: VerifiedToolingScope | None = None
+    checker_bundle_sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -179,6 +216,80 @@ def _runtime_scope(path: str) -> str:
     raise PreflightInputError("unknown_change_scope")
 
 
+def valid_tooling_change(value: object) -> bool:
+    if (
+        not isinstance(value, SourceChange)
+        or not isinstance(value.service, str)
+        or value.service not in SERVICES
+        or not isinstance(value.path, str)
+        or value.path not in TOOLING_PATHS
+    ):
+        return False
+    for mode, blob in (
+        (value.before_mode, value.before_blob),
+        (value.after_mode, value.after_blob),
+    ):
+        if mode is None:
+            if blob is not None:
+                return False
+        elif (
+            not isinstance(mode, str)
+            or mode not in {"100644", "100755"}
+            or not isinstance(blob, str)
+            or not SHA.fullmatch(blob)
+        ):
+            return False
+    if value.before_blob is None and value.after_blob is None:
+        return False
+    return (value.after_blob is None and value.after_sha256 is None) or (
+        value.after_blob is not None
+        and isinstance(value.after_sha256, str)
+        and DIGEST.fullmatch(value.after_sha256) is not None
+    )
+
+
+def _reviewed_pairs(facts: ReleaseFacts) -> set[tuple[str, str]]:
+    scope = facts.tooling_scope
+    if scope is None:
+        return set()
+    if (
+        not isinstance(scope, VerifiedToolingScope)
+        or not isinstance(scope.proof_sha256, str)
+        or not DIGEST.fullmatch(scope.proof_sha256)
+        or scope.candidate != facts.candidate
+        or scope.service_revisions != tuple(sorted(facts.service_revisions.items()))
+        or not isinstance(facts.checker_bundle_sha256, str)
+        or not DIGEST.fullmatch(facts.checker_bundle_sha256)
+        or scope.checker_bundle_sha256 != facts.checker_bundle_sha256
+        or not isinstance(scope.changes, tuple)
+    ):
+        raise PreflightInputError("tooling_scope_mismatch")
+    actual: set[tuple[str, str]] = set()
+    for service, paths in facts.changed_paths.items():
+        for path in paths:
+            try:
+                _runtime_scope(path)
+            except PreflightInputError:
+                actual.add((service, path))
+    reviewed: set[tuple[str, str]] = set()
+    for item in scope.changes:
+        if (
+            not isinstance(item, SourceChange)
+            or not isinstance(item.path, str)
+            or item.path not in TOOLING_PATHS
+        ):
+            raise PreflightInputError("unknown_change_scope")
+        if not valid_tooling_change(item):
+            raise PreflightInputError("tooling_scope_mismatch")
+        pair = (item.service, item.path)
+        if pair in reviewed:
+            raise PreflightInputError("tooling_scope_mismatch")
+        reviewed.add(pair)
+    if not reviewed or reviewed != actual:
+        raise PreflightInputError("tooling_scope_mismatch")
+    return reviewed
+
+
 def _classify(facts: ReleaseFacts) -> PreflightDecision:
     if (
         not isinstance(facts.candidate, str)
@@ -204,13 +315,25 @@ def _classify(facts: ReleaseFacts) -> PreflightDecision:
     pending = chain[chain.index(facts.schema_heads[0]) + 1 :]
     runtime_change = False
     dependencies_changed = False
+    for paths in facts.changed_paths.values():
+        if not isinstance(paths, tuple) or not all(
+            isinstance(path, str) for path in paths
+        ):
+            raise PreflightInputError("facts_invalid")
+    reviewed = _reviewed_pairs(facts)
+    config_gates = CONFIG_GATE + (("approved_tooling_review",) if reviewed else ())
     for service, paths in facts.changed_paths.items():
         if not isinstance(paths, tuple) or not all(
             isinstance(path, str) for path in paths
         ):
             raise PreflightInputError("facts_invalid")
         for path in paths:
-            scope = _runtime_scope(path)
+            try:
+                scope = _runtime_scope(path)
+            except PreflightInputError:
+                if (service, path) not in reviewed:
+                    raise
+                scope = "reviewed_tooling"
             relevant = scope == "all" or scope == (
                 "frontend" if service == "frontend" else "backend"
             )
@@ -220,10 +343,10 @@ def _classify(facts: ReleaseFacts) -> PreflightDecision:
                 "backend/pyproject.toml",
             }
     if not pending and not runtime_change:
-        return PreflightDecision("no_rollout", (), (), CONFIG_GATE)
+        return PreflightDecision("no_rollout", (), (), config_gates)
     if not STAGE_FLAGS <= facts.compose_up_flags:
         raise PreflightInputError("compose_capability_missing")
-    gates: tuple[str, ...] = CONFIG_GATE + APP_GATES
+    gates: tuple[str, ...] = config_gates + APP_GATES
     if dependencies_changed:
         gates += ("rebuild_and_verify_runtime",)
     if pending:

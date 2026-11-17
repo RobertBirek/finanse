@@ -181,7 +181,7 @@ class PinnedScenario:
         runner = module("release_preflight_exec").ReadOnlyRunner(
             self.repo,
             self.tools,
-            verifier=lambda pin: trust.verify_pinned_file(pin, owner_uid=os.geteuid()),
+            verifier=lambda pin: trust.verify_pinned_file(pin, owner_uid=pin.uid),
         )
         runner.bind(
             compose_files=(self.compose_file,),
