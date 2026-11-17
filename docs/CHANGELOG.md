@@ -8,6 +8,10 @@ Wszystkie istotne zmiany w projekcie.
   tożsamość plików, root-owned executable pins i jawne dane endpointu PG/limitów.
   26nowych regresji RED→GREEN; łącznie65trust/policyPASS. CLI nadal V1,
   bez dopuszczenia do produkcji. Pozostałe zadania w toku, bez push lub rollout.
+- Task2: przypięty runner bez wyszukiwania PATH/pluginów, zamknięte argv,
+  ograniczony output/timeout i jeden lokalny SELECT jako jawny UID:GID PG
+  w czystym env.18regresjiRED→GREEN;135preflightofflinePASS. Nadal moduł
+  biblioteczny, nie przełączenie CLI lub sprawdzenie faktycznego uwierzytelnienia.
 
 ## [Plan napraw preflight; bez implementacji] — 2026-11-17
 

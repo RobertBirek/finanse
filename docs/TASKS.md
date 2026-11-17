@@ -45,6 +45,8 @@ Backlog zadań ze statusami.
   osobne zgody na publikację, pakiety tooling, readonly acceptance i rollout.
 - [x] Task1: trust/manifests26RED→GREEN,65trust/policyPASS; kanoniczne lint/types,
   backendcollection i719VitestPASS. CLI jeszcze nie przełączony.
+- [x] Task2: runner/PG18RED→GREEN,135offlinePASS; kanoniczne kontrole,
+  dodatkowe Ruff/mypy4ops i719VitestPASS. CLI jeszcze V1.
 - [x] Ograniczony readonly odczyt: trzy działające aplikacje na `45bcf88`,
   rewizje/image IDs zgodne z aktywnymi metadanymi. Nie zastępuje inventory.
 - [x] Jawna zgoda na migracjęa6e52f41c9d0 poefaf i nowy kontrakt Vision po backupie/

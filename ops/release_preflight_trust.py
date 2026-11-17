@@ -107,7 +107,7 @@ def read_regular(path: Path, *, private: bool = False) -> bytes:
         raise PreflightInputError("trust_file_unavailable") from None
 
 
-def strict_json(content: bytes) -> dict[str, object]:
+def json_value(content: bytes | str) -> Any:
     def unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, value in pairs:
@@ -122,7 +122,11 @@ def strict_json(content: bytes) -> dict[str, object]:
         result = json.loads(content, object_pairs_hook=unique, parse_constant=invalid)
     except (ValueError, UnicodeError, RecursionError):
         raise PreflightInputError("trust_json_invalid") from None
-    return mapping(result)
+    return result
+
+
+def strict_json(content: bytes) -> dict[str, object]:
+    return mapping(json_value(content))
 
 
 def read_private_json(path: Path, expected_sha256: str) -> dict[str, object]:

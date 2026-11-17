@@ -16,6 +16,14 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   produkcji. Pozostałe Tasks2–6 i review nadal wymagane.
 - Task1przedcommit: kanoniczne lint/mypy220/tsc/backendcollection/719VitestPASS;
   dodatkowe Ruff/mypy3modułów opsPASS. Nie mylić kolekcji z testami backenduDB.
+- Task1commit47ec38e zamknięty task-done65PASS. Task2:18RED missingmodule,
+  potem18GREEN i pełne135offlinePASS50.44s. Nowy runner wykonuje tylko przypięte
+  binaria, bez plugin discovery, ogranicza wspólny output/stdout+stderr i timeout10s,
+  PGexec uid999:999 w testach z odrębną roląDB, env-i/socket/port i statycznySQL.
+  PGHOST/PGSERVICE nie dziedziczone; obcy image/socket mount/project/role blokuje
+  przed exec. Brak realnegoPG/Dockera, CLI V1 jeszcze bez przełączenia.
+- Task2przedcommit: kanoniczne lint/types/kolekcja/719VitestPASS,
+  Ruff/mypy4opsPASS. Regresje timeout/sekret/-O zachowane z wcześniejszego CLI.
 
 ## 2026-11-17 — Projekt zatwierdzony; plan6zadań gotowy do przeglądu
 
