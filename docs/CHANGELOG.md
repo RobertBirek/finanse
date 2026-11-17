@@ -2,6 +2,15 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Plan napraw preflight; bez implementacji] — 2026-11-17
+
+- Użytkownik zatwierdził projekt granicy zaufania. Przygotowano i samodzielnie
+  sprawdzono plan6zależnych zadań: manifesty, runner/PG, snapshot, dokładny
+  zakres tooling, launcher/pakowanie oraz odbiór/procedura.
+- Osobny runtime parsera proponuje pin dostępnego PyYAML6.0.3, bez instalacji
+  lub zmian zależności aplikacji. Implementacja czeka na przegląd planu i wybór
+  Native/Subagent-driven. Brak odczytów lub zmian produkcji.
+
 ## [Projekt napraw preflight; bez implementacji] — 2026-11-17
 
 - Przygotowano roboczy projekt granicy zaufania checkera/toolchain, wiązania

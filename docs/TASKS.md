@@ -35,11 +35,14 @@ Backlog zadań ze statusami.
 - [x] Osobno przejrzeć zakres zmian .opencode/command/deploy.md oraz obu modułów
   ops/release_preflight:0Critical/3Important,91istniejących testówPASS,
   trzy dodatkowe negatywne próbyRED potwierdzają braki.
-- [ ] Osobno uzgodnić naprawę PATH, pinning plików/endpointuPG i projekt obsługi
-  zatwierdzonych zmian tooling; bez pomijania blokady V1 lub edycji metadanych.
+- [x] Uzgodnić projekt naprawy PATH, pinning plików/endpointuPG i obsługi
+  zatwierdzonych zmian tooling; użytkownik zatwierdził pełny opis odpowiedzią „tak”.
 - [x] Przygotować projekt preflight-trust-and-reviewed-tooling i builder check:
   doprecyzowano2pytania, odbiór odpowiedzi zakończony.
-- [ ] Zatwierdzenie projektu przez użytkownika, potem osobny plan przed implementacją.
+- [x] Zatwierdzenie projektu przez użytkownika i osobny plan6zadań z self-review.
+- [ ] Przegląd planu i wybór Native/Subagent-driven przed implementacją.
+- [ ] Implementacja napraw/checkera V2, lokalny odbiór i świeży review; potem
+  osobne zgody na publikację, pakiety tooling, readonly acceptance i rollout.
 - [x] Ograniczony readonly odczyt: trzy działające aplikacje na `45bcf88`,
   rewizje/image IDs zgodne z aktywnymi metadanymi. Nie zastępuje inventory.
 - [x] Jawna zgoda na migracjęa6e52f41c9d0 poefaf i nowy kontrakt Vision po backupie/

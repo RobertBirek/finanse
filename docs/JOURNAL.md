@@ -2,6 +2,28 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Projekt zatwierdzony; plan6zadań gotowy do przeglądu
+
+- Użytkownik odpowiedział „tak” na zatwierdzenie pełnego projektu jako podstawy
+  planu. Uruchomiono writing-plans, bez implementacji.
+- Plan: superpowers/plans/2026-11-17-preflight-trust-and-reviewed-tooling.md.
+  Sześć zależnych zadań, jawne typy/interfejsy, RED/GREEN, per-task checks/commits,
+  jeden końcowy review, pięć Review Focus z konkretnymi regresjami.
+- Decyzje planu: nowe moduły trust/exec/snapshot/review i osobny launcher/packager,
+  PyYAML6.0.3 w tool-runtime (dostępny w zatwierdzonym dev venv, bez instalacji),
+  node graph+ScalarToken do bezpiecznej zmiany wyłącznie env_file, zamknięta
+  obsługa zależności Compose i dokładny review scope. Nie zmieniać backend deps/CI.
+- Self-review poprawił cykl importów, brak project_directory/source pins,
+  ryzyko zgubienia YAML anchora, ograniczenie stdout/stderr i kolejność integracji:
+  Tasks1–4 moduły, Task5 kompletny CLI, Task6 odbiór. Nie nazywać częściowych
+  unitów naprawą V1 lub zielonym odbiorem produkcyjnym.
+- Brak źródeł/testów implementacji, nowych runtime/bundle/manifestów zgody,
+  zapytań Docker/DB lub mutacji produkcji. Następnie użytkownik przegląda plan
+  i wybiera sposób wykonania; do tego czasu kod i rollout nadal zablokowane.
+- Przed lokalnym commitem dokumentacji świeże lint/typecheck (mypy220/tsc),
+  backendcollection i719Vitest/115plikówPASS. Struktura planu6zadań oraz
+  git diff --checkPASS. To nie testy implementacji, która jeszcze nie powstała.
+
 ## 2026-11-17 — Projekt po builder check, oczekuje zatwierdzenia
 
 - Builder check wskazał2pytania o źródło zaufania zgody i bezhasłowy kontekstPG.

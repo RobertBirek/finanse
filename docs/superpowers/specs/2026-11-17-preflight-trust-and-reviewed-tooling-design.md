@@ -1,7 +1,11 @@
 # Preflight: granica zaufania i jawnie zatwierdzone zmiany narzędzi
 
-Status: **projekt do zatwierdzenia; bez implementacji i bez wdrożenia**.
+Status: **projekt zatwierdzony przez użytkownika; bez implementacji i bez wdrożenia**.
 Data: 2026-11-17.
+
+Zgoda: użytkownik odpowiedział „tak” na pytanie o zatwierdzenie tego projektu
+jako podstawy planu implementacji. Nie jest to akceptacja przyszłego planu,
+pakietu, manifestów zgody lub operacji produkcyjnych.
 
 Kontrola wykonalności: zakończona. Builder check wskazał dwa pytania o źródło
 zgody i kontekst uwierzytelniania PG; doprecyzowano je w sekcjach3a i5.
