@@ -2,6 +2,25 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Lokalnie; etap 1/3] — 2026-11-17 — Polityka preflightu wydania
+
+### Added
+- Czysta klasyfikacja źródeł i liniowego grafu migracji, bez I/O lub uprawnień
+  do wdrożenia. Oddzielne rewizje usług, blokada nieznanych ścieżek i zmian
+  historycznych migracji; już wykonany head nie proponuje ponownego backfillu.
+- 39 testów offline RED→GREEN. CLI i włączenie do procedury w kolejnych etapach.
+  Brak zmian produkcyjnych, aplikacyjnych lub zależności.
+
+## [Projekt i plan; bez implementacji] — 2026-11-16 — Readonly preflight wydania
+
+### Added
+- Projekt małej bramki rozróżniającej no_rollout/app_only/migration_then_app/blocked.
+  Sprawdza przypięte źródła, stan usług/schematu i możliwości Compose; nie wykonuje
+  deployu, migracji, backupu lub rollbacku i nie przyznaje zgody na te operacje.
+- Dokumenty `docs/superpowers/{specs,plans}/2026-11-16-release-preflight*`.
+  Przygotowanie planu zatwierdzone; decyzje wykonawcze i implementacja wymagają
+  akceptacji dokumentów. Bez kodu, odczytów produkcyjnych lub push.
+
 ## [Main; bez zmiany produkcji] — 2026-11-16 — Poprawka testu DocumentList
 
 ### Changed

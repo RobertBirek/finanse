@@ -2,6 +2,47 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Wykonanie planu preflightu Native, etap policy
+
+- Po akceptacji planu/Native użytkownik polecił samodzielnie dobrać środowisko,
+  także z możliwością instalacji. Wybrany istniejący izolowany Python:
+  `/tmp/opencode/backend-test-env-20261114/run-302e8d4cb8/venv/bin/python`.
+  Wszystkie3preflight PASS, bez instalacji/zmiany venv. Stary backend/.venv odrzucony.
+- Zastany linked worktree detached HEAD; brak nowego worktree lub zmian produkcji.
+  Dokumenty /opt/finanse są starsze od bieżącego worktree; nie traktować ich jako
+  odczytu runtime. Źródło wykonania: zatwierdzony spec/plan z bieżącego worktree.
+- Baseline lint/typesPASS(mypy215), kolekcja backenduPASS i707Vitest55.02s.
+  Pierwszy wspólny tooltimeout120s przerwał test przed wynikiem; bez zmian testów
+  powtórzono tylko kanoniczny /test z większym limitem narzędzia i zachowano oba logi.
+- Task1:39testów oczekiwanie braku modułuRED→GREEN, czysta klasyfikacja/AST.
+  Ruff/mypy nowych plikówPASS; /lint /typecheck i kolekcjaPASS,707Vitest60.59sPASS.
+  Nie uruchamiano fixtureDB, prawdziwego Docker/PG, odczytów produkcji lub push.
+  CLI/procedura/final review nadal przed nami; nie jest to produkcyjny odbiór.
+
+## 2026-11-16 — Plan readonly preflightu; bez kodu
+
+- Użytkownik zaakceptował przygotowanie planu po propozycji utrwalenia małej
+  bramki wydania. To nie jest jeszcze zgoda na implementację lub produkcyjny check.
+  Baza bieżącego worktree/mainb5c212a; CI43950336643 zakończyło się11/11PASS.
+  Produkcja pozostaje45bcf88/schemaefaf; brak odczytów/zapisów produkcji w tej sesji.
+- Rekonesans wyłącznie repo: prepare_release/verify_release już mają bramki;
+  release_policy to historyczna konkretna polityka rollbacku, nie ogólny silnik.
+  Nie duplikować ich i nie kopiować prywatnych metadanych/sekretów do repo.
+- Projekt: czysta decyzja + readonlycollectorCLI + docsprocedury. JSON raport
+  nie jest źródłem prawdy aplikacji/DBpermit lub zgodą na mutację. exit0 oznacza
+  klasyfikację źródeł/schematu, nie production-ready lub pełny configaudit.
+- Spec/plan `2026-11-16-release-preflight`; jeden buildercheck wskazał4luki:
+  inventory/trustanchor, granicę poświadczeniaOCI, protokółPG i rolę override.
+  Doprecyzowano je w dokumentach, bez drugiego review. Self-review pokrycia,
+  kontraktów i ReviewFocus zakończony. Format active metadata jest proponowanym
+  adapterem, nie dowodem zgodności z produkcją; odbiór realny wymaga osobnej zgody.
+- Decyzje wykonawcze są propozycjami autora. Implementacja i metoda wymagają
+  akceptacji pełnego planu. Propozycja Native:3silniezależne zadania, jedenreview
+  po całości. Bez nowych zależności, Docker/DB, push lub deployu.
+- ADVISOR_DEV_PYTHON nie jest ustawiony; bez szukania zastępczego interpretera,
+  kontroli developerskich lub commita. Następny krok: akceptacja planu/metody
+  i wskazanie bezwzględnej ścieżki do zatwierdzonego Pythona3.12+.
+
 ## 2026-11-16 — DocumentList na main; wydanie aplikacji niepotrzebne
 
 - Użytkownik polecił pushmain/deploy po lokalnej poprawce. Przed push sprawdzono

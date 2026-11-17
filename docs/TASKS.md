@@ -2,6 +2,26 @@
 
 Backlog zadań ze statusami.
 
+## Readonly preflight wydania — implementacja (2026-11-17)
+
+- [x] Akceptacja planu i Native, zgoda na samodzielny dobór środowiska.
+- [x] Wybrano istniejący izolowany Python; preflight test/lint/typecheck PASS.
+- [x] Baseline lint/types, kolekcja backendu i 707 Vitest PASS.
+- [x] Czysta polityka/AST: 39 testów offline RED→GREEN.
+- [ ] Readonly CLI i regresje granicy Git/Compose/PG na syntetycznych danych.
+- [ ] Procedura, końcowe kontrole i jeden świeży review.
+- [ ] Osobna zgoda na push/CI, produkcyjny odbiór adaptera i rzeczywisty preflight.
+
+## Readonly preflight wydania — plan (2026-11-16)
+
+- [x] Uzgodnić przygotowanie małego planu, bez przenoszenia całego operatora.
+- [x] Spec i3zadania: czysta decyzja, readonlyCLI, włączenie do procedury.
+- [x] Builder check i self-review; doprecyzować inventory/OCI/PG/Compose.
+- [x] Akceptacja pełnego zakresu i Native (2026-11-17).
+- [x] Po zgodzie dobrano ADVISOR_DEV_PYTHON; bez instalacji lub zmiany shared venv.
+- [ ] Implementacja/TDD offline; brak prawdziwego Docker/DB/produkcji w testach.
+- [ ] Odrębne decyzje o push/CI i rzeczywistym użyciu preflightu.
+
 ## Stabilizacja testu DocumentList (2026-11-16)
 
 - [x] Zgoda na test i trzy wpisy dokumentacji, bez aplikacji lub deployu.
