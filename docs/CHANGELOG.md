@@ -2,6 +2,63 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Projekt napraw preflight; bez implementacji] — 2026-11-17
+
+- Przygotowano roboczy projekt granicy zaufania checkera/toolchain, wiązania
+  konfiguracji Compose/env, lokalnego endpointu PG i osobno zatwierdzonych
+  zmian tooling. Kontrola wykonalności zakończona: doprecyzowano źródło zgody
+  i bezhasłowy lokalny kontekst PG. Projekt czeka na zatwierdzenie przed planem/kodem.
+- Brak nowych narzędzi, zależności, manifestów zgody, snapshotów lub zmian produkcji.
+
+## [Review preflight: changes requested; bez wdrożenia] — 2026-11-17
+
+- Osobny readonly review trzech plików narzędziowych:0Critical/3Important.
+  Potwierdzono w kodzie i próbach syntetycznych ryzyka PATH, zmiany env po hashu
+  oraz nieprzypiętego endpointu libpq.91istniejących testów PASS,3nowe próby
+  negatywne RED; nie raportować ich jako naprawionych.
+- Wymagana osobna naprawa i projekt obsługi zakresu tooling; wynik blocked
+  nadal obowiązuje. Raport: audits/2026-11-17-document-drafts-preflight-tooling-review.md.
+
+## [Preflight BLOCKED; bez wdrożenia] — 2026-11-17
+
+- Po zgodzie operatora na wskazany inventory/SHA256 uruchomiono readonly preflight
+  kandydata `5c37246`. Wynik exit2, `unknown_change_scope`.
+- Diagnoza wyłącznie z Git:72zmienione ścieżki względem `45bcf88`, w tym3poza
+  zakresem adaptera V1: komenda deploy i dwa moduły release_preflight.
+  Wymagany osobny przegląd zakresu narzędzi wdrożeniowych; zabezpieczeń nie zmieniono.
+- Preflight zatrzymał się przed Docker/DB. Bez buildów, migracji i zmian produkcji.
+
+## [Inventory: walidacja plikowa PASS; bez wdrożenia] — 2026-11-17
+
+- Ponownie sprawdzono inventory.expected.json dostarczony przez użytkownika:
+  struktura, formaty, uprawnienia, hashe wskazanych plików i zgodność aktywnych
+  metadanych PASS. Pliku nie zmieniano. To nie jest niezależne zatwierdzenie,
+  pełny preflight ani dowód zgodności działających kontenerów lub bazy.
+
+## [Walidacja inventory; bez wdrożenia] — 2026-11-17
+
+- Sprawdzono dostarczony przez użytkownika inventory.expected.json bez zmian
+  pliku. JSON, właściciel i tryby0600/0700 poprawne;16pól ma niepoprawny format
+  lub pozostawione placeholdery. STOP przed odczytem produkcyjnych plików,
+  Docker/DB i preflightem. Nie jest to zatwierdzone inventory.
+
+## [Read-only; bez wdrożenia] — 2026-11-17 — Kontrola zgodności aktywnej wersji
+
+- Po prośbie użytkownika o przejęcie czynności technicznych sprawdzono ograniczony
+  zestaw metadanych i odczyt Docker inspect: backend, worker i frontend działają
+  na `45bcf88`; rewizje i image IDs odpowiadają active-release.json.
+- Nie jest to pełny preflight ani niezależne zatwierdzenie inventory.
+  Nie utworzono inventory z obserwacji; produkcja bez zmian.
+
+## [Operator handoff; bez wdrożenia] — 2026-11-17 — Formularz inventory
+
+### Added
+- Po wskazaniu siebie jako administratora użytkownik otrzymał pusty formularz
+  i instrukcję niezależnego zatwierdzenia oczekiwanego środowiska. Wyłącznie poza
+  repo,0700/0600, bez sekretów lub wypełniania bieżącymi obserwacjami.
+- Sprawdzono strukturę JSON i brak gotowego inventory; placeholdery celowo
+  uniemożliwiają użycie szablonu jako zgody. Nadal bez preflightu lub deployu.
+
 ## [Main; CI green; deployment blocked] — 2026-11-17 — Odbiór szkiców dokumentów
 
 ### Changed

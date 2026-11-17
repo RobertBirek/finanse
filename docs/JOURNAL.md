@@ -2,6 +2,134 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Projekt po builder check, oczekuje zatwierdzenia
+
+- Builder check wskazał2pytania o źródło zaufania zgody i bezhasłowy kontekstPG.
+  Doprecyzowano propozycje w sekcjach3a/5: administrator zatwierdza dokładne
+  hashe w rozmowie, prywatne receipty/bundle poza kandydatem i osobny launcher;
+  PG jako numeryczny UID:GID istniejącego użytkownika systemowego postgres,
+  z rolą/bazą z inventory i istniejącym peer/mapą lub trust. Bez HBA/role zmian
+  i bez kanału haseł; niezgodny runtime blokuje. To propozycje do akceptacji.
+- Ten sam builder sprawdził wyłącznie odpowiedzi na dwa pytania: questions answered.
+  Nie robił kolejnego review kodu ani odczytów produkcyjnych.
+- Świeże kanoniczne lint/typecheck (mypy220/tsc)/backendcollection/719VitestPASS,
+  git diff --checkPASS. Nie raportować backendcollection jako wykonania testówDB.
+- Projekt gotowy do przedstawienia użytkownikowi. Następnie zatwierdzenie
+  pełnego opisu i writing-plans; nie rozpoczynać implementacji przed tą bramką.
+  Kod preflightu nadal z3nierozwiązanymi Important, rollout nadal BLOCKED.
+
+## 2026-11-17 — Roboczy projekt napraw i zakresu tooling
+
+- User „ok, działaj” po przedstawieniu wyników review i potrzebie osobnego planu.
+  Przygotowano wyłącznie projekt:
+  superpowers/specs/2026-11-17-preflight-trust-and-reviewed-tooling-design.md.
+- Propozycje autora, jeszcze niezgłoszone jako zaakceptowane: osobno przypięty
+  checker/toolchain, snapshot konfiguracji z zachowaniem semantyki, jawny lokalny
+  endpointPG w czystym env oraz osobny, dokładny dowód review zakresu tooling.
+  Default blocked dla niezatwierdzonych ścieżek pozostaje; nie ma issuera inventory.
+- Nowy kontrakt snapshotu może wymagać prywatnego scratch i parsera w osobnym
+  runtime narzędziowym. Te koszty są jawne w projekcie, nie ukryte w implementacji.
+  Wybór algorytmu i ewentualnej zależności należy do planu przed kodowaniem.
+- Zlecono osobny readonly builder check wykonalności; projekt czeka na jego odbiór,
+  a następnie zatwierdzenie użytkownika. Bez implementacji/instalacji, odczytów
+  Docker/DB/produkcji, manifestów zgody lub rzeczywistych snapshotów.
+
+## 2026-11-17 — Review narzędzi:3Important potwierdzone, brak zgody na użycie produkcyjne
+
+- Osobny agent readonly przejrzał trzy pliki, range45bcf88..5c37246:
+  verdict changes requested,0Critical/3Important. Intencjonalne unknown_change_scope
+  pozostaje odrębne od usterek. Nie wolno zastąpić sukcesu CLI samym review.
+- Zweryfikowano uwagi w ToolRunner.run/bind, _inventory i _observe:
+  odziedziczonyPATH wybiera binaria, Docker ponownie czyta pliki po hashu,
+  psql nie przypina endpointu ani nie izoluje PGHOST/PGPORT/PGSERVICE.
+- Świeże91istniejących testów adaptera/policyPASS39.44s. Następnie3syntetyczne
+  negatywne próby potwierdziły braki: podstawionyGit wykonany; env zmieniony
+  po hashu nadal no_rollout; obce zmienne endpointuPG nadal no_rollout.
+  RED3FAIL2.29s, bez rzeczywistego połączeniaPG lub Docker. Nie naprawiano kodu.
+- Źródła trzech plików przypięte do kandydata; SHA256 dowodów w
+  /tmp/opencode/document-drafts-preflight-bct7kdzz/review-source-binding.json.
+  Proby: test_review_proofs.py/review-negative-proofs.log w tym samym katalogu.
+- Declined/outside: pełna funkcja i gotowość produkcyjna, faktyczna konfiguracja
+  endpointuPG, projekt przyszłego onboardingu. Nie uznawać ich za sprawdzone.
+  Potrzebne osobne uzgodnienie naprawy3usterek i projektu zakresu tooling,
+  nie bezwarunkowe allowlist ani pomijanie raportu blocked.
+  Raport: audits/2026-11-17-document-drafts-preflight-tooling-review.md.
+
+## 2026-11-17 — Zgoda na readonly preflight; STOP na nieobsługiwanym zakresie
+
+- Po przedstawieniu walidacji i dokładnego SHA256 użytkownik odpowiedział
+  „ok, działaj”; potraktowano to jako akceptację wskazanego pliku i readonly
+  kontroli, nie pominięcie dalszych bramek.
+- Pinned inventory SHA256:
+  ad1c29404ff4955e9b3d1eba869be35a14e4fa42523722c3572ec916056e17e9.
+  Pinned candidate5c372467b3f5af712ea2cd7055b1b99836387031.
+  Uruchomiono natywne release_preflight.main z pełnymi Compose/env/projektem/PG
+  z dostarczonego pliku; SHA sprawdzony względem zgody, nie przyjęty automatycznie.
+- Wynik exit2, action blocked, unknown_change_scope, wymagany
+  external_configuration_scope_review. Raport prywatny:
+  `/tmp/opencode/document-drafts-preflight-bct7kdzz/preflight.json`.
+- Source-only RCA:72ścieżki względem45bcf88, backend23/frontend10/none36,
+  nieobsługiwane3: .opencode/command/deploy.md, ops/release_preflight.py,
+  ops/release_preflight_policy.py. Zgodnie z procedurą V1 blokuje zmiany
+  narzędzi/ops; to nie błąd inventory. Lista w unsupported-source-paths.json
+  przy raporcie. Nie zmieniano whitelisty, metadanych ani inventory.
+- Adapter odrzucił source scope przed _observe, zatem nie wykonał Docker/DB.
+  Nie uruchamiano buildów, backup/restore, migracji, restartów ani Vision.
+  Następnie osobny przegląd trzech zmian i uzgodnienie ścieżki zgodnej z procedurą.
+
+## 2026-11-17 — Poprawiony inventory: walidacja plikowa PASS
+
+- Na ponowną prośbę użytkownika odczytano ten sam inventory.expected.json.
+  SHA256 ad1c29404ff4955e9b3d1eba869be35a14e4fa42523722c3572ec916056e17e9.
+- Świeża kontrola exit0: JSON bez duplikatów, ścisłe klucze/formaty, różne ID,
+  zwykły plik/bez symlinków, właściciel i0600/0700; następnie natywne _inventory
+  sprawdziło hashe Compose/env/active metadata, aktywny override i zgodność
+  rewizji/image IDs z metadanymi. Potwierdzono niezmienność pliku podczas kontroli.
+- Nie uruchamiano collect_facts, Dockera, zapytań DB ani pełnego preflightu.
+  Hash policzony do identyfikacji pliku nie jest niezależną zgodą operatora.
+  Pliku nie poprawiano. Nadal potrzebne zatwierdzenie oparte na weryfikacji
+  oczekiwań; po nim readonly preflight, a nie od razu rollout.
+
+## 2026-11-17 — Walidacja formularza dostarczonego przez użytkownika
+
+- User zgłosił uzupełnienie; znaleziono inventory.expected.json w prywatnym
+  katalogu document-auto-finance-drafts-inventory.Zv5oKH.
+- Odczyt bez edycji: JSON bez duplikatów i poprawne klucze, właściciel,
+  regularny plik bez symlinków oraz0600/0700.16pól nie spełnia formatów:
+  active hash, trzeci Compose path/hash, env hash, wszystkie3pola każdej
+  aplikacji oraz PG container_id/database/role. Wartości nie wypisano.
+- Walidacja exit2; STOP przed weryfikacją produkcyjnych plików/Docker/DB.
+  Nie uruchamiano pełnego preflightu, nie zatwierdzono ani nie poprawiono inventory.
+
+## 2026-11-17 — Odczyt po prośbie o przejęcie technicznych czynności
+
+- Użytkownik poprosił o uzupełnienie i dokończenie na jego odpowiedzialność.
+  Nie potraktowano tego jako niezależnego zatwierdzenia nieistniejącego inventory.
+- Ograniczony odczyt active-release.json i Docker inspect trzech aplikacji:
+  wszystkie running, rewizja45bcf8812ded8696624ead6dd65d2a0c5f80710a,
+  zgodność service_revisions i application_images[S].id.
+  Wymagane cztery pola metadanych obecne, release_status verified-live.
+- Wyłącznie odczyt przez lokalny socket; bez env/sekretów w wynikach, DB,
+  migracji, restartów, aktywacji Vision i bez tworzenia inventory z obserwacji.
+  Ta częściowa zgodność nie certyfikuje pełnego preflightu ani konfiguracji.
+  Pozostaje wymagane niezależne zatwierdzenie; procedury nie zmieniono.
+
+## 2026-11-17 — Przekazanie pustego inventory zatwierdzającemu administratorowi
+
+- Na pytanie o niezależnego zatwierdzającego user wybrał „Ja, jako administrator”.
+  Przygotowano wyłącznie pusty inventory.template.json oraz README.md w
+  `/tmp/opencode/document-auto-finance-drafts-inventory.Zv5oKH/`.
+  Nie wpisano danych z obserwacji, nie powstał inventory.expected.json.
+- Shape-check zgodny z _inventory:7pól głównych,3usługi,Postgres4pola,
+  rekordyCompose/env; wszystkie stringi są nieprawidłowymi placeholderami.
+  Prywatny katalog0700/pliki0600. Nie używać SHA256 szablonu jako zgody.
+- Instrukcja opisuje niezależne potwierdzenie oczekiwań i bezpieczne pomocnicze
+  sha256sum/ograniczone dockerinspect wykonywane przez administratora; agent nie
+  uruchamiał ich na produkcji w tym kroku. Brak sekretów/treści.env w plikach lub Git.
+- Następnie user uzupełnia własny plik poza repo i zatwierdza jego absolutną
+  ścieżkę/SHA256 oraz readonly preflight. Bez tego nadal STOP przed rolloutem.
+  Źródła aplikacji bez zmian, bez mutacji produkcji lub AI.
+
 ## 2026-11-17 — Pełne CI szkiców zielone, produkcja nadal bez zmian
 
 - Dokładny source39aceecca4ab4f400eebfd0ee2fdb0a9e4dd6a10 na main.

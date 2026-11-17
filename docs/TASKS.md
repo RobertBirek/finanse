@@ -23,6 +23,25 @@ Backlog zadań ze statusami.
   bez nowych skipów lub osłabienia bramek.
 - [ ] Dostarczyć niezależnie zatwierdzone inventory i SHA256 do preflightu;
   nie adoptować automatycznie stanu produkcji.
+- [x] Użytkownik wskazał siebie jako zatwierdzającego administratora; dostarczono
+  pusty formularz+instrukcję poza repo, bez obserwacji i bez wydawania zgody.
+- [ ] Administrator uzupełnia oczekiwania i jawnie zatwierdza konkretny plik/SHA256.
+- [x] Sprawdzić dostarczony inventory.expected.json: JSON/uprawnienia poprawne,
+  ale16pól niepoprawnych lub nieuzupełnionych; dalsza kontrola zablokowana.
+- [x] Ponowna walidacja poprawionego przez użytkownika pliku: formaty,
+  uprawnienia, hashe plików i aktywne metadane PASS; bez pełnego preflightu.
+- [x] Po „ok, działaj” operatora uruchomić readonly preflight dla zatwierdzonego
+  pliku/SHA256 i5c37246: BLOCKED/exit2, unknown_change_scope, przed Docker/DB.
+- [x] Osobno przejrzeć zakres zmian .opencode/command/deploy.md oraz obu modułów
+  ops/release_preflight:0Critical/3Important,91istniejących testówPASS,
+  trzy dodatkowe negatywne próbyRED potwierdzają braki.
+- [ ] Osobno uzgodnić naprawę PATH, pinning plików/endpointuPG i projekt obsługi
+  zatwierdzonych zmian tooling; bez pomijania blokady V1 lub edycji metadanych.
+- [x] Przygotować projekt preflight-trust-and-reviewed-tooling i builder check:
+  doprecyzowano2pytania, odbiór odpowiedzi zakończony.
+- [ ] Zatwierdzenie projektu przez użytkownika, potem osobny plan przed implementacją.
+- [x] Ograniczony readonly odczyt: trzy działające aplikacje na `45bcf88`,
+  rewizje/image IDs zgodne z aktywnymi metadanymi. Nie zastępuje inventory.
 - [x] Jawna zgoda na migracjęa6e52f41c9d0 poefaf i nowy kontrakt Vision po backupie/
   restore; użytkownik potwierdził zakres, następnie polecił naprawić CI i kontynuować.
 - [ ] Po bramkach wykonać migrację/deploy i aktywację Vision; potwierdzić retencję,
