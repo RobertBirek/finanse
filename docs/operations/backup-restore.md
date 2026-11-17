@@ -265,6 +265,95 @@ queues and record data-service container IDs. After applying: check all three
 revision labels, absence of `/app` host mounts, unchanged data-service IDs,
 HTTPS frontend/health, unauthenticated API rejection, and worker status/errors.
 Do not rewrite historic transactions or run imports as a deployment step.
+### Read-only release preflight
+
+`ops/release_preflight.py --check` classifies **source and schema changes**, not
+external configuration-only changes. It never builds, creates, starts, stops,
+removes, migrates, restores, rolls back, or publishes metadata. Reading a real
+environment still needs separate approval. Local fake-tool tests do not grant it.
+
+Inputs must identify the exact current environment, not a future release overlay:
+
+- A full candidate commit SHA and existing Git objects for each service revision.
+  The candidate must descend from every running service revision. The tool does
+  not fetch, import migrations, or trust dirty worktree source.
+- Full ordered current Compose files (at least two), explicit project/env-file
+  and PostgreSQL service. The active release override must be last; a deployment
+  with a later hardening overlay is unsupported in V1 and blocks rather than
+  silently dropping that overlay.
+- An independently approved inventory, in a regular file mode0600 within an owned
+  private0700 directory, plus its independently approved SHA256. Do not create
+  an inventory by automatically adopting the observations that this check gathers.
+  The tool has no issuer. Never copy an inventory or env values into this repo.
+
+Inventory JSON has exactly `version: 1`, `project`, `active_release_sha256`,
+`compose_files` (ordered `{path, sha256}` records), `env_file` (`{path, sha256}`),
+`services` (exactly backend/worker/frontend, each `{container_id, image_id, revision}`)
+and `postgres` (`{service, container_id, database, role}`). Paths are absolute,
+container IDs/digests are64lowercase hex, image IDs are `sha256:` plus64hex, service
+revisions are40hex. Input files and paths may not be symlinks. Extra or duplicate
+inventory keys, changed digests, wrong ownership/modes and ambiguous observations
+block; the check does not chmod, repair or adopt them.
+
+The V1 adapter requires active metadata fields `release_status: "verified-live"`,
+`service_revisions`, `application_images[S].id`, and `compose_override`. It never
+falls back to a common `revision` or docs-only `git_tip`. **Compatibility with the
+actual production metadata format has not been certified by the local tests.**
+Verify it in a separately approved read-only acceptance before real use; absent
+fields mean blocked, not permission to rewrite existing metadata.
+
+Example, after assigning **approved absolute paths and values** to these variables
+(`PREFLIGHT_PYTHON` is Python3.12+, `CANDIDATE_SHA` is a full pinned SHA):
+
+```bash
+"$PREFLIGHT_PYTHON" -B "$REPO/ops/release_preflight.py" --check \
+  --repository "$REPO" --candidate "$CANDIDATE_SHA" \
+  --active-release "$ACTIVE_METADATA" \
+  --approved-inventory "$APPROVED_INVENTORY" --inventory-sha256 "$APPROVED_INVENTORY_SHA256" \
+  --project "$COMPOSE_PROJECT" --env-file "$CURRENT_ENV_FILE" \
+  --compose-file "$CURRENT_BASE_COMPOSE" \
+  --compose-file "$CURRENT_PROD_COMPOSE" \
+  --compose-file "$CURRENT_RELEASE_COMPOSE" \
+  --postgres-service "$POSTGRES_SERVICE"
+```
+
+The argument set is exercised by the synthetic CLI tests. This example is **not**
+an instruction to target production without approval. Git and Docker reads use
+sanitized environments; inherited Git settings and Docker context/host variables
+are not forwarded. V1 uses the local Docker daemon with its normal default endpoint;
+remote/custom Docker contexts require a separate design, not an environment fallback.
+Rendered config/inspect/env values and raw errors are never emitted. Schema read
+is one literal SELECT in the validated PG container with read-only transactions
+and a10s statement timeout; every external command has a10s timeout.
+
+| Report action | Meaning (not authorization) |
+|---|---|
+| `no_rollout` | No service-relevant runtime changes; schema already current. Docs/test-only changes do not need identical image rebuilds or restarts. |
+| `app_only` | Source/build changes need review for application rollout; schema already current. BO after a migration followed by application rollback must not repeat backfill. |
+| `migration_then_app` | Current DB revision precedes candidate head in a supported linear graph. Separate exact migration approval is required. |
+| `blocked` | Missing, unsupported, ambiguous or inconsistent evidence. Stop; do not infer a fallback action. |
+
+Unknown paths (including ops/workflow changes), changed historical migrations,
+branch/merge/dependency or nested migration layouts block. Backend/worker and
+frontend source comparisons use their own revisions, not a shared latest Git tip.
+Compose must support `up --no-start --no-deps --no-build` for application actions;
+the check only reads help, never runs that command. Do not use unsupported
+`create --no-deps`.
+
+The stdout JSON always has `authorized=false`, `production_ready=false`,
+`source_binding="operator_approved_inventory"`, `content_provenance_verified=false`
+and `external_configuration_reviewed=false`. OCI labels and operator-approved
+expectations are not cryptographic content provenance. Exit0 means classification,
+exit2 means blocked; a stale saved JSON or successful exit is never a deploy permit.
+Separately review external env/mount/ingress changes, even for `no_rollout`.
+This is not a health, login-cookie, ARQ, image-content or retention test.
+
+Existing approval, CI/build, exact non-root image verification, backup/restore,
+fencing/data retention, rollback compatibility and runtime observation gates all
+remain required. Do not regenerate inventory just to turn a mismatch green.
+State changes invalidate the report: recheck under the existing deploy lock
+immediately before any authorized mutation. The preflight itself is not a lock.
+
 # Document safety package — staging and release gate (2026-10-22)
 
 This package is **not deployed**. Do not apply the overlay or run a production

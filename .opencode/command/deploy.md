@@ -10,6 +10,19 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
    rewizje poszczególnych usług i istniejący rollback. Nie wypisuj sekretów.
 2. Wymagaj zatwierdzenia dokładnej rewizji i zakresu wdrożenia. Przejście testów
    lub scalenie PR samo w sobie nie upoważnia do wdrożenia.
+   Po osobnej zgodzie na odczyt rzeczywistego środowiska uruchom readonly
+   `ops/release_preflight.py --check` zgodnie z sekcją „Read-only release preflight”
+   w procedurze. Podaj pełne SHA, pełną uporządkowaną listę Compose/env/projekt/PG
+   oraz niezależnie zatwierdzony inventory i jego SHA256. Nie wydawaj inventory
+   z bieżących obserwacji ani nie zmieniaj aktywnych metadanych, aby kontrola przeszła.
+   `blocked`/exit2 oznacza STOP; exit0 to klasyfikacja źródeł/schematu, nie zgoda
+   lub production-ready. Oceń zewnętrzny env/mounty/ingress osobno.
+   `no_rollout` dla samych docs/testów oznacza brak nowych bajtów aplikacji:
+   nie buduj i nie restartuj identycznych usług wyłącznie dla nowszej etykiety.
+   `app_only` na już zmigrowanym schemacie nie upoważnia do ponownego backfillu;
+   `migration_then_app` wymaga osobnej zgody na dokładną migrację.
+   Po zmianie stanu raport jest nieaktualny; przed mutacją ponów sprawdzenie
+   pod istniejącym deploylock. Bramka nie zastępuje żadnego z dalszych dowodów.
 3. Uruchom testy, lint, typy i build. Przygotuj wersjonowany pakiet przez
    `ops/prepare_release.py` i skontroluj wynikowy Compose. Zmiana
    `backend/requirements.txt` wymaga nowego, zweryfikowanego runtime; nie obchodź
