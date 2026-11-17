@@ -10,7 +10,11 @@ Backlog zadań ze statusami.
 - [x] Automatyczna rejestracja szkicu i sugestia kategorii w istniejącym odczycie.
 - [x] UI statusów/linków/edycji kategorii i poprawne odświeżanie.
 - [x] Lokalny odbiór:424offline/719Vitest/lint/types/kolekcja/build; jeden świeży review.
-- [ ] Osobna zgoda na integrację/push/CI i testy rzeczywistego PostgreSQL.
+- [x] Zgoda na main/deploy i fast-forward pushcf3ae26, remoteSHA potwierdzone;
+  świeże lint/types/kolekcja/719Vitest PASS, CI44070352230 uruchomione.
+- [ ] Odebrać rzeczywiste testy PostgreSQL w CI dla dokładnego SHA.
+- [ ] Dostarczyć niezależnie zatwierdzone inventory i SHA256 do preflightu;
+  nie adoptować automatycznie stanu produkcji.
 - [ ] Osobna zgoda na migrację/deploy i aktywację zmienionej polityki Vision;
   potwierdzić retencję, runtime i dostawcę, bez masowej adopcji starych plików.
 

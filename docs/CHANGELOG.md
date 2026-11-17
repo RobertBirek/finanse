@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Main pushed; deployment blocked] — 2026-11-17 — Automatyczne szkice dokumentów
+
+### Changed
+- Po zgodzie użytkownika fast-forward `b5fbc5e..cf3ae26` na `origin/main`;
+  odrębny odczyt remote potwierdził pełne SHA. Świeże lint/typecheck/kolekcja
+  backendu i719Vitest PASS. CI44070352230 dla dokładnego SHA uruchomione.
+- Bez migracji, restartu lub zmiany polityk. Brak niezależnie zatwierdzonego
+  inventory/SHA256 wymaganego przez `/deploy`; nie wygenerowano go z obserwacji.
+  Migracja `a6e52f41c9d0` i aktywacja nowego kontraktu Vision wymagają jawnego
+  zatwierdzenia. Dane aktywnego release'u wskazują nadal aplikację `45bcf88`.
+
 ## [Lokalnie; bez push/deploy] — 2026-11-17 — Obieg dokumentów i kategoria AI
 
 ### Added

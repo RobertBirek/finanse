@@ -2,6 +2,27 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Szkice dokumentów wypchnięte na main, rollout zablokowany bramkami
+
+- User: „push do main i wdroż”. Fetch potwierdził origin/mainb5fbc5e i dokładnie
+  4commityFF do cf3ae26; bez ingerencji w stary checkout main593a232 w /opt/finanse.
+  Świeże kanoniczne lint/mypy220/tsc/kolekcja/719Vitest71.42sPASS, bez autofix.
+- Push `HEAD:refs/heads/main` bez force, odrębne ls-remote potwierdziło
+  `cf3ae26b6a3f4821f404986531e3599ada67d743`. CI44070352230 uruchomione;
+  obserwator gh run watch bez manipulacji jobami.
+- Przeczytano `/deploy`, backup/rollback/preflight i wyłącznie bezpieczne pola
+  active metadata. Wskazują verified-live45bcf88 i
+  opening-balances-45bcf88/compose.active.yaml; to metadane, nie świeży dowód
+  faktycznych kontenerów. Nie modyfikowano metadanych ani usług.
+- Nie znaleziono zatwierdzonego inventory w katalogach infra/release (znalezione
+  historyczne pliki innych wydań nie są zgodą). Bez wymaganej ścieżki i
+  zatwierdzonego SHA256 preflightu nie uruchamiano. Nie wydano inventory z obserwacji.
+- STOP przed rolloutem: wymagane niezależne inventory, pozytywny odbiór CI/PG,
+  jawne zatwierdzenie dokładnej migracjia6e52f41c9d0 (parentefaf) oraz nowego
+  kontraktu Vision. Backup/restore/retencja i runtime pozostają do wykonania po
+  przejściu bramek. Bez rzeczywistego AI, DBDDL lub modyfikacji danych użytkownika.
+- Dowody publikacji: `/tmp/opencode/document-auto-finance-drafts-publish.PD9Vyl/`.
+
 ## 2026-11-17 — Automatyczne szkice dokumentów: zakończenie lokalnej implementacji
 
 - Kontynuowano zatwierdzony plan inline/TDD. Etap2 `4848a84`, etap3 `3c5ea2d`.
