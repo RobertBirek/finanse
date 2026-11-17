@@ -2,6 +2,27 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Pełne CI szkiców zielone, produkcja nadal bez zmian
+
+- Dokładny source39aceecca4ab4f400eebfd0ee2fdb0a9e4dd6a10 na main.
+  gh run watch44074810399 exit0; odrębne gh run view potwierdziło completed/
+  success oraz11jobówSUCCESS. PobraneJUnit:legacy84, ordinary1=488,2=440,
+  3=414,4=500,5=461,6=461,proxy14; suma2862,0failures/errors/skips.
+  Zbiorczy verifier pokrycia/reportów teżPASS; frontend unit/build/E2EPASS.
+- Lokalnie431offline/719Vitest/lint/typecheck220 i dodatkowy scriptmypyPASS;
+  pełneE2E205PASS/1istniejącyplanowyskip5.6min. Wąski review0uwag.
+- User zgoda na dokładną migrację+Vision zapisana. Bramka inventory nadal
+  niespełniona: wcześniejsze archiwum opisuje historyczny rollout i nie zastępuje
+  niezależnie zatwierdzonych oczekiwań aktualnego środowiska. Nie uruchamiano
+  preflightu z fikcyjnymi danymi, issuera, Dockerbuild/up, DBmigracji, restore,
+  policy transition lub rzeczywistego AI. Produkcyjnych danych nie modyfikowano.
+- Następnie operator musi niezależnie przygotować i zatwierdzić inventory wraz
+  ze SHA256 zgodnie z backup-restore/Read-only release preflight. Dopiero potem
+  exactrevisionpreflight, backup/restore/retencja, obrazy/nonrootgate,
+  migracja+spójnyrollout, kontrolowane wznowienieVision i odbiór runtime.
+- Raport: `audits/2026-11-17-document-auto-finance-drafts-publish.md`;
+  surowe syntetyczne dowody w `/tmp/opencode/document-auto-finance-drafts-ci-fix/`.
+
 ## 2026-11-17 — Naprawa testowego kontraktu Vision po rzeczywistym CI
 
 - Użytkownik jawnie zatwierdził migracjęa6e52f41c9d0 poefaf78432563 po backup/
@@ -40,6 +61,17 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   zatwierdzić go bieżącymi obserwacjami. Operatorowi można dostarczyć pustą checklistę.
 - Świeży readonly review wąskich poprawek względem79a5fc9:0Critical/0Important/0Minor;
   potwierdzono fail-closed guard, nieosłabioną walidację i dokładne selektory.
+- Poprawki wypchnięte bez force na main39aceec, ls-remote potwierdzone; CI44074810399
+  obserwowane do pełnego zakończenia, nie anulować go kolejnym docs push.
+- Pełne lokalne E2E po naprawie:205PASS/1planowy desktop-skip w5.6min
+  (test mobilnego kalendarza), bez dodawania skipów; przerwany wcześniejszy run
+  nie jest częścią tego dowodu.
+- Kontynuacja na polecenie użytkownika: readonly przegląd nazw/kluczy archiwum
+  opening-balances-45bcf88/evidence potwierdził wcześniejsze approval/live/finish
+  i config hashes (sprzed tamtego rollout, z override people-gifts), ale nie
+  kompletny, niezależnie zatwierdzony inventory aktualnego wdrożenia.
+  Nie traktować wcześniejszego config-hashes lub containers-before jako gotowej
+  zgody dla bieżącego stanu; inventory nie utworzono, metadanych nie zmieniano.
 - Dowody RCA: `/tmp/opencode/document-auto-finance-drafts-ci-fix/`.
 
 ## 2026-11-17 — Szkice dokumentów wypchnięte na main, rollout zablokowany bramkami

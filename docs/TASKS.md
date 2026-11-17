@@ -12,12 +12,15 @@ Backlog zadań ze statusami.
 - [x] Lokalny odbiór:424offline/719Vitest/lint/types/kolekcja/build; jeden świeży review.
 - [x] Zgoda na main/deploy i fast-forward pushcf3ae26, remoteSHA potwierdzone;
   świeże lint/types/kolekcja/719Vitest PASS, CI44070352230 uruchomione.
-- [ ] Odebrać rzeczywiste testy PostgreSQL w CI dla dokładnego SHA.
+- [x] Rzeczywisty PostgreSQL w CI44074810399 dla39aceec:2862backendPASS,
+  wszystkie8grup+verifierPASS, bez backend skips/errors/failures.
 - [x] RCA pierwszego błęduCI44070352230: stara odpowiedź atrapy Vision bez
   category_key; poprawka testowa i regresja obydwu kontraktów,426offlinePASS.
 - [x] Pełny wynik79a5fc9: naprawić jawny rejestr FK/snapshoty i pending w guardzie
   kategorii (4RED→GREEN) oraz selektoryE2E (strictmodeRED→46GREEN), bez skipów.
-- [ ] Odebrać całe CI po poprawce; brak skipów/wyłączeń walidacji dla zielonego wyniku.
+- [x] Pełne lokalne E2E po poprawce:205PASS/1istniejący planowy skip,5.6min.
+- [x] CałeCI44074810399 SUCCESS,11jobów (w tym frontend unit/build/browser);
+  bez nowych skipów lub osłabienia bramek.
 - [ ] Dostarczyć niezależnie zatwierdzone inventory i SHA256 do preflightu;
   nie adoptować automatycznie stanu produkcji.
 - [x] Jawna zgoda na migracjęa6e52f41c9d0 poefaf i nowy kontrakt Vision po backupie/

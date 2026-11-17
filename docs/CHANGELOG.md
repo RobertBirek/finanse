@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Main; CI green; deployment blocked] — 2026-11-17 — Odbiór szkiców dokumentów
+
+### Changed
+- Poprawki `39aceec` wypchnięte bez force. CI44074810399 dla pełnego
+  SHA39aceecca4ab4f400eebfd0ee2fdb0a9e4dd6a10 zakończone SUCCESS:
+  wszystkie11jobów,2862przypadki backendu w8grupach bez failures/errors/skips,
+  frontend unit/build/browser PASS. Lokalne E2E205PASS/1planowy skip.
+- Osobna zgoda użytkownika obejmuje migracjęa6e52f41c9d0 poefaf i kontrakt Vision
+  po backup/restore. Nadal brak niezależnie zatwierdzonego inventory/SHA256:
+  rollout zatrzymany przed budowaniem/apply/migracją/policy transition.
+  Nie przyjęto obserwacji lub archiwum starszego wydania jako zgody na aktualny stan.
+- Dowód publikacji/CI i jawne granice:
+  `audits/2026-11-17-document-auto-finance-drafts-publish.md`.
+
 ## [CI repair; bez wdrożenia] — 2026-11-17 — Regresje pełnego odbioru szkiców
 
 ### Fixed
