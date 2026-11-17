@@ -2,6 +2,21 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Native rozpoczęte: strict trust inputs
+
+- User „tak, native”; planfa7b470 zatwierdzony. Ten sam linked worktree,
+  detachedHEAD, czysty baseline91preflightPASS. Bez nowego worktree/instalacji.
+- Ledger: .superpowers/sdd/2026-11-17-preflight-trust-and-reviewed-tooling/progress.md.
+  Po compaction czytać go i task briefs, nie powtarzać ukończonych zadań.
+- Task1:26RED missingmodule, potem26trust+39policy65PASS. Nowy trust module
+  sprawdza strictJSON/digest/permissions/file identity, root binarypins i jawny
+  PgEndpoint/InputLimits. Runtime parsera tylko przypięty w ops requirements,
+  nic nie instalowano. Ruff/mypy nowego modułuPASS, pełne kontrole przed commitem.
+- Nie przełączono CLI V1, nie usunięto blokady, nie wykonano odczytów/mutacji
+  produkcji. Pozostałe Tasks2–6 i review nadal wymagane.
+- Task1przedcommit: kanoniczne lint/mypy220/tsc/backendcollection/719VitestPASS;
+  dodatkowe Ruff/mypy3modułów opsPASS. Nie mylić kolekcji z testami backenduDB.
+
 ## 2026-11-17 — Projekt zatwierdzony; plan6zadań gotowy do przeglądu
 
 - Użytkownik odpowiedział „tak” na zatwierdzenie pełnego projektu jako podstawy

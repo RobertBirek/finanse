@@ -40,9 +40,11 @@ Backlog zadań ze statusami.
 - [x] Przygotować projekt preflight-trust-and-reviewed-tooling i builder check:
   doprecyzowano2pytania, odbiór odpowiedzi zakończony.
 - [x] Zatwierdzenie projektu przez użytkownika i osobny plan6zadań z self-review.
-- [ ] Przegląd planu i wybór Native/Subagent-driven przed implementacją.
-- [ ] Implementacja napraw/checkera V2, lokalny odbiór i świeży review; potem
+- [x] Przegląd planu i wybór Native: użytkownik „tak, native”.
+- [~] Implementacja napraw/checkera V2, lokalny odbiór i świeży review; potem
   osobne zgody na publikację, pakiety tooling, readonly acceptance i rollout.
+- [x] Task1: trust/manifests26RED→GREEN,65trust/policyPASS; kanoniczne lint/types,
+  backendcollection i719VitestPASS. CLI jeszcze nie przełączony.
 - [x] Ograniczony readonly odczyt: trzy działające aplikacje na `45bcf88`,
   rewizje/image IDs zgodne z aktywnymi metadanymi. Nie zastępuje inventory.
 - [x] Jawna zgoda na migracjęa6e52f41c9d0 poefaf i nowy kontrakt Vision po backupie/

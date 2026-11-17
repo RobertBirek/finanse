@@ -2,6 +2,13 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [WIP lokalny; bez wdrożenia] — 2026-11-17 — Implementacja preflight Native
+
+- Użytkownik zatwierdził plan i Native. Task1: ścisłe prywatne JSON/manifests,
+  tożsamość plików, root-owned executable pins i jawne dane endpointu PG/limitów.
+  26nowych regresji RED→GREEN; łącznie65trust/policyPASS. CLI nadal V1,
+  bez dopuszczenia do produkcji. Pozostałe zadania w toku, bez push lub rollout.
+
 ## [Plan napraw preflight; bez implementacji] — 2026-11-17
 
 - Użytkownik zatwierdził projekt granicy zaufania. Przygotowano i samodzielnie

@@ -1,0 +1,2 @@
+# Tool-only runtime. Provision separately; never install from inside the checker.
+PyYAML==6.0.3
