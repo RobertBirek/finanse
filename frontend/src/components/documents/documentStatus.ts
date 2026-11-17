@@ -2,6 +2,30 @@ import type { DocumentData } from "../../api/documents";
 
 export type DocumentStatusTone = "neutral" | "warning" | "success" | "danger";
 
+export function getFinanceDocumentStatus(
+  document: Pick<DocumentData, "finance">,
+): { label: string; tone: DocumentStatusTone } {
+  const finance = document.finance;
+  if (finance?.bill_id) {
+    if (finance.lifecycle === "archived")
+      return { label: "Archiwalny w finansach", tone: "neutral" };
+    if (finance.lifecycle === "cancelled")
+      return { label: "Anulowany w finansach", tone: "neutral" };
+    if (finance.review === "approved")
+      return { label: "Zatwierdzony w finansach", tone: "success" };
+    if (finance.review === "rejected")
+      return { label: "Odrzucony w finansach", tone: "warning" };
+    return { label: "Szkic w finansach", tone: "warning" };
+  }
+  if (finance?.state === "pending")
+    return { label: "Przygotowywanie szkicu", tone: "neutral" };
+  if (finance?.state === "failed")
+    return { label: "Błąd zapisu szkicu — sprawdź dane", tone: "danger" };
+  if (finance?.state === "needs_review")
+    return { label: "Do sprawdzenia", tone: "warning" };
+  return { label: "Nie wczytano", tone: "neutral" };
+}
+
 const limitErrors = new Set(["daily_limit_reached", "vision_daily_limit"]);
 const unavailableErrors = new Set([
   "configuration_missing",

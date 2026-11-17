@@ -38,6 +38,13 @@ export function BillRegister({
             className="card flex flex-wrap items-center justify-between gap-3 p-4"
           >
             <div>
+              <p className="mb-1 text-xs text-gray-400">
+                {bill.review === "draft"
+                  ? "Szkic — wymaga zatwierdzenia"
+                  : bill.review === "approved"
+                    ? "Zatwierdzony"
+                    : "Odrzucony"}
+              </p>
               <button
                 type="button"
                 onClick={() => onSelect(bill.id)}
@@ -78,6 +85,14 @@ export function BillRegister({
             >
               Szczegóły
             </Link>
+            {bill.review === "draft" && bill.sources[0] && (
+              <Link
+                className="text-sm text-advisor-400 underline"
+                to={`/documents?review=${encodeURIComponent(bill.sources[0].document_id)}`}
+              >
+                Sprawdź dane źródłowe
+              </Link>
+            )}
           </article>
         );
       })}

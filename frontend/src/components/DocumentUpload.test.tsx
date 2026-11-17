@@ -30,6 +30,14 @@ describe("DocumentUpload", () => {
     );
   };
 
+  it("discloses category names export and manual draft approval before upload", () => {
+    renderUpload();
+    expect(screen.getByText(/nazwy i ścieżki Twoich kategorii/)).toBeVisible();
+    expect(
+      screen.getByText(/Szkic wymaga Twojego zatwierdzenia/),
+    ).toBeVisible();
+  });
+
   it.each([
     [
       "document_mime_unsupported",

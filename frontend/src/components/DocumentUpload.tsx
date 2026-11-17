@@ -158,6 +158,12 @@ export function DocumentUpload() {
 
   return (
     <div className="mb-6">
+      <p className="mb-3 text-sm text-gray-400">
+        Odczyt AI może przekazać dostawcy treść dokumentu oraz nazwy i ścieżki
+        Twoich kategorii wydatków, aby zaproponować kategorię. Po odczycie
+        przygotujemy szkic w finansach. Szkic wymaga Twojego zatwierdzenia; nie
+        tworzy płatności ani transakcji.
+      </p>
       {capabilities.data?.automatic_image_vision ? (
         <p role="status" className="mb-3 text-sm text-gray-300">
           Zdjęcia są automatycznie wysyłane do{" "}

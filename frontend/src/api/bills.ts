@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import api from "../lib/api";
+import { useAuthStore } from "../stores/authStore";
+import {
+  captureProcessingActor,
+  isProcessingActorCurrent,
+} from "../stores/documentProcessingStore";
 
 export type BillKind = "invoice" | "receipt";
 export type PaymentDeclaration = "unknown" | "payable" | "declared_paid";
@@ -187,6 +192,7 @@ const invalidate = (
 export function usePrepareBill() {
   const client = useQueryClient();
   return useMutation({
+    onMutate: () => captureProcessingActor(),
     mutationFn: async ({ documentId }: { documentId: string }) =>
       (
         await api.post<BillResponse>(
@@ -195,12 +201,15 @@ export function usePrepareBill() {
           { headers: headers() },
         )
       ).data,
-    onSuccess: () => invalidate(client),
+    onSuccess: (_bill, _input, actor) => {
+      if (isProcessingActorCurrent(actor)) invalidate(client);
+    },
   });
 }
 export function useApproveBill() {
   const client = useQueryClient();
   return useMutation({
+    onMutate: () => captureProcessingActor(),
     mutationFn: async ({
       billId,
       data,
@@ -215,7 +224,9 @@ export function useApproveBill() {
           headers: { "Idempotency-Key": idempotencyKey },
         })
       ).data,
-    onSuccess: () => invalidate(client),
+    onSuccess: (_bill, _input, actor) => {
+      if (isProcessingActorCurrent(actor)) invalidate(client);
+    },
   });
 }
 export function useAttachBillSource() {
@@ -258,8 +269,10 @@ export function useDuplicateCandidates(billId: string | null) {
   });
 }
 export function useBill(billId: string | null, enabled = true) {
+  const ownerId = useAuthStore((state) => state.user?.id);
+  const sessionVersion = useAuthStore((state) => state.sessionVersion);
   return useQuery({
-    queryKey: ["finance", "bills", billId],
+    queryKey: ["finance", "bills", billId, ownerId, sessionVersion],
     enabled: !!billId && enabled,
     queryFn: async () =>
       (await api.get<BillResponse>(`/finance/bills/${billId}`)).data,
@@ -267,8 +280,10 @@ export function useBill(billId: string | null, enabled = true) {
 }
 
 export function useBills(filters: BillFilters = {}) {
+  const ownerId = useAuthStore((state) => state.user?.id);
+  const sessionVersion = useAuthStore((state) => state.sessionVersion);
   return useQuery({
-    queryKey: ["finance", "bills", filters],
+    queryKey: ["finance", "bills", filters, ownerId, sessionVersion],
     queryFn: async () =>
       (await api.get<BillPage>("/finance/bills", { params: filters })).data,
   });

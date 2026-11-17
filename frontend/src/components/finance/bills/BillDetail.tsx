@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   useDocumentOriginal,
   useDocumentPreview,
@@ -117,6 +118,21 @@ export function BillDetail({
           Zamknij
         </button>
       </div>
+      <p className="mt-3 text-sm text-gray-300">
+        {bill.review === "draft"
+          ? "Szkic — dane i kwota czekają na Twoje zatwierdzenie."
+          : bill.review === "approved"
+            ? "Dokument zatwierdzony."
+            : "Dokument odrzucony."}
+      </p>
+      {bill.review === "draft" && bill.sources[0] && (
+        <Link
+          className="mt-2 inline-block text-advisor-400 underline"
+          to={`/documents?review=${encodeURIComponent(bill.sources[0].document_id)}`}
+        >
+          Sprawdź dane źródłowe
+        </Link>
+      )}
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div>
           <dt className="text-gray-500">Do zapłaty</dt>

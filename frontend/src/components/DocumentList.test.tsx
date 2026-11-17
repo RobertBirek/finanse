@@ -3,10 +3,67 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import api from "../lib/api";
-import { processingReview } from "../test/documentFixtures";
+import { processingDocument, processingReview } from "../test/documentFixtures";
 import { DocumentList } from "./DocumentList";
 
 afterEach(() => vi.restoreAllMocks());
+
+it("shows independent finance evidence even if the latest recognition failed", async () => {
+  const document = processingDocument({
+    status: "error",
+    review: null,
+    finance: {
+      state: "succeeded",
+      bill_id: "bill-owned",
+      review: "approved",
+      lifecycle: "active",
+    },
+  });
+  vi.spyOn(api, "get").mockResolvedValue({ data: [document] });
+  const post = vi.spyOn(api, "post");
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <DocumentList />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByLabelText("Odczyt")).toHaveTextContent("Błąd");
+  expect(screen.getByLabelText("Finanse")).toHaveTextContent(
+    "Zatwierdzony w finansach",
+  );
+  expect(
+    screen.getByRole("link", { name: "Otwórz w finansach" }),
+  ).toHaveAttribute("href", "/finances/documents?bill=bill-owned");
+  expect(post).not.toHaveBeenCalled();
+});
+
+it("does not invent a finance link from ready OCR", async () => {
+  const document = processingDocument({
+    review: {
+      ...processingDocument().review!,
+      status: "ready",
+      job_state: "succeeded",
+    },
+  });
+  vi.spyOn(api, "get").mockResolvedValue({ data: [document] });
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <DocumentList />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByLabelText("Finanse")).toHaveTextContent(
+    "Nie wczytano",
+  );
+  expect(
+    screen.queryByRole("link", { name: "Otwórz w finansach" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Sprawdź dane i przygotuj szkic" }),
+  ).toBeVisible();
+});
 it("opens a toast-linked review even when the document is outside the current list page", async () => {
   const review = processingReview({ status: "ready" });
   vi.spyOn(api, "get").mockImplementation(async (url) => {

@@ -12,7 +12,10 @@ import {
 import { DocumentViewer } from "./DocumentViewer";
 import { DocumentReview } from "./documents/DocumentReview";
 import { QueryFeedback } from "./QueryFeedback";
-import { getDocumentStatus } from "./documents/documentStatus";
+import {
+  getDocumentStatus,
+  getFinanceDocumentStatus,
+} from "./documents/documentStatus";
 import { ProcessingPulse } from "./documents/ProcessingFeedback";
 import { isDocumentWorkActive } from "../api/documents";
 import { isProcessingActorCurrent } from "../stores/documentProcessingStore";
@@ -154,7 +157,7 @@ export function DocumentList() {
               return (
                 <li
                   key={doc.id}
-                  className="flex items-center gap-2 p-3 bg-gray-900 rounded-lg"
+                  className="flex flex-wrap items-center gap-2 p-3 bg-gray-900 rounded-lg"
                 >
                   <div className="min-w-0 flex-1">
                     <button
@@ -206,11 +209,41 @@ export function DocumentList() {
                     )}
                   </div>
                   <span
+                    aria-label="Odczyt"
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[statusColor]}`}
                   >
                     {isDocumentWorkActive(doc) && <ProcessingPulse />}
                     {reviewStatus.label}
                   </span>
+                  <div className="flex flex-col gap-1 text-xs">
+                    <span
+                      aria-label="Finanse"
+                      className="rounded-full border border-gray-700 px-2 py-1 text-gray-300"
+                    >
+                      Finanse: {getFinanceDocumentStatus(doc).label}
+                    </span>
+                    {doc.finance?.bill_id && (
+                      <Link
+                        className="px-2 text-advisor-400 underline"
+                        to={`/finances/documents?bill=${encodeURIComponent(doc.finance.bill_id)}`}
+                      >
+                        Otwórz w finansach
+                      </Link>
+                    )}
+                    {!archived &&
+                      (!doc.finance?.bill_id ||
+                        doc.finance.review === "draft") && (
+                        <button
+                          type="button"
+                          className="min-h-11 px-2 text-left text-advisor-400 underline"
+                          onClick={() => setReviewingId(doc.id)}
+                        >
+                          {doc.finance?.bill_id
+                            ? "Sprawdź szkic"
+                            : "Sprawdź dane i przygotuj szkic"}
+                        </button>
+                      )}
+                  </div>
                   <button
                     type="button"
                     aria-label={`${archived ? "Przywróć" : "Archiwizuj"} dokument: ${doc.original_name}`}

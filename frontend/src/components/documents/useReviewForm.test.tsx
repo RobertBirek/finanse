@@ -36,6 +36,54 @@ const review = (
 });
 
 describe("useReviewForm", () => {
+  it("fills a suggested category arriving after options and preserves a manual clear on later results", () => {
+    const data = { ...review(1), suggested_category_id: "mobile" };
+    const mobile = {
+      id: "mobile",
+      name: "Mobile",
+      type: "expense" as const,
+      parent_id: null,
+      is_active: true,
+    };
+    const { result, rerender } = renderHook(
+      ({ options, data }) => useReviewForm("doc-1", data, options),
+      { initialProps: { options: [] as (typeof mobile)[], data } },
+    );
+    expect(result.current.form.category_id).toBe("");
+    rerender({ options: [mobile], data });
+    expect(result.current.form.category_id).toBe("mobile");
+    act(() => result.current.update("category_id", ""));
+    rerender({
+      options: [mobile],
+      data: { ...data, id: "revision-2", revision: 2 },
+    });
+    act(() => result.current.applyNewSuggestions());
+    expect(result.current.form.category_id).toBe("");
+  });
+
+  it.each(["foreign", "inactive", "income", "none"])(
+    "does not prefill %s category",
+    (reason) => {
+      const item = {
+        id: "mobile",
+        name: "Mobile",
+        type: reason === "income" ? ("income" as const) : ("expense" as const),
+        parent_id: null,
+        is_active: reason !== "inactive",
+      };
+      const { result } = renderHook(() =>
+        useReviewForm(
+          "doc-1",
+          {
+            ...review(1),
+            suggested_category_id: reason === "none" ? null : "mobile",
+          },
+          reason === "foreign" ? [] : [item],
+        ),
+      );
+      expect(result.current.form.category_id).toBe("");
+    },
+  );
   it("fills untouched fields when a pending revision becomes ready without changing its id", () => {
     const { result, rerender } = renderHook(
       ({ data }) => useReviewForm("doc-1", data),

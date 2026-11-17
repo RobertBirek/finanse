@@ -13,6 +13,15 @@ import {
 } from "../components/documents/documentProcessing";
 
 export interface DocumentData {
+  finance?: {
+    state:
+      "not_requested" | "pending" | "needs_review" | "failed" | "succeeded";
+    error_code?: string | null;
+    bill_id: string | null;
+    revision_id?: string | null;
+    review: "draft" | "approved" | "rejected" | null;
+    lifecycle: "active" | "archived" | "cancelled" | null;
+  };
   id: string;
   user_id: string;
   filename: string;
@@ -49,6 +58,7 @@ export type ReviewSummary = {
 };
 
 export type DocumentReview = {
+  suggested_category_id?: string | null;
   id: string;
   document_id: string;
   revision: number;
@@ -143,11 +153,16 @@ export function useDocumentMetadata(id: string) {
     enabled: !!id,
     queryFn: async ({ signal }) =>
       (await api.get<DocumentData>(`/documents/${id}`, { signal })).data,
+    refetchInterval: (query) =>
+      query.state.data?.finance?.state === "pending" ? 3000 : false,
   });
 }
 
 export function isDocumentWorkActive(document: DocumentData): boolean {
-  return getDocumentOperations(document).some(isActiveOperation);
+  return (
+    (!document.archived_at && document.finance?.state === "pending") ||
+    getDocumentOperations(document).some(isActiveOperation)
+  );
 }
 
 export function useDocumentText(id: string, enabled = true) {
@@ -215,15 +230,25 @@ export function useDocumentUploadCapabilities() {
   });
 }
 
-export function useDocumentReview(id: string | null) {
+export function useDocumentReview(
+  id: string | null,
+  revisionId?: string | null,
+) {
   const actor = useDocumentActor();
   return useQuery({
-    queryKey: documentQueryKey(id, "review", actor),
+    queryKey: [
+      ...documentQueryKey(id, "review", actor),
+      ...(revisionId ? [revisionId] : []),
+    ],
     enabled: !!id,
     retry: false,
     queryFn: async ({ signal }) =>
-      (await api.get<DocumentReview>(`/documents/${id}/review`, { signal }))
-        .data,
+      (
+        await api.get<DocumentReview>(`/documents/${id}/review`, {
+          signal,
+          ...(revisionId ? { params: { revision_id: revisionId } } : {}),
+        })
+      ).data,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === "pending" || status === "processing" ? 3000 : false;

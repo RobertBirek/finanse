@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { DocumentReview } from "../../api/documents";
+import type { Category } from "../../api/finance";
 
 export type ReviewForm = {
   kind: "invoice" | "receipt";
@@ -38,6 +39,7 @@ type ReviewInput = Pick<
   "id" | "revision" | "status" | "document_type"
 > & {
   fields: Partial<DocumentReview["fields"]>;
+  suggested_category_id?: string | null;
 };
 type SuggestedField = Exclude<
   keyof ReviewForm,
@@ -74,7 +76,12 @@ function suggestion(review: ReviewInput): Pick<ReviewForm, SuggestedField> {
   };
 }
 
-export function useReviewForm(documentId: string, review?: ReviewInput) {
+const noCategories: Category[] = [];
+export function useReviewForm(
+  documentId: string,
+  review?: ReviewInput,
+  categories: Category[] = noCategories,
+) {
   const [form, setForm] = useState<ReviewForm>(emptyReviewForm);
   const context = useRef(documentId);
   const dirty = useRef(new Set<keyof ReviewForm>());
@@ -106,6 +113,28 @@ export function useReviewForm(documentId: string, review?: ReviewInput) {
     });
     applied.current.add(review.id);
   }, [documentId, review]);
+  const eligibleCategory =
+    categories.find(
+      (category) =>
+        category.id === review?.suggested_category_id &&
+        category.is_active &&
+        category.type === "expense",
+    )?.id ?? "";
+  useEffect(() => {
+    if (
+      !review ||
+      review.status === "pending" ||
+      review.status === "processing" ||
+      context.current !== documentId ||
+      dirty.current.has("category_id")
+    )
+      return;
+    setForm((current) =>
+      current.category_id === eligibleCategory
+        ? current
+        : { ...current, category_id: eligibleCategory },
+    );
+  }, [documentId, review, eligibleCategory]);
   const update = (key: keyof ReviewForm, value: string) => {
     dirty.current.add(key);
     setForm((current) => ({ ...current, [key]: value }) as ReviewForm);

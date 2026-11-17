@@ -20,6 +20,17 @@ function wrapper({ children }: { children: ReactNode }) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("document query polling", () => {
+  it("requests the pinned revision rather than silently taking the latest", async () => {
+    const get = vi
+      .spyOn(api, "get")
+      .mockResolvedValue({ data: { status: "ready" } });
+    renderHook(() => useDocumentReview("document-1", "pinned-1"), { wrapper });
+    await act(async () => {});
+    expect(get).toHaveBeenCalledWith(
+      "/documents/document-1/review",
+      expect.objectContaining({ params: { revision_id: "pinned-1" } }),
+    );
+  });
   it("polls a technically completed document while its owner review is active", async () => {
     vi.useFakeTimers();
     const get = vi.spyOn(api, "get").mockResolvedValue({

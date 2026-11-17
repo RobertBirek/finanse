@@ -532,8 +532,10 @@ export function useDeleteAccount() {
 }
 
 export function useCategories() {
+  const ownerId = useAuthStore((state) => state.user?.id);
+  const sessionVersion = useAuthStore((state) => state.sessionVersion);
   return useQuery({
-    queryKey: ["finance", "categories"],
+    queryKey: ["finance", "categories", ownerId, sessionVersion],
     queryFn: async () => {
       const { data } = await api.get<Category[]>("/finance/categories");
       return data;

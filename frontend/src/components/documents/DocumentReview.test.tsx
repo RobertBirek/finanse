@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { categorySelectFixture } from "../../test/categoryFixtures";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { useAuthStore } from "../../stores/authStore";
 import type { DocumentReview as DocumentReviewData } from "../../api/documents";
 import { DocumentReview } from "./DocumentReview";
 
@@ -37,6 +38,17 @@ const apiState = vi.hoisted(() => ({
     .fn()
     .mockResolvedValue({ data: { id: "draft-1", version: 5 } }),
 }));
+beforeEach(() =>
+  useAuthStore.setState({
+    user: {
+      id: "owner-review",
+      email: "test@example.test",
+      display_name: "Test",
+      is_active: true,
+    },
+  }),
+);
+afterEach(() => useAuthStore.setState({ user: null }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => apiState.navigate }));
 
 vi.mock("../../api/documents", async (original) => ({

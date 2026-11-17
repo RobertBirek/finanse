@@ -244,7 +244,12 @@ async def prepare_bill(
         # unset until the human explicitly supplies approval data.
         if revision is not None and revision.status == "ready":
             try:
-                suggestion = ReviewSuggestion.model_validate(revision.data)
+                suggestion = ReviewSuggestion.model_validate(
+                    {
+                        key: revision.data.get(key)
+                        for key in ("document_type", "fields", "provenance", "parser_version")
+                    }
+                )
             except ValueError:
                 suggestion = None
             if suggestion is not None and suggestion.document_type in {"invoice", "receipt"}:

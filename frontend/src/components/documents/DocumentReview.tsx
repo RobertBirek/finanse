@@ -25,6 +25,12 @@ import { categoryOptions } from "../../lib/categories";
 import { Dialog } from "../Dialog";
 import type { AxiosError } from "axios";
 import { useReviewForm, type ReviewForm } from "./useReviewForm";
+import { useAuthStore } from "../../stores/authStore";
+import {
+  captureProcessingActor,
+  isProcessingActorCurrent,
+  useDocumentProcessingStore,
+} from "../../stores/documentProcessingStore";
 
 type Props = { documentId: string; onClose: () => void };
 const minor = (raw: string) =>
@@ -42,9 +48,26 @@ const processingError = (error: unknown, fallback: string) => {
 };
 
 export function DocumentReview({ documentId, onClose }: Props) {
+  const ownerId = useAuthStore((state) => state.user?.id);
+  const generation = useDocumentProcessingStore((state) => state.generation);
+  return (
+    <DocumentReviewContent
+      key={`${ownerId}:${generation}:${documentId}`}
+      documentId={documentId}
+      onClose={onClose}
+    />
+  );
+}
+
+function DocumentReviewContent({ documentId, onClose }: Props) {
   const navigate = useNavigate();
-  const review = useDocumentReview(documentId);
   const metadata = useDocumentMetadata(documentId);
+  const [showLatest, setShowLatest] = useState(false);
+  const pinnedRevision =
+    metadata.data?.finance?.bill_id && !showLatest
+      ? metadata.data.finance.revision_id
+      : null;
+  const review = useDocumentReview(documentId, pinnedRevision);
   const restore = useRestoreDocument();
   const archived = !!metadata.data?.archived_at;
   const canProcess =
@@ -74,7 +97,8 @@ export function DocumentReview({ documentId, onClose }: Props) {
   const accounts = useAccounts();
   const { form, update, applyNewSuggestions } = useReviewForm(
     documentId,
-    review.data,
+    metadata.isLoading ? undefined : review.data,
+    categories.data,
   );
   const [conflict, setConflict] = useState<"draft" | "attach" | null>(null);
   const [refreshedConflict, setRefreshedConflict] = useState<
@@ -132,11 +156,14 @@ export function DocumentReview({ documentId, onClose }: Props) {
       !form.currency
     )
       return;
+    const actor = captureProcessingActor();
     prepareBill.mutate(
       { documentId },
       {
-        onSuccess: (bill) =>
-          setDraftBill({ id: bill.id, version: bill.version }),
+        onSuccess: (bill) => {
+          if (!isProcessingActorCurrent(actor)) return;
+          setDraftBill({ id: bill.id, version: bill.version });
+        },
       },
     );
   };
@@ -162,6 +189,7 @@ export function DocumentReview({ documentId, onClose }: Props) {
       payment_account_id: form.payment_account_id || null,
       ...(separate ? { duplicate_decision: "separate" as const } : {}),
     };
+    const actor = captureProcessingActor();
     approve.mutate(
       {
         billId: draftBill.id,
@@ -173,7 +201,10 @@ export function DocumentReview({ documentId, onClose }: Props) {
         }),
       },
       {
-        onSuccess: (bill) => navigate(`/finances/documents?bill=${bill.id}`),
+        onSuccess: (bill) => {
+          if (isProcessingActorCurrent(actor))
+            navigate(`/finances/documents?bill=${bill.id}`);
+        },
         onError: (error) => {
           if ((error as AxiosError).response?.status === 409) {
             setRefreshedConflict(null);
@@ -350,7 +381,10 @@ export function DocumentReview({ documentId, onClose }: Props) {
               type="button"
               className="btn-primary"
               disabled={!canProcess}
-              onClick={() => prepare.mutate({ documentId, refresh: false })}
+              onClick={() => {
+                setShowLatest(true);
+                prepare.mutate({ documentId, refresh: false });
+              }}
             >
               Sprawdź dane
             </button>
@@ -360,6 +394,18 @@ export function DocumentReview({ documentId, onClose }: Props) {
                 OCR i zewnętrzny dostawca językowy mogą się pomylić. Porównaj
                 dane z oryginałem i popraw je ręcznie.
               </p>
+              {pinnedRevision && (
+                <p className="mt-2 text-xs text-gray-400">
+                  Wyświetlasz odczyt użyty do szkicu.
+                  <button
+                    type="button"
+                    className="ml-2 underline"
+                    onClick={() => setShowLatest(true)}
+                  >
+                    Pokaż najnowsze sugestie bez ponownego odczytu
+                  </button>
+                </p>
+              )}
               {(review.data.status === "error" ||
                 invalidModelOutput ||
                 interruptedModelRead ||
@@ -374,12 +420,13 @@ export function DocumentReview({ documentId, onClose }: Props) {
                     type="button"
                     className="btn-secondary ml-2"
                     disabled={!canProcess || prepareVision.isPending}
-                    onClick={() =>
+                    onClick={() => {
+                      setShowLatest(true);
                       prepareVision.mutate({
                         documentId,
                         intentKey: crypto.randomUUID(),
-                      })
-                    }
+                      });
+                    }}
                   >
                     Ponów AI
                   </button>
@@ -547,6 +594,10 @@ function ReviewForm({
             ))}
         </select>
       </label>
+      <p className="text-xs text-gray-400">
+        Sugestia AI nie jest zatwierdzoną kategorią. Możesz ją zmienić lub
+        wyczyścić.
+      </p>
       <label className="block text-sm text-gray-300">
         Konto płatności
         <select
@@ -614,7 +665,7 @@ function ReviewForm({
         onChange={(v) => update("payee_iban", v)}
       />
       <p className="text-xs text-gray-400">
-        Kategoria i konto płatności są opcjonalne i wybierzesz je w rejestrze.
+        Kategoria i konto płatności są opcjonalne.
       </p>
       <button
         type="submit"

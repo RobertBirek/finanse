@@ -56,6 +56,26 @@ function renderRegister(items = [bill]) {
 }
 
 describe("FinanceDocuments register", () => {
+  it("clearly marks drafts and links to checking the source without showing a confirmed amount", async () => {
+    renderRegister([
+      {
+        ...bill,
+        id: "draft-1",
+        review: "draft",
+        total_minor: null,
+        currency: null,
+        declaration: "unknown",
+        sources: [{ document_id: "doc-1" }],
+      },
+    ]);
+    expect(
+      await screen.findByText("Szkic — wymaga zatwierdzenia"),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Sprawdź dane źródłowe" }),
+    ).toHaveAttribute("href", "/documents?review=doc-1");
+    expect(screen.queryByText("100,00 €")).not.toBeInTheDocument();
+  });
   it("separates declared paid from partial reconciliation and renders the remaining currency amount", async () => {
     renderRegister();
     expect(

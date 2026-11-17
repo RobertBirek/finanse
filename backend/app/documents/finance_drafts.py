@@ -51,7 +51,12 @@ def review_block_reason(revision: Revision | None) -> str | None:
     if revision.status != "ready" or revision.warnings:
         return "recognition_incomplete"
     try:
-        parsed = ReviewSuggestion.model_validate(revision.data)
+        parsed = ReviewSuggestion.model_validate(
+            {
+                key: revision.data.get(key)
+                for key in ("document_type", "fields", "provenance", "parser_version")
+            }
+        )
         if parsed.document_type not in {"invoice", "receipt"}:
             return "unsupported_document"
         fields = parsed.fields

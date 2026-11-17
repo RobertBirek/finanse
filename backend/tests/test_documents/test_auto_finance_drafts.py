@@ -87,6 +87,51 @@ async def test_supported_recognition_creates_one_unapproved_draft(drafts, monkey
 
 
 @pytest.mark.asyncio
+async def test_saved_text_recognition_with_derived_minor_units_is_eligible(drafts, monkeypatch):
+    db, _, intent, revision = setup_draft(drafts)
+    revision.data["total_minor"] = 7500
+    monkeypatch.setattr(
+        drafts, "prepare_bill", AsyncMock(return_value=SimpleNamespace(id=uuid.uuid4()))
+    )
+    assert await drafts.prepare_pending_finance_draft(db, intent.id) == "succeeded"
+
+
+@pytest.mark.asyncio
+async def test_prepare_bill_uses_text_hints_but_never_commits_money(monkeypatch):
+    from app.finance import bills
+    from app.finance.bills_schemas import MutationContext
+
+    owner, doc_id = uuid.uuid4(), uuid.uuid4()
+    revision = ready_revision(owner, doc_id)
+    revision.data["total_minor"] = 7500
+    added = []
+    db = SimpleNamespace(
+        execute=AsyncMock(
+            side_effect=[scalar(SimpleNamespace()), None, scalar(None), scalar(revision)]
+        ),
+        add=added.append,
+        flush=AsyncMock(),
+    )
+
+    async def command(db, user_id, action, key, payload, operation):
+        return await operation()
+
+    async def response(db, bill):
+        return bill
+
+    monkeypatch.setattr(bills, "_run_bill_command", command)
+    monkeypatch.setattr(bills, "_response", response)
+    monkeypatch.setattr(bills, "log_event", AsyncMock())
+    result = await bills.prepare_bill(
+        db, owner, doc_id, context=MutationContext(idempotency_key="test")
+    )
+    assert result.supplier_name == "Synthetic"
+    assert result.description == "Subscription"
+    assert result.total_minor is None
+    assert result.currency is None
+
+
+@pytest.mark.asyncio
 async def test_delivery_replay_never_prepares_or_overwrites_a_bill(drafts, monkeypatch):
     db, _, intent, _ = setup_draft(drafts, status="succeeded")
     prepare = AsyncMock()
