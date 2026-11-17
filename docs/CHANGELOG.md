@@ -2,6 +2,31 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Lokalnie; bez push/deploy] — 2026-11-17 — Obieg dokumentów i kategoria AI
+
+### Added
+- Nowy upload tworzy trwałe zlecenie szkicu. Po kompletnym odczycie pojedynczej
+  faktury/paragonu worker używa istniejącego `prepare_bill`; duplikat, ponowne
+  dostarczenie i istniejące powiązanie nie tworzą drugiej faktury.
+- Sugestia aktywnej kategorii wydatku właściciela w tym samym wywołaniu AI.
+  Dostawca widzi ograniczone aliasy/ścieżki, nie UUID; backend ponownie sprawdza
+  katalog. Formularz chroni ręczny wybór i ręczne wyczyszczenie kategorii.
+- Dwa niezależne znaczniki Odczyt/Finanse, prawdziwy link do faktury, przegląd
+  źródła szkicu i jego przypiętej rewizji; jawne oznaczenia szkiców w rejestrze.
+
+### Changed
+- Kwota/waluta szkicu pozostają NULL, deklaracja unknown. Bez zatwierdzania,
+  transakcji, płatności, zadań Today lub przetwarzania historycznych plików.
+- Cache faktur/kategorii izolowany właścicielem i sesją; późny wynik starej
+  sesji nie przenosi użytkownika do dokumentu poprzedniego konta.
+- Lokalny odbiór: 424 testy dokumentów offline, 719 Vitest, lint/typecheck,
+  kolekcja backendu i frontend build PASS. Jeden świeży review bez uwag
+  Critical/Important. Szczegóły i ograniczenia w
+  `audits/2026-11-17-document-auto-finance-drafts-local.md`.
+- Migracja `a6e52f41c9d0` tylko przygotowana i sprawdzona offline. Nie uruchamiano
+  testów PostgreSQL, migracji rzeczywistej bazy, AI na dokumentach użytkownika,
+  push ani wdrożenia. Nowy zakres danych wymaga osobnej aktywacji polityki Vision.
+
 ## [Lokalnie; etap 1] — 2026-11-17 — Automatyczne szkice dokumentów
 
 ### Added

@@ -7,9 +7,12 @@ Backlog zadań ze statusami.
 - [x] Uzgodnić szkice, dwa znaczniki, istniejące kategorie i brak zapisów księgi/płatności.
 - [x] Po przełączeniu agenta rozpocząć lokalne TDD, zachować wcześniejsze notatki.
 - [x] Intent/projekcja i addytywna migracja:13offlinePASS, integracja dla CI.
-- [ ] Automatyczna rejestracja szkicu i sugestia kategorii w istniejącym odczycie.
-- [ ] UI statusów/linków/edycji kategorii i poprawne odświeżanie.
-- [ ] Odbiór, jeden świeży review i osobne decyzje o push/CI/deploy.
+- [x] Automatyczna rejestracja szkicu i sugestia kategorii w istniejącym odczycie.
+- [x] UI statusów/linków/edycji kategorii i poprawne odświeżanie.
+- [x] Lokalny odbiór:424offline/719Vitest/lint/types/kolekcja/build; jeden świeży review.
+- [ ] Osobna zgoda na integrację/push/CI i testy rzeczywistego PostgreSQL.
+- [ ] Osobna zgoda na migrację/deploy i aktywację zmienionej polityki Vision;
+  potwierdzić retencję, runtime i dostawcę, bez masowej adopcji starych plików.
 
 ## Dokument jako zadanie w Today — diagnoza (2026-11-17)
 

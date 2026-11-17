@@ -6,6 +6,7 @@ import {
   fireEvent,
   waitFor,
   act,
+  cleanup,
 } from "@testing-library/react";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import api from "../../lib/api";
@@ -71,6 +72,8 @@ beforeEach(() => {
   }));
 });
 afterEach(() => {
+  // Actor-scoped queries must be unmounted before changing auth and restoring HTTP mocks.
+  cleanup();
   client.clear();
   vi.restoreAllMocks();
   useAuthStore.setState({ user: null });

@@ -2,6 +2,36 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Automatyczne szkice dokumentów: zakończenie lokalnej implementacji
+
+- Kontynuowano zatwierdzony plan inline/TDD. Etap2 `4848a84`, etap3 `3c5ea2d`.
+  Worker DB-only tworzy wyłącznie draft przez prepare_bill, z blokadą
+  dokument→intent, stałym receipt key i bez ponownego OCR przy błędzie zapisu.
+  Nie zmienia istniejącego draft/approved/rejected; bankowy/niekompletny odczyt
+  wymaga sprawdzenia. Bez backfillu/historycznego AI lub zmian produkcji.
+- Kategoria: aktywne expense ownera, poprawna taksonomia bez technicznych węzłów,
+  aliasy c01…/ścieżki z limitami Settings; fingerprint i walidacja po sieci.
+  Jeden request rozpoznania obrazu/tekstu, stare kontrakty bez katalogu zachowane.
+  Sugestia FK należy do rewizji, nie do zatwierdzonej faktury.
+- UI ma niezależne statusy, rzeczywiste linki, przegląd przypiętej rewizji i
+  ręczną opcję pobrania nowszych sugestii bez odczytu. Dirty category/clear
+  zachowane. Formularz jest remontowany dla nowego aktora; cache bills/categories
+  owner+session (RED wykazał ekspozycję starego cache przy zmianie konta).
+- RED2 wykrył strict ReviewSuggestion vs wewnętrzne total_minor w odczycie tekstu;
+  oba miejsca parsują tylko pola kontraktu, nie gubią hintów i nie zatwierdzają kwoty.
+- Odbiór lokalny424documentsoffline/137integrationdeselected,719Vitest115plików,
+  pełne Ruff/ESLint/mypy220/tsc/kolekcja i frontend build PASS. Znane ostrzeżenia:
+  passlib crypt i bundlowanie >500kB. RCA dodatkowych4jsdomAggregateError:
+  teardown TransactionCategorization resetował auth po przywróceniu HTTPmocków
+  na wciąż zamontowanych query; cleanup przed resetem,9testów bez diagnostyk.
+- Jeden świeży readonly review b5fbc5e..3c5ea2d: brak Critical/Important.
+  Uwaga o dokumentacji etapu1 zamknięta planowym uzupełnieniem Task4.
+  Integracja/retencja PG, realny dostawca i runtime poza zakresem, nie PASS.
+- Migracji nie stosowano. Bez push/deploy/zmiany polityk AI. Następnie osobna
+  decyzja o integracji i CI/PG, potem kontrolowany rollout z reaktywacją polityki
+  Vision (fingerprint nowego kontraktu); nie uruchamiać backfillu dokumentów.
+  Raport: `audits/2026-11-17-document-auto-finance-drafts-local.md`.
+
 ## 2026-11-17 — Automatyczne szkice dokumentów, etap modeli i statusu
 
 - Użytkownik zatwierdził plan w rozmowie: upload→odczyt+kategoria→szkic→ręczne

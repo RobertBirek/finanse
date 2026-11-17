@@ -34,12 +34,12 @@ Interfaces: FinanceDraftSummary(state, error_code, bill_id, review, lifecycle).
 Intent: unique(document_id), owner/document/revision FK, state/error and timestamps.
 Revision: nullable suggested_category_id FK; no backfill. Migration parent efaf78432563.
 
-- [ ] RED: batch owner-scoped projection, no source vs draft vs approved vs archived,
+- [x] RED: batch owner-scoped projection, no source vs draft vs approved vs archived,
   stopped intent, nullable category and migration non-destructive shape.
-- [ ] Run focused offline tests; expected missing contracts, no DB access.
-- [ ] Implement models/schema/projection and one extra batched read in document_responses.
-- [ ] GREEN focused tests + collection; integration tests added for CI, not run locally.
-- [ ] Verify lint/types/test before commit `feat: dodaj trwały intent i status finansowy dokumentu`.
+- [x] Run focused offline tests; expected missing contracts, no DB access.
+- [x] Implement models/schema/projection and one extra batched read in document_responses.
+- [x] GREEN focused tests + collection; integration tests added for CI, not run locally.
+- [x] Verify lint/types/test before commit `feat: dodaj trwały intent i status finansowy dokumentu`.
 
 ### Task 2: Automatyczny szkic i katalog kategorii w odczycie
 
@@ -54,16 +54,16 @@ Interfaces: `create_finance_draft_intent(db,user_id,document_id)` (new upload on
 Catalog packet: public aliases+paths / private alias→UUID; resolver revalidates
 owner and category when attaching optional suggested_category_id.
 
-- [ ] RED: new upload creates intent; duplicate does not; no old rows adopted.
+- [x] RED: new upload creates intent; duplicate does not; no old rows adopted.
   Supported complete review → one draft; incomplete/archive/other → safe state;
   existing link preserved; replay/concurrent delivery guarded.
-- [ ] RED catalog: unknown/deleted/foreign/inactive/cyclic/technical taxonomy,
+- [x] RED catalog: unknown/deleted/foreign/inactive/cyclic/technical taxonomy,
   null model choice, budget limits and hostile text; image/text parity.
-- [ ] Observe failures offline, implement DB orchestration and optional enriched
+- [x] Observe failures offline, implement DB orchestration and optional enriched
   extraction contract, preserving legacy payload without catalog.
-- [ ] GREEN: no ledger/declaration writes, no extra provider invocation; migration
+- [x] GREEN: no ledger/declaration writes, no extra provider invocation; migration
   integration/concurrency tests queued for CI. Config limits in Settings, not hardcoded.
-- [ ] Full devchecks, commit `feat: przygotuj szkice finansowe po odczycie dokumentów`.
+- [x] Full devchecks, commit `feat: przygotuj szkice finansowe po odczycie dokumentów`.
 
 ### Task 3: Statusy, linki, szkice i edytowalna sugestia w UI
 
@@ -74,20 +74,20 @@ focused Vitest tests.
 Consumes Task1 finance summary and Task2 optional suggested_category_id.
 No GET mutations, known actor/generation guards and normal Query invalidation.
 
-- [ ] RED: separate recognition/finance badges, correct route to existing bill,
+- [x] RED: separate recognition/finance badges, correct route to existing bill,
   no link fabricated from ready; draft action opens review of source.
-- [ ] RED: suggested category prefilled only for owned active option; manual
+- [x] RED: suggested category prefilled only for owned active option; manual
   selection/clear survives late results/retry; no category creation; no-suggestion.
-- [ ] Implement accessible labels, direct actions, draft presentation and polling
+- [x] Implement accessible labels, direct actions, draft presentation and polling
   while DB intent pending. Upload notice includes category catalog data export.
-- [ ] GREEN focused Vitest, full frontend suite/lint/types/build.
-- [ ] Full devchecks, commit `feat: pokaż obieg dokumentów i sugestie kategorii`.
+- [x] GREEN focused Vitest, full frontend suite/lint/types/build.
+- [x] Full devchecks, commit `feat: pokaż obieg dokumentów i sugestie kategorii`.
 
 ### Task 4: Odbiór, dokumentacja i jeden review
 
-- [ ] Run all focused offline contracts, project /lint /typecheck /test, frontend build.
-- [ ] Fresh readonly whole-branch review, fix Important/Critical once by RED→GREEN,
+- [x] Run all focused offline contracts, project /lint /typecheck /test, frontend build.
+- [x] Fresh readonly whole-branch review, fix Important/Critical once by RED→GREEN,
   record deferred minors; no second reviewer.
-- [ ] Update CHANGELOG/TASKS/JOURNAL and local audit; state explicitly that live
+- [x] Update CHANGELOG/TASKS/JOURNAL and local audit; state explicitly that live
   migration/provider/runtime not verified. Commit results locally, no push/deploy.
-- [ ] Preserve evidence, finish branch and ask separately about integration.
+- [x] Preserve evidence, finish branch and ask separately about integration.
