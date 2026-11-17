@@ -131,6 +131,9 @@ async def store_document(
     )
     db.add(doc)
     await db.flush()
+    from app.documents.finance_drafts import create_finance_draft_intent
+
+    await create_finance_draft_intent(db, user_id, doc.id)
     # Routing is immutable for a newly stored original.  Duplicates returned above
     # deliberately retain their historic method and never create fresh work.
     if mime_type.startswith("image/") and settings.DOCUMENT_VISION_ENABLED:

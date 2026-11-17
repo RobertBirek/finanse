@@ -14,5 +14,6 @@ class FinanceDraftSummary(BaseModel):
     )
     error_code: str | None = None
     bill_id: uuid.UUID | None = None
+    revision_id: uuid.UUID | None = None
     review: Literal["draft", "approved", "rejected"] | None = None
     lifecycle: Literal["active", "archived", "cancelled"] | None = None

@@ -31,8 +31,9 @@ async def get_document_review(
     document_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    revision_id: uuid.UUID | None = None,
 ):
-    review = await get_review(db, current_user.id, document_id)
+    review = await get_review(db, current_user.id, document_id, revision_id=revision_id)
     if review is None:
         return JSONResponse(content={"detail": "Review not found"}, status_code=404)
     return review

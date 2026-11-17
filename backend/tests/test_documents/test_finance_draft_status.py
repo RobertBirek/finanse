@@ -32,6 +32,7 @@ async def test_finance_summaries_are_batched_and_owner_scoped(queries):
                 bill_id=uuid.uuid4(),
                 review="approved",
                 lifecycle="active",
+                revision_id=uuid.uuid4(),
             ),
             SimpleNamespace(
                 document_id=ids[1],
@@ -40,12 +41,14 @@ async def test_finance_summaries_are_batched_and_owner_scoped(queries):
                 bill_id=None,
                 review=None,
                 lifecycle=None,
+                revision_id=None,
             ),
         ]
     )
     db = SimpleNamespace(execute=AsyncMock(return_value=result))
     summary = await queries.get_finance_summaries(db, owner, ids)
     assert summary[ids[0]].review == "approved"
+    assert summary[ids[0]].revision_id is not None
     assert summary[ids[1]].state == "pending"
     assert summary[ids[2]].bill_id is None
     assert summary[ids[2]].state == "not_requested"

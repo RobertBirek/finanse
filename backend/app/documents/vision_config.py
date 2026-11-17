@@ -23,6 +23,7 @@ class VisionConfig:
             endpoint = f"{endpoint}:{parsed.port}"
         endpoint = f"{endpoint}{parsed.path.rstrip('/') or '/'}"
         identity = {
+            "contract": "owned-document-category-suggestions-v2",
             "endpoint": endpoint,
             "model": self.model.strip(),
             "prompt_version": self.prompt_version.strip(),

@@ -67,6 +67,7 @@ class ReviewSuggestion(BaseModel):
 
 
 class ReviewResponse(ReviewSuggestion):
+    suggested_category_id: uuid.UUID | None = None
     id: uuid.UUID
     document_id: uuid.UUID
     revision: int

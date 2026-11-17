@@ -155,8 +155,11 @@ class Settings(BaseSettings):
     LLM_MAX_OUTPUT_TOKENS: PositiveInt = 4096
     LLM_REASONING_EFFORT: str = "low"
     DOCUMENT_TEXT_MODEL: str = ""
+    DOCUMENT_TEXT_INPUT_MAX_CHARS: PositiveInt = Field(default=12000, le=2_000_000)
     DOCUMENT_TEXT_MAX_OUTPUT_TOKENS: PositiveInt = 2000
     DOCUMENT_TEXT_REASONING_EFFORT: str = "none"
+    DOCUMENT_CATEGORY_MAX_CATEGORIES: PositiveInt = Field(default=200, le=1000)
+    DOCUMENT_CATEGORY_MAX_BYTES: PositiveInt = Field(default=32768, le=262144)
     CORS_ORIGINS: str = DEFAULT_CORS_ORIGINS
     TRUSTED_ORIGINS: str | None = None
     TRUSTED_PROXY_HOSTS: str = "frontend"

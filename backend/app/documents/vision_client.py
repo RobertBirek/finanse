@@ -1,6 +1,7 @@
 """Bounded OpenAI-compatible image extraction with no fallback or tool access."""
 
 import base64
+import json
 import logging
 from typing import Any, cast
 
@@ -12,8 +13,12 @@ from pydantic import ValidationError
 from app.config import settings
 from app.documents.vision_config import VisionConfig
 from app.documents.vision_schemas import (
+    CATEGORY_SELECTION_PROMPT,
+    CategorizedVisionPayload,
     VisionExtraction,
     VisionPayload,
+    category_extraction,
+    category_payload_schema,
     review_suggestion_from_payload,
     to_minor_units,
 )
@@ -67,11 +72,29 @@ def _provider_error(error: BaseException) -> VisionProviderError:
     return VisionProviderError("provider_unavailable", retryable=True)
 
 
-async def extract_image_review(jpeg: bytes, *, config: VisionConfig) -> VisionExtraction:
+async def extract_image_review(
+    jpeg: bytes,
+    *,
+    config: VisionConfig,
+    category_catalog: list[dict[str, str]] | None = None,
+) -> VisionExtraction:
     """Extract one normalized JPEG; callers own image preparation and retry policy."""
     if not jpeg:
         raise VisionProviderError("invalid_image", retryable=False)
     image_url = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode("ascii")
+    prompt = _SYSTEM_PROMPT
+    content: list[dict[str, str]] = [{"type": "input_image", "image_url": image_url}]
+    schema = VisionPayload.model_json_schema()
+    if category_catalog:
+        prompt = prompt.replace("infer an account or category", "infer an account")
+        prompt += CATEGORY_SELECTION_PROMPT
+        content.append(
+            {
+                "type": "input_text",
+                "text": json.dumps({"categories": category_catalog}, ensure_ascii=False),
+            }
+        )
+        schema = category_payload_schema(category_catalog)
     http_client = _create_http_client(
         timeout=settings.DOCUMENT_VISION_TIMEOUT_SECONDS,
         follow_redirects=False,
@@ -90,10 +113,10 @@ async def extract_image_review(jpeg: bytes, *, config: VisionConfig) -> VisionEx
             {
                 "model": config.model,
                 "input": [
-                    {"role": "developer", "content": _SYSTEM_PROMPT},
+                    {"role": "developer", "content": prompt},
                     {
                         "role": "user",
-                        "content": [{"type": "input_image", "image_url": image_url}],
+                        "content": content,
                     },
                 ],
                 "max_output_tokens": settings.DOCUMENT_VISION_MAX_OUTPUT_TOKENS,
@@ -104,7 +127,7 @@ async def extract_image_review(jpeg: bytes, *, config: VisionConfig) -> VisionEx
                         "type": "json_schema",
                         "name": "document_vision_review",
                         "strict": True,
-                        "schema": VisionPayload.model_json_schema(),
+                        "schema": schema,
                     }
                 },
             },
@@ -118,11 +141,17 @@ async def extract_image_review(jpeg: bytes, *, config: VisionConfig) -> VisionEx
         await client.close()
 
     try:
-        content = response_text(response)
+        output = response_text(response)
     except ValueError:
         raise VisionProviderError("invalid_model_output", retryable=False)
     try:
-        payload = VisionPayload.model_validate_json(content)
+        if category_catalog:
+            return category_extraction(
+                CategorizedVisionPayload.model_validate_json(output),
+                parser_version=f"{config.provider}:{config.model}",
+                catalog=category_catalog,
+            )
+        payload = VisionPayload.model_validate_json(output)
         if payload.fields.total is not None:
             to_minor_units(payload.fields.total)
         # The review model enforces semantic rules beyond the provider JSON schema,

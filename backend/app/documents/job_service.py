@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.documents.category_catalog import CategoryCatalog, resolve_category
 from app.documents.job_models import (
     DocumentProcessingJob,
     DocumentVisionPolicy,
@@ -37,6 +38,8 @@ class JobClaim:
 
 @dataclass(frozen=True)
 class JobOutcome:
+    category_catalog: CategoryCatalog | None = None
+    category_key: str | None = None
     suggestion: ReviewSuggestion | None = None
     warnings: tuple[str, ...] = ()
     source_sha256: str | None = None
@@ -413,6 +416,8 @@ async def finish_processing_job(
     if (
         not job
         or not document
+        or document.user_id != claim.user_id
+        or document.archived_at is not None
         or job.state != "processing"
         or job.lease_token != claim.lease_token
         or job.lease_expires_at is None
@@ -460,6 +465,13 @@ async def finish_processing_job(
             job.state, job.error_code = "superseded", "newer_revision"
             return False
     if outcome.suggestion is not None and revision is not None:
+        revision.suggested_category_id = (
+            await resolve_category(
+                db, claim.user_id, outcome.category_catalog, outcome.category_key
+            )
+            if outcome.category_catalog is not None
+            else None
+        )
         revision.data = outcome.suggestion.model_dump(mode="json")
         revision.field_provenance = outcome.suggestion.provenance
         revision.parser_version = outcome.suggestion.parser_version

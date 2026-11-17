@@ -24,6 +24,7 @@ async def get_finance_summaries(
                 Document.id.label("document_id"),
                 Intent.state,
                 Intent.error_code,
+                Intent.revision_id,
                 Bill.id.label("bill_id"),
                 Bill.review,
                 Bill.lifecycle,
@@ -42,6 +43,7 @@ async def get_finance_summaries(
         result[row.document_id] = FinanceDraftSummary(
             state=row.state or "not_requested",
             error_code=row.error_code,
+            revision_id=row.revision_id,
             bill_id=row.bill_id,
             review=row.review,
             lifecycle=row.lifecycle,

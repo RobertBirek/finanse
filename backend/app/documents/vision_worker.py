@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.database import async_session_factory
+from app.documents.category_catalog import load_document_category_catalog
 from app.documents.images import ImageNormalizationError, normalize_image
 from app.documents.job_service import (
     JobOutcome,
@@ -40,7 +41,13 @@ async def process_document_job(ctx: dict[str, object], job_id: str) -> None:
         return
     async with async_session_factory() as db:
         document = (
-            await db.execute(select(Document).where(Document.id == claim.document_id))
+            await db.execute(
+                select(Document).where(
+                    Document.id == claim.document_id,
+                    Document.user_id == claim.user_id,
+                    Document.archived_at.is_(None),
+                )
+            )
         ).scalar_one_or_none()
         await db.commit()
     if document is None:
@@ -65,10 +72,15 @@ async def process_document_job(ctx: dict[str, object], job_id: str) -> None:
         if not await reserve_vision_call(db, claim, now=datetime.now(UTC), config=config):
             await db.commit()
             return
+        catalog = await load_document_category_catalog(db, claim.user_id, claim.document_id)
         await db.commit()
     try:
-        extraction = await extract_image_review(derivative, config=config)
+        extraction = await extract_image_review(
+            derivative, config=config, category_catalog=catalog.public or None
+        )
         outcome = JobOutcome(
+            category_catalog=catalog,
+            category_key=extraction.category_key,
             suggestion=extraction.suggestion,
             warnings=extraction.warnings,
             source_sha256=hashlib.sha256(source).hexdigest(),

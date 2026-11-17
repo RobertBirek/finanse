@@ -106,6 +106,11 @@ async def test_upload_waits_for_backup_lock_without_blocking_event_loop(
 
     monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
     lock_path = tmp_path / ".backup.lock"
+    from unittest.mock import AsyncMock
+
+    from app.documents import finance_drafts
+
+    monkeypatch.setattr(finance_drafts, "create_finance_draft_intent", AsyncMock())
     lock_path.touch()
     lock_file = lock_path.open("a+b")
     fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)

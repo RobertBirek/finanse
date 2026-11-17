@@ -51,6 +51,7 @@ def _response(revision: DocumentExtractionRevision) -> ReviewResponse:
         revision=revision.revision,
         status=cast(Literal["pending", "processing", "ready", "incomplete", "error"], status),
         error_code=revision.error_code,
+        suggested_category_id=revision.suggested_category_id,
         input_method=cast(Literal["text", "image"], revision.input_method),
         warnings=cast(
             tuple[Literal["unreadable", "missing_required_fields", "unsupported_document"], ...],
@@ -168,7 +169,11 @@ async def prepare_review(
 
 
 async def get_review(
-    db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    document_id: uuid.UUID,
+    *,
+    revision_id: uuid.UUID | None = None,
 ) -> ReviewResponse | None:
     revision = (
         await db.execute(
@@ -176,6 +181,7 @@ async def get_review(
             .where(
                 DocumentExtractionRevision.document_id == document_id,
                 DocumentExtractionRevision.user_id == user_id,
+                *([DocumentExtractionRevision.id == revision_id] if revision_id else []),
             )
             .order_by(DocumentExtractionRevision.revision.desc())
             .limit(1)
@@ -193,7 +199,7 @@ async def process_review_revision(
         return None
     document = await db.scalar(
         select(Document)
-        .where(Document.id == candidate.document_id)
+        .where(Document.id == candidate.document_id, Document.user_id == candidate.user_id)
         .with_for_update(skip_locked=True)
         .execution_options(populate_existing=True)
     )
@@ -218,7 +224,19 @@ async def process_review_revision(
         revision.status, revision.error_code = "incomplete", "ocr_text_unavailable"
         return revision
     try:
-        parsed = await extract_review_data(text.extracted_text)
+        from app.documents.category_catalog import load_document_category_catalog, resolve_category
+        from app.documents.extractor import extract_review_with_categories
+
+        catalog = await load_document_category_catalog(db, revision.user_id, revision.document_id)
+        if catalog.public:
+            extraction = await extract_review_with_categories(text.extracted_text, catalog.public)
+            parsed = extraction.suggestion
+            revision.warnings = list(extraction.warnings)
+            revision.suggested_category_id = await resolve_category(
+                db, revision.user_id, catalog, extraction.category_key
+            )
+        else:
+            parsed = await extract_review_data(text.extracted_text)
     except ReviewExtractionError as error:
         revision.status, revision.error_code = "incomplete", error.code
         return revision
@@ -239,7 +257,7 @@ async def process_review_revision(
     revision.data = data
     revision.field_provenance = parsed.provenance
     revision.parser_version = parsed.parser_version
-    revision.status = "ready"
+    revision.status = "incomplete" if revision.warnings else "ready"
     revision.error_code = None
     return revision
 

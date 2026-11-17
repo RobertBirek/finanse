@@ -130,6 +130,27 @@ async def dispatch_pending_document_reviews(ctx) -> None:
         )
 
 
+async def dispatch_finance_drafts(ctx) -> None:
+    from app.documents.finance_drafts import pending_finance_draft_ids
+
+    async with async_session_factory() as db:
+        ids = await pending_finance_draft_ids(db, limit=settings.DOCUMENT_DISPATCH_BATCH_SIZE)
+    for intent_id in ids:
+        await ctx["redis"].enqueue_job(
+            "prepare_document_finance_draft",
+            str(intent_id),
+            _job_id=f"document-finance-draft:{intent_id}",
+        )
+
+
+async def prepare_document_finance_draft(ctx, intent_id: str) -> None:
+    from app.documents.finance_drafts import prepare_pending_finance_draft
+
+    async with async_session_factory() as db:
+        await prepare_pending_finance_draft(db, uuid.UUID(intent_id))
+        await db.commit()
+
+
 async def dispatch_document_jobs(ctx) -> None:
     """Deliver durable vision/local-OCR intents; legacy rows never enter this queue."""
     from app.documents.job_service import recover_processing_jobs
@@ -327,6 +348,7 @@ class WorkerSettings:
     functions: ClassVar = [
         process_document,
         prepare_document_review,
+        prepare_document_finance_draft,
         process_document_job,
         func(
             process_receipt_read,
@@ -352,6 +374,7 @@ class WorkerSettings:
     cron_jobs: ClassVar = [
         cron(dispatch_pending_documents, second={0, 30}, run_at_startup=True),
         cron(dispatch_pending_document_reviews, second={15, 45}, run_at_startup=True),
+        cron(dispatch_finance_drafts, second={17, 47}, run_at_startup=True),
         cron(dispatch_document_jobs, second={5, 35}, run_at_startup=True),
         cron(dispatch_receipt_reads, second={7, 37}, run_at_startup=True),
         cron(dispatch_rule_events, second={10, 40}, run_at_startup=True),
