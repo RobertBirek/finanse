@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Main; bez nowego rollout aplikacji] — 2026-11-17 — Publikacja preflightu
+
+### Changed
+- Po zgodzie użytkownika push bez force `b5c212a..2492ad2` do main.
+  Świeże lint/types/kolekcjaPASS,134offlineunitPASS i707VitestPASS65.81s.
+- Diff względem live45bcf88 obejmuje ops/testy/docs; brak zmian runtime lub
+  migracji. Bez identycznego build/restartu. Readonly HTTPS/health200/auth401,
+  workerPASS i schemaefaf;3usługi zgodne z active metadata,0restartów.
+- Nowe CLI nie ma jeszcze zatwierdzonego inventory; nie adoptowano obserwacji
+  ani nie zmieniono metadanych dla PASS. Raport `audits/2026-11-17-release-preflight-main.md`.
+  Zdalne CI sprawdzać dla dokładnej końcowej rewizji po dokumentacyjnym follow-up.
+
 ## [Lokalnie; bez push/deploy] — 2026-11-17 — Readonly preflight wydania
 
 ### Added

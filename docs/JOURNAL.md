@@ -2,6 +2,27 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Preflight na main; brak nowych bajtów aplikacji
+
+- User polecił pushmain/deploy po lokalnym odbiorze2492ad2. Remote b5c212a,
+  cztery commityFF, czysty worktree; fetch i ponowne sprawdzenie remote bez driftu.
+  Push bez force2492ad2, zdalny receipt zgodny. Nie ruszano lokalnego checkoutu main.
+- Kanoniczne lint/types/kolekcja backenduPASS,707Vitest65.81sPASS;
+ 134konkretnychunitoffline40.37sPASS, Ruff/mypy2opsPASS. Bez DBfixture lub instalacji.
+- Odczyt active metadata i realnych3apps: live45bcf88/IDs/revisions zgodne,
+  brak /app hostmount,0restartów. Historyczne one-off backend kontenery odrzucono
+  z discovery po jawnych etykietach; bez cleanup starych zasobów.
+- Pusty runtime/buildinputdiff backend/frontend/Dockerignore po wyłączeniu
+  rozpoznanych testów; zmianyops już przeszły ręczny review. Brak nowej aplikacji
+  do wydania, więc bez build/up/restart/backup/migrate/publishmetadata.
+  HTTPS200/APIhealth200/auth401, ARQcheckPASS, schemaefaf. Nie testowano logowania.
+- Nowe CLI nie uzyskało zatwierdzonego inventory: nie uruchamiano go na produkcji,
+  nie wydawano inventory z obserwacji i nie podszywano się pod jego no_rollout.
+  Potwierdzono tylko obecność wymaganych pól active metadata, nie pełny adapterPASS.
+- Dowody `/tmp/opencode/release-preflight-main-20261117.uOt5wazx/`,
+  raport `docs/audits/2026-11-17-release-preflight-main.md`. Po docs-onlyfollowup
+  odczytać dokładne zdalneCI; wcześniejszy/lokalny wynik nie zastępuje jego statusu.
+
 ## 2026-11-17 — Wykonanie planu preflightu Native, policy i CLI
 
 - Po akceptacji planu/Native użytkownik polecił samodzielnie dobrać środowisko,

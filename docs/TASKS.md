@@ -10,7 +10,10 @@ Backlog zadań ze statusami.
 - [x] Czysta polityka/AST: 39 testów offline RED→GREEN.
 - [x] Readonly CLI; 51 testów granicy Git/Compose/PG na syntetycznych danych.
 - [x] Procedura, kontrole 134unit/707Vitest/lint/types/kolekcja i jeden review bez uwag.
-- [ ] Osobna zgoda na push/CI, produkcyjny odbiór adaptera i rzeczywisty preflight.
+- [x] Po osobnej zgodzie pushmain2492ad2 bez force; świeże kontrole PASS.
+- [x] Readonly kwalifikacja wdrożenia: brak runtime diff, live45bcf88 zdrowe;
+  bez restartu/migracji/metadanych. Odczytać dokładne CI po końcowym docs follow-up.
+- [ ] Niezależnie zatwierdzone inventory i pełny produkcyjny odbiór nowego CLI.
 
 ## Readonly preflight wydania — plan (2026-11-16)
 
@@ -20,7 +23,8 @@ Backlog zadań ze statusami.
 - [x] Akceptacja pełnego zakresu i Native (2026-11-17).
 - [x] Po zgodzie dobrano ADVISOR_DEV_PYTHON; bez instalacji lub zmiany shared venv.
 - [x] Implementacja/TDD offline; brak prawdziwego Docker/DB/produkcji w testach.
-- [ ] Odrębne decyzje o push/CI i rzeczywistym użyciu preflightu.
+- [x] Odrębna zgoda na pushmain/CI i kontrolę wdrożenia (2026-11-17).
+- [ ] Pełny pozytywny odbiór nowego CLI na zatwierdzonym inventory.
 
 ## Stabilizacja testu DocumentList (2026-11-16)
 
