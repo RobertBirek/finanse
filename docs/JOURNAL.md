@@ -22,7 +22,18 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   te formaty; brak prób auto-naprawy. 51CLI+39policy oraz43powiązaneunit=133PASS.
   Lint/typecheck/kolekcjaPASS,707Vitest55.85sPASS; brak prawdziwegoDocker/PG.
   Adapter active metadata proponowany i testowany syntetycznie, nie produkcyjnie.
-  Procedura/finalreview jeszcze przed nami; to nie jest gotowość do deployu.
+- Task3: procedura runbook+/deploy, kontrola pisania bytecode bez-BRED→GREEN,
+  134unitPASS37.99s; lint/mypy2ops/mypy215/tsc/kolekcjaPASS,707Vitest56.06sPASS.
+  Jeden świeży review całego slice (commits+workingoverlay), bez Critical/
+  Important/Minor. Nie wykonywano drugiego review lub fixpass bez findingów.
+  Ograniczenia odroczone przez review potwierdzono jawnie w raporcie lokalnego
+  odbioru: brak realadapter/provenance/config/runtime/production acceptance,
+  brak modelu obrony przed złośliwym rootem, wyników testów reviewer nie powtarzał.
+  Końcowa integracja/push/CI i realny odbiór wymagają oddzielnej decyzji.
+- Po review ponowiono134unitPASS37.84s, Ruff/mypy2ops i pełne
+  /lint /typecheck/kolekcjaPASS,707Vitest59.86sPASS. Logi i hashe źródeł w
+  `/tmp/opencode/release-preflight-local-20261117.QQeVlHP2/`, publiczny raport
+  `docs/audits/2026-11-17-release-preflight-local.md`. Brak odroczonych minorów.
 
 ## 2026-11-16 — Plan readonly preflightu; bez kodu
 

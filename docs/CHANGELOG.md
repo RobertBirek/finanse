@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Lokalnie; etap 2/3] — 2026-11-17 — Readonly preflight wydania
+## [Lokalnie; bez push/deploy] — 2026-11-17 — Readonly preflight wydania
 
 ### Added
 - Czysta klasyfikacja źródeł i liniowego grafu migracji, bez I/O lub uprawnień
@@ -11,9 +11,12 @@ Wszystkie istotne zmiany w projekcie.
 - CLI `ops/release_preflight.py --check`: przypięty Git, inventory SHA256,
   zgodność aktualnych usług z metadanymi, capabilities Compose i stały readonly
   SELECT schematu. Brak apply, automatycznej adopcji inventory lub logów sekretów.
-- 39 testów policy i 51 CLI offline; 133 nowych/powiązanych unit PASS, Ruff/mypy
-  nowych modułów PASS, pełne lint/types/kolekcja i 707 Vitest PASS. Procedura
-  i final review nadal do wykonania. Bez produkcji, aplikacji lub zależności.
+- 39 testów policy i 52 CLI offline; 134 nowych/powiązanych unit PASS, Ruff/mypy
+  nowych modułów PASS, pełne lint/types/kolekcja i 707 Vitest PASS. Jeden świeży
+  review całości bez uwag. Procedura dodana do runbooka i /deploy.
+  Raport `docs/audits/2026-11-17-release-preflight-local.md`.
+  Brak instalacji, zmian produkcji, aplikacji lub zależności; realny adapter
+  active metadata i działanie z prawdziwym Compose/PG wymagają osobnego odbioru.
 
 ## [Projekt i plan; bez implementacji] — 2026-11-16 — Readonly preflight wydania
 

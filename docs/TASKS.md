@@ -9,7 +9,7 @@ Backlog zadań ze statusami.
 - [x] Baseline lint/types, kolekcja backendu i 707 Vitest PASS.
 - [x] Czysta polityka/AST: 39 testów offline RED→GREEN.
 - [x] Readonly CLI; 51 testów granicy Git/Compose/PG na syntetycznych danych.
-- [ ] Procedura, końcowe kontrole i jeden świeży review.
+- [x] Procedura, kontrole 134unit/707Vitest/lint/types/kolekcja i jeden review bez uwag.
 - [ ] Osobna zgoda na push/CI, produkcyjny odbiór adaptera i rzeczywisty preflight.
 
 ## Readonly preflight wydania — plan (2026-11-16)
@@ -19,7 +19,7 @@ Backlog zadań ze statusami.
 - [x] Builder check i self-review; doprecyzować inventory/OCI/PG/Compose.
 - [x] Akceptacja pełnego zakresu i Native (2026-11-17).
 - [x] Po zgodzie dobrano ADVISOR_DEV_PYTHON; bez instalacji lub zmiany shared venv.
-- [ ] Implementacja/TDD offline; brak prawdziwego Docker/DB/produkcji w testach.
+- [x] Implementacja/TDD offline; brak prawdziwego Docker/DB/produkcji w testach.
 - [ ] Odrębne decyzje o push/CI i rzeczywistym użyciu preflightu.
 
 ## Stabilizacja testu DocumentList (2026-11-16)

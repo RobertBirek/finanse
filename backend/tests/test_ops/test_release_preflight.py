@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -501,3 +502,21 @@ def test_mixed_service_revisions_are_observed_independently(scenario: Scenario) 
     value = report(scenario.run(), "app_only")
     assert value["service_revisions"]["backend"] == scenario.base
     assert value["service_revisions"]["frontend"] == scenario.candidate
+
+
+def test_cli_without_python_B_never_writes_bytecode(scenario: Scenario) -> None:
+    scripts = scenario.root / "scripts"
+    scripts.mkdir()
+    for name in ("release_preflight.py", "release_preflight_policy.py"):
+        shutil.copyfile(SCRIPT.parent / name, scripts / name)
+    result = subprocess.run(
+        [sys.executable, str(scripts / "release_preflight.py"), "--help"],
+        env={"PATH": "/usr/bin:/bin", "HOME": str(scenario.root)},
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0
+    assert not (scripts / "__pycache__").exists()
+    assert scenario.calls() == []

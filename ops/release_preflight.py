@@ -8,8 +8,12 @@ import os
 import re
 import stat
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, NoReturn
+
+# The check must not create a source-tree cache even when invoked without python -B.
+sys.dont_write_bytecode = True
 
 from release_preflight_policy import (
     IMAGE_ID,
