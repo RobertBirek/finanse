@@ -2,6 +2,51 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Automatyczne szkice dokumentów, etap modeli i statusu
+
+- Użytkownik zatwierdził plan w rozmowie: upload→odczyt+kategoria→szkic→ręczne
+  zatwierdzenie; Plan mode jawnie wyłączony, zgoda na implementację. Bez prod/push.
+- Zastany linked worktree detached b5fbc5e, wcześniejsze3docs zachowane.
+  Baseline lint/types/kolekcjaPASS i707Vitest61.51sPASS; ten sam zatwierdzony Python.
+- Dodano intent jeden na dokument i owner-scoped batch status finansów, niezależny
+  od najnowszego odczytu. Nullable FK sugestii kategorii nie zmienia starych danych.
+  13unitofflineRED→GREEN, jeden test integracyjny dla nowego CI; nie uruchamiano DBfixture.
+- /migration wskazuje produkcję i onlineupgrade: nie uruchamiano go w tym zakresie.
+  Przygotowany addytywny plik i statyczny/offlineDDL odbiór; realupgrade/retencja
+  nadal do osobnego odbioru. Po etapie1 lint/types(mypy218)/kolekcjaPASS,
+  707Vitest57.35sPASS. Schemat produkcji i polityki AI bez zmian.
+
+## 2026-11-17 — Zatwierdzone anulowanie jednego zadania dokumentowego
+
+- Użytkownik zaakceptował anulowanie wyłącznie wcześniej zidentyfikowanego
+  zadania, bez zmiany faktury/płatności. Backend image/revision/project/service
+  zweryfikowano przed operacją; użytkownik związany przez jawnie podany login.
+- Ponownie sprawdzono dokładny tytuł/created_at/source/status/brak terminu i link
+  do dokumentowego Inboxu. W transakcji z blokadą wiersza Task: TaskUpdate
+  status=cancelled, istniejący work.update_task, policy na poziomie2 z jawną
+  zgodą oraz audit.log_event. Guard flush dopuszczał tylko ten Task i jego audit;
+  bez delete oraz zapisów innych modeli. Bez swobodnego SQL lub zmiany kodu.
+- Po commit odrębna sesja readonly potwierdziła cancelled, nieobecność na liście
+  todo,in_progress, pozostałe pola bez zmian poza automatycznym updated_at
+  i utrwalony audit. Dokumentów, płatności i księgi nie modyfikowano.
+  Bez wdrożenia lub zmian programu; dokumentacja lokalna pozostaje bez commita.
+
+## 2026-11-17 — Readonly diagnoza dokumentu widocznego jako zadanie Today
+
+- Użytkownik zapytał o konkretny wpis w /today. Pierwszy odczyt zatrzymano na
+  niejednoznaczności właściciela; po jawnym wskazaniu konta użyto identity/work/
+  inbox services w sesji z default_transaction_read_only=on, bez autoflush,
+  z limitem czasu. Nie odczytywano zadań innych kont, sesji auth lub treści pliku.
+- Potwierdzono źródło inbox, todo, brak terminu oraz rzeczywiste powiązanie
+  target_id z przetworzonym wpisem source_type=document, classified_by=human.
+  Konwersja Inbox→Task kopiuje content do title, source=inbox; nie tworzy
+  powiązania task z płatnością faktury. Metadane nie dowodzą, kto fizycznie
+  kliknął konwersję ani czy faktura jest zapłacona.
+- Today.tsx pobiera status=todo,in_progress bez daty; odrębny get_today_schedule
+  filtruje datę, ale ta lista go nie używa. Jest to wyjaśnienie obecności, nie
+  zatwierdzony zakres zmiany UI. Niczego nie zamykano, anulowano lub usuwano.
+  Bez implementacji, testów, commita lub wdrożenia; dalsza decyzja użytkownika.
+
 ## 2026-11-17 — Preflight na main; brak nowych bajtów aplikacji
 
 - User polecił pushmain/deploy po lokalnym odbiorze2492ad2. Remote b5c212a,

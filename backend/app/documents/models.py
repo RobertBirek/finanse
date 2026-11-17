@@ -18,6 +18,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.documents import finance_draft_models as _finance_draft_models  # noqa: F401
 from app.documents import receipt_read_models as _receipt_read_models  # noqa: F401
 
 
@@ -113,3 +114,10 @@ class DocumentExtractionRevision(Base):
     model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     prompt_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
     schema_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    suggested_category_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "categories.id", ondelete="SET NULL", name="fk_document_revision_suggested_category"
+        ),
+        nullable=True,
+    )

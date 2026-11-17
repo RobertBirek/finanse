@@ -2,6 +2,25 @@
 
 Backlog zadań ze statusami.
 
+## Dokumenty → automatyczne szkice i kategoria AI (2026-11-17)
+
+- [x] Uzgodnić szkice, dwa znaczniki, istniejące kategorie i brak zapisów księgi/płatności.
+- [x] Po przełączeniu agenta rozpocząć lokalne TDD, zachować wcześniejsze notatki.
+- [x] Intent/projekcja i addytywna migracja:13offlinePASS, integracja dla CI.
+- [ ] Automatyczna rejestracja szkicu i sugestia kategorii w istniejącym odczycie.
+- [ ] UI statusów/linków/edycji kategorii i poprawne odświeżanie.
+- [ ] Odbiór, jeden świeży review i osobne decyzje o push/CI/deploy.
+
+## Dokument jako zadanie w Today — diagnoza (2026-11-17)
+
+- [x] Potwierdzić kod widoku: wszystkie aktywne zadania, bez filtra due_date.
+- [x] Po jawnym wskazaniu konta potwierdzić readonly source=inbox i powiązany
+  przetworzony wpis source_type=document; task todo, bez terminu.
+- [x] Jawna zgoda na anulowanie wyłącznie tego zadania: cancelled przez serwis,
+  audit i niezależny readonly odczyt po commit; brak na aktywnej liście.
+- [ ] Ewentualna poprawa obiegu/UI wymaga osobnego zakresu i zgody.
+  Bez domniemania zapłaty lub usuwania dokumentu.
+
 ## Readonly preflight wydania — implementacja (2026-11-17)
 
 - [x] Akceptacja planu i Native, zgoda na samodzielny dobór środowiska.

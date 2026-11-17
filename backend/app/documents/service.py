@@ -242,9 +242,11 @@ async def document_responses(
     """Map a page with one owner-scoped status query, never loading document content."""
     if not documents:
         return []
+    from app.documents.finance_draft_queries import get_finance_summaries
     from app.documents.processing_queries import get_local_ocr_summaries, get_review_summaries
 
     summaries = await get_review_summaries(db, user_id, [document.id for document in documents])
+    finance = await get_finance_summaries(db, user_id, [document.id for document in documents])
     ocr = await get_local_ocr_summaries(db, user_id, [document.id for document in documents])
     text_ids = set(
         (
@@ -259,6 +261,7 @@ async def document_responses(
         DocumentResponse.model_validate(document).model_copy(
             update={
                 "review": summaries.get(document.id),
+                "finance": finance.get(document.id),
                 "has_extracted_text": document.id in text_ids,
                 "local_ocr_state": ocr[document.id][1] if document.id in ocr else None,
                 "local_ocr_job_id": ocr[document.id][0] if document.id in ocr else None,

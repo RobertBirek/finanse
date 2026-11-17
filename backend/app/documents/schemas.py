@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.documents.finance_draft_schemas import FinanceDraftSummary
+
 
 class _DocumentExtraction(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
@@ -71,6 +73,7 @@ class DocumentResponse(BaseModel):
     local_ocr_state: str | None = None
     local_ocr_job_id: uuid.UUID | None = None
     local_ocr_error_code: str | None = None
+    finance: FinanceDraftSummary = Field(default_factory=FinanceDraftSummary)
 
     model_config = {"from_attributes": True}
 

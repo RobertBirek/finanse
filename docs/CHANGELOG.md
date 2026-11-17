@@ -2,6 +2,34 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Lokalnie; etap 1] — 2026-11-17 — Automatyczne szkice dokumentów
+
+### Added
+- Trwały intent dla nowych uploadów i niezależna projekcja statusu finansowego
+  dokumentu: realny bill/review/lifecycle, bez uznawania OCR ready za rejestrację.
+- Addytywna migracja pustej tabeli intentów i nullable sugestii kategorii rewizji;
+  bez adopcji starych dokumentów. Nie wykonano upgrade na prawdziwej bazie.
+- 13 testów offline PASS, test integracyjny przygotowany dla CI; lint/types/
+  kolekcja i 707 Vitest PASS. Orkiestracja i UI w kolejnych etapach.
+
+## [Operacja użytkownika; bez wdrożenia] — 2026-11-17 — Anulowanie starego zadania
+
+### Changed
+- Po jednoznacznej zgodzie anulowano wyłącznie wskazane stare zadanie pochodzące
+  z dokumentowego Inboxu. Zapis przez istniejący serwis work, kontrolę policy
+  i audit w jednej transakcji; bez usuwania dokumentu lub zmiany płatności.
+- Nowy readonly odczyt po commit potwierdził cancelled, brak na aktywnej liście
+  Today, zapis audit i pozostałe pola zadania bez zmian poza updated_at.
+
+## [Diagnoza; bez zmian aplikacji lub danych] — 2026-11-17 — Dokument jako zadanie w Today
+
+### Diagnosed
+- `/today` wyświetla aktywne zadania bez filtra daty i bez powiązania ze statusem
+  płatności faktury. Odczyt dla jawnie wskazanego konta potwierdził stary wpis
+  dokumentowy Inbox przekształcony w zadanie todo bez terminu.
+- Nie zmieniono statusów, dokumentów lub płatności; pochodzenie wpisu nie
+  stanowi dowodu zaległości. Dalsze działania wymagają decyzji użytkownika.
+
 ## [Main; bez nowego rollout aplikacji] — 2026-11-17 — Publikacja preflightu
 
 ### Changed

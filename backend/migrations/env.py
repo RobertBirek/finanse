@@ -9,6 +9,7 @@ import app.advisor.models
 import app.audit.models
 import app.documents.models
 import app.documents.job_models
+import app.documents.finance_draft_models
 import app.finance.models
 import app.finance.annotation_models
 import app.finance.imports.models
