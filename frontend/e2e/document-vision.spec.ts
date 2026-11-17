@@ -14,7 +14,9 @@ for (const viewport of [375, 1440]) {
       await page
         .getByRole("button", { name: "Otwórz dokument: synthetic-photo.jpg" })
         .click();
-      await page.getByRole("button", { name: "Sprawdź dane" }).click();
+      await page
+        .getByRole("button", { name: "Sprawdź dane", exact: true })
+        .click();
       await expect(
         page.getByRole("dialog", { name: "Sprawdź dane dokumentu" }),
       ).toBeVisible();
@@ -60,7 +62,7 @@ test("error, limit, and refusal retain private original and require explicit dis
   await page
     .getByRole("button", { name: "Otwórz dokument: synthetic-photo.jpg" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane" }).click();
+  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText(
     "Możesz uzupełnić pola ręcznie",
   );
@@ -99,7 +101,7 @@ test("synthetic JPEG upload posts multipart and its pending vision review become
   await page
     .getByRole("button", { name: "Otwórz dokument: synthetic-upload.jpg" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane" }).click();
+  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
   await expect(page.getByLabel("Sprzedawca")).toHaveValue("");
   await expect(page.getByLabel("Sprzedawca")).toHaveValue("Delayed shop", {
     timeout: 6_000,
@@ -121,7 +123,7 @@ test("review fetches binary private preview and original and offers a download l
   const originalResponse = page.waitForResponse((response) =>
     response.url().endsWith(`/documents/${visionIds.image}/original`),
   );
-  await page.getByRole("button", { name: "Sprawdź dane" }).click();
+  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
   expect((await previewResponse).status()).toBe(200);
   expect(await (await originalResponse).body()).toEqual(
     Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
@@ -150,7 +152,7 @@ test("HTTP 429 from an explicit vision retry leaves manual fields available", as
   await page
     .getByRole("button", { name: "Otwórz dokument: synthetic-photo.jpg" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane" }).click();
+  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
   await expect(page.getByLabel("Sprzedawca")).toBeVisible();
   await page.getByLabel("Sprzedawca").fill("Ręcznie wpisany sprzedawca");
   await page.getByRole("button", { name: "Ponów AI" }).click();
@@ -176,7 +178,7 @@ test("legacy PDF retains its text-review contract without a vision request", asy
   await page
     .getByRole("button", { name: "Otwórz dokument: legacy.pdf" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane" }).click();
+  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
   await expect(page.getByLabel("Sprzedawca")).toHaveValue("Legacy");
   expect(api.requests).toEqual([]);
   api.assertClean();

@@ -2,6 +2,46 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-17 — Naprawa testowego kontraktu Vision po rzeczywistym CI
+
+- Użytkownik jawnie zatwierdził migracjęa6e52f41c9d0 poefaf78432563 po backup/
+  restore i reaktywację Vision z nazwami/ścieżkami kategorii. Po wyjaśnieniu
+  migracji i błędu pełnego CI polecił kontynuację. Brak zatwierdzonego inventory.
+- CI44070352230/cf3ae26: ordinary-2 zatrzymał się po70PASS na
+  test_new_vision_upload_ready_then_human_review_never_changes_ledger_or_inbox.
+  Nie wtórny KeyError total jest przyczyną, lecz invalid_model_output:
+  _provider_response nie zwracało obowiązkowego category_key przy katalogu.
+  Resztę uruchomienia anulował późniejszy docs push79a5fc9, nie pomijać grup.
+- Pobrano prawdziwy artefakt ordinary-2/run.log; regresja parametryczna starego/
+  nowego kontraktu dała1PASS/1FAIL missingcategory_key. Atrapa teraz czyta
+  żądany schema i dodaje NULL wyłącznie dla kontraktu z katalogiem.
+  Bez zmiany kodu produktu, skipowania testu albo osłabienia strictschema.
+- Lokalnie426documentsofflinePASS/137integrationdeselected, cryptwarning baseline.
+  CI44070858643 dla79a5fc9 zakończone:6grup backenduPASS, ordinary2FAIL jak wyżej,
+  legacyFAIL invalid_preflight, frontend28FAIL selektorówE2E. Błąd zbiorczego
+  verifiera jest skutkiem, nie powodem do osłabienia bramki.
+- LegacyRCA: nowy FK document_extraction_revisions.suggested_category_id nie należał
+  do jawnego _CATEGORY_REFS. Rozszerzono whitelist, owner snapshot intentów i
+  active_work pending; nieznane i foreign refs nadal blokują.4RED→GREEN5offline.
+- E2ERCA: nowe akcje listy zaczynają się od „Sprawdź dane”; selektor bez exact
+  wybierał3przyciski. Agent naprawił9locatorów w2plikach, bez zmian produktu,
+  obserwował strictmodeRED, potem46E2EPASS (desktop/mobile) i typecheckPASS.
+- Łącznie431offline (426documents+5guard) PASS. Pełny wynik CI po poprawce wymagany.
+  Bez lokalnego DBfixture, issuerpermitów, mutacji produkcji lub zmiany metadanych.
+- Kanoniczne lint/mypy220/tsc/kolekcja/719VitestPASS oraz osobny Ruff/mypy guardaPASS.
+  Pełne lokalneE2E przekroczyło limit narzędzia240s po desktopie bez wykazanego
+  błędu asercji; ponowne pełne uruchomienie ma osobny proces bez tego limitu,
+  nie wydłużano timeoutów pojedynczych testów. Nie raportować przerwanego jakoPASS.
+- Artefakty79a5fc9 potwierdzają nowe3integracje auto-finance-drafts oraz realną
+  projekcję właścicieliPASS na CI PostgreSQL. To częściowy dowód, nie cały CIgreen
+  ani rzeczywisty upgrade a6e52f41c9d0 na produkcyjnej kopii.
+- Readonly analiza preflightu: wspierany jest tylko --check, brak issuera.
+  Zgoda na migrację nie tworzy inventory; nadal nie wolno samodzielnie wypełnić/
+  zatwierdzić go bieżącymi obserwacjami. Operatorowi można dostarczyć pustą checklistę.
+- Świeży readonly review wąskich poprawek względem79a5fc9:0Critical/0Important/0Minor;
+  potwierdzono fail-closed guard, nieosłabioną walidację i dokładne selektory.
+- Dowody RCA: `/tmp/opencode/document-auto-finance-drafts-ci-fix/`.
+
 ## 2026-11-17 — Szkice dokumentów wypchnięte na main, rollout zablokowany bramkami
 
 - User: „push do main i wdroż”. Fetch potwierdził origin/mainb5fbc5e i dokładnie

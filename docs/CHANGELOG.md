@@ -2,6 +2,22 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [CI repair; bez wdrożenia] — 2026-11-17 — Regresje pełnego odbioru szkiców
+
+### Fixed
+- Pełne CI ujawniło nieaktualną atrapę dostawcy w test_vision_invariants:
+  żądanie z katalogiem wymagało category_key, a odpowiedź nadal miała stary format.
+  Atrapa obsługuje oba kontrakty i jawnie nie sugeruje kategorii (NULL).
+  Regresja offline odtworzyła brak wymaganego pola RED→GREEN.
+- Bez zmian kodu produkcyjnego, złagodzenia walidacji, skipów lub obchodzenia
+  PostgreSQL permitów w naprawie atrapy Vision.
+- Guard operatora drzewa kategorii jawnie obsługuje nową referencję sugestii
+  dokumentu, chroni snapshot intentów i blokuje pracę przy pending. Nieznane
+  referencje i obcy właściciel nadal blokują operację;4regresje RED→GREEN.
+- Testy E2E wybierają dokładny przycisk „Sprawdź dane”, a nie nowe dłuższe akcje
+  listy. Regresja strict-mode RED→GREEN,46dotkniętych E2E PASS. Lokalnie431offline
+  (dokumenty+guard) PASS; pełne CI po naprawach do odbioru.
+
 ## [Main pushed; deployment blocked] — 2026-11-17 — Automatyczne szkice dokumentów
 
 ### Changed

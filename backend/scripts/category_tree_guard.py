@@ -34,6 +34,7 @@ _CATEGORY_REFS = frozenset(
         ("transaction_categorization_rules", "target_category_id"),
         ("transaction_categorization_rules", "approved_for_uncategorized_category_id"),
         ("categorization_proposal_items", "target_category_id"),
+        ("document_extraction_revisions", "suggested_category_id"),
     }
 )
 _OWNER_TABLES = frozenset(
@@ -72,6 +73,7 @@ _OWNER_TABLES = frozenset(
         "documents",
         "document_texts",
         "document_extraction_revisions",
+        "document_finance_draft_intents",
         "document_processing_jobs",
         "document_vision_usage",
         "receipt_read_streams",
@@ -271,6 +273,7 @@ async def _work_blockers(db: AsyncSession, owner: UUID, counts: Mapping[str, int
         blockers.add("marker_configured")
     active = {
         "document_processing_jobs": ("state", ["pending", "processing"]),
+        "document_finance_draft_intents": ("state", ["pending"]),
         "documents": ("status", ["pending", "processing"]),
         "receipt_read_jobs": ("state", ["pending", "preparing", "dispatched"]),
         "categorization_suggestion_jobs": (

@@ -13,10 +13,17 @@ Backlog zadań ze statusami.
 - [x] Zgoda na main/deploy i fast-forward pushcf3ae26, remoteSHA potwierdzone;
   świeże lint/types/kolekcja/719Vitest PASS, CI44070352230 uruchomione.
 - [ ] Odebrać rzeczywiste testy PostgreSQL w CI dla dokładnego SHA.
+- [x] RCA pierwszego błęduCI44070352230: stara odpowiedź atrapy Vision bez
+  category_key; poprawka testowa i regresja obydwu kontraktów,426offlinePASS.
+- [x] Pełny wynik79a5fc9: naprawić jawny rejestr FK/snapshoty i pending w guardzie
+  kategorii (4RED→GREEN) oraz selektoryE2E (strictmodeRED→46GREEN), bez skipów.
+- [ ] Odebrać całe CI po poprawce; brak skipów/wyłączeń walidacji dla zielonego wyniku.
 - [ ] Dostarczyć niezależnie zatwierdzone inventory i SHA256 do preflightu;
   nie adoptować automatycznie stanu produkcji.
-- [ ] Osobna zgoda na migrację/deploy i aktywację zmienionej polityki Vision;
-  potwierdzić retencję, runtime i dostawcę, bez masowej adopcji starych plików.
+- [x] Jawna zgoda na migracjęa6e52f41c9d0 poefaf i nowy kontrakt Vision po backupie/
+  restore; użytkownik potwierdził zakres, następnie polecił naprawić CI i kontynuować.
+- [ ] Po bramkach wykonać migrację/deploy i aktywację Vision; potwierdzić retencję,
+  runtime i dostawcę, bez masowej adopcji starych plików.
 
 ## Dokument jako zadanie w Today — diagnoza (2026-11-17)
 

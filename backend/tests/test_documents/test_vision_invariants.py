@@ -90,6 +90,10 @@ def _provider_response(request: httpx.Request) -> httpx.Response:
         },
         "warnings": [],
     }
+    requested_schema = json.loads(request.content)["text"]["format"]["schema"]
+    if "category_key" in requested_schema["properties"]:
+        # The synthetic provider abstains, but must honor the selected strict schema.
+        payload["category_key"] = None
     return httpx.Response(
         200,
         json={
@@ -112,6 +116,36 @@ def _provider_response(request: httpx.Request) -> httpx.Response:
             "tools": [],
         },
     )
+
+
+@pytest.mark.parametrize("with_catalog", [False, True])
+def test_acceptance_provider_obeys_requested_recognition_contract(with_catalog):
+    from app.documents.vision_schemas import (
+        CategorizedVisionPayload,
+        VisionPayload,
+        category_payload_schema,
+    )
+
+    schema = (
+        category_payload_schema([{"key": "c01", "path": "Synthetic category"}])
+        if with_catalog
+        else VisionPayload.model_json_schema()
+    )
+    response = _provider_response(
+        httpx.Request(
+            "POST",
+            "https://vision.example.test/v1/responses",
+            json={"text": {"format": {"schema": schema}}},
+        )
+    )
+    payload = json.loads(response.json()["output"][0]["content"][0]["text"])
+    contract = CategorizedVisionPayload if with_catalog else VisionPayload
+    parsed = contract.model_validate(payload)
+    assert parsed.fields.total == "12.34"
+    if with_catalog:
+        assert parsed.category_key is None
+    else:
+        assert "category_key" not in payload
 
 
 @pytest.mark.integration
