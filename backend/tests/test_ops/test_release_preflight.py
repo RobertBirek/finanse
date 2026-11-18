@@ -219,6 +219,8 @@ class Scenario:
             f"responses=json.loads(Path({str(self.responses_file)!r}).read_text())\n"
             "r=responses.get(json.dumps(args))\n"
             "if r is None: sys.exit(99)\n"
+            "if 'mutate' in r: Path(r['mutate']).write_text('drift')\n"
+            "if r.get('cleanup_canary'): (Path(consumed[0][0]).parent/'not-owned').write_text('private')\n"
             "time.sleep(r.get('sleep',0));sys.stdout.write(r.get('stdout',''))\n"
             "sys.stderr.write(r.get('stderr',''));sys.exit(r.get('code',0))\n"
         )

@@ -16,6 +16,13 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   procedura i jeden świeży review. Bez push i bez odczytów/mutacji produkcji.
 - Task5 przed commitem: kanoniczne lint/types/kolekcja/719VitestPASS, dodatkowe
   Ruff/mypy8opsPASS. Nie wykonano testów backendowych z fixtureDB.
+- Task5commit550a84f/task-done217PASS. Task6:13nowych scenariuszy,
+  230offlinePASS124.48s.3początkowe FAIL były niepoprawnymi założeniami nowych
+  testów (nazwa migrationgate/up--help/dawna klasyfikacja .dockerignore), nie
+  zmieniono kodu produkcyjnego dla koloru. Ruling zachowania runtime gates
+  .dockerignore w ledgerze. Procedura V2 bez kandydackich importów/inventoryissuer.
+- Task6kontrole exit0: lint/types/kolekcja/719Vitest/Ruff+mypy8opsPASS;
+  następnie jeden świeży review całego fa7b470..HEAD. Bez zgód produkcyjnych.
 
 ## 2026-11-17 — Native rozpoczęte: strict trust inputs
 

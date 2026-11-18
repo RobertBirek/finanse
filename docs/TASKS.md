@@ -4,7 +4,8 @@ Backlog zadań ze statusami.
 
 - [x] Preflight Task5: bootstrap/packager/CLI V2;216offlinePASS i launcher23PASS
   (w tym -O); lint/types/kolekcja/719Vitest i Ruff/mypy8opsPASS.
-- [ ] Preflight Task6: integracyjne warianty/procedura/jeden świeży review.
+- [~] Preflight Task6:13integracyjnych wariantów,230offlinePASS; procedura
+  V2 gotowa; lint/types/kolekcja/719Vitest/Ruff+mypy8opsPASS; czeka świeży review.
 
 ## Dokumenty → automatyczne szkice i kategoria AI (2026-11-17)
 

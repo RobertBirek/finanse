@@ -11,13 +11,20 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
 2. Wymagaj zatwierdzenia dokładnej rewizji i zakresu wdrożenia. Przejście testów
    lub scalenie PR samo w sobie nie upoważnia do wdrożenia.
    Po osobnej zgodzie na odczyt rzeczywistego środowiska uruchom readonly
-   `ops/release_preflight.py --check` zgodnie z sekcją „Read-only release preflight”
-   w procedurze. Podaj pełne SHA, pełną uporządkowaną listę Compose/env/projekt/PG
+   przez osobno przejrzany i zaakceptowany launcher V2, zgodnie z sekcją
+   „Read-only release preflight” w procedurze. Nie uruchamiaj checkera z kandydata.
+   Najpierw wymagane są dokładne zewnętrzne piny pakietu/runtime, toolchainu,
+   opcjonalnego scope proof i prywatny receipt rzeczywistej zgody administratora.
+   Lokalny odbiór kodu nie jest zgodą na pakowanie/instalację ani odczyty produkcji.
+   Podaj pełne SHA, pełną listę Compose/env/projekt/PG, prywatny scratch0700
    oraz niezależnie zatwierdzony inventory i jego SHA256. Nie wydawaj inventory
    z bieżących obserwacji ani nie zmieniaj aktywnych metadanych, aby kontrola przeszła.
    `blocked`/exit2 oznacza STOP; exit0 to klasyfikacja źródeł/schematu, nie zgoda
    lub production-ready. Oceń zewnętrzny env/mounty/ingress osobno.
-   `no_rollout` dla samych docs/testów oznacza brak nowych bajtów aplikacji:
+   Domyślne unknown scope nadal blokuje; jedynie exact review proof dla plików
+   checkera/deploy może uznać konkretną zmianę tooling. Nie pozwala to instalować
+   narzędzi, zmieniać etykiet aplikacji lub pomijać wcześniejszego blocked V1.
+   `no_rollout` dla samych docs/testów/zatwierdzonego tooling oznacza brak nowych bajtów aplikacji:
    nie buduj i nie restartuj identycznych usług wyłącznie dla nowszej etykiety.
    `app_only` na już zmigrowanym schemacie nie upoważnia do ponownego backfillu;
    `migration_then_app` wymaga osobnej zgody na dokładną migrację.

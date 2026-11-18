@@ -267,10 +267,63 @@ HTTPS frontend/health, unauthenticated API rejection, and worker status/errors.
 Do not rewrite historic transactions or run imports as a deployment step.
 ### Read-only release preflight
 
-`ops/release_preflight.py --check` classifies **source and schema changes**, not
+V2 classifies **source and schema changes**, not
 external configuration-only changes. It never builds, creates, starts, stops,
 removes, migrates, restores, rolls back, or publishes metadata. Reading a real
 environment still needs separate approval. Local fake-tool tests do not grant it.
+
+**Local implementation only, not certified for production.** First publish only
+after approval and run CI for the exact SHA. Separately review and accept the
+exact checker/runtime bundle, toolchain and optional tooling-scope proof.
+Packaging, installation and real-environment readonly acceptance need explicit
+permission; neither this procedure nor a test result grants it.
+
+V1's historical `blocked/unknown_change_scope` remains valid evidence; V1 cannot
+approve its replacement. Never rewrite metadata, adopt observations or filter
+diffs to obtain success. Direct `release_preflight.py` denies unbootstrapped use.
+
+#### Separate trust artifacts (outside candidate checkout)
+
+- `prepare_preflight_bundle.prepare_bundle` only reads pinned local Git objects
+  and an explicitly provided existing PyYAML6.0.3 distribution (pure Python,
+  license included). It has no fetch/pip/install/approval step, refuses existing
+  output and takes an explicit positive `max_output_bytes`. Dirty worktree code
+  is not a source. This implementation does not create a real approved bundle.
+- Bundle manifest version1 has exactly `version`, `source_revision`, `runtime`,
+  `files`. Runtime fields: `python_path`, `python_sha256`, `stdlib_root`,
+  `stdlib_tree_sha256`; members: relative `path`, `sha256`, `mode`. It includes
+  launcher/checker/lock/vendor/license, excludes itself and all approval evidence.
+  The bundle identifier is SHA256 of exact manifest bytes. Runtime tree digest
+  covers sorted `[relative_path, sha256, mode]` for `.py/.pyc/.so` (excluding
+  site/dist-packages), canonical JSON `ensure_ascii=True,separators=(",",":")`.
+  Extra members, symlinks, unpinned zip imports or wrong ownership/modes block.
+- Toolchain version1: `version`, `executables` (`git/docker/compose`, each
+  canonical absolute `path`, `sha256`, integer `mode`, `uid:0`), `postgres`,
+  `limits`. The ComposeV2 executable is called directly, not plugin discovery.
+  PG fields: full `container_id`, `image_id`, numeric nonroot OS `uid`, `gid`,
+  absolute `env_executable`, `psql_executable`, `socket_directory`, explicit
+  `port`, `auth` (`peer` or existing `trust`). All limits must be explicit positive
+  integers: `max_file_bytes`, `max_yaml_nodes`, `max_yaml_depth`, `max_output_bytes`.
+- Optional tooling scope version1: `candidate`, all three `service_revisions`,
+  `checker_bundle_sha256`, `review_report_sha256`, `review_result` equal to
+  `accepted_no_open_critical_or_important`, and exact `changes`. Each change has
+  `service`, `path`, `before_mode/blob`, `after_mode/blob`, `after_sha256` (individual
+  fields are named `before_mode`, `before_blob`, etc.; null for missing sides).
+  Only the nine explicit checker files and `.opencode/command/deploy.md` qualify.
+  Every pair/path/mode/blob/hash must match actual Git; no glob or omitted path.
+  New candidate (even docs-only), any baseline or checker change invalidates proof.
+- After actual administrator acceptance in authenticated conversation, an
+  operator may record private receipt version1: `operator_reference`,
+  `bundle_sha256`, `toolchain_sha256`, nullable `review_scope_sha256`, plus
+  `version`. It is not a signature or an issuer. The launcher requires hashes
+  independently supplied from that acceptance and equality with the receipt.
+  Test receipts and review JSON are not approval.
+
+Code bundles are root-owned0700, members non-group/world-writable, manifests0600.
+External evidence/receipt stays in private0700 directories with files0600,
+outside both bundle and candidate. Proposed locations (not already installed):
+`/opt/finanse/webapp/tooling/preflight/<bundle-sha256>/` and
+`/opt/finanse/webapp/approvals/preflight/<approval-id>/`.
 
 Inputs must identify the exact current environment, not a future release overlay:
 
@@ -279,7 +332,7 @@ Inputs must identify the exact current environment, not a future release overlay
   not fetch, import migrations, or trust dirty worktree source.
 - Full ordered current Compose files (at least two), explicit project/env-file
   and PostgreSQL service. The active release override must be last; a deployment
-  with a later hardening overlay is unsupported in V1 and blocks rather than
+   with a later hardening overlay is unsupported and blocks rather than
   silently dropping that overlay.
 - An independently approved inventory, in a regular file mode0600 within an owned
   private0700 directory, plus its independently approved SHA256. Do not create
@@ -295,18 +348,27 @@ revisions are40hex. Input files and paths may not be symlinks. Extra or duplicat
 inventory keys, changed digests, wrong ownership/modes and ambiguous observations
 block; the check does not chmod, repair or adopt them.
 
-The V1 adapter requires active metadata fields `release_status: "verified-live"`,
+The adapter requires active metadata fields `release_status: "verified-live"`,
 `service_revisions`, `application_images[S].id`, and `compose_override`. It never
 falls back to a common `revision` or docs-only `git_tip`. **Compatibility with the
 actual production metadata format has not been certified by the local tests.**
 Verify it in a separately approved read-only acceptance before real use; absent
 fields mean blocked, not permission to rewrite existing metadata.
 
-Example, after assigning **approved absolute paths and values** to these variables
-(`PREFLIGHT_PYTHON` is Python3.12+, `CANDIDATE_SHA` is a full pinned SHA):
+#### Approved invocation and configuration subset
+
+Example only after all separate approvals, using approved absolute paths and
+pins (`PREFLIGHT_PYTHON` is the exact accepted Python3.12+ runtime). A trusted
+supervisor/administrator must supply a clean startup environment, including no
+LD_PRELOAD/LD_LIBRARY_PATH/PYTHON*; Python cannot undo loader code run before it.
+The launcher itself must already be externally pinned before execution.
 
 ```bash
-"$PREFLIGHT_PYTHON" -B "$REPO/ops/release_preflight.py" --check \
+env -i PATH=/usr/bin:/bin HOME=/nonexistent \
+  "$PREFLIGHT_PYTHON" -I -S -B "$APPROVED_BUNDLE/preflight_launcher.py" \
+  --bundle "$APPROVED_BUNDLE" --bundle-sha256 "$APPROVED_BUNDLE_SHA256" \
+  --toolchain "$APPROVED_TOOLCHAIN" --toolchain-sha256 "$APPROVED_TOOLCHAIN_SHA256" \
+  --approval "$APPROVAL_RECEIPT" --check \
   --repository "$REPO" --candidate "$CANDIDATE_SHA" \
   --active-release "$ACTIVE_METADATA" \
   --approved-inventory "$APPROVED_INVENTORY" --inventory-sha256 "$APPROVED_INVENTORY_SHA256" \
@@ -314,17 +376,36 @@ Example, after assigning **approved absolute paths and values** to these variabl
   --compose-file "$CURRENT_BASE_COMPOSE" \
   --compose-file "$CURRENT_PROD_COMPOSE" \
   --compose-file "$CURRENT_RELEASE_COMPOSE" \
-  --postgres-service "$POSTGRES_SERVICE"
+  --postgres-service "$POSTGRES_SERVICE" --scratch-directory "$PRIVATE_EMPTY_SCRATCH"
 ```
 
-The argument set is exercised by the synthetic CLI tests. This example is **not**
-an instruction to target production without approval. Git and Docker reads use
-sanitized environments; inherited Git settings and Docker context/host variables
-are not forwarded. V1 uses the local Docker daemon with its normal default endpoint;
-remote/custom Docker contexts require a separate design, not an environment fallback.
-Rendered config/inspect/env values and raw errors are never emitted. Schema read
-is one literal SELECT in the validated PG container with read-only transactions
-and a10s statement timeout; every external command has a10s timeout.
+If applicable append all three: `--review-scope "$APPROVED_SCOPE"`
+`--review-scope-sha256 "$APPROVED_SCOPE_SHA256" --review-report "$PRIVATE_REVIEW_REPORT"`.
+Absent proof still blocks unknown tooling. These are not production credentials.
+
+Git/Docker/Compose use absolute pinned executable bytes and clean environments;
+only `unix:///var/run/docker.sock` is supported. Remote/custom contexts block.
+All consumed Compose/env bytes go into private0600 snapshots under an explicit
+empty0700 scratch. `service.env_file` may reference only that approved env-file
+(scalar/list); aliases, merge precedence and `!override/!reset` are preserved by
+token edits. Original project directory and ordered merge stay unchanged.
+Include/extends/label_file, file-based secrets/configs, external env, unknown
+file readers and unsupported forms block before rendering. Bind/build paths
+are not read/copied. Missing pinned YAML runtime blocks; no ad hoc install.
+Scratch paths containing `$` are unsupported. Snapshots may contain secrets:
+never log/commit them. Cleanup removes only owned files, does not promise secure
+erase; drift, write or cleanup failure suppresses success. Do not erase a
+non-owned leftover to force green. Original identities and hashes are rechecked.
+
+Schema read is exactly one literal `SELECT version_num FROM alembic_version`
+in the validated PG container/image as explicit numeric postgres OS UID:GID,
+with separate inventory DB role. `env -i`, `HOME=/nonexistent`, no password/rc,
+`PGPASSFILE=/dev/null`, explicit Unix socket/port, read-only transactions,
+statement timeout10s and connect timeout5s. Socket bind/shared volumes block;
+no root/password/TCP/auth-map fallback. Existing local peer mapping or trust
+must already work; never change pg_hba to pass. Synthetic tests do not certify
+actual auth or production compatibility. Each subprocess timeout is10s and
+combined stdout/stderr is bounded; raw output/errors are not reported.
 
 | Report action | Meaning (not authorization) |
 |---|---|
@@ -333,12 +414,19 @@ and a10s statement timeout; every external command has a10s timeout.
 | `migration_then_app` | Current DB revision precedes candidate head in a supported linear graph. Separate exact migration approval is required. |
 | `blocked` | Missing, unsupported, ambiguous or inconsistent evidence. Stop; do not infer a fallback action. |
 
-Unknown paths (including ops/workflow changes), changed historical migrations,
+Unknown paths (including unrelated ops/workflow changes), changed historical migrations,
 branch/merge/dependency or nested migration layouts block. Backend/worker and
 frontend source comparisons use their own revisions, not a shared latest Git tip.
 Compose must support `up --no-start --no-deps --no-build` for application actions;
 the check only reads help, never runs that command. Do not use unsupported
 `create --no-deps`.
+
+An exact separately approved tooling proof adds `approved_tooling_review` and
+`reviewed_tooling_changes` without hiding paths or changing app/migration gates.
+Tooling-only `no_rollout` is not tooling installation or application relabeling.
+`.dockerignore` retains its existing runtime/build classification, not a new
+tooling exemption. Report_version2 adds checker/toolchain/proof digests; blocked
+reports suppress candidate/facts and reviewed scope.
 
 The stdout JSON always has `authorized=false`, `production_ready=false`,
 `source_binding="operator_approved_inventory"`, `content_provenance_verified=false`
@@ -351,6 +439,7 @@ This is not a health, login-cookie, ARQ, image-content or retention test.
 Existing approval, CI/build, exact non-root image verification, backup/restore,
 fencing/data retention, rollback compatibility and runtime observation gates all
 remain required. Do not regenerate inventory just to turn a mismatch green.
+Snapshots do not make the whole server observation atomic.
 State changes invalidate the report: recheck under the existing deploy lock
 immediately before any authorized mutation. The preflight itself is not a lock.
 

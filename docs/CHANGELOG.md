@@ -9,6 +9,9 @@ Wszystkie istotne zmiany w projekcie.
 - CLI wymaga BootstrapContext, używa przypiętego runnera i snapshotów; raport V2
   nadal nie autoryzuje wdrożenia.216offlinePASS; dodatkowo launcher z -O23PASS.
   Nie przygotowano rzeczywistych pakietów, zgód ani odczytów produkcji.
+- Task6:13nowych scenariuszy integracyjnych;230offlinePASS124.48s.
+  Procedura wymaga launchera V2, osobnych pinów/akceptacji i prywatnego scratch,
+  zachowując wszystkie aplikacyjne gates. Świeży review nadal przed nami.
 
 ## [WIP lokalny; bez wdrożenia] — 2026-11-17 — Implementacja preflight Native
 
