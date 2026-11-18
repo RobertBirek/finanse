@@ -2,6 +2,19 @@
 
 Backlog zadań ze statusami.
 
+## Publikacja i rollout V2 — 2026-11-18
+
+- [x] Push main0e9e73c bez force i niezależne potwierdzenie remoteSHA.
+- [x] Przygotować runtime/bundle/toolchain/scope i osobny review artefaktów.
+- [x] Jawna akceptacja trzech hashy i warunkowego readonly preflightu przez admina.
+- [ ] CI exactSHA:44253508543FAIL (1fixturebackend + npm audit10high/picomatch).
+- [x] Wąska poprawka fixture runtime: RED→GREEN24launcherPASS;231offline/
+  719Vitest/lint/types/kolekcja/Ruff+mypy8opsPASS, focusedreview bez uwag.
+- [ ] Akceptacja proponowanego planu decyzji remediacji picomatch; bez zmian
+  zależności lub wyłączania audytu / `audit fix --force`.
+- [ ] Po zmianie kandydata nowe CI i nowy scope proof/hash do akceptacji;
+  potem preflight, backup/restore, rollback, migracja/spójny rollout/runtime.
+
 - [x] Preflight Task5: bootstrap/packager/CLI V2;216offlinePASS i launcher23PASS
   (w tym -O); lint/types/kolekcja/719Vitest i Ruff/mypy8opsPASS.
 - [x] Preflight Task6:13integracyjnych wariantów,230offlinePASS129.74s; procedura

@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -62,9 +63,14 @@ class Bundle:
         safe.write_bytes(b"safe = 1\n")
         safe.chmod(0o600)
         tree = [["safe.py", digest(safe), 0o600]]
+        # Verification-only fixture: do not trust the CI runner's toolcache
+        # ancestor permissions, and never execute this private binary copy.
+        python = root / "python"
+        shutil.copyfile(Path(sys.executable).resolve(), python)
+        python.chmod(0o700)
         self.runtime = {
-            "python_path": str(Path(sys.executable).resolve()),
-            "python_sha256": digest(Path(sys.executable).resolve()),
+            "python_path": str(python),
+            "python_sha256": digest(python),
             "stdlib_root": str(stdlib),
             "stdlib_tree_sha256": hashlib.sha256(
                 json.dumps(tree, ensure_ascii=True, separators=(",", ":")).encode()
@@ -144,6 +150,37 @@ def test_valid_bundle_verification_never_imports_checker(bundle):
     )
     assert value["source_revision"] == "a" * 40
     assert not bundle.marker.exists()
+
+
+def test_fixture_runtime_is_independent_of_writable_hostedtoolcache(tmp_path, monkeypatch):
+    launcher = module("preflight_launcher")
+    hosted = tmp_path / "hostedtoolcache"
+    hosted.mkdir(mode=0o777)
+    hosted.chmod(0o777)
+    host_python = hosted / "python"
+    host_python.write_bytes(Path(sys.executable).resolve().read_bytes())
+    host_python.chmod(0o755)
+    fixture_root = tmp_path / "private"
+    fixture_root.mkdir(mode=0o700)
+    monkeypatch.setattr(sys, "executable", str(host_python))
+    fixture = Bundle(fixture_root)
+
+    # The production guard must still reject the hosted toolcache path itself.
+    with pytest.raises(launcher.BootstrapError) as error:
+        launcher._read(host_python, owner_uid=os.geteuid())
+    assert error.value.code == "bootstrap_parent_untrusted"
+    assert (
+        launcher.verify_bundle(
+            fixture.bundle,
+            digest(fixture.manifest_path),
+            owner_uid=os.geteuid(),
+        )["source_revision"]
+        == "a" * 40
+    )
+    copied = Path(fixture.runtime["python_path"])
+    assert copied.is_relative_to(fixture_root)
+    assert copied.read_bytes() == host_python.read_bytes()
+    assert not fixture.marker.exists()
 
 
 def test_read_access_time_is_not_treated_as_integrity_drift(bundle):

@@ -2,6 +2,23 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Main opublikowany; rollout BLOCKED] — 2026-11-18 — Preflight V2
+
+- Po poleceniu użytkownika wypchnięto bez force `0e9e73c` na main i potwierdzono
+  zdalne SHA. CI44253508543 zakończone FAILURE: npm audit10high w łańcuchu
+  picomatch oraz1backendtest fixture `bootstrap_parent_untrusted`.
+- Przygotowano izolowany regular-copy runtime i pakiet28members; osobny odbiór
+  artefaktów bez uwag. Administrator jawnie zaakceptował exactbundle/toolchain/
+  scopehashy i readonly acceptance wyłącznie po zielonym CI. Receipt zapisany.
+- Warunek CI nie został spełniony: nie uruchomiono produkcyjnego preflightu,
+  migracji lub rollout. Nie zmieniano metadanych/konfiguracji/auth/danych.
+- Po dodatkowej zgodzie wąska fixture runtime RED→GREEN24launcherPASS:
+  prywatna kopia pliku interpretera, bez zmiany guardów `ops`. Osobny
+  proponowany plan decyzji remediacji picomatch; zależności nadal bez zmian.
+- Odbiór poprawki:231offlinePASS138.42s,719Vitest, kanoniczne lint/types/
+  kolekcja i Ruff/mypy8opsPASS. Focusedreview bez uwag; frontend audit nadal
+  wymaga osobnego rozwiązania. Plan zależności czeka na akceptację.
+
 ## [Lokalny odbiór; bez wdrożenia] — 2026-11-18 — Bootstrap i CLI preflight V2
 
 - Dodano osobny launcher stdlib weryfikujący pakiet/runtime/zgodę przed importem

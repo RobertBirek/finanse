@@ -2,6 +2,46 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-18 — Main0e9e73c pushed, CI zatrzymało rollout
+
+- User „wypchnij do main i wdróż”; push5c37246→0e9e73c55b88f9bc2bf760d9836b28044b993931
+  bez force, remote osobno potwierdzony. Hostcheckoutmain/pozostałe worktree nietknięte.
+- App/backendmigrations/frontend identyczne z wcześniej zielonym39aceec.
+  Nowe exactCI44253508543FAIL: frontend npm audit blokuje przed lint/tests/build/
+  browser (picomatch GHSA-fc5q-39xc-vjpf,10high w łańcuchu zależności; advisory
+  zaktualizowane17XI, brak opublikowanej patchedversion). Nie stosowano forcefix.
+- Backend ordinary-3 ma1FAIL: test_valid_bundle_verification_never_imports_checker,
+  bootstrap_parent_untrusted. Fixture pinuje rzeczywisty hostedtoolcachePython,
+  którego ancestors nie spełniają modelu trust; guard prawidłowo odmawia.
+  Poprawka powinna dotyczyć wyłącznie prywatnej kopii runtime w fixture.
+  Backendstatic i7pozostałych executiongroupsSUCCESS; aggregate słusznieFAIL.
+- Evidence `/tmp/opencode/preflight-publish-0e9e73c.9qfZE5y5/`, failedlogs/JUnit.
+- Artefakty `/tmp/opencode/preflight-artifacts-0e9e73c.sOpN8zYw/`, progress.md
+  zawiera dokładne piny/procedurę/status. Systemstdlib3symlinki zostały odrzucone;
+  osobna kopia tych samych rootcontrolledbajtów nie ma symlinków, bez instalacji
+  lub zmiany systemu. Runtime/bundle28/pins i30toolingpairs niezależnie odebrane
+  przez ses_e129444fcffeIDZpwfjkwwMZ0S bez uwag. Potem admin wybrał
+  „Akceptuję hashe i preflight”; receipt zapisano, ale CIwarunek pozostaje niespełniony.
+- Readonly discovery: whitelist metadanych/PGinspect i fixedfiledockerCP dla
+  passwd/executables/HBA/socketlock; żadnego query/exec/authchange. Existing
+  approvedinventoryad1c294… nadal zgadzało się z activehash. Nie wydano inventory.
+- Produkcyjny preflight/build/backup/migracja/rollout NIE wykonane. Nie obchodzić
+  CI; nowy kandydat wymaga nowego scope proof i akceptacji hasha. Dokumentacja
+  bieżącej blokady lokalna do czasu zamknięcia dalszego zakresu.
+- Następnie user „Napraw fixture i przygotuj plan”. Nowa regresja realnego
+  writableancestorRED bootstrap_parent_untrusted; prywatna kopia interpretera
+  w fixture (nigdy niewykonywana) →24launcherPASS1.96s. Opsguardy bez zmian.
+  Spec/plan picomatch są propozycją wyłącznie rozpoznania i decyzji; brak poprawki
+  pozwala zakończyć BLOCKED. Nie instalowano zależności, node_modules/lock bez zmian.
+  Weryfikacja pełna i focusedreview w toku przed commitem.
+- Focusedreview ses_e12716443ffe2R91cJBn6Uf87f approve, bez uwag/pytań:
+  fixture nie wykonuje kopii i nadal odrzuca writablehostedtoolcache; plan jest
+  celowo decyzyjny/research-only, bez uprawnienia do zmiany zależności.
+- Finalfixturefix:231offlinePASS138.42s,719Vitest i kanoniczne lint/types/
+  kolekcja oraz Ruff/mypy8opsPASS. Gitdiff produktu/ops/dependencylock pusty.
+  Poprawka test-only nie rozwiązuje audytu; nowy candidate nie dziedziczy
+  zaakceptowanego scope dla0e9e73c. Plan zależności czeka na odpowiedź użytkownika.
+
 ## 2026-11-18 — Native preflight: integracja V2
 
 - Tasks1–4 ukończone w commitach47ec38e/415a420/ea39eee/e987067; nie powtarzać.
