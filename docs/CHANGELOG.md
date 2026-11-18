@@ -2,7 +2,7 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [WIP lokalny; bez wdrożenia] — 2026-11-18 — Bootstrap i CLI preflight V2
+## [Lokalny odbiór; bez wdrożenia] — 2026-11-18 — Bootstrap i CLI preflight V2
 
 - Dodano osobny launcher stdlib weryfikujący pakiet/runtime/zgodę przed importem
   i lokalny packager wyłącznie z przypiętego Git oraz źródła PyYAML6.0.3.
@@ -11,7 +11,11 @@ Wszystkie istotne zmiany w projekcie.
   Nie przygotowano rzeczywistych pakietów, zgód ani odczytów produkcji.
 - Task6:13nowych scenariuszy integracyjnych;230offlinePASS124.48s.
   Procedura wymaga launchera V2, osobnych pinów/akceptacji i prywatnego scratch,
-  zachowując wszystkie aplikacyjne gates. Świeży review nadal przed nami.
+  zachowując wszystkie aplikacyjne gates. Świeży review fa7b470..d451698:
+  0Critical/0Important/0Minor, dodatkowe24testyPASS. Bez push lub wdrożenia.
+- Końcowa weryfikacja:230offlinePASS129.74s,719Vitest, lint/types/kolekcja
+  backendu oraz Ruff/mypy8opsPASS. Pełne CI i rzeczywiste artefakty/produkcja
+  wymagają osobnych zgód; zewnętrznie zarządzany worktree zachowany.
 
 ## [WIP lokalny; bez wdrożenia] — 2026-11-17 — Implementacja preflight Native
 

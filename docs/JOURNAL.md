@@ -23,6 +23,14 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   .dockerignore w ledgerze. Procedura V2 bez kandydackich importów/inventoryissuer.
 - Task6kontrole exit0: lint/types/kolekcja/719Vitest/Ruff+mypy8opsPASS;
   następnie jeden świeży review całego fa7b470..HEAD. Bez zgód produkcyjnych.
+- Świeży reviewer ses_e12a2c73fffeG5oXHfsQ4UeEch przeczytał cały zakres
+  fa7b470..d451698, wszystkie5focus/rulings:0Critical/0Important/0Minor,
+  Declined to judge:none. Własne24offlinePASS23.56s. Brak rundy poprawek kodu.
+  Decyzje wykonawcze i ich koszty przeniesiono do trwałego raportu audits.
+- Task6task-done230PASS129.74s. Końcowe lint/types/kolekcja/719Vitest oraz
+  Ruff/mypy8opsPASS. Kod po review bez zmian; finaldocscommit tylko zapisuje odbiór.
+  Plan ukończony lokalnie; detachedHEAD/worktree zachowane, bez merge/push/PR
+  i bez prawdziwego pakietu/receiptu lub operacji produkcyjnych.
 
 ## 2026-11-17 — Native rozpoczęte: strict trust inputs
 
