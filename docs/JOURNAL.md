@@ -2,6 +2,21 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-18 — Native preflight: integracja V2
+
+- Tasks1–4 ukończone w commitach47ec38e/415a420/ea39eee/e987067; nie powtarzać.
+  Ledger `.superpowers/sdd/2026-11-17-preflight-trust-and-reviewed-tooling/progress.md`.
+- Task5 dodał bootstrap stdlib, weryfikację runtime/members/receipt z zewnętrznymi
+  pinami i packager bez install/fetch/zgód. CLI V2 odrzuca brak bootstrapu,
+  sprawdza zakres źródeł przed Dockerem, używa tylko snapshotów i stałego PGSELECT.
+- RED początkowe oraz atime/ancestor/custody/origin/runtime-omission → GREEN.
+  216offlinePASS82.49s, potem launcher23PASS1.75s (dodane -O).
+  Pozytywny adapter ma osobny test-only harness, nie flagę produkcyjną.
+- Kontrole kanoniczne i commit Task5 następne, potem Task6 integracyjne warianty,
+  procedura i jeden świeży review. Bez push i bez odczytów/mutacji produkcji.
+- Task5 przed commitem: kanoniczne lint/types/kolekcja/719VitestPASS, dodatkowe
+  Ruff/mypy8opsPASS. Nie wykonano testów backendowych z fixtureDB.
+
 ## 2026-11-17 — Native rozpoczęte: strict trust inputs
 
 - User „tak, native”; planfa7b470 zatwierdzony. Ten sam linked worktree,

@@ -203,69 +203,12 @@ class ReadOnlyRunner:
         return output
 
     def _capture(self, command: list[str], env: dict[str, str]) -> str:
-        process: subprocess.Popen[bytes] | None = None
-        try:
-            process = subprocess.Popen(
-                command,
-                shell=False,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                cwd=self.repository,
-                start_new_session=True,
-            )
-            if process.stdout is None or process.stderr is None:
-                raise PreflightInputError("tool_failed")
-            deadline = time.monotonic() + 10
-            chunks: list[bytes] = []
-            count = 0
-            with selectors.DefaultSelector() as selector:
-                selector.register(process.stdout, selectors.EVENT_READ, "stdout")
-                selector.register(process.stderr, selectors.EVENT_READ, "stderr")
-                while selector.get_map():
-                    remaining = deadline - time.monotonic()
-                    require(remaining > 0, "tool_timeout")
-                    for key, _ in selector.select(remaining):
-                        block = os.read(
-                            key.fd,
-                            min(65536, self.toolchain.limits.max_output_bytes + 1),
-                        )
-                        if not block:
-                            selector.unregister(key.fileobj)
-                            continue
-                        count += len(block)
-                        require(
-                            count <= self.toolchain.limits.max_output_bytes,
-                            "tool_output_limit",
-                        )
-                        if key.data == "stdout":
-                            chunks.append(block)
-            remaining = deadline - time.monotonic()
-            require(remaining > 0, "tool_timeout")
-            require(process.wait(timeout=remaining) == 0, "tool_failed")
-            return b"".join(chunks).decode("utf-8")
-        except subprocess.TimeoutExpired:
-            raise PreflightInputError("tool_timeout") from None
-        except (OSError, UnicodeError):
-            raise PreflightInputError("tool_unavailable") from None
-        finally:
-            if process is not None:
-                # Before wait() reaps the leader its PID cannot be reused.
-                # This also kills children holding pipes after a parent exits.
-                if process.returncode is None:
-                    try:
-                        os.killpg(process.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
-                if process.stdout is not None:
-                    process.stdout.close()
-                if process.stderr is not None:
-                    process.stderr.close()
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    raise PreflightInputError("tool_cleanup_failed") from None
+        return capture_process(
+            command,
+            env,
+            cwd=self.repository,
+            max_output_bytes=self.toolchain.limits.max_output_bytes,
+        )
 
     def _inspect_pg(self) -> dict[str, Any]:
         endpoint = self.toolchain.postgres
@@ -332,3 +275,71 @@ class ReadOnlyRunner:
             "schema_head_invalid",
         )
         return heads
+
+
+def capture_process(
+    command: list[str],
+    env: dict[str, str],
+    *,
+    cwd: Path,
+    max_output_bytes: int,
+) -> str:
+    """Bounded I/O primitive; callers must validate their own closed argv grammar."""
+    require(
+        type(max_output_bytes) is int and max_output_bytes > 0, "tool_limit_invalid"
+    )
+    process: subprocess.Popen[bytes] | None = None
+    try:
+        process = subprocess.Popen(
+            command,
+            shell=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            cwd=cwd,
+            start_new_session=True,
+        )
+        if process.stdout is None or process.stderr is None:
+            raise PreflightInputError("tool_failed")
+        deadline = time.monotonic() + 10
+        chunks: list[bytes] = []
+        count = 0
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout, selectors.EVENT_READ, "stdout")
+            selector.register(process.stderr, selectors.EVENT_READ, "stderr")
+            while selector.get_map():
+                remaining = deadline - time.monotonic()
+                require(remaining > 0, "tool_timeout")
+                for key, _ in selector.select(remaining):
+                    block = os.read(key.fd, min(65536, max_output_bytes + 1))
+                    if not block:
+                        selector.unregister(key.fileobj)
+                        continue
+                    count += len(block)
+                    require(count <= max_output_bytes, "tool_output_limit")
+                    if key.data == "stdout":
+                        chunks.append(block)
+        remaining = deadline - time.monotonic()
+        require(remaining > 0, "tool_timeout")
+        require(process.wait(timeout=remaining) == 0, "tool_failed")
+        return b"".join(chunks).decode("utf-8")
+    except subprocess.TimeoutExpired:
+        raise PreflightInputError("tool_timeout") from None
+    except (OSError, UnicodeError):
+        raise PreflightInputError("tool_unavailable") from None
+    finally:
+        if process is not None:
+            if process.returncode is None:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            if process.stdout is not None:
+                process.stdout.close()
+            if process.stderr is not None:
+                process.stderr.close()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                raise PreflightInputError("tool_cleanup_failed") from None

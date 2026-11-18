@@ -180,6 +180,15 @@ class Toolchain:
     limits: InputLimits
 
 
+@dataclass(frozen=True)
+class BootstrapContext:
+    bundle_sha256: str
+    toolchain_sha256: str
+    toolchain: Toolchain
+    review_scope_sha256: str | None
+    runtime_root: Path
+
+
 def verify_pinned_file(pin: FilePin, *, owner_uid: int = 0) -> bytes:
     path = absolute(pin.path)
     mode, uid = integer(pin.mode), integer(pin.uid)

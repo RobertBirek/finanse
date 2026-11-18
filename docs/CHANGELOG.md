@@ -2,6 +2,14 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [WIP lokalny; bez wdrożenia] — 2026-11-18 — Bootstrap i CLI preflight V2
+
+- Dodano osobny launcher stdlib weryfikujący pakiet/runtime/zgodę przed importem
+  i lokalny packager wyłącznie z przypiętego Git oraz źródła PyYAML6.0.3.
+- CLI wymaga BootstrapContext, używa przypiętego runnera i snapshotów; raport V2
+  nadal nie autoryzuje wdrożenia.216offlinePASS; dodatkowo launcher z -O23PASS.
+  Nie przygotowano rzeczywistych pakietów, zgód ani odczytów produkcji.
+
 ## [WIP lokalny; bez wdrożenia] — 2026-11-17 — Implementacja preflight Native
 
 - Użytkownik zatwierdził plan i Native. Task1: ścisłe prywatne JSON/manifests,

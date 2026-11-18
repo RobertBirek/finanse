@@ -16,11 +16,6 @@ SERVICES = ("backend", "worker", "frontend")
 PG_OPTIONS = (
     "PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=10000 -c timezone=UTC"
 )
-PG_COMMAND = (
-    'exec psql -X --no-password -U "$POSTGRES_USER" -d "$POSTGRES_DB" '
-    "--set=ON_ERROR_STOP=1 --no-align --tuples-only "
-    '--command="SELECT version_num FROM alembic_version"'
-)
 CANARY = "private-canary-must-not-appear"
 
 
@@ -78,12 +73,41 @@ class Scenario:
             "compose",
             "--project-name",
             "synthetic",
+            "--project-directory",
+            str(root),
             "--env-file",
             str(self.env_file),
         ]
         for file in self.compose_files:
             self.compose.extend(["-f", str(file)])
-        self.exec = ["exec", "--env", PG_OPTIONS, self.pg_id, "sh", "-c", PG_COMMAND]
+        self.exec = [
+            "exec",
+            "--user",
+            "999:999",
+            self.pg_id,
+            "/usr/bin/env",
+            "-i",
+            "HOME=/nonexistent",
+            "PGPASSFILE=/dev/null",
+            "PGCONNECT_TIMEOUT=5",
+            PG_OPTIONS,
+            "/usr/lib/postgresql/16/bin/psql",
+            "-X",
+            "--no-password",
+            "--host",
+            "/var/run/postgresql",
+            "--port",
+            "5432",
+            "--username",
+            "synthetic",
+            "--dbname",
+            "synthetic",
+            "--set=ON_ERROR_STOP=1",
+            "--no-align",
+            "--tuples-only",
+            "--command",
+            "SELECT version_num FROM alembic_version",
+        ]
         self.responses: dict[str, dict[str, Any]] = {}
         config = {
             "name": "synthetic",
@@ -112,6 +136,7 @@ class Scenario:
                         "Id": container_id,
                         "Image": self.images.get(service, "sha256:" + "d" * 64),
                         "State": {"Running": True, "Restarting": False, "Status": "running"},
+                        "Mounts": [],
                         "Config": {
                             "Image": f"local/synthetic:{service}",
                             "Labels": labels,
@@ -161,6 +186,85 @@ class Scenario:
             },
         }
         self.approve()
+        self.scratch = root / "scratch"
+        self.scratch.mkdir(mode=0o700)
+        # Normalize only fixture snapshot path names, after actually opening the
+        # private snapshots. Raw argv is retained separately for V2 assertions.
+        docker.write_text(
+            f"#!{sys.executable}\n"
+            "import hashlib,json,os,sys,time\nfrom pathlib import Path\n"
+            "actual=sys.argv[1:]\nargs=list(actual)\n"
+            "if Path(sys.argv[0]).name=='compose': args.insert(0,'compose')\n"
+            "elif args[:2]==['--host','unix:///var/run/docker.sock']: args=args[2:]\n"
+            "consumed=[]\n"
+            "if args and args[0]=='compose':\n"
+            f" expected={[(str(p), digest(p)) for p in self.compose_files]!r}\n"
+            f" env_original={str(self.env_file)!r}\n"
+            f" env_sha={digest(self.env_file)!r}\n"
+            " for i,a in enumerate(args[:-1]):\n"
+            "  if a not in ('-f','--env-file'): continue\n"
+            "  path=Path(args[i+1]);raw=path.read_bytes()\n"
+            f"  if path.parent.parent != Path({str(self.scratch)!r}): sys.exit(98)\n"
+            "  if not path.parent.name.startswith('preflight-inputs-'): sys.exit(98)\n"
+            "  sha=hashlib.sha256(raw).hexdigest();consumed.append([str(path),sha])\n"
+            "  if a=='--env-file':\n"
+            "   if sha!=env_sha: sys.exit(98)\n"
+            "   args[i+1]=env_original\n"
+            "  else:\n"
+            "   index=int(path.stem.split('-')[1]); original,want=expected[index]\n"
+            "   if sha!=want: sys.exit(98)\n"
+            "   args[i+1]=original\n"
+            f"with Path({str(self.journal)!r}).open('a') as out:\n"
+            " out.write(json.dumps({'actual':actual,'normalized':args,'consumed':consumed})+'\\n')\n"
+            f"responses=json.loads(Path({str(self.responses_file)!r}).read_text())\n"
+            "r=responses.get(json.dumps(args))\n"
+            "if r is None: sys.exit(99)\n"
+            "time.sleep(r.get('sleep',0));sys.stdout.write(r.get('stdout',''))\n"
+            "sys.stderr.write(r.get('stderr',''));sys.exit(r.get('code',0))\n"
+        )
+        docker.chmod(0o700)
+        compose_binary = self.bin / "compose"
+        compose_binary.write_bytes(docker.read_bytes())
+        compose_binary.chmod(0o700)
+        git_binary = Path("/usr/bin/git").resolve()
+        self.context = root / "synthetic-bootstrap.json"
+        self.context.write_text(
+            json.dumps(
+                {
+                    "executables": {
+                        name: {
+                            "path": str(path),
+                            "sha256": digest(path),
+                            "mode": path.stat().st_mode & 0o7777,
+                            "uid": path.stat().st_uid,
+                        }
+                        for name, path in (
+                            ("git", git_binary),
+                            ("docker", docker),
+                            ("compose", compose_binary),
+                        )
+                    },
+                    "postgres": {
+                        "container_id": self.pg_id,
+                        "image_id": "sha256:" + "d" * 64,
+                        "uid": 999,
+                        "gid": 999,
+                        "env_executable": "/usr/bin/env",
+                        "psql_executable": "/usr/lib/postgresql/16/bin/psql",
+                        "socket_directory": "/var/run/postgresql",
+                        "port": 5432,
+                        "auth": "peer",
+                    },
+                    "limits": {
+                        "max_file_bytes": 1048576,
+                        "max_yaml_nodes": 4096,
+                        "max_yaml_depth": 64,
+                        "max_output_bytes": 1048576,
+                    },
+                }
+            )
+        )
+        self.context.chmod(0o600)
 
     def git(self, *args: str) -> str:
         return subprocess.check_output(
@@ -214,6 +318,8 @@ class Scenario:
             str(self.env_file),
             "--postgres-service",
             "postgres",
+            "--scratch-directory",
+            str(self.scratch),
         ]
         for file in self.compose_files:
             args.extend(["--compose-file", str(file)])
@@ -237,7 +343,8 @@ class Scenario:
                 sys.executable,
                 "-B",
                 *(["-O"] if optimized else []),
-                str(SCRIPT),
+                str(Path(__file__).with_name("preflight_cli_harness.py")),
+                str(self.context),
                 *(self.args() if args is None else args),
                 *extra,
             ],
@@ -251,7 +358,7 @@ class Scenario:
     def calls(self) -> list[list[str]]:
         if not self.journal.exists():
             return []
-        return [json.loads(line) for line in self.journal.read_text().splitlines()]
+        return [json.loads(line)["normalized"] for line in self.journal.read_text().splitlines()]
 
 
 @pytest.fixture

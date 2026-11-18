@@ -2,6 +2,10 @@
 
 Backlog zadań ze statusami.
 
+- [x] Preflight Task5: bootstrap/packager/CLI V2;216offlinePASS i launcher23PASS
+  (w tym -O); lint/types/kolekcja/719Vitest i Ruff/mypy8opsPASS.
+- [ ] Preflight Task6: integracyjne warianty/procedura/jeden świeży review.
+
 ## Dokumenty → automatyczne szkice i kategoria AI (2026-11-17)
 
 - [x] Uzgodnić szkice, dwa znaczniki, istniejące kategorie i brak zapisów księgi/płatności.
