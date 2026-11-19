@@ -30,7 +30,7 @@ it("shows independent finance evidence even if the latest recognition failed", a
   );
   expect(await screen.findByLabelText("Odczyt")).toHaveTextContent("Błąd");
   expect(screen.getByLabelText("Finanse")).toHaveTextContent(
-    "Zatwierdzony w finansach",
+    "Zatwierdzony",
   );
   expect(
     screen.getByRole("link", { name: "Otwórz w finansach" }),
@@ -61,7 +61,7 @@ it("does not invent a finance link from ready OCR", async () => {
     screen.queryByRole("link", { name: "Otwórz w finansach" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Sprawdź dane i przygotuj szkic" }),
+    screen.getByRole("button", { name: "Sprawdź dane" }),
   ).toBeVisible();
 });
 it("opens a toast-linked review even when the document is outside the current list page", async () => {

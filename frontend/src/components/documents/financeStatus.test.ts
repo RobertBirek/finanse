@@ -11,7 +11,7 @@ it("polls registration after recognition is finished and stops for review", () =
   });
   expect(isDocumentWorkActive(document)).toBe(true);
   expect(getFinanceDocumentStatus(document).label).toBe(
-    "Przygotowywanie szkicu",
+    "Szkic w kolejce",
   );
   document.finance!.state = "needs_review";
   expect(isDocumentWorkActive(document)).toBe(false);

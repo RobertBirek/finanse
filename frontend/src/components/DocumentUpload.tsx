@@ -12,6 +12,8 @@ import {
   isProcessingActorCurrent,
 } from "../stores/documentProcessingStore";
 
+import { DocumentIcon, DocumentTooltip } from "./documents/documentControls";
+
 const ACCEPTED_TYPES = [
   "application/pdf",
   "image/jpeg",
@@ -150,51 +152,72 @@ export function DocumentUpload() {
   const onDrop = (event: DragEvent) => {
     event.preventDefault();
     setDragActive(false);
-    addFiles(event.dataTransfer.files);
+    if (event.dataTransfer.files.length) addFiles(event.dataTransfer.files);
   };
   const limit = capabilities.data
     ? `do ${formatFileSize(capabilities.data.max_file_bytes)}`
     : "zgodnie z limitem konta";
 
   return (
-    <div className="mb-6">
-      <p className="mb-3 text-sm text-gray-400">
-        Odczyt AI może przekazać dostawcy treść dokumentu oraz nazwy i ścieżki
-        Twoich kategorii wydatków, aby zaproponować kategorię. Po odczycie
-        przygotujemy szkic w finansach. Szkic wymaga Twojego zatwierdzenia; nie
+    <div className="mb-5">
+      <p
+        id="upload-privacy"
+        className="mb-2 text-xs leading-relaxed text-gray-400"
+      >
+        {capabilities.data?.automatic_image_vision ? (
+          <span role="status">
+            Zdjęcia automatycznie trafiają do{" "}
+            {capabilities.data.vision_provider_label ?? "dostawcy"} do odczytu
+            AI.{" "}
+          </span>
+        ) : null}
+        Odczyt AI może przekazać dostawcy treść pliku oraz nazwy i ścieżki
+        Twoich kategorii wydatków. Szkic wymaga Twojego zatwierdzenia i sam nie
         tworzy płatności ani transakcji.
       </p>
-      {capabilities.data?.automatic_image_vision ? (
-        <p role="status" className="mb-3 text-sm text-gray-300">
-          Zdjęcia są automatycznie wysyłane do{" "}
-          {capabilities.data.vision_provider_label ?? "dostawcy"} do odczytu AI.
-          Dane wymagają sprawdzenia. Informacje widoczne na zdjęciu są
-          przekazywane dostawcy.
-        </p>
-      ) : null}
-      <button
-        type="button"
-        aria-label="Wybierz dokument do przesłania"
-        aria-describedby="upload-formats"
-        className={`w-full border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive ? "border-advisor-400 bg-advisor-400/10" : "border-gray-700 hover:border-gray-500 bg-gray-900"}`}
+      <div
+        className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-dashed px-3 py-2.5 ${dragActive ? "border-advisor-400 bg-advisor-400/10" : "border-gray-700 bg-gray-900"}`}
         onDragOver={(event) => {
+          if (!event.dataTransfer.types.includes("Files")) return;
           event.preventDefault();
           setDragActive(true);
         }}
-        onDragLeave={() => setDragActive(false)}
+        onDragLeave={(event) => {
+          if (
+            !(event.relatedTarget instanceof Node) ||
+            !event.currentTarget.contains(event.relatedTarget)
+          ) {
+            setDragActive(false);
+          }
+        }}
         onDrop={onDrop}
-        onClick={() => fileInputRef.current?.click()}
       >
-        <span className="block text-gray-300 font-medium">
-          Wybierz dokument do przesłania
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-describedby="upload-formats upload-privacy"
+            className="btn-primary inline-flex min-h-11 items-center gap-2"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <DocumentIcon name="upload" />
+            Dodaj dokument
+          </button>
+          <DocumentTooltip label="Aparat">
+            <button
+              type="button"
+              aria-label="Aparat"
+              aria-describedby="upload-privacy"
+              className="document-icon-control"
+              onClick={() => cameraInputRef.current?.click()}
+            >
+              <DocumentIcon name="camera" />
+            </button>
+          </DocumentTooltip>
+        </div>
+        <span id="upload-formats" className="text-xs text-gray-400">
+          PDF, JPG, PNG, HEIC, HEIF · {limit}
         </span>
-      </button>
-      <span
-        id="upload-formats"
-        className="block text-center text-gray-400 text-sm mt-1"
-      >
-        PDF, JPG, PNG, HEIC, HEIF — {limit}
-      </span>
+      </div>
       <input
         ref={fileInputRef}
         type="file"
@@ -211,22 +234,6 @@ export function DocumentUpload() {
         className="hidden"
         onChange={onChange}
       />
-      <div className="flex gap-3 mt-3">
-        <button
-          type="button"
-          onClick={() => cameraInputRef.current?.click()}
-          className="min-h-11 flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 text-sm"
-        >
-          Aparat
-        </button>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="min-h-11 flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 text-sm"
-        >
-          Galeria lub pliki
-        </button>
-      </div>
       {validationError && (
         <p role="alert" className="mt-2 text-sm text-red-300">
           {validationError}

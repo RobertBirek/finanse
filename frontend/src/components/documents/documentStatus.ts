@@ -8,19 +8,37 @@ export function getFinanceDocumentStatus(
   const finance = document.finance;
   if (finance?.bill_id) {
     if (finance.lifecycle === "archived")
-      return { label: "Archiwalny w finansach", tone: "neutral" };
+      return {
+        label: "Archiwalny",
+        tone: "neutral",
+      };
     if (finance.lifecycle === "cancelled")
-      return { label: "Anulowany w finansach", tone: "neutral" };
+      return {
+        label: "Anulowany",
+        tone: "neutral",
+      };
     if (finance.review === "approved")
-      return { label: "Zatwierdzony w finansach", tone: "success" };
+      return {
+        label: "Zatwierdzony",
+        tone: "success",
+      };
     if (finance.review === "rejected")
-      return { label: "Odrzucony w finansach", tone: "warning" };
-    return { label: "Szkic w finansach", tone: "warning" };
+      return {
+        label: "Odrzucony",
+        tone: "warning",
+      };
+    return { label: "Szkic", tone: "warning" };
   }
   if (finance?.state === "pending")
-    return { label: "Przygotowywanie szkicu", tone: "neutral" };
+    return {
+      label: "Szkic w kolejce",
+      tone: "neutral",
+    };
   if (finance?.state === "failed")
-    return { label: "Błąd zapisu szkicu — sprawdź dane", tone: "danger" };
+    return {
+      label: "Błąd szkicu",
+      tone: "danger",
+    };
   if (finance?.state === "needs_review")
     return { label: "Do sprawdzenia", tone: "warning" };
   return { label: "Nie wczytano", tone: "neutral" };

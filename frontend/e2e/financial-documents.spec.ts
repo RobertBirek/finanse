@@ -299,7 +299,10 @@ test("legacy PDF review remains manually usable after LLM/OCR error", async ({
   await page
     .getByRole("button", { name: "Otwórz dokument: stara-faktura.pdf" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sprawdź dane", exact: true })
+    .click();
   await expect(page.getByRole("alert")).toContainText(
     "Możesz uzupełnić pola ręcznie",
   );
@@ -331,7 +334,7 @@ for (const viewport of [375, 1440]) {
     const api = await financialDocumentFixtures(page);
     await page.goto("/documents");
     const chooser = page.locator('input[type="file"]').first();
-    await expect(page.getByText(/HEIF — do 20\.0 MB/)).toBeVisible();
+    await expect(page.getByText(/HEIF · do 20\.0 MB/)).toBeVisible();
     await expect(chooser).toHaveAttribute("accept", /image\/heif/);
     await chooser.setInputFiles({
       name: "ten-sam-zakup.heif",
@@ -360,6 +363,7 @@ for (const viewport of [375, 1440]) {
       .getByRole("button", { name: "Otwórz dokument: ten-sam-zakup.heif" })
       .click();
     await page
+      .getByRole("dialog")
       .getByRole("button", { name: "Sprawdź dane", exact: true })
       .click();
     await page
@@ -391,6 +395,7 @@ for (const viewport of [375, 1440]) {
       .getByRole("button", { name: "Otwórz dokument: paragon.pdf" })
       .click();
     await page
+      .getByRole("dialog")
       .getByRole("button", { name: "Sprawdź dane", exact: true })
       .click();
     await page

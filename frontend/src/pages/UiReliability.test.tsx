@@ -174,11 +174,12 @@ describe("document recovery UI", () => {
         <DocumentList />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Oczekuje" }));
+    const status = screen.getByRole("combobox", { name: "Status dokumentów" });
+    fireEvent.change(status, { target: { value: "pending" } });
     expect(
       screen.getByText("Brak dokumentów o wybranym statusie."),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Wszystkie" }));
+    fireEvent.change(status, { target: { value: "" } });
     expect(
       screen.getByRole("button", { name: "Otwórz dokument: example.pdf" }),
     ).toBeInTheDocument();
@@ -249,7 +250,7 @@ describe("document recovery UI", () => {
   it("has an accessible upload action and rejects empty files", () => {
     render(<DocumentUpload />);
     expect(
-      screen.getByRole("button", { name: "Wybierz dokument do przesłania" }),
+      screen.getByRole("button", { name: "Dodaj dokument" }),
     ).toBeInTheDocument();
     const input = document.querySelector('input[type="file"]')!;
     fireEvent.change(input, { target: { files: [new File([], "empty.pdf")] } });

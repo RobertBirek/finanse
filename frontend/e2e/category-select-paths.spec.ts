@@ -123,7 +123,10 @@ test("bill payment and document review use the same full active expense labels",
   await page
     .getByRole("button", { name: "Otwórz dokument: stara-faktura.pdf" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sprawdź dane", exact: true })
+    .click();
   await expect(
     page.getByLabel("Kategoria", { exact: true }).locator("option"),
   ).toHaveText(["Nie wybieraj teraz", ...expenseLabels]);

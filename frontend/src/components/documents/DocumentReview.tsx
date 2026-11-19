@@ -23,6 +23,7 @@ import {
 import { useAccounts, useCategories, type Category } from "../../api/finance";
 import { categoryOptions } from "../../lib/categories";
 import { Dialog } from "../Dialog";
+import { DocumentIcon, DocumentTooltip } from "./documentControls";
 import type { AxiosError } from "axios";
 import { useReviewForm, type ReviewForm } from "./useReviewForm";
 import { useAuthStore } from "../../stores/authStore";
@@ -63,6 +64,7 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
   const navigate = useNavigate();
   const metadata = useDocumentMetadata(documentId);
   const [showLatest, setShowLatest] = useState(false);
+  const [mobilePane, setMobilePane] = useState<"original" | "data">("data");
   const pinnedRevision =
     metadata.data?.finance?.bill_id && !showLatest
       ? metadata.data.finance.revision_id
@@ -228,13 +230,49 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
         attach.isPending
       }
     >
-      <div className="flex items-center justify-between gap-3 border-b border-gray-800 p-4">
-        <h2 className="text-lg font-semibold text-white">Sprawdź dane</h2>
-        <button type="button" onClick={onClose} className="btn-secondary">
-          Zamknij
-        </button>
+      <div className="sticky top-0 z-10 border-b border-gray-800 bg-gray-900 px-4 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-white">Sprawdź dane</h2>
+            {metadata.data?.original_name && (
+              <p
+                className="truncate text-xs text-gray-400"
+                title={metadata.data.original_name}
+              >
+                {metadata.data.original_name}
+              </p>
+            )}
+          </div>
+          <DocumentTooltip label="Zamknij">
+            <button
+              type="button"
+              aria-label="Zamknij"
+              onClick={onClose}
+              className="document-icon-control"
+            >
+              <DocumentIcon name="close" />
+            </button>
+          </DocumentTooltip>
+        </div>
+        <div
+          role="group"
+          aria-label="Widok dokumentu"
+          className="mt-1 grid grid-cols-2 gap-1 rounded-lg bg-gray-950 p-1 md:hidden"
+        >
+          {(["original", "data"] as const).map((pane) => (
+            <button
+              key={pane}
+              type="button"
+              aria-pressed={mobilePane === pane}
+              onClick={() => setMobilePane(pane)}
+              className={`min-h-11 rounded-md px-2 text-sm font-medium ${mobilePane === pane ? "bg-gray-800 text-white" : "text-gray-400 hover:text-white"}`}
+            >
+              {pane === "original" ? "Oryginał" : "Dane"}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="grid gap-5 p-4 md:grid-cols-2">
+      <div className="grid gap-5 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {archived && (
           <div className="md:col-span-2 rounded border border-gray-700 p-3 text-sm text-gray-300">
             <p>Dokument jest w archiwum. Przywróć go przed nowym odczytem.</p>
@@ -257,17 +295,25 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
             review={archived ? undefined : review.data}
           />
         </div>
-        <section>
-          <h3 className="font-medium text-white">Oryginał dokumentu</h3>
-          {originalUrl && (
-            <a
-              href={originalUrl}
-              download="dokument"
-              className="mt-2 inline-block text-sm text-advisor-700 hover:underline"
-            >
-              Pobierz autoryzowany oryginał
-            </a>
-          )}
+        <section
+          aria-label="Oryginał dokumentu"
+          className={`min-w-0 self-start rounded-lg border border-gray-800 bg-gray-950 p-3 md:block ${mobilePane === "original" ? "" : "hidden"}`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-medium text-white">Oryginał dokumentu</h3>
+            {originalUrl && (
+              <DocumentTooltip label="Pobierz oryginał">
+                <a
+                  href={originalUrl}
+                  download="dokument"
+                  aria-label="Pobierz autoryzowany oryginał"
+                  className="document-icon-control"
+                >
+                  <DocumentIcon name="download" />
+                </a>
+              </DocumentTooltip>
+            )}
+          </div>
           {previewUrl ? (
             preview.data?.type === "application/pdf" ? (
               <iframe
@@ -282,13 +328,23 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                 className="mt-3 max-h-[24rem] w-full object-contain"
               />
             )
+          ) : preview.isError ? (
+            <p className="mt-3 text-sm text-gray-300">
+              Nie udało się załadować podglądu.{" "}
+              {originalUrl
+                ? "Możesz pobrać oryginał."
+                : "Spróbuj otworzyć dokument ponownie."}
+            </p>
           ) : (
-            <p className="mt-3 text-sm text-gray-400">
-              Podgląd jest ładowany z prywatnego źródła.
+            <p role="status" className="mt-3 text-sm text-gray-400">
+              Ładowanie podglądu…
             </p>
           )}
         </section>
-        <section>
+        <section
+          aria-label="Dane dokumentu"
+          className={`min-w-0 md:block ${mobilePane === "data" ? "" : "hidden"}`}
+        >
           {prepare.error ? (
             <p role="alert" className="mb-3 text-sm text-red-300">
               {processingError(

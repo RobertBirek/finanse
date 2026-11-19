@@ -196,7 +196,7 @@ describe("document retry and admission feedback", () => {
     await screen.findByRole("button", { name: "Otwórz dokument: saved.pdf" });
     expect(screen.queryByText(/Ponowna próba/)).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Przetwarzanie zakończone błędem/),
+      screen.getByText(/Odczyt nie powiódł się/),
     ).toBeInTheDocument();
   });
   it.each([413, 503, 507])(
