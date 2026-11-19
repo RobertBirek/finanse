@@ -6,6 +6,65 @@ import {
   processingReview,
 } from "../src/test/documentFixtures";
 
+test("Today opens the camera picker and uploads the photo as a document", async ({
+  page,
+}) => {
+  const base = await fixtures(page);
+  const document = processingDocument({
+    user_id: "qa",
+    original_name: "zdjecie-faktury.jpg",
+    mime_type: "image/jpeg",
+    status: "done",
+    review: null,
+  });
+  let uploads = 0;
+  await page.route("**/api/documents**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/documents/upload" && request.method() === "POST") {
+      expect(request.postData()).toContain('filename="zdjecie-faktury.jpg"');
+      expect(request.postData()).toContain("synthetic-photo");
+      uploads += 1;
+      return route.fulfill({ json: { document, is_duplicate: false } });
+    }
+    if (path === "/api/documents")
+      return route.fulfill({ json: uploads ? [document] : [] });
+    await route.fallback();
+  });
+
+  await page.goto("/today");
+  const camera = page.getByRole("button", { name: "Zrób zdjęcie dokumentu" });
+  await expect(camera).toHaveAccessibleDescription(
+    /zdjęcie oraz nazwy i ścieżki kategorii/,
+  );
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    camera.click(),
+  ]);
+  expect(await chooser.element().getAttribute("capture")).toBe("environment");
+  expect(await chooser.element().getAttribute("accept")).toContain(
+    "image/jpeg",
+  );
+  expect(uploads).toBe(0);
+  await chooser.setFiles({
+    name: "zdjecie-faktury.jpg",
+    mimeType: "image/jpeg",
+    buffer: Buffer.from("synthetic-photo"),
+  });
+  await expect(
+    page.getByRole("list", { name: "Stan przesyłania" }),
+  ).toContainText("Przesłano");
+  await expect(page).toHaveURL(/\/today$/);
+  expect(uploads).toBe(1);
+  await page.getByRole("link", { name: "Otwórz dokumenty" }).click();
+  await expect(page).toHaveURL(/\/documents$/);
+  await expect(
+    page.getByRole("button", { name: "Otwórz dokument: zdjecie-faktury.jpg" }),
+  ).toBeVisible();
+  expect(base.mutations).toEqual([]);
+  await base.assertClean();
+});
+
 for (const kind of ["ai", "ocr"] as const) {
   test(`${kind} completion survives navigation and opens an off-page document`, async ({
     page,

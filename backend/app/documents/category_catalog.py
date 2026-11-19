@@ -82,6 +82,10 @@ async def _owned_categories(db: AsyncSession, user_id: uuid.UUID) -> list[Catego
     )
 
 
+async def load_owned_category_catalog(db: AsyncSession, user_id: uuid.UUID) -> CategoryCatalog:
+    return build_category_catalog(await _owned_categories(db, user_id), user_id)
+
+
 async def load_document_category_catalog(
     db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID
 ) -> CategoryCatalog:
@@ -96,7 +100,7 @@ async def load_document_category_catalog(
     ).scalar_one_or_none()
     if intent is None:
         return CategoryCatalog()
-    return build_category_catalog(await _owned_categories(db, user_id), user_id)
+    return await load_owned_category_catalog(db, user_id)
 
 
 async def resolve_category(
@@ -104,7 +108,7 @@ async def resolve_category(
 ) -> uuid.UUID | None:
     if key is None or key not in catalog.private_key_map:
         return None
-    current = build_category_catalog(await _owned_categories(db, user_id), user_id)
+    current = await load_owned_category_catalog(db, user_id)
     if current.fingerprint != catalog.fingerprint:
         return None
     return current.private_key_map.get(key)

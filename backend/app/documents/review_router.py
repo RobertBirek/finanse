@@ -2,19 +2,21 @@ import logging
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import JSONResponse
 from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.documents.lifecycle import DocumentLifecycleError
-from app.documents.review_schemas import ReviewResponse
+from app.documents.review_schemas import ReviewCategoryResponse, ReviewResponse
 from app.documents.review_service import (
+    ReviewExtractionError,
     get_review,
     prepare_review,
     prepare_vision_review,
     request_ocr_retry,
+    suggest_review_category,
 )
 from app.finance.bills_schemas import MutationContext
 from app.identity.models import User
@@ -73,6 +75,28 @@ async def prepare_document_review(
     review = await get_review(db, current_user.id, document_id)
     assert review is not None
     return review
+
+
+@router.post("/{document_id}/review/category-suggestion")
+async def suggest_document_category(
+    document_id: uuid.UUID,
+    revision_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _limit: Annotated[None, Depends(processing_action_rate_limit)],
+) -> ReviewCategoryResponse:
+    try:
+        category_id = await suggest_review_category(
+            db, current_user.id, document_id, revision_id=revision_id
+        )
+    except DocumentLifecycleError as error:
+        raise HTTPException(409, error.code) from None
+    except LookupError:
+        raise HTTPException(404, "review_not_found") from None
+    except ReviewExtractionError as error:
+        status = {"category_read_unavailable": 409, "llm_unavailable": 503}.get(error.code, 502)
+        raise HTTPException(status, error.code) from None
+    return ReviewCategoryResponse(suggested_category_id=category_id)
 
 
 @router.post("/{document_id}/vision/prepare", response_model=ReviewResponse, status_code=202)

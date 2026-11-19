@@ -104,7 +104,7 @@ beforeEach(() => {
   mocks.summary.mockReturnValue(
     query({ net_total_pln: 123456, month: 10, year: 2026 }),
   );
-  mocks.docs.mockReturnValue(query([doc]));
+  mocks.docs.mockReturnValue(query({ pages: [{ items: [doc] }] }));
   mocks.text.mockReturnValue(query({ extracted_text: "Treść" }));
   mocks.upload.mockReturnValue({ mutate: mocks.mutate, isPending: false });
   mocks.settings.mockReturnValue(
@@ -167,7 +167,7 @@ describe("trustworthy query states", () => {
 describe("document recovery UI", () => {
   it("keeps filters available when their result is empty", () => {
     mocks.docs.mockImplementation((params) =>
-      query(params?.status ? [] : [doc]),
+      query({ pages: [{ items: params?.status ? [] : [doc] }] }),
     );
     render(
       <MemoryRouter>
@@ -185,7 +185,11 @@ describe("document recovery UI", () => {
     ).toBeInTheDocument();
   });
   it("does not disguise document errors as no documents", () => {
-    mocks.docs.mockReturnValue({ ...query(undefined), isError: true });
+    mocks.docs.mockReturnValue({
+      ...query(undefined),
+      isError: true,
+      isLoadingError: true,
+    });
     render(
       <MemoryRouter>
         <DocumentList />

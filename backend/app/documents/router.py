@@ -259,9 +259,18 @@ async def list_documents(
     offset: Annotated[int, Query(ge=0)] = 0,
     status: Annotated[str | None, Query(pattern=r"^(pending|processing|done|error)$")] = None,
     archived: bool = False,
-):
+    query: Annotated[str | None, Query(max_length=500)] = None,
+    before: uuid.UUID | None = None,
+) -> list[DocumentResponse]:
     docs = await service.get_documents(
-        db, current_user.id, limit=limit, offset=offset, status=status, archived=archived
+        db,
+        current_user.id,
+        limit=limit,
+        offset=offset,
+        status=status,
+        archived=archived,
+        query=query,
+        before=before,
     )
     return await service.document_responses(db, current_user.id, docs)
 

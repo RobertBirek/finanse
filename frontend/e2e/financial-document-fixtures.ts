@@ -16,6 +16,7 @@ export async function financialDocumentFixtures(
   page: Page,
   options: {
     reviewError?: boolean;
+    missingReview?: boolean;
     invoiceTotalMinor?: number;
     candidateEvidence?: boolean;
   } = {},
@@ -226,6 +227,8 @@ export async function financialDocumentFixtures(
           ],
         },
       });
+    if (options.missingReview && path === `/api/documents/${ids.oldPdf}/review`)
+      return route.fulfill({ status: 404 });
     if (
       [ids.oldPdf, ids.heic].includes(path.split("/")[3]) &&
       path.endsWith("/text")
@@ -428,6 +431,13 @@ export async function financialDocumentFixtures(
         key: req.headerValue("Idempotency-Key"),
       });
     if (
+      path === `/api/documents/${ids.oldPdf}/review/category-suggestion` &&
+      method === "POST"
+    ) {
+      expect(url.searchParams.get("revision_id")).toBe("r");
+      return route.fulfill({ json: { suggested_category_id: "c1" } });
+    }
+    if (
       path === `/api/finance/bills/${ids.bill}/payment-declaration` &&
       method === "POST"
     ) {
@@ -511,7 +521,17 @@ export async function financialDocumentFixtures(
         status: 422,
         json: {
           detail: "duplicate_decision_required",
-          duplicate_candidates: [{ id: ids.bill, reasons: ["same_purchase"] }],
+          duplicate_candidates: [
+            {
+              id: ids.bill,
+              reasons: ["same_purchase"],
+              supplier_name: bill().supplier_name,
+              number: bill().number,
+              issue_date: bill().issue_date,
+              total_minor: bill().total_minor,
+              currency: bill().currency,
+            },
+          ],
         },
       });
     }

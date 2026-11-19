@@ -36,6 +36,38 @@ const review = (
 });
 
 describe("useReviewForm", () => {
+  it("uses the requested suggestion only while the category is untouched", () => {
+    const data = review(1);
+    const categories = [
+      {
+        id: "internet",
+        name: "Internet",
+        type: "expense" as const,
+        parent_id: null,
+        is_active: true,
+      },
+      {
+        id: "other",
+        name: "Inne",
+        type: "expense" as const,
+        parent_id: null,
+        is_active: true,
+      },
+    ];
+    const { result, rerender } = renderHook(
+      ({ requested }: { requested: string | null }) =>
+        useReviewForm("doc-1", data, categories, requested),
+      { initialProps: { requested: null as string | null } },
+    );
+    rerender({ requested: "internet" });
+    expect(result.current.form.category_id).toBe("internet");
+
+    act(() => result.current.update("category_id", "other"));
+    rerender({ requested: null });
+    rerender({ requested: "internet" });
+    expect(result.current.form.category_id).toBe("other");
+  });
+
   it("fills a suggested category arriving after options and preserves a manual clear on later results", () => {
     const data = { ...review(1), suggested_category_id: "mobile" };
     const mobile = {

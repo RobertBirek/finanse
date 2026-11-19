@@ -75,7 +75,13 @@ it.each(["original", "preview", "review", "text", "list"] as const)(
       },
     };
     const { result, rerender } = renderHook(() => hooks[kind](), { wrapper });
-    await waitFor(() => expect(result.current.data).toEqual(secret));
+    await waitFor(() =>
+      expect(result.current.data).toEqual(
+        kind === "list"
+          ? { pages: [{ items: secret, next: undefined }], pageParams: [null] }
+          : secret,
+      ),
+    );
     vi.mocked(api.get).mockRejectedValue({ response: { status: 404 } });
     act(() => useAuthStore.setState({ user: owner("b") }));
     rerender();

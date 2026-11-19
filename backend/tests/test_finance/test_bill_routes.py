@@ -120,12 +120,15 @@ async def test_approval_returns_owner_duplicate_candidates_for_submitted_fields(
     owner = await create_owner(db_session)
     other = await create_owner(db_session)
     existing = await setup_bill(db_session, owner)
+    second = await setup_bill(db_session, owner)
     foreign = await setup_bill(db_session, other)
-    existing.issue_date = foreign.issue_date = date(2026, 10, 28)
+    existing.issue_date = second.issue_date = foreign.issue_date = date(2026, 10, 28)
+    existing.number, second.number, foreign.number = "FV-1", "FV-2", "FV-3"
     draft = FinancialDocument(user_id=owner)
     db_session.add(draft)
     await db_session.flush()
-    draft_id, existing_id = str(draft.id), str(existing.id)
+    draft_id = str(draft.id)
+    candidate_ids = {str(existing.id): "FV-1", str(second.id): "FV-2"}
     await db_session.commit()
     payload = {
         "version": 1,
@@ -149,10 +152,19 @@ async def test_approval_returns_owner_duplicate_candidates_for_submitted_fields(
             headers={"Idempotency-Key": "approve-separately"},
         )
     assert duplicate.status_code == 422
-    assert duplicate.json() == {
-        "detail": "duplicate_decision_required",
-        "duplicate_candidates": [{"id": existing_id, "reasons": ["supplier_amount_currency"]}],
-    }
+    assert duplicate.json()["detail"] == "duplicate_decision_required"
+    candidates = duplicate.json()["duplicate_candidates"]
+    assert {item["id"]: item["number"] for item in candidates} == candidate_ids
+    for candidate in candidates:
+        assert candidate == {
+            "id": candidate["id"],
+            "reasons": ["supplier_amount_currency"],
+            "supplier_name": "Supplier",
+            "number": candidate_ids[candidate["id"]],
+            "issue_date": "2026-10-28",
+            "total_minor": 10_000,
+            "currency": "PLN",
+        }
     assert unchanged.json()["review"] == "draft"
     assert unchanged.json()["version"] == 1
     assert approved.status_code == 200

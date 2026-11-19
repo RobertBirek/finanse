@@ -11,7 +11,17 @@ const duplicateError = vi.hoisted(() => ({
     status: 422,
     data: {
       detail: "duplicate_decision_required",
-      duplicate_candidates: [{ id: "bill-existing", reasons: ["same_number"] }],
+      duplicate_candidates: [
+        {
+          id: "bill-existing",
+          reasons: ["same_number"],
+          supplier_name: "Sklep",
+          number: "FV-11",
+          issue_date: "2026-10-03",
+          total_minor: 1234,
+          currency: "PLN",
+        },
+      ],
     },
   },
 }));
@@ -56,6 +66,11 @@ const apiState = vi.hoisted(() => ({
     .fn()
     .mockResolvedValue({ data: { id: "draft-1", version: 5 } }),
 }));
+const comparisonBill = {
+  ...duplicateError.response.data.duplicate_candidates[0],
+  review: "approved",
+  lifecycle: "active",
+};
 beforeEach(() =>
   useAuthStore.setState({
     user: {
@@ -109,8 +124,15 @@ vi.mock("../../api/bills", () => ({
     isPending: false,
     error: apiState.approveError,
   }),
-  useBill: () => ({
-    data: { id: "bill-existing", version: 9 },
+  useBill: (id: string | null) => ({
+    data: id
+      ? {
+          ...comparisonBill,
+          number: id === "bill-second" ? "FV-22" : "FV-11",
+          id,
+          version: 9,
+        }
+      : undefined,
     isLoading: false,
     refetch: apiState.refetchBill,
   }),
@@ -539,6 +561,78 @@ describe("DocumentReview", () => {
     expect(screen.queryByText(/podobny dokument/i)).not.toBeInTheDocument();
   });
 
+  it("shows an inline amount error and submits a grouped Polish amount in exact minor units", () => {
+    apiState.prepare.mockClear();
+    apiState.approve.mockClear();
+    renderReview();
+    const amount = screen.getByLabelText("Kwota");
+    const submit = screen.getByRole("button", {
+      name: "Zatwierdź do rejestru",
+    });
+    for (const invalid of ["0", "12 34,00", "123,456", "90071992547409,92"]) {
+      fireEvent.change(amount, { target: { value: invalid } });
+      fireEvent.click(submit);
+      expect(amount).toHaveAccessibleDescription(/Wpisz poprawną kwotę/);
+      expect(apiState.prepare).not.toHaveBeenCalled();
+    }
+    fireEvent.change(amount, { target: { value: "1 234,50" } });
+    expect(amount).not.toHaveAttribute("aria-invalid");
+    fireEvent.click(submit);
+    expect(apiState.approve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ total_minor: 123450 }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("compares each duplicate and attaches only the chosen entry", async () => {
+    const originalData = duplicateError.response.data;
+    apiState.approve.mockImplementationOnce((_input, options) =>
+      options?.onError?.({
+        response: {
+          status: 422,
+          data: {
+            ...originalData,
+            duplicate_candidates: [
+              ...originalData.duplicate_candidates,
+              { ...comparisonBill, id: "bill-second", number: "FV-22" },
+            ],
+          },
+        },
+      }),
+    );
+    apiState.attach.mockClear();
+    renderReview();
+    fireEvent.change(screen.getByLabelText("Numer dokumentu"), {
+      target: { value: "FV-bieżący" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    const panel = await screen.findByRole("region", {
+      name: "Podobne wpisy w rejestrze",
+    });
+    expect(within(panel).getByRole("heading", { level: 3 })).toHaveFocus();
+    expect(within(panel).getByText("FV-bieżący")).toBeVisible();
+    expect(within(panel).getByText("FV-11")).toBeVisible();
+    const [first, second] = within(panel).getAllByRole("listitem");
+    expect(within(second).getByText("FV-22")).toBeVisible();
+    fireEvent.click(
+      within(second).getByRole("button", { name: "Dołącz do istniejącego" }),
+    );
+    expect(
+      within(first).queryByRole("button", { name: "Potwierdź dołączenie" }),
+    ).toBeNull();
+    fireEvent.click(
+      within(second).getByRole("button", { name: "Potwierdź dołączenie" }),
+    );
+    expect(apiState.attach).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ billId: "bill-second", expectedVersion: 9 }),
+      expect.anything(),
+    );
+  });
+
   it("requires a fresh duplicate check after editing the submitted fields", async () => {
     apiState.approve.mockClear();
     renderReview();
@@ -578,7 +672,9 @@ describe("DocumentReview", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
     );
-    expect(await screen.findByText(/podobny dokument/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "Podobne wpisy w rejestrze" }),
+    ).toBeVisible();
     expect(
       screen.getByRole("button", { name: /Dołącz do istniejącego/ }),
     ).toBeInTheDocument();
@@ -719,6 +815,9 @@ describe("DocumentReview", () => {
 
   it("blocks an attach conflict until a refreshed target version is acknowledged", async () => {
     apiState.attach.mockReset();
+    apiState.refetchBill.mockResolvedValueOnce({
+      data: { ...comparisonBill, id: "bill-existing", version: 5 },
+    });
     apiState.attach.mockImplementation((_input, options) =>
       options?.onError?.({ response: { status: 409 } }),
     );
@@ -768,7 +867,9 @@ describe("DocumentReview", () => {
     apiState.refetchBill
       .mockReset()
       .mockResolvedValueOnce({ data: { id: "draft-1", version: 5 } })
-      .mockResolvedValueOnce({ data: { id: "bill-existing", version: 6 } });
+      .mockResolvedValueOnce({
+        data: { ...comparisonBill, id: "bill-existing", version: 6 },
+      });
     renderReview();
     fireEvent.click(
       screen.getByRole("button", { name: "Zatwierdź do rejestru" }),

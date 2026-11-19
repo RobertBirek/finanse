@@ -132,7 +132,14 @@ export type BillApprove = {
   declaration?: PaymentDeclaration;
   duplicate_decision?: "separate";
 };
-export type DuplicateCandidate = { id: string; reasons: string[] };
+export type BillComparisonFields = Pick<
+  BillResponse,
+  "supplier_name" | "number" | "issue_date" | "total_minor" | "currency"
+>;
+export type DuplicateCandidate = BillComparisonFields & {
+  id: string;
+  reasons: string[];
+};
 const headers = () => ({ "Idempotency-Key": crypto.randomUUID() });
 export const stableKey = () => crypto.randomUUID();
 function canonicalIntent(value: unknown): unknown {

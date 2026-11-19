@@ -1,5 +1,12 @@
-import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type DragEvent,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { isAxiosError } from "axios";
+import { Link } from "react-router-dom";
 import {
   formatFileSize,
   useDocumentUploadCapabilities,
@@ -14,13 +21,8 @@ import {
 
 import { DocumentIcon, DocumentTooltip } from "./documents/documentControls";
 
-const ACCEPTED_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/heic",
-  "image/heif",
-];
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif"];
+const ACCEPTED_TYPES = ["application/pdf", ...IMAGE_TYPES];
 type UploadItem = {
   id: number;
   file: File;
@@ -57,7 +59,14 @@ function errorMessage(error: unknown) {
   return "Nie udało się przesłać dokumentu.";
 }
 
-export function DocumentUpload() {
+export function DocumentUpload({
+  cameraOnly = false,
+}: {
+  cameraOnly?: boolean;
+}) {
+  const uploadId = useId();
+  const privacyId = `${uploadId}-privacy`;
+  const formatsId = `${uploadId}-formats`;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadDocument();
@@ -115,16 +124,19 @@ export function DocumentUpload() {
   };
   const addFiles = (files: FileList | File[]) => {
     setValidationError(null);
+    const acceptedTypes = cameraOnly ? IMAGE_TYPES : ACCEPTED_TYPES;
     const valid = Array.from(files).filter(
       (file) =>
         file.size > 0 &&
         (file.type === "" ||
           file.type === "application/octet-stream" ||
-          ACCEPTED_TYPES.includes(file.type)),
+          acceptedTypes.includes(file.type)),
     );
     if (!valid.length) {
       setValidationError(
-        "Wybierz niepusty plik PDF, JPG, PNG, HEIC lub HEIF. CSV nie jest dokumentem do sprawdzenia.",
+        cameraOnly
+          ? "Wybierz niepuste zdjęcie w formacie JPG, PNG, HEIC lub HEIF."
+          : "Wybierz niepusty plik PDF, JPG, PNG, HEIC lub HEIF. CSV nie jest dokumentem do sprawdzenia.",
       );
       return;
     }
@@ -158,74 +170,97 @@ export function DocumentUpload() {
     ? `do ${formatFileSize(capabilities.data.max_file_bytes)}`
     : "zgodnie z limitem konta";
 
-  return (
-    <div className="mb-5">
-      <p
-        id="upload-privacy"
-        className="mb-2 text-xs leading-relaxed text-gray-400"
-      >
-        {capabilities.data?.automatic_image_vision ? (
-          <span role="status">
-            Zdjęcia automatycznie trafiają do{" "}
-            {capabilities.data.vision_provider_label ?? "dostawcy"} do odczytu
-            AI.{" "}
-          </span>
-        ) : null}
-        Odczyt AI może przekazać dostawcy treść pliku oraz nazwy i ścieżki
-        Twoich kategorii wydatków. Szkic wymaga Twojego zatwierdzenia i sam nie
-        tworzy płatności ani transakcji.
-      </p>
-      <div
-        className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-dashed px-3 py-2.5 ${dragActive ? "border-advisor-400 bg-advisor-400/10" : "border-gray-700 bg-gray-900"}`}
-        onDragOver={(event) => {
-          if (!event.dataTransfer.types.includes("Files")) return;
-          event.preventDefault();
-          setDragActive(true);
-        }}
-        onDragLeave={(event) => {
-          if (
-            !(event.relatedTarget instanceof Node) ||
-            !event.currentTarget.contains(event.relatedTarget)
-          ) {
-            setDragActive(false);
-          }
-        }}
-        onDrop={onDrop}
-      >
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            aria-describedby="upload-formats upload-privacy"
-            className="btn-primary inline-flex min-h-11 items-center gap-2"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <DocumentIcon name="upload" />
-            Dodaj dokument
-          </button>
-          <DocumentTooltip label="Aparat">
-            <button
-              type="button"
-              aria-label="Aparat"
-              aria-describedby="upload-privacy"
-              className="document-icon-control"
-              onClick={() => cameraInputRef.current?.click()}
-            >
-              <DocumentIcon name="camera" />
-            </button>
-          </DocumentTooltip>
-        </div>
-        <span id="upload-formats" className="text-xs text-gray-400">
-          PDF, JPG, PNG, HEIC, HEIF · {limit}
+  const cameraButton = (
+    <button
+      type="button"
+      aria-label={cameraOnly ? undefined : "Aparat"}
+      aria-describedby={privacyId}
+      className={
+        cameraOnly
+          ? "btn-secondary inline-flex min-h-11 shrink-0 items-center justify-center gap-2"
+          : "document-icon-control"
+      }
+      onClick={() => cameraInputRef.current?.click()}
+    >
+      <DocumentIcon name="camera" />
+      {cameraOnly && "Zrób zdjęcie dokumentu"}
+    </button>
+  );
+  const privacyNotice = (
+    <p
+      id={privacyId}
+      className={`text-xs leading-relaxed text-gray-400 ${cameraOnly ? "max-w-lg" : "mb-2"}`}
+    >
+      {capabilities.data?.automatic_image_vision ? (
+        <span role="status">
+          Zdjęcia automatycznie trafiają do{" "}
+          {capabilities.data.vision_provider_label ?? "dostawcy"} do odczytu
+          AI.{" "}
         </span>
-      </div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,application/pdf,image/jpeg,image/png,image/heic,image/heif"
-        className="hidden"
-        onChange={onChange}
-      />
+      ) : null}
+      {cameraOnly
+        ? "Odczyt AI może przekazać dostawcy zdjęcie oraz nazwy i ścieżki kategorii wydatków. Szkic zatwierdzisz w Dokumentach."
+        : "Odczyt AI może przekazać dostawcy treść pliku oraz nazwy i ścieżki Twoich kategorii wydatków. Szkic wymaga Twojego zatwierdzenia i sam nie tworzy płatności ani transakcji."}
+    </p>
+  );
+
+  return (
+    <div
+      className={
+        cameraOnly ? "mt-4 min-w-0 border-t border-gray-800 pt-3" : "mb-5"
+      }
+    >
+      {cameraOnly ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          {cameraButton}
+          {privacyNotice}
+        </div>
+      ) : (
+        <>
+          {privacyNotice}
+          <div
+            className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-dashed px-3 py-2.5 ${dragActive ? "border-advisor-400 bg-advisor-400/10" : "border-gray-700 bg-gray-900"}`}
+            onDragOver={(event) => {
+              if (!event.dataTransfer.types.includes("Files")) return;
+              event.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={(event) => {
+              if (
+                !(event.relatedTarget instanceof Node) ||
+                !event.currentTarget.contains(event.relatedTarget)
+              ) {
+                setDragActive(false);
+              }
+            }}
+            onDrop={onDrop}
+          >
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-describedby={`${formatsId} ${privacyId}`}
+                className="btn-primary inline-flex min-h-11 items-center gap-2"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <DocumentIcon name="upload" />
+                Dodaj dokument
+              </button>
+              <DocumentTooltip label="Aparat">{cameraButton}</DocumentTooltip>
+            </div>
+            <span id={formatsId} className="text-xs text-gray-400">
+              PDF, JPG, PNG, HEIC, HEIF · {limit}
+            </span>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,application/pdf,image/jpeg,image/png,image/heic,image/heif"
+            className="hidden"
+            onChange={onChange}
+          />
+        </>
+      )}
       <input
         ref={cameraInputRef}
         type="file"
@@ -322,6 +357,17 @@ export function DocumentUpload() {
           {documentArchiveError(restore.error)}
         </p>
       )}
+      {cameraOnly &&
+        items.some(
+          (item) => item.state === "success" && !item.archivedDocumentId,
+        ) && (
+          <Link
+            to="/documents"
+            className="mt-2 inline-flex min-h-11 items-center rounded-md text-sm text-[var(--ui-blue)] underline"
+          >
+            Otwórz dokumenty
+          </Link>
+        )}
     </div>
   );
 }

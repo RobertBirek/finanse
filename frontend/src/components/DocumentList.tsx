@@ -74,6 +74,15 @@ export function DocumentList() {
       ? requestedReview
       : null;
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [filename, setFilename] = useState("");
+  const [filenameQuery, setFilenameQuery] = useState("");
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setFilenameQuery(filename.trim()),
+      250,
+    );
+    return () => window.clearTimeout(timer);
+  }, [filename]);
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   useEffect(() => {
@@ -88,11 +97,15 @@ export function DocumentList() {
       setSearchParams(next, { replace: true });
     }
   };
-  const query = useDocuments({ status: statusFilter, archived });
+  const query = useDocuments({
+    status: statusFilter,
+    archived,
+    query: filenameQuery || undefined,
+  });
   const archiveDoc = useArchiveDocument();
   const restoreDoc = useRestoreDocument();
   const [feedback, setFeedback] = useState<string | null>(null);
-  const documents = query.data ?? [];
+  const documents = query.data?.pages.flatMap((page) => page.items) ?? [];
   // Resolve from current query data so a polling result also updates an open viewer.
   const viewingDoc = documents.find((doc) => doc.id === viewingId);
 
@@ -145,6 +158,16 @@ export function DocumentList() {
           </select>
         </label>
       </div>
+      <label className="mb-3 block text-sm text-gray-300 sm:max-w-sm">
+        Szukaj po nazwie pliku
+        <input
+          type="search"
+          className="input mt-1 min-h-11 w-full"
+          maxLength={500}
+          value={filename}
+          onChange={(event) => setFilename(event.target.value)}
+        />
+      </label>
       {archived && (
         <p className="mb-3 text-sm text-gray-400">
           Archiwizacja ukrywa dokument na zwykłej liście. Pliki i powiązania
@@ -162,24 +185,30 @@ export function DocumentList() {
       )}
       <QueryFeedback
         loading={query.isLoading}
-        error={query.isError}
+        error={query.isLoadingError}
         errorMessage="Nie udało się pobrać dokumentów."
         onRetry={query.refetch}
       >
         {documents.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-400">
             <p>
-              {statusFilter
-                ? "Brak dokumentów o wybranym statusie."
-                : archived
-                  ? "Archiwum jest puste."
-                  : "Brak dokumentów. Wybierz plik powyżej lub zrób zdjęcie."}
+              {filenameQuery
+                ? "Brak dokumentów pasujących do wyszukiwania."
+                : statusFilter
+                  ? "Brak dokumentów o wybranym statusie."
+                  : archived
+                    ? "Archiwum jest puste."
+                    : "Brak dokumentów. Wybierz plik powyżej lub zrób zdjęcie."}
             </p>
-            {statusFilter && (
+            {(filenameQuery || statusFilter) && (
               <button
                 type="button"
                 className="btn-secondary mt-3"
-                onClick={() => setStatusFilter(undefined)}
+                onClick={() => {
+                  setFilename("");
+                  setFilenameQuery("");
+                  setStatusFilter(undefined);
+                }}
               >
                 Pokaż wszystkie dokumenty
               </button>
@@ -342,6 +371,23 @@ export function DocumentList() {
           </ul>
         )}
       </QueryFeedback>
+      {query.hasNextPage && (
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+          {query.isFetchNextPageError && (
+            <p role="alert" className="text-sm text-red-300">
+              Nie udało się wczytać kolejnych dokumentów.
+            </p>
+          )}
+          <button
+            type="button"
+            className="btn-secondary min-h-11"
+            disabled={query.isFetching}
+            onClick={() => void query.fetchNextPage({ cancelRefetch: false })}
+          >
+            {query.isFetchingNextPage ? "Wczytywanie…" : "Wczytaj więcej"}
+          </button>
+        </div>
+      )}
       {(archiveDoc.isError || restoreDoc.isError) && (
         <p role="alert" className="mt-3 text-sm text-red-300">
           {documentArchiveError(archiveDoc.error ?? restoreDoc.error)}

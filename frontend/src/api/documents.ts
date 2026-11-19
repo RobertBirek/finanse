@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import api from "../lib/api";
 import { useAuthStore } from "../stores/authStore";
 import {
@@ -125,20 +130,42 @@ export interface DocumentUploadResponse {
   is_duplicate: boolean;
 }
 
-export function useDocuments(params?: { status?: string; archived?: boolean }) {
+const DOCUMENTS_PAGE_SIZE = 50;
+
+export function useDocuments(params?: {
+  status?: string;
+  archived?: boolean;
+  query?: string;
+}) {
   const actor = useDocumentActor();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["documents", "list", actor.ownerId, actor.generation, params],
-    queryFn: async ({ signal }) => {
+    initialPageParam: null as string | null,
+    queryFn: async ({ signal, pageParam }) => {
       const { data } = await api.get<DocumentData[]>("/documents", {
-        params,
+        params: {
+          ...params,
+          limit: DOCUMENTS_PAGE_SIZE + 1,
+          before: pageParam ?? undefined,
+        },
         signal,
       });
-      return data;
+      const items = data.slice(0, DOCUMENTS_PAGE_SIZE);
+      return {
+        items,
+        next:
+          data.length > DOCUMENTS_PAGE_SIZE
+            ? items[DOCUMENTS_PAGE_SIZE - 1].id
+            : undefined,
+      };
     },
+    getNextPageParam: (page) => page.next,
     refetchInterval: (query) => {
-      const docs = query.state.data;
-      if (docs?.some((document) => isDocumentWorkActive(document))) {
+      if (
+        query.state.data?.pages.some((page) =>
+          page.items.some(isDocumentWorkActive),
+        )
+      ) {
         return 3000;
       }
       return false;
@@ -253,6 +280,26 @@ export function useDocumentReview(
       const status = query.state.data?.status;
       return status === "pending" || status === "processing" ? 3000 : false;
     },
+  });
+}
+
+export function useSuggestDocumentCategory() {
+  return useMutation({
+    retry: false,
+    mutationFn: async ({
+      documentId,
+      revisionId,
+    }: {
+      documentId: string;
+      revisionId: string;
+    }) =>
+      (
+        await api.post<{ suggested_category_id: string | null }>(
+          `/documents/${documentId}/review/category-suggestion`,
+          undefined,
+          { params: { revision_id: revisionId } },
+        )
+      ).data,
   });
 }
 

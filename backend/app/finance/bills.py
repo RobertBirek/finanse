@@ -308,7 +308,7 @@ async def find_duplicate_bills(
         FinancialDocument.total_minor == data.total_minor,
         FinancialDocument.lifecycle == "active",
     )
-    candidates = list((await db.execute(stmt)).scalars())
+    candidates = list((await db.execute(stmt.order_by(FinancialDocument.id))).scalars())
     answer: list[DuplicateCandidate] = []
     tax_id = (data.supplier_tax_id or "").replace("-", "").replace(" ", "").upper()
     number = (data.number or "").strip().upper()
@@ -333,7 +333,17 @@ async def find_duplicate_bills(
         ):
             reasons.append("supplier_amount_currency")
         if reasons:
-            answer.append(DuplicateCandidate(id=candidate.id, reasons=reasons))
+            answer.append(
+                DuplicateCandidate(
+                    id=candidate.id,
+                    reasons=reasons,
+                    supplier_name=candidate.supplier_name,
+                    number=candidate.number,
+                    issue_date=candidate.issue_date,
+                    total_minor=data.total_minor,
+                    currency=data.currency,
+                )
+            )
     return answer
 
 

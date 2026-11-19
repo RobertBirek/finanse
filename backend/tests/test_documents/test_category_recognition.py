@@ -1,6 +1,7 @@
 """Optional category context is one recognition call, never a second provider job."""
 
 import json
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -70,6 +71,43 @@ async def test_text_category_context_uses_same_strict_payload_without_extra_call
     assert request["text"]["format"]["strict"] is True
     assert "Bills / Mobile" in json.dumps(request["input"])
     assert "Synthetic printed document text" in json.dumps(request["input"])
+
+
+@pytest.mark.asyncio
+async def test_manual_category_call_sends_only_saved_fields_and_allowed_category_keys(monkeypatch):
+    from app.documents import extractor
+
+    provider = AsyncMock(return_value=object())
+
+    @asynccontextmanager
+    async def client():
+        yield SimpleNamespace(responses=SimpleNamespace(create=provider))
+
+    monkeypatch.setattr(extractor, "_get_client", client)
+    monkeypatch.setattr(extractor.settings, "DOCUMENT_TEXT_MODEL", "test-model")
+    monkeypatch.setattr(extractor, "response_text", lambda _: '{"category_key":"c01"}')
+    catalog = [{"key": "c01", "path": "Rachunki / Internet"}]
+
+    result = await extractor.suggest_category_from_review(
+        supplier="Dostawca", description="Internet domowy", catalog=catalog
+    )
+
+    assert result == "c01"
+    provider.assert_awaited_once()
+    request = provider.call_args.kwargs
+    assert json.loads(request["input"][1]["content"]) == {
+        "supplier": "Dostawca",
+        "description": "Internet domowy",
+        "categories": catalog,
+    }
+    assert request["store"] is False
+    assert "tools" not in request
+    format_ = request["text"]["format"]
+    schema = format_["schema"]
+    assert format_["strict"] is True
+    assert schema["additionalProperties"] is False
+    assert schema["required"] == ["category_key"]
+    assert schema["properties"]["category_key"]["anyOf"][0]["enum"] == ["c01"]
 
 
 @pytest.mark.asyncio

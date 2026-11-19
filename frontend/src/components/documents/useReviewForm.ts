@@ -81,6 +81,7 @@ export function useReviewForm(
   documentId: string,
   review?: ReviewInput,
   categories: Category[] = noCategories,
+  requestedCategoryId?: string | null,
 ) {
   const [form, setForm] = useState<ReviewForm>(emptyReviewForm);
   const context = useRef(documentId);
@@ -116,7 +117,8 @@ export function useReviewForm(
   const eligibleCategory =
     categories.find(
       (category) =>
-        category.id === review?.suggested_category_id &&
+        category.id ===
+          (requestedCategoryId ?? review?.suggested_category_id) &&
         category.is_active &&
         category.type === "expense",
     )?.id ?? "";

@@ -135,13 +135,14 @@ test("empty document status retains controls and a way back to all", async ({
 }) => {
   const api = await fixtures(page);
   await page.goto("/documents");
-  await page.getByRole("button", { name: "Błąd", exact: true }).click();
+  const status = page.getByRole("combobox", { name: "Status dokumentów" });
+  await status.selectOption("error");
   await expect(
     page.getByText("Brak dokumentów o wybranym statusie."),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Gotowe", exact: true }),
-  ).toBeVisible();
+    status.getByRole("option", { name: "Gotowe", exact: true }),
+  ).toHaveAttribute("value", "done");
   await page.getByRole("button", { name: "Pokaż wszystkie dokumenty" }).click();
   await expect(
     page.getByRole("button", { name: "Otwórz dokument: Faktura.pdf" }),

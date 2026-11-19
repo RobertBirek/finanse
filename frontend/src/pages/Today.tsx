@@ -8,6 +8,7 @@ import {
 } from "../api/work";
 import { useFinancialSummary } from "../api/finance";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { DocumentUpload } from "../components/DocumentUpload";
 import { formatPLN } from "../lib/format";
 import { formatLocalTime, localDayRange, useLocalNow } from "../lib/date";
 
@@ -94,6 +95,7 @@ export function Today() {
             ponownie.
           </p>
         )}
+        <DocumentUpload cameraOnly />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="card">

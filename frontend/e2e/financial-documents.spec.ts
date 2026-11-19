@@ -320,6 +320,76 @@ test("legacy PDF with a failed read is registered with one click", async ({
   api.assertClean();
 });
 
+test("a PDF without a saved read can be registered manually with a comma amount", async ({
+  page,
+}) => {
+  const api = await financialDocumentFixtures(page, { missingReview: true });
+  await page.goto("/documents");
+  await page
+    .getByRole("listitem")
+    .filter({
+      has: page.getByRole("button", {
+        name: "Otwórz dokument: stara-faktura.pdf",
+      }),
+    })
+    .getByRole("button", { name: "Sprawdź dane", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Sprawdź dane dokumentu" });
+  await dialog.getByRole("button", { name: "Wpisz ręcznie" }).click();
+  await expect(dialog.getByLabel("Sprzedawca")).toBeFocused();
+  await expect(
+    dialog.getByRole("button", { name: "Podpowiedz kategorię" }),
+  ).toHaveCount(0);
+  await dialog.getByLabel("Sprzedawca").fill("Ręczny dostawca");
+  await dialog.getByLabel("Opis").fill("Ręczny opis");
+  await dialog.getByLabel("Kwota").fill("123,45");
+  await dialog.getByLabel("Waluta").selectOption("PLN");
+  await dialog.getByRole("button", { name: "Zatwierdź do rejestru" }).click();
+  await expect(page).toHaveURL(/\/finances\/documents\?bill=/);
+  expect(api.mutations.map(({ path }) => path)).toEqual([
+    `/api/finance/bills/prepare/${ids.oldPdf}`,
+    `/api/finance/bills/${ids.bill}/approve`,
+  ]);
+  expect(api.mutations[1].body).toMatchObject({
+    total_minor: 12345,
+    currency: "PLN",
+  });
+  api.assertClean();
+});
+
+test("a saved legacy PDF suggests a category and submits it only on approval", async ({
+  page,
+}) => {
+  const api = await financialDocumentFixtures(page);
+  await page.goto("/documents");
+  await page
+    .getByRole("button", { name: "Otwórz dokument: stara-faktura.pdf" })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sprawdź dane", exact: true })
+    .click();
+  const review = page.getByRole("dialog", { name: "Sprawdź dane dokumentu" });
+  const category = review.getByLabel("Kategoria", { exact: true });
+  await expect(category).toHaveValue("");
+  expect(api.mutations).toEqual([]);
+  await review.getByRole("button", { name: "Podpowiedz kategorię" }).click();
+  await expect(review.getByText("Propozycja AI — Usługi")).toBeVisible();
+  await expect(category).toHaveValue("c1");
+  const suggestion = `/api/documents/${ids.oldPdf}/review/category-suggestion`;
+  expect(api.mutations.map(({ path }) => path)).toEqual([suggestion]);
+
+  await review.getByRole("button", { name: "Zatwierdź do rejestru" }).click();
+  await expect(page).toHaveURL(/\/finances\/documents\?bill=/);
+  expect(api.mutations.map(({ path }) => path)).toEqual([
+    suggestion,
+    `/api/finance/bills/prepare/${ids.oldPdf}`,
+    `/api/finance/bills/${ids.bill}/approve`,
+  ]);
+  expect(api.mutations[2].body).toMatchObject({ category_id: "c1" });
+  api.assertClean();
+});
+
 for (const viewport of [375, 1440]) {
   test(`synthetic HEIF upload attaches a second original without a cost at ${viewport}px`, async ({
     page,
@@ -363,7 +433,13 @@ for (const viewport of [375, 1440]) {
     await page
       .getByRole("button", { name: "Zatwierdź do rejestru", exact: true })
       .click();
-    await expect(page.getByText("Znaleziono podobny dokument.")).toBeVisible();
+    const comparison = page.getByRole("region", {
+      name: "Podobne wpisy w rejestrze",
+    });
+    await expect(comparison).toBeVisible();
+    await expect(
+      comparison.getByRole("list", { name: "Istniejące wpisy" }),
+    ).toContainText("FV-100");
     await page.getByRole("button", { name: "Dołącz do istniejącego" }).click();
     await page.getByRole("button", { name: "Potwierdź dołączenie" }).click();
     await expect(page).toHaveURL(

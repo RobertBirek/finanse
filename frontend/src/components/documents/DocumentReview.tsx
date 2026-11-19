@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useApproveBill,
@@ -7,12 +14,15 @@ import {
   usePrepareBill,
   useSerializedIntentKey,
   type BillApprove,
+  type BillComparisonFields,
+  type BillResponse,
   type DuplicateCandidate,
 } from "../../api/bills";
 import {
   useDocumentOriginal,
   useDocumentPreview,
   useDocumentReview,
+  useSuggestDocumentCategory,
   usePrepareDocumentReview,
   usePrepareDocumentVision,
   useRetryDocumentOcr,
@@ -21,7 +31,8 @@ import {
   documentArchiveError,
 } from "../../api/documents";
 import { useAccounts, useCategories, type Category } from "../../api/finance";
-import { categoryOptions } from "../../lib/categories";
+import { categoryOptions, categoryPath } from "../../lib/categories";
+import { formatCalendarDate } from "../../lib/date";
 import { Dialog } from "../Dialog";
 import { DocumentIcon, DocumentTooltip } from "./documentControls";
 import type { AxiosError } from "axios";
@@ -40,8 +51,16 @@ type ApprovalError = AxiosError<{
   detail?: string;
   duplicate_candidates?: DuplicateCandidate[];
 }>;
-const minor = (raw: string) =>
-  /^\d+(\.\d{1,2})?$/.test(raw) ? Math.round(Number(raw) * 100) : null;
+function parseAmount(raw: string): number | null {
+  const match =
+    /^(\d+|\d{1,3}(?:[ \u00a0\u202f]\d{3})+)(?:[.,](\d{1,2}))?$/.exec(
+      raw.trim(),
+    );
+  if (!match) return null;
+  const digits = match[1].replace(/\s/g, "");
+  const cents = Number(digits + (match[2] ?? "").padEnd(2, "0"));
+  return Number.isSafeInteger(cents) && cents > 0 ? cents : null;
+}
 const mutationError = (error: unknown) => {
   const detail = (error as AxiosError<{ detail?: unknown }>)?.response?.data
     ?.detail;
@@ -60,6 +79,21 @@ const processingError = (error: unknown, fallback: string) => {
     : fallback;
 };
 
+function categorySuggestionError(error: unknown): string {
+  const response = (error as AxiosError<{ detail?: string }>)?.response;
+  if (response?.status === 429)
+    return "Za dużo prób. Odczekaj chwilę lub wybierz kategorię ręcznie.";
+  if (
+    response?.status === 404 ||
+    response?.data?.detail === "category_read_unavailable"
+  )
+    return "Zapisany odczyt jest niedostępny. Odśwież dokument lub wybierz kategorię ręcznie.";
+  return processingError(
+    error,
+    "Nie udało się podpowiedzieć kategorii. Spróbuj ponownie lub wybierz kategorię ręcznie.",
+  );
+}
+
 export function DocumentReview({ documentId, onClose }: Props) {
   const ownerId = useAuthStore((state) => state.user?.id);
   const generation = useDocumentProcessingStore((state) => state.generation);
@@ -76,6 +110,7 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
   const navigate = useNavigate();
   const metadata = useDocumentMetadata(documentId);
   const [showLatest, setShowLatest] = useState(false);
+  const [manualEntry, setManualEntry] = useState(false);
   const [mobilePane, setMobilePane] = useState<"original" | "data">("data");
   const pinnedRevision =
     metadata.data?.finance?.bill_id && !showLatest
@@ -86,6 +121,8 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
   const archived = !!metadata.data?.archived_at;
   const canProcess =
     !!metadata.data && !Array.isArray(metadata.data) && !archived;
+  const canRegister =
+    canProcess && metadata.data?.finance?.review !== "approved";
   const preview = useDocumentPreview(documentId);
   const original = useDocumentOriginal(documentId);
   const prepare = usePrepareDocumentReview();
@@ -103,25 +140,53 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
   } | null>(null);
   const [attachTargetId, setAttachTargetId] = useState<string | null>(null);
   const attachTarget = useBill(attachTargetId);
-  const [attachComparison, setAttachComparison] = useState<{
-    id: string;
-    version: number;
-  } | null>(null);
+  const [attachComparison, setAttachComparison] = useState<BillResponse | null>(
+    null,
+  );
+  const comparedTarget = attachComparison ?? attachTarget.data;
   const currentDraft = useBill(draftBill?.id ?? null, false);
   const categories = useCategories();
   const accounts = useAccounts();
+  const suggestCategory = useSuggestDocumentCategory();
+  const savedRead = review.data;
+  const categoryRead =
+    canRegister &&
+    metadata.data?.processing_method !== "bank_import" &&
+    !review.isError &&
+    savedRead &&
+    (savedRead.status === "ready" || savedRead.status === "incomplete") &&
+    (savedRead.document_type === "invoice" ||
+      savedRead.document_type === "receipt") &&
+    (savedRead.fields.supplier_name?.trim() ||
+      savedRead.fields.description?.trim())
+      ? savedRead
+      : undefined;
+  const categoryRequestMatches =
+    categoryRead && suggestCategory.variables?.revisionId === categoryRead.id;
+  const requestedCategoryId = categoryRequestMatches
+    ? suggestCategory.data?.suggested_category_id
+    : undefined;
+  const requestedCategory = categories.data?.find(
+    (item) =>
+      item.id === requestedCategoryId &&
+      item.is_active &&
+      item.type === "expense",
+  );
   const { form, update, applyNewSuggestions } = useReviewForm(
     documentId,
     metadata.isLoading ? undefined : review.data,
     categories.data,
+    requestedCategory?.id,
   );
   const formKey = JSON.stringify(form);
+  const amount = parseAmount(form.total);
   const matchingDuplicates =
     duplicateReview?.formKey === formKey ? duplicateReview : null;
   const [conflict, setConflict] = useState<"draft" | "attach" | null>(null);
   const [refreshedConflict, setRefreshedConflict] = useState<
     "draft" | "attach" | null
   >(null);
+  const [conflictRefreshFailed, setConflictRefreshFailed] = useState(false);
   const previewUrl = useMemo(
     () => (preview.data ? URL.createObjectURL(preview.data) : null),
     [preview.data],
@@ -234,6 +299,7 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
             }
           } else if (response?.status === 409) {
             setRefreshedConflict(null);
+            setConflictRefreshFailed(false);
             setConflict("draft");
           }
         },
@@ -253,10 +319,10 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
     prepareBill.error || approvalFailure || attach.error;
 
   const submit = () => {
-    if (approvalPending || conflict || matchingDuplicates) return;
-    const total_minor = minor(form.total);
+    if (!canRegister || approvalPending || conflict || matchingDuplicates)
+      return;
     if (
-      total_minor === null ||
+      amount === null ||
       !form.supplier_name.trim() ||
       !form.description.trim() ||
       !form.currency
@@ -266,7 +332,7 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
       kind: form.kind,
       supplier_name: form.supplier_name.trim(),
       description: form.description.trim(),
-      total_minor,
+      total_minor: amount,
       currency: form.currency,
       declaration: form.kind === "receipt" ? "declared_paid" : "unknown",
       supplier_tax_id: form.supplier_tax_id || null,
@@ -478,12 +544,24 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                 <button
                   type="button"
                   className="btn-secondary"
+                  disabled={
+                    conflict === "draft"
+                      ? currentDraft.isFetching
+                      : attachTarget.isFetching
+                  }
                   onClick={async () => {
+                    setConflictRefreshFailed(false);
                     const result =
                       conflict === "draft"
                         ? await currentDraft.refetch()
                         : await attachTarget.refetch();
-                    if (result.data) {
+                    const expectedId =
+                      conflict === "draft" ? draftBill?.id : attachTargetId;
+                    if (
+                      !result.isError &&
+                      result.data &&
+                      result.data.id === expectedId
+                    ) {
                       setRefreshedConflict(conflict);
                       if (conflict === "draft" && draftBill)
                         setDraftBill({
@@ -491,10 +569,10 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                           version: result.data.version,
                         });
                       if (conflict === "attach")
-                        setAttachComparison({
-                          id: result.data.id,
-                          version: result.data.version,
-                        });
+                        setAttachComparison(result.data);
+                    } else {
+                      setRefreshedConflict(null);
+                      setConflictRefreshFailed(true);
                     }
                   }}
                 >
@@ -510,14 +588,19 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                   </button>
                 ) : null}
               </div>
+              {conflictRefreshFailed && (
+                <p role="alert" className="mt-2">
+                  Nie udało się odświeżyć wpisu. Spróbuj ponownie.
+                </p>
+              )}
             </div>
           ) : null}
           {review.isError || !review.data ? (
-            <>
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="btn-primary"
-                disabled={!canProcess}
+                className="btn-secondary"
+                disabled={!canProcess || prepare.isPending}
                 onClick={() => {
                   setShowLatest(true);
                   prepare.mutate({ documentId, refresh: false });
@@ -525,8 +608,17 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
               >
                 Sprawdź dane
               </button>
+              {canRegister && !manualEntry && (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setManualEntry(true)}
+                >
+                  Wpisz ręcznie
+                </button>
+              )}
               {needsPdfOcr && retryLocalOcr}
-            </>
+            </div>
           ) : (
             <>
               <p className="text-sm text-gray-400">
@@ -586,23 +678,12 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                   {retryLocalOcr}
                 </p>
               )}
-              {unsupported ? (
+              {unsupported && (
                 <p role="alert" className="mt-3 text-sm text-yellow-300">
                   Ten dokument zawiera wiele pozycji albo nie jest
                   fakturą/paragonem. Nie trafia do rejestru finansowego jako
                   jedna pozycja.
                 </p>
-              ) : (
-                <ReviewForm
-                  form={form}
-                  update={update}
-                  provenance={review.data.provenance}
-                  onSubmit={submit}
-                  pending={approvalPending}
-                  submitBlocked={!!conflict || !!matchingDuplicates}
-                  categories={categories.data ?? []}
-                  accounts={accounts.data ?? []}
-                />
               )}
               {review.data.revision > 1 && !unsupported ? (
                 <button
@@ -613,53 +694,122 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                   Zastosuj nowe sugestie
                 </button>
               ) : null}
-              {draftBill && matchingDuplicates && (
-                <DuplicateChoices
-                  candidates={matchingDuplicates.candidates}
-                  onAttach={(candidate) => {
-                    setAttachComparison(null);
-                    setAttachTargetId(candidate.id);
-                  }}
-                  attachTarget={attachComparison ?? attachTarget.data}
-                  attachTargetLoading={attachTarget.isLoading}
-                  onConfirmAttach={(target) =>
-                    attach.mutate(
-                      {
-                        billId: target.id,
-                        documentId,
-                        expectedVersion: target.version,
-                        idempotencyKey: keyFor({
-                          action: "attach-bill-source",
-                          billId: target.id,
-                          documentId,
-                          expectedVersion: target.version,
-                        }),
-                      },
-                      {
-                        onSuccess: (bill) =>
-                          navigate(`/finances/documents?bill=${bill.id}`),
-                        onError: (error) => {
-                          if ((error as AxiosError).response?.status === 409) {
-                            setAttachComparison(null);
-                            setRefreshedConflict(null);
-                            setConflict("attach");
-                          }
-                        },
-                      },
-                    )
-                  }
-                  onSeparate={() =>
-                    submitApproval(
-                      draftBill,
-                      matchingDuplicates.fields,
-                      formKey,
-                      true,
-                    )
-                  }
-                  disabled={!!conflict || approvalPending}
-                />
-              )}
             </>
+          )}
+          {!unsupported && (manualEntry || review.data) && (
+            <ReviewForm
+              form={form}
+              update={update}
+              provenance={review.data?.provenance ?? {}}
+              onSubmit={submit}
+              pending={approvalPending}
+              focusSupplier={manualEntry}
+              canRegister={canRegister}
+              hasValidAmount={amount !== null}
+              submitBlocked={!!conflict || !!matchingDuplicates}
+              categories={categories.data ?? []}
+              accounts={accounts.data ?? []}
+              categoryAction={
+                categoryRead && (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      disabled={suggestCategory.isPending}
+                      onClick={() =>
+                        suggestCategory.mutate({
+                          documentId,
+                          revisionId: categoryRead.id,
+                        })
+                      }
+                    >
+                      {suggestCategory.isPending
+                        ? "Dobieranie kategorii…"
+                        : "Podpowiedz kategorię"}
+                    </button>
+                    <p className="text-xs text-gray-400">
+                      AI otrzyma sprzedawcę i opis z odczytu oraz nazwy Twoich
+                      kategorii wydatków.
+                    </p>
+                    {categoryRequestMatches && suggestCategory.isPending && (
+                      <p role="status" className="sr-only">
+                        Trwa dobieranie kategorii.
+                      </p>
+                    )}
+                    {categoryRequestMatches && suggestCategory.isError && (
+                      <p role="alert" className="text-sm text-red-300">
+                        {categorySuggestionError(suggestCategory.error)}
+                      </p>
+                    )}
+                    {categoryRequestMatches && suggestCategory.isSuccess && (
+                      <p role="status" className="text-sm text-gray-300">
+                        {requestedCategory
+                          ? `Propozycja AI — ${categoryPath(requestedCategory.id, categories.data ?? [])}`
+                          : "Brak pasującej kategorii. Możesz wybrać ją ręcznie."}
+                      </p>
+                    )}
+                  </div>
+                )
+              }
+            />
+          )}
+          {draftBill && matchingDuplicates && (
+            <DuplicateChoices
+              candidates={matchingDuplicates.candidates}
+              current={matchingDuplicates.fields}
+              selectedId={attachTargetId}
+              onAttach={(candidate) => {
+                if (candidate.id === attachTargetId) {
+                  if (attachTarget.isError) void attachTarget.refetch();
+                  return;
+                }
+                setAttachComparison(null);
+                setAttachTargetId(candidate.id);
+              }}
+              attachTarget={
+                comparedTarget?.id === attachTargetId
+                  ? comparedTarget
+                  : undefined
+              }
+              attachTargetLoading={attachTarget.isFetching}
+              attachTargetError={attachTarget.isError}
+              onConfirmAttach={(target) =>
+                attach.mutate(
+                  {
+                    billId: target.id,
+                    documentId,
+                    expectedVersion: target.version,
+                    idempotencyKey: keyFor({
+                      action: "attach-bill-source",
+                      billId: target.id,
+                      documentId,
+                      expectedVersion: target.version,
+                    }),
+                  },
+                  {
+                    onSuccess: (bill) =>
+                      navigate(`/finances/documents?bill=${bill.id}`),
+                    onError: (error) => {
+                      if ((error as AxiosError).response?.status === 409) {
+                        setAttachComparison(null);
+                        setRefreshedConflict(null);
+                        setConflictRefreshFailed(false);
+                        setConflict("attach");
+                      }
+                    },
+                  },
+                )
+              }
+              onSeparate={() =>
+                submitApproval(
+                  draftBill,
+                  matchingDuplicates.fields,
+                  formKey,
+                  true,
+                )
+              }
+              disabled={!canRegister || !!conflict || approvalPending}
+            />
           )}
         </section>
       </div>
@@ -673,29 +823,42 @@ function ReviewForm({
   provenance,
   onSubmit,
   pending,
+  focusSupplier,
+  canRegister,
+  hasValidAmount,
   submitBlocked,
   categories,
   accounts,
+  categoryAction,
 }: {
   form: ReviewForm;
   update: (key: keyof ReviewForm, value: string) => void;
   provenance: Record<string, string>;
   onSubmit: () => void;
   pending: boolean;
+  focusSupplier: boolean;
+  canRegister: boolean;
+  hasValidAmount: boolean;
   submitBlocked: boolean;
   categories: Category[];
   accounts: { id: string; name: string; is_active: boolean }[];
+  categoryAction?: ReactNode;
 }) {
+  const [validateAmount, setValidateAmount] = useState(false);
   return (
     <form
       className="mt-4"
       aria-busy={pending}
       onSubmit={(event) => {
         event.preventDefault();
+        setValidateAmount(true);
         onSubmit();
       }}
     >
-      <fieldset disabled={pending} className="min-w-0 space-y-3">
+      <fieldset
+        disabled={pending || !canRegister}
+        className="min-w-0 space-y-3"
+      >
         <label className="block text-sm text-gray-300">
           Typ
           <select
@@ -713,6 +876,7 @@ function ReviewForm({
           value={form.supplier_name}
           onChange={(v) => update("supplier_name", v)}
           note={provenance.supplier_name}
+          autoFocus={focusSupplier}
           required
         />
         <Field
@@ -745,10 +909,7 @@ function ReviewForm({
               ))}
           </select>
         </label>
-        <p className="text-xs text-gray-400">
-          Sugestia AI nie jest zatwierdzoną kategorią. Możesz ją zmienić lub
-          wyczyścić.
-        </p>
+        {categoryAction}
         <label className="block text-sm text-gray-300">
           Konto płatności
           <select
@@ -771,6 +932,13 @@ function ReviewForm({
           label="Kwota"
           value={form.total}
           onChange={(v) => update("total", v)}
+          onBlur={() => setValidateAmount(true)}
+          inputMode="decimal"
+          error={
+            validateAmount && !hasValidAmount
+              ? "Wpisz poprawną kwotę większą od zera, np. 123,45."
+              : undefined
+          }
           note={provenance.total}
           required
         />
@@ -832,68 +1000,166 @@ function ReviewForm({
 
 function DuplicateChoices({
   candidates,
+  current,
+  selectedId,
   onAttach,
   attachTarget,
   attachTargetLoading,
+  attachTargetError,
   onConfirmAttach,
   onSeparate,
   disabled,
 }: {
   candidates: DuplicateCandidate[];
+  current: ApprovalFields;
+  selectedId: string | null;
   onAttach: (candidate: DuplicateCandidate) => void;
-  attachTarget?: { id: string; version: number };
+  attachTarget?: BillResponse;
   attachTargetLoading: boolean;
+  attachTargetError: boolean;
   onConfirmAttach: (target: { id: string; version: number }) => void;
   onSeparate: () => void;
   disabled: boolean;
 }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const prefix = useId();
+  useEffect(() => heading.current?.focus(), []);
+  const canAttach =
+    attachTarget?.lifecycle === "active" && attachTarget.review === "approved";
   return (
-    <div className="mt-3 rounded-lg border border-yellow-700 p-3">
-      <p role="status" className="text-sm text-yellow-200">
-        Znaleziono podobny dokument. Wybierz świadomie: dołącz źródło albo
-        zarejestruj osobno.
-      </p>
-      {candidates.map((candidate) => (
-        <button
-          key={candidate.id}
-          type="button"
-          className="btn-secondary mt-2 mr-2"
-          onClick={() => onAttach(candidate)}
-          disabled={disabled}
+    <section
+      aria-labelledby={`${prefix}-heading`}
+      className="mt-4 rounded-lg border border-yellow-700 p-3"
+    >
+      <h3
+        id={`${prefix}-heading`}
+        ref={heading}
+        tabIndex={-1}
+        className="font-medium text-yellow-200"
+      >
+        Podobne wpisy w rejestrze
+      </h3>
+      <div className="mt-3 grid items-start gap-3 sm:grid-cols-2">
+        <section
+          aria-label="Bieżący dokument"
+          className="min-w-0 rounded-lg bg-gray-950 p-3"
         >
-          Dołącz do istniejącego
-        </button>
-      ))}
-      {attachTargetLoading && (
-        <span role="status" className="ml-2 text-sm text-gray-400">
-          Pobieranie wersji rejestru…
-        </span>
-      )}
-      {attachTarget && (
-        <button
-          type="button"
-          className="btn-secondary mt-2 mr-2"
-          onClick={() => onConfirmAttach(attachTarget)}
-          disabled={disabled}
-        >
-          Potwierdź dołączenie
-        </button>
-      )}
+          <h4 className="mb-2 text-sm font-medium text-white">
+            Bieżący dokument
+          </h4>
+          <BillComparison
+            bill={{
+              ...current,
+              number: current.number ?? null,
+              issue_date: current.issue_date ?? null,
+            }}
+          />
+        </section>
+        <ul aria-label="Istniejące wpisy" className="min-w-0 space-y-2">
+          {candidates.map((candidate) => {
+            const selected = candidate.id === selectedId;
+            const detailsId = `${prefix}-${candidate.id}`;
+            return (
+              <li
+                key={candidate.id}
+                className={`rounded-lg border bg-gray-950 p-3 ${selected ? "border-yellow-500" : "border-gray-800"}`}
+              >
+                <div id={detailsId}>
+                  <BillComparison
+                    bill={selected && attachTarget ? attachTarget : candidate}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary mt-2"
+                  aria-describedby={detailsId}
+                  aria-pressed={selected}
+                  onClick={() => onAttach(candidate)}
+                  disabled={disabled || (selected && attachTargetLoading)}
+                >
+                  Dołącz do istniejącego
+                </button>
+                {selected && attachTargetLoading && (
+                  <p role="status" className="mt-2 text-sm text-gray-400">
+                    Pobieranie aktualnych danych wpisu…
+                  </p>
+                )}
+                {selected && attachTargetError && (
+                  <p role="alert" className="mt-2 text-sm text-red-300">
+                    Nie udało się pobrać wpisu. Wybierz go ponownie.
+                  </p>
+                )}
+                {selected &&
+                  attachTarget &&
+                  !attachTargetLoading &&
+                  !attachTargetError &&
+                  (canAttach ? (
+                    <button
+                      type="button"
+                      className="btn-primary mt-2"
+                      aria-describedby={detailsId}
+                      onClick={() => onConfirmAttach(attachTarget)}
+                      disabled={disabled}
+                    >
+                      Potwierdź dołączenie
+                    </button>
+                  ) : (
+                    <p className="mt-2 text-sm text-yellow-200">
+                      Ten wpis nie jest już dostępny do dołączenia.
+                    </p>
+                  ))}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
       <button
         type="button"
-        className="btn-primary mt-2"
+        className="btn-secondary mt-3"
         onClick={onSeparate}
         disabled={disabled}
       >
         Zarejestruj osobno
       </button>
-    </div>
+    </section>
   );
 }
+
+function BillComparison({ bill }: { bill: BillComparisonFields }) {
+  const total = bill.total_minor;
+  const amount =
+    total != null && bill.currency
+      ? `${((total - (total % 100)) / 100).toLocaleString("pl-PL")},${String(total % 100).padStart(2, "0")} ${bill.currency}`
+      : "—";
+  const details = [
+    ["Sprzedawca", bill.supplier_name || "—"],
+    ["Numer", bill.number || "—"],
+    [
+      "Data wystawienia",
+      bill.issue_date ? formatCalendarDate(bill.issue_date) : "—",
+    ],
+    ["Kwota", amount],
+  ];
+  return (
+    <dl className="space-y-1.5 text-sm break-words">
+      {details.map(([label, value]) => (
+        <div key={label}>
+          <dt className="text-xs text-gray-400">{label}</dt>
+          <dd className="text-gray-100">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function Field({
   label,
   value,
   onChange,
+  onBlur,
+  inputMode,
+  error,
+  autoFocus,
   type = "text",
   note,
   required = false,
@@ -901,10 +1167,15 @@ function Field({
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
+  inputMode?: "decimal";
+  error?: string;
+  autoFocus?: boolean;
   type?: string;
   note?: string;
   required?: boolean;
 }) {
+  const errorId = useId();
   return (
     <label className="block text-sm text-gray-300">
       {label}
@@ -913,12 +1184,26 @@ function Field({
       )}
       <input
         aria-label={label}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
         required={required}
         type={type}
+        inputMode={inputMode}
+        autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         className="input mt-1 w-full"
       />
+      {error && (
+        <span
+          id={errorId}
+          role="alert"
+          className="mt-1 block text-sm text-red-300"
+        >
+          {error}
+        </span>
+      )}
     </label>
   );
 }
