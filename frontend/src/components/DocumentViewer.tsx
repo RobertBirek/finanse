@@ -79,38 +79,46 @@ export function DocumentViewer({ document: doc, onClose, onReview }: Props) {
           <p role="status" className="py-8 text-center text-gray-300">
             Dokument jest przetwarzany…
           </p>
-        ) : doc.status === "error" ? (
-          <p role="alert" className="py-8 text-red-300">
-            Nie udało się odczytać dokumentu. Oryginał pozostaje zachowany.
-            Możesz ponownie przesłać ten sam plik, aby ponowić odczyt.
-          </p>
-        ) : !doc.has_extracted_text ? (
-          <p className="py-8 text-gray-400">
-            Tekst OCR nie jest dostępny dla tego dokumentu.
-          </p>
         ) : (
-          <QueryFeedback
-            loading={text.isLoading}
-            error={text.isError}
-            errorMessage="Nie udało się pobrać odczytanego tekstu."
-            onRetry={text.refetch}
-          >
-            {text.data?.extracted_text.trim() ? (
-              <>
-                <h3 className="mb-2 text-sm font-medium text-gray-300">
-                  Odczytany tekst
-                </h3>
-                <pre className="max-h-[56dvh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-gray-950 p-4 font-mono text-sm text-gray-300">
-                  {text.data.extracted_text}
-                </pre>
-              </>
-            ) : (
-              <p className="py-8 text-gray-400">
-                Nie znaleziono tekstu w dokumencie. Sprawdź, czy plik zawiera
-                czytelny tekst lub wyraźne zdjęcie.
+          <>
+            {doc.status === "error" && (
+              <p role="alert" className="mb-3 text-sm text-red-300">
+                Ostatni odczyt zakończył się błędem. Oryginał jest zachowany.
+                {onReview &&
+                  doc.mime_type === "application/pdf" &&
+                  !doc.archived_at &&
+                  " W sekcji „Sprawdź dane” możesz ponowić lokalny OCR."}
               </p>
             )}
-          </QueryFeedback>
+            {!doc.has_extracted_text ? (
+              <p className="py-8 text-gray-400">
+                Tekst OCR nie jest dostępny dla tego dokumentu.
+              </p>
+            ) : (
+              <QueryFeedback
+                loading={text.isLoading}
+                error={text.isError}
+                errorMessage="Nie udało się pobrać odczytanego tekstu."
+                onRetry={text.refetch}
+              >
+                {text.data?.extracted_text.trim() ? (
+                  <>
+                    <h3 className="mb-2 text-sm font-medium text-gray-300">
+                      Odczytany tekst
+                    </h3>
+                    <pre className="max-h-[56dvh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-gray-950 p-4 font-mono text-sm text-gray-300">
+                      {text.data.extracted_text}
+                    </pre>
+                  </>
+                ) : (
+                  <p className="py-8 text-gray-400">
+                    Nie znaleziono tekstu w dokumencie. Sprawdź, czy plik
+                    zawiera czytelny tekst lub wyraźne zdjęcie.
+                  </p>
+                )}
+              </QueryFeedback>
+            )}
+          </>
         )}
       </section>
     </Dialog>

@@ -149,6 +149,29 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
       (warning) =>
         warning === "unreadable" || warning === "missing_required_fields",
     );
+  const isPdf = metadata.data?.mime_type === "application/pdf";
+  const needsPdfOcr =
+    isPdf &&
+    (metadata.data?.status === "error" ||
+      review.data?.error_code === "ocr_text_unavailable");
+  const pdfProcessing =
+    isPdf &&
+    (metadata.data?.status === "pending" ||
+      metadata.data?.status === "processing" ||
+      review.data?.status === "pending" ||
+      review.data?.status === "processing");
+  const retryLocalOcr = (
+    <button
+      type="button"
+      className="btn-secondary ml-2"
+      disabled={!canProcess || pdfProcessing || retryOcr.isPending}
+      onClick={() =>
+        retryOcr.mutate({ documentId, intentKey: crypto.randomUUID() })
+      }
+    >
+      Ponów lokalny OCR
+    </button>
+  );
   const submit = () => {
     const total_minor = minor(form.total);
     if (
@@ -433,17 +456,20 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
             </div>
           ) : null}
           {review.isError || !review.data ? (
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={!canProcess}
-              onClick={() => {
-                setShowLatest(true);
-                prepare.mutate({ documentId, refresh: false });
-              }}
-            >
-              Sprawdź dane
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!canProcess}
+                onClick={() => {
+                  setShowLatest(true);
+                  prepare.mutate({ documentId, refresh: false });
+                }}
+              >
+                Sprawdź dane
+              </button>
+              {needsPdfOcr && retryLocalOcr}
+            </>
           ) : (
             <>
               <p className="text-sm text-gray-400">
@@ -465,40 +491,42 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
               {(review.data.status === "error" ||
                 invalidModelOutput ||
                 interruptedModelRead ||
-                incompleteImageRead) && (
+                incompleteImageRead ||
+                needsPdfOcr) && (
                 <p role="alert" className="mt-3 text-sm text-red-300">
                   {invalidModelOutput
                     ? "AI zwróciło niepoprawne dane. Możesz uzupełnić pola ręcznie."
                     : incompleteImageRead
                       ? "AI nie odczytało wszystkich danych. Porównaj dokument z oryginałem, uzupełnij pola ręcznie lub jawnie ponów odczyt."
-                      : "Nie udało się uzyskać propozycji od zewnętrznego dostawcy. Możesz uzupełnić pola ręcznie."}
-                  <button
-                    type="button"
-                    className="btn-secondary ml-2"
-                    disabled={!canProcess || prepareVision.isPending}
-                    onClick={() => {
-                      setShowLatest(true);
-                      prepareVision.mutate({
-                        documentId,
-                        intentKey: crypto.randomUUID(),
-                      });
-                    }}
-                  >
-                    Ponów AI
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary ml-2"
-                    disabled={!canProcess || retryOcr.isPending}
-                    onClick={() =>
-                      retryOcr.mutate({
-                        documentId,
-                        intentKey: crypto.randomUUID(),
-                      })
-                    }
-                  >
-                    Ponów lokalny OCR
-                  </button>
+                      : needsPdfOcr
+                        ? "Odczyt tego PDF wymaga sprawdzenia. Możesz ponowić lokalny OCR lub uzupełnić pola ręcznie."
+                        : "Nie udało się uzyskać propozycji od zewnętrznego dostawcy. Możesz uzupełnić pola ręcznie."}
+                  {(!isPdf || metadata.data?.has_extracted_text) && (
+                    <button
+                      type="button"
+                      className="btn-secondary ml-2"
+                      disabled={
+                        !canProcess ||
+                        pdfProcessing ||
+                        prepare.isPending ||
+                        prepareVision.isPending
+                      }
+                      onClick={() => {
+                        setShowLatest(true);
+                        if (isPdf) {
+                          prepare.mutate({ documentId, refresh: true });
+                        } else {
+                          prepareVision.mutate({
+                            documentId,
+                            intentKey: crypto.randomUUID(),
+                          });
+                        }
+                      }}
+                    >
+                      {isPdf ? "Ponów analizę tekstu" : "Ponów AI"}
+                    </button>
+                  )}
+                  {retryLocalOcr}
                 </p>
               )}
               {unsupported ? (

@@ -34,6 +34,11 @@ const apiState = vi.hoisted(() => ({
   retryOcrError: null as unknown,
   navigate: vi.fn(),
   archived: false,
+  metadata: {} as {
+    mime_type?: string;
+    has_extracted_text?: boolean;
+    status?: string;
+  },
   refetchBill: vi
     .fn()
     .mockResolvedValue({ data: { id: "draft-1", version: 5 } }),
@@ -54,7 +59,10 @@ vi.mock("react-router-dom", () => ({ useNavigate: () => apiState.navigate }));
 vi.mock("../../api/documents", async (original) => ({
   ...(await original<typeof import("../../api/documents")>()),
   useDocumentMetadata: () => ({
-    data: { archived_at: apiState.archived ? "2026-11-03T12:00:00Z" : null },
+    data: {
+      ...apiState.metadata,
+      archived_at: apiState.archived ? "2026-11-03T12:00:00Z" : null,
+    },
   }),
   useRestoreDocument: () => ({ mutate: vi.fn(), isPending: false }),
   useDocumentReview: () => ({
@@ -370,6 +378,59 @@ describe("DocumentReview", () => {
       }
     },
   );
+  it("retries a PDF extraction from existing OCR text through text review", () => {
+    const previous = apiState.review;
+    apiState.metadata = {
+      mime_type: "application/pdf",
+      has_extracted_text: true,
+      status: "done",
+    };
+    apiState.review = {
+      ...previous!,
+      status: "incomplete",
+      error_code: "invalid_model_output",
+    };
+    apiState.prepare.mockClear();
+    apiState.prepareVision.mockClear();
+    apiState.retryOcr.mockClear();
+    try {
+      renderReview();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Ponów analizę tekstu" }),
+      );
+      expect(apiState.prepare).toHaveBeenCalledWith({
+        documentId: "document-1",
+        refresh: true,
+      });
+      expect(apiState.prepareVision).not.toHaveBeenCalled();
+      expect(apiState.retryOcr).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("Sprzedawca")).toBeVisible();
+    } finally {
+      apiState.metadata = {};
+      apiState.review = previous;
+    }
+  });
+
+  it("offers explicit local OCR when an older failed PDF has no review", () => {
+    const previous = apiState.review;
+    apiState.metadata = { mime_type: "application/pdf", status: "error" };
+    apiState.review = undefined;
+    apiState.retryOcr.mockClear();
+    try {
+      renderReview();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Ponów lokalny OCR" }),
+      );
+      expect(apiState.retryOcr).toHaveBeenCalledWith({
+        documentId: "document-1",
+        intentKey: expect.any(String),
+      });
+    } finally {
+      apiState.metadata = {};
+      apiState.review = previous;
+    }
+  });
+
   it("review_shows_llm_error_and_manual_fields", () => {
     renderReview();
     expect(screen.getByText(/zewnętrzny dostawca/i)).toBeInTheDocument();
