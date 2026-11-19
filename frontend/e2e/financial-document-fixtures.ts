@@ -339,20 +339,6 @@ export async function financialDocumentFixtures(
         },
       });
     if (
-      path === `/api/finance/bills/${ids.bill}/duplicates` &&
-      method === "GET"
-    )
-      return route.fulfill({ json: [] });
-    if (path === "/api/finance/bills/heif-draft/duplicates" && method === "GET")
-      return route.fulfill({
-        json: [{ id: ids.bill, reasons: ["same_purchase"] }],
-      });
-    if (
-      path === "/api/finance/bills/receipt-draft/duplicates" &&
-      method === "GET"
-    )
-      return route.fulfill({ json: [] });
-    if (
       path === `/api/finance/bills/${ids.bill}/candidates` &&
       method === "GET"
     )
@@ -519,6 +505,16 @@ export async function financialDocumentFixtures(
         status: 201,
         json: { ...bill(), id: "receipt-draft", review: "draft", version: 1 },
       });
+    if (path === "/api/finance/bills/heif-draft/approve" && method === "POST") {
+      expect(req.postDataJSON()).not.toHaveProperty("duplicate_decision");
+      return route.fulfill({
+        status: 422,
+        json: {
+          detail: "duplicate_decision_required",
+          duplicate_candidates: [{ id: ids.bill, reasons: ["same_purchase"] }],
+        },
+      });
+    }
     if (path === `/api/finance/bills/${ids.bill}/approve` && method === "POST")
       return route.fulfill({ json: bill() });
     if (

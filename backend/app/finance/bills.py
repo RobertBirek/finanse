@@ -39,6 +39,12 @@ from app.finance.models import (
 )
 
 
+class DuplicateDecisionRequired(ValueError):
+    def __init__(self, candidates: list[DuplicateCandidate]) -> None:
+        super().__init__("duplicate_decision_required")
+        self.candidates = candidates
+
+
 def _canonical_hash(payload: dict[str, object]) -> str:
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
@@ -363,7 +369,7 @@ async def approve_bill(
         await _validate_links(db, user_id, data)
         duplicates = await find_duplicate_bills(db, user_id, data)
         if duplicates and data.duplicate_decision != "separate":
-            raise ValueError("duplicate_decision_required")
+            raise DuplicateDecisionRequired(duplicates)
         for name, value in data.model_dump(exclude={"version", "duplicate_decision"}).items():
             setattr(bill, name, value)
         bill.review = "approved"

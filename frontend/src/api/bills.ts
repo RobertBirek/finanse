@@ -256,18 +256,6 @@ export function useAttachBillSource() {
     onSuccess: () => invalidate(client),
   });
 }
-export function useDuplicateCandidates(billId: string | null) {
-  return useQuery({
-    queryKey: ["finance", "bills", billId, "duplicates"],
-    enabled: !!billId,
-    queryFn: async () =>
-      (
-        await api.get<DuplicateCandidate[]>(
-          `/finance/bills/${billId}/duplicates`,
-        )
-      ).data,
-  });
-}
 export function useBill(billId: string | null, enabled = true) {
   const ownerId = useAuthStore((state) => state.user?.id);
   const sessionVersion = useAuthStore((state) => state.sessionVersion);

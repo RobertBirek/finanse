@@ -4,10 +4,10 @@ import {
   useApproveBill,
   useAttachBillSource,
   useBill,
-  useDuplicateCandidates,
   usePrepareBill,
   useSerializedIntentKey,
   type BillApprove,
+  type DuplicateCandidate,
 } from "../../api/bills";
 import {
   useDocumentOriginal,
@@ -34,11 +34,23 @@ import {
 } from "../../stores/documentProcessingStore";
 
 type Props = { documentId: string; onClose: () => void };
+type Draft = { id: string; version: number };
+type ApprovalFields = Omit<BillApprove, "version" | "duplicate_decision">;
+type ApprovalError = AxiosError<{
+  detail?: string;
+  duplicate_candidates?: DuplicateCandidate[];
+}>;
 const minor = (raw: string) =>
   /^\d+(\.\d{1,2})?$/.test(raw) ? Math.round(Number(raw) * 100) : null;
-const mutationError = (error: unknown) =>
-  (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ??
-  "Nie udało się zapisać zmian. Popraw pola i spróbuj ponownie.";
+const mutationError = (error: unknown) => {
+  const detail = (error as AxiosError<{ detail?: unknown }>)?.response?.data
+    ?.detail;
+  if (detail === "duplicate_decision_required")
+    return "Wykryto podobny dokument. Nie udało się wyświetlić porównania.";
+  return typeof detail === "string"
+    ? detail
+    : "Nie udało się zapisać zmian. Popraw pola i spróbuj ponownie.";
+};
 const processingError = (error: unknown, fallback: string) => {
   const data = (error as AxiosError<{ code?: string; detail?: string }>)
     ?.response?.data;
@@ -83,12 +95,13 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
   const approve = useApproveBill();
   const attach = useAttachBillSource();
   const keyFor = useSerializedIntentKey();
-  const [draftBill, setDraftBill] = useState<{
-    id: string;
-    version: number;
+  const [draftBill, setDraftBill] = useState<Draft | null>(null);
+  const [duplicateReview, setDuplicateReview] = useState<{
+    candidates: DuplicateCandidate[];
+    fields: ApprovalFields;
+    formKey: string;
   } | null>(null);
   const [attachTargetId, setAttachTargetId] = useState<string | null>(null);
-  const duplicates = useDuplicateCandidates(draftBill?.id ?? null);
   const attachTarget = useBill(attachTargetId);
   const [attachComparison, setAttachComparison] = useState<{
     id: string;
@@ -102,6 +115,9 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
     metadata.isLoading ? undefined : review.data,
     categories.data,
   );
+  const formKey = JSON.stringify(form);
+  const matchingDuplicates =
+    duplicateReview?.formKey === formKey ? duplicateReview : null;
   const [conflict, setConflict] = useState<"draft" | "attach" | null>(null);
   const [refreshedConflict, setRefreshedConflict] = useState<
     "draft" | "attach" | null
@@ -172,7 +188,72 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
       Ponów lokalny OCR
     </button>
   );
+  const submitApproval = (
+    draft: Draft,
+    fields: ApprovalFields,
+    submittedFormKey: string,
+    separate = false,
+  ) => {
+    const data: BillApprove = {
+      ...fields,
+      version: draft.version,
+      ...(separate ? { duplicate_decision: "separate" as const } : {}),
+    };
+    const actor = captureProcessingActor();
+    approve.mutate(
+      {
+        billId: draft.id,
+        data,
+        idempotencyKey: keyFor({
+          action: "approve-bill",
+          billId: draft.id,
+          data,
+        }),
+      },
+      {
+        onSuccess: (bill) => {
+          if (isProcessingActorCurrent(actor))
+            navigate(`/finances/documents?bill=${bill.id}`);
+        },
+        onError: (error) => {
+          if (!isProcessingActorCurrent(actor)) return;
+          const response = (error as ApprovalError).response;
+          if (
+            response?.status === 422 &&
+            response.data?.detail === "duplicate_decision_required"
+          ) {
+            const candidates = response.data.duplicate_candidates;
+            if (Array.isArray(candidates) && candidates.length > 0) {
+              setAttachTargetId(null);
+              setAttachComparison(null);
+              setDuplicateReview({
+                candidates,
+                fields,
+                formKey: submittedFormKey,
+              });
+            }
+          } else if (response?.status === 409) {
+            setRefreshedConflict(null);
+            setConflict("draft");
+          }
+        },
+      },
+    );
+  };
+
+  const approvalPending =
+    prepareBill.isPending || approve.isPending || attach.isPending;
+  const approvalResponse = (approve.error as ApprovalError | null)?.response;
+  const approvalFailure =
+    approvalResponse?.data?.detail === "duplicate_decision_required" &&
+    duplicateReview
+      ? null
+      : approve.error;
+  const registrationError =
+    prepareBill.error || approvalFailure || attach.error;
+
   const submit = () => {
+    if (approvalPending || conflict || matchingDuplicates) return;
     const total_minor = minor(form.total);
     if (
       total_minor === null ||
@@ -181,23 +262,7 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
       !form.currency
     )
       return;
-    const actor = captureProcessingActor();
-    prepareBill.mutate(
-      { documentId },
-      {
-        onSuccess: (bill) => {
-          if (!isProcessingActorCurrent(actor)) return;
-          setDraftBill({ id: bill.id, version: bill.version });
-        },
-      },
-    );
-  };
-  const approveDraft = (separate: boolean) => {
-    if (!draftBill || conflict) return;
-    const total_minor = minor(form.total);
-    if (total_minor === null || !form.currency) return;
-    const data: BillApprove = {
-      version: draftBill.version,
+    const fields: ApprovalFields = {
       kind: form.kind,
       supplier_name: form.supplier_name.trim(),
       description: form.description.trim(),
@@ -212,29 +277,23 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
       payee_iban: form.payee_iban || null,
       category_id: form.category_id || null,
       payment_account_id: form.payment_account_id || null,
-      ...(separate ? { duplicate_decision: "separate" as const } : {}),
     };
+    setDuplicateReview(null);
+    setAttachTargetId(null);
+    setAttachComparison(null);
+    if (draftBill) {
+      submitApproval(draftBill, fields, formKey);
+      return;
+    }
     const actor = captureProcessingActor();
-    approve.mutate(
-      {
-        billId: draftBill.id,
-        data,
-        idempotencyKey: keyFor({
-          action: "approve-bill",
-          billId: draftBill.id,
-          data,
-        }),
-      },
+    prepareBill.mutate(
+      { documentId },
       {
         onSuccess: (bill) => {
-          if (isProcessingActorCurrent(actor))
-            navigate(`/finances/documents?bill=${bill.id}`);
-        },
-        onError: (error) => {
-          if ((error as AxiosError).response?.status === 409) {
-            setRefreshedConflict(null);
-            setConflict("draft");
-          }
+          if (!isProcessingActorCurrent(actor)) return;
+          const draft = { id: bill.id, version: bill.version };
+          setDraftBill(draft);
+          submitApproval(draft, fields, formKey);
         },
       },
     );
@@ -392,12 +451,10 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
               )}
             </p>
           ) : null}
-          {prepareBill.error || approve.error || attach.error ? (
+          {registrationError ? (
             <p role="alert" className="mb-3 text-sm text-red-300">
-              {mutationError(
-                prepareBill.error || approve.error || attach.error,
-              )}
-              {(approve.error as AxiosError | null)?.response?.status === 409 ||
+              {mutationError(registrationError)}
+              {approvalResponse?.status === 409 ||
               (attach.error as AxiosError | null)?.response?.status === 409
                 ? " Dane pozostały w formularzu; odśwież przegląd i porównaj wersję dokumentu przed kolejną próbą."
                 : ""}
@@ -541,7 +598,8 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                   update={update}
                   provenance={review.data.provenance}
                   onSubmit={submit}
-                  pending={prepareBill.isPending || approve.isPending}
+                  pending={approvalPending}
+                  submitBlocked={!!conflict || !!matchingDuplicates}
                   categories={categories.data ?? []}
                   accounts={accounts.data ?? []}
                 />
@@ -555,10 +613,9 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                   Zastosuj nowe sugestie
                 </button>
               ) : null}
-              {draftBill && (
+              {draftBill && matchingDuplicates && (
                 <DuplicateChoices
-                  candidates={duplicates.data ?? []}
-                  loading={duplicates.isLoading}
+                  candidates={matchingDuplicates.candidates}
                   onAttach={(candidate) => {
                     setAttachComparison(null);
                     setAttachTargetId(candidate.id);
@@ -591,9 +648,15 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                       },
                     )
                   }
-                  onSeparate={() => approveDraft(true)}
-                  onApprove={() => approveDraft(false)}
-                  disabled={!!conflict}
+                  onSeparate={() =>
+                    submitApproval(
+                      draftBill,
+                      matchingDuplicates.fields,
+                      formKey,
+                      true,
+                    )
+                  }
+                  disabled={!!conflict || approvalPending}
                 />
               )}
             </>
@@ -610,6 +673,7 @@ function ReviewForm({
   provenance,
   onSubmit,
   pending,
+  submitBlocked,
   categories,
   accounts,
 }: {
@@ -618,191 +682,174 @@ function ReviewForm({
   provenance: Record<string, string>;
   onSubmit: () => void;
   pending: boolean;
+  submitBlocked: boolean;
   categories: Category[];
   accounts: { id: string; name: string; is_active: boolean }[];
 }) {
   return (
     <form
-      className="mt-4 space-y-3"
+      className="mt-4"
+      aria-busy={pending}
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
     >
-      <label className="block text-sm text-gray-300">
-        Typ
-        <select
-          aria-label="Typ"
-          value={form.kind}
-          onChange={(e) => update("kind", e.target.value)}
-          className="input mt-1 w-full"
+      <fieldset disabled={pending} className="min-w-0 space-y-3">
+        <label className="block text-sm text-gray-300">
+          Typ
+          <select
+            aria-label="Typ"
+            value={form.kind}
+            onChange={(e) => update("kind", e.target.value)}
+            className="input mt-1 w-full"
+          >
+            <option value="invoice">Faktura</option>
+            <option value="receipt">Paragon</option>
+          </select>
+        </label>
+        <Field
+          label="Sprzedawca"
+          value={form.supplier_name}
+          onChange={(v) => update("supplier_name", v)}
+          note={provenance.supplier_name}
+          required
+        />
+        <Field
+          label="Data sprzedaży"
+          value={form.sale_date}
+          onChange={(v) => update("sale_date", v)}
+          type="date"
+        />
+        <Field
+          label="Opis"
+          value={form.description}
+          onChange={(v) => update("description", v)}
+          required
+        />
+        <label className="block text-sm text-gray-300">
+          Kategoria
+          <select
+            aria-label="Kategoria"
+            value={form.category_id}
+            onChange={(e) => update("category_id", e.target.value)}
+            className="input mt-1 w-full"
+          >
+            <option value="">Nie wybieraj teraz</option>
+            {categoryOptions(categories)
+              .filter((item) => item.is_active && item.type === "expense")
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+          </select>
+        </label>
+        <p className="text-xs text-gray-400">
+          Sugestia AI nie jest zatwierdzoną kategorią. Możesz ją zmienić lub
+          wyczyścić.
+        </p>
+        <label className="block text-sm text-gray-300">
+          Konto płatności
+          <select
+            aria-label="Konto płatności"
+            value={form.payment_account_id}
+            onChange={(e) => update("payment_account_id", e.target.value)}
+            className="input mt-1 w-full"
+          >
+            <option value="">Nie wybieraj teraz</option>
+            {accounts
+              .filter((item) => item.is_active)
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+          </select>
+        </label>
+        <Field
+          label="Kwota"
+          value={form.total}
+          onChange={(v) => update("total", v)}
+          note={provenance.total}
+          required
+        />
+        <label className="block text-sm text-gray-300">
+          Waluta
+          <select
+            aria-label="Waluta"
+            value={form.currency}
+            onChange={(e) => update("currency", e.target.value)}
+            className="input mt-1 w-full"
+          >
+            <option value="">Wybierz walutę</option>
+            <option>PLN</option>
+            <option>EUR</option>
+            <option>USD</option>
+          </select>
+        </label>
+        <Field
+          label="Data wystawienia"
+          value={form.issue_date}
+          onChange={(v) => update("issue_date", v)}
+          type="date"
+        />
+        <Field
+          label="Termin płatności"
+          value={form.due_date}
+          onChange={(v) => update("due_date", v)}
+          type="date"
+        />
+        <Field
+          label="Numer dokumentu"
+          value={form.number}
+          onChange={(v) => update("number", v)}
+        />
+        <Field
+          label="NIP sprzedawcy"
+          value={form.supplier_tax_id}
+          onChange={(v) => update("supplier_tax_id", v)}
+        />
+        <Field
+          label="IBAN odbiorcy"
+          value={form.payee_iban}
+          onChange={(v) => update("payee_iban", v)}
+        />
+        <p className="text-xs text-gray-400">
+          Kategoria i konto płatności są opcjonalne.
+        </p>
+        <button
+          type="submit"
+          disabled={submitBlocked || !form.currency}
+          className="btn-primary"
         >
-          <option value="invoice">Faktura</option>
-          <option value="receipt">Paragon</option>
-        </select>
-      </label>
-      <Field
-        label="Sprzedawca"
-        value={form.supplier_name}
-        onChange={(v) => update("supplier_name", v)}
-        note={provenance.supplier_name}
-        required
-      />
-      <Field
-        label="Data sprzedaży"
-        value={form.sale_date}
-        onChange={(v) => update("sale_date", v)}
-        type="date"
-      />
-      <Field
-        label="Opis"
-        value={form.description}
-        onChange={(v) => update("description", v)}
-        required
-      />
-      <label className="block text-sm text-gray-300">
-        Kategoria
-        <select
-          aria-label="Kategoria"
-          value={form.category_id}
-          onChange={(e) => update("category_id", e.target.value)}
-          className="input mt-1 w-full"
-        >
-          <option value="">Nie wybieraj teraz</option>
-          {categoryOptions(categories)
-            .filter((item) => item.is_active && item.type === "expense")
-            .map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-        </select>
-      </label>
-      <p className="text-xs text-gray-400">
-        Sugestia AI nie jest zatwierdzoną kategorią. Możesz ją zmienić lub
-        wyczyścić.
-      </p>
-      <label className="block text-sm text-gray-300">
-        Konto płatności
-        <select
-          aria-label="Konto płatności"
-          value={form.payment_account_id}
-          onChange={(e) => update("payment_account_id", e.target.value)}
-          className="input mt-1 w-full"
-        >
-          <option value="">Nie wybieraj teraz</option>
-          {accounts
-            .filter((item) => item.is_active)
-            .map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-        </select>
-      </label>
-      <Field
-        label="Kwota"
-        value={form.total}
-        onChange={(v) => update("total", v)}
-        note={provenance.total}
-        required
-      />
-      <label className="block text-sm text-gray-300">
-        Waluta
-        <select
-          aria-label="Waluta"
-          value={form.currency}
-          onChange={(e) => update("currency", e.target.value)}
-          className="input mt-1 w-full"
-        >
-          <option value="">Wybierz walutę</option>
-          <option>PLN</option>
-          <option>EUR</option>
-          <option>USD</option>
-        </select>
-      </label>
-      <Field
-        label="Data wystawienia"
-        value={form.issue_date}
-        onChange={(v) => update("issue_date", v)}
-        type="date"
-      />
-      <Field
-        label="Termin płatności"
-        value={form.due_date}
-        onChange={(v) => update("due_date", v)}
-        type="date"
-      />
-      <Field
-        label="Numer dokumentu"
-        value={form.number}
-        onChange={(v) => update("number", v)}
-      />
-      <Field
-        label="NIP sprzedawcy"
-        value={form.supplier_tax_id}
-        onChange={(v) => update("supplier_tax_id", v)}
-      />
-      <Field
-        label="IBAN odbiorcy"
-        value={form.payee_iban}
-        onChange={(v) => update("payee_iban", v)}
-      />
-      <p className="text-xs text-gray-400">
-        Kategoria i konto płatności są opcjonalne.
-      </p>
-      <button
-        type="submit"
-        disabled={pending || !form.currency}
-        className="btn-primary"
-      >
-        Zatwierdź do rejestru
-      </button>
+          {pending ? "Zapisywanie…" : "Zatwierdź do rejestru"}
+        </button>
+      </fieldset>
     </form>
   );
 }
 
 function DuplicateChoices({
   candidates,
-  loading,
   onAttach,
   attachTarget,
   attachTargetLoading,
   onConfirmAttach,
   onSeparate,
-  onApprove,
   disabled,
 }: {
-  candidates: { id: string; reasons: string[] }[];
-  loading: boolean;
-  onAttach: (candidate: { id: string; reasons: string[] }) => void;
+  candidates: DuplicateCandidate[];
+  onAttach: (candidate: DuplicateCandidate) => void;
   attachTarget?: { id: string; version: number };
   attachTargetLoading: boolean;
   onConfirmAttach: (target: { id: string; version: number }) => void;
   onSeparate: () => void;
-  onApprove: () => void;
   disabled: boolean;
 }) {
-  if (loading)
-    return (
-      <p role="status" className="mt-3 text-sm text-gray-400">
-        Sprawdzanie podobnych dokumentów…
-      </p>
-    );
-  if (!candidates.length)
-    return (
-      <button
-        type="button"
-        className="btn-primary mt-3"
-        onClick={onApprove}
-        disabled={disabled}
-      >
-        Zatwierdź do rejestru
-      </button>
-    );
   return (
     <div className="mt-3 rounded-lg border border-yellow-700 p-3">
-      <p className="text-sm text-yellow-200">
+      <p role="status" className="text-sm text-yellow-200">
         Znaleziono podobny dokument. Wybierz świadomie: dołącz źródło albo
         zarejestruj osobno.
       </p>

@@ -291,7 +291,7 @@ test("replacing one 100 PLN occurrence leaves exactly one 120 PLN invoice upcomi
   api.assertClean();
 });
 
-test("legacy PDF review remains manually usable after LLM/OCR error", async ({
+test("legacy PDF with a failed read is registered with one click", async ({
   page,
 }) => {
   const api = await financialDocumentFixtures(page, { reviewError: true });
@@ -312,17 +312,11 @@ test("legacy PDF review remains manually usable after LLM/OCR error", async ({
   await page
     .getByRole("button", { name: "Zatwierdź do rejestru", exact: true })
     .click();
-  const resolvedApproval = page.locator('button[type="button"]', {
-    hasText: "Zatwierdź do rejestru",
-  });
-  await expect(resolvedApproval).toBeVisible();
-  await resolvedApproval.click();
   await expect(page).toHaveURL(/\/finances\/documents\?bill=/);
-  expect(
-    api.mutations.some(
-      ({ path }) => path === `/api/finance/bills/prepare/${ids.oldPdf}`,
-    ),
-  ).toBe(true);
+  expect(api.mutations.map(({ path }) => path)).toEqual([
+    `/api/finance/bills/prepare/${ids.oldPdf}`,
+    `/api/finance/bills/${ids.bill}/approve`,
+  ]);
   api.assertClean();
 });
 
@@ -380,6 +374,7 @@ for (const viewport of [375, 1440]) {
     ).toEqual([
       "POST /api/documents/upload",
       `POST /api/finance/bills/prepare/${ids.heic}`,
+      "POST /api/finance/bills/heif-draft/approve",
       `POST /api/finance/bills/${ids.bill}/sources/${ids.heic}`,
     ]);
     api.assertClean();
@@ -401,11 +396,6 @@ for (const viewport of [375, 1440]) {
     await page
       .getByRole("button", { name: "Zatwierdź do rejestru", exact: true })
       .click();
-    const resolvedApproval = page.locator('button[type="button"]', {
-      hasText: "Zatwierdź do rejestru",
-    });
-    await expect(resolvedApproval).toBeVisible();
-    await resolvedApproval.click();
     await expect(page).toHaveURL(/\/finances\/documents\?bill=receipt-bill/);
     await expect(
       page.locator("dt", { hasText: "Uzgodnienie" }).locator(".."),

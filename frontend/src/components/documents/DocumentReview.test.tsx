@@ -6,6 +6,16 @@ import { useAuthStore } from "../../stores/authStore";
 import type { DocumentReview as DocumentReviewData } from "../../api/documents";
 import { DocumentReview } from "./DocumentReview";
 
+const duplicateError = vi.hoisted(() => ({
+  response: {
+    status: 422,
+    data: {
+      detail: "duplicate_decision_required",
+      duplicate_candidates: [{ id: "bill-existing", reasons: ["same_number"] }],
+    },
+  },
+}));
+
 const apiState = vi.hoisted(() => ({
   review: {
     id: "review-1",
@@ -28,7 +38,10 @@ const apiState = vi.hoisted(() => ({
   retryOcr: vi.fn(),
   prepareVision: vi.fn(),
   attach: vi.fn(),
-  approve: vi.fn(),
+  approve: vi.fn((input, options) => {
+    if (input.data.duplicate_decision !== "separate")
+      options?.onError?.(duplicateError);
+  }),
   approveError: null as unknown,
   prepareError: null as unknown,
   retryOcrError: null as unknown,
@@ -95,10 +108,6 @@ vi.mock("../../api/bills", () => ({
     mutate: apiState.approve,
     isPending: false,
     error: apiState.approveError,
-  }),
-  useDuplicateCandidates: () => ({
-    data: [{ id: "bill-existing", reasons: ["same_number"] }],
-    isLoading: false,
   }),
   useBill: () => ({
     data: { id: "bill-existing", version: 9 },
@@ -507,6 +516,54 @@ describe("DocumentReview", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("prepares and approves in one submit when no duplicate is returned", () => {
+    apiState.approve.mockClear();
+    apiState.approve.mockImplementationOnce((_input, options) =>
+      options?.onSuccess?.({ id: "approved-directly" }),
+    );
+    renderReview();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    expect(apiState.approve).toHaveBeenCalledTimes(1);
+    expect(apiState.approve.mock.calls[0][0]).toMatchObject({
+      billId: "draft-1",
+      data: { version: 4, supplier_name: "Sklep", total_minor: 1234 },
+    });
+    expect(apiState.approve.mock.calls[0][0].data).not.toHaveProperty(
+      "duplicate_decision",
+    );
+    expect(apiState.navigate).toHaveBeenCalledWith(
+      "/finances/documents?bill=approved-directly",
+    );
+    expect(screen.queryByText(/podobny dokument/i)).not.toBeInTheDocument();
+  });
+
+  it("requires a fresh duplicate check after editing the submitted fields", async () => {
+    apiState.approve.mockClear();
+    renderReview();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    await screen.findByRole("button", { name: "Zarejestruj osobno" });
+    fireEvent.change(screen.getByLabelText("Kwota"), {
+      target: { value: "23.45" },
+    });
+    expect(
+      screen.queryByRole("button", { name: "Zarejestruj osobno" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    expect(apiState.approve).toHaveBeenCalledTimes(2);
+    expect(apiState.approve.mock.calls[1][0].data).toMatchObject({
+      total_minor: 2345,
+    });
+    expect(apiState.approve.mock.calls[1][0].data).not.toHaveProperty(
+      "duplicate_decision",
+    );
+  });
+
   it("offers explicit duplicate attach or separate approval with full manual fields", async () => {
     renderReview();
     fireEvent.change(screen.getByLabelText("Data sprzedaży"), {
@@ -612,12 +669,16 @@ describe("DocumentReview", () => {
   });
 
   it("keeps manual fields visible and tells the reviewer to refresh after a 409 approval conflict", async () => {
-    apiState.approve.mockImplementation((_input, options) => {
-      apiState.approveError = {
-        response: { status: 409, data: { detail: "version_conflict" } },
-      };
-      options?.onError?.(apiState.approveError);
-    });
+    apiState.approve
+      .mockImplementationOnce((_input, options) =>
+        options?.onError?.(duplicateError),
+      )
+      .mockImplementation((_input, options) => {
+        apiState.approveError = {
+          response: { status: 409, data: { detail: "version_conflict" } },
+        };
+        options?.onError?.(apiState.approveError);
+      });
     const rendered = renderReview();
     fireEvent.change(screen.getByLabelText("Data sprzedaży"), {
       target: { value: "2026-10-03" },
@@ -694,9 +755,13 @@ describe("DocumentReview", () => {
   });
 
   it("requires a target refetch after attach 409 even when a draft conflict was acknowledged", async () => {
-    apiState.approve.mockImplementation((_input, options) =>
-      options?.onError?.({ response: { status: 409 } }),
-    );
+    apiState.approve
+      .mockImplementationOnce((_input, options) =>
+        options?.onError?.(duplicateError),
+      )
+      .mockImplementation((_input, options) =>
+        options?.onError?.({ response: { status: 409 } }),
+      );
     apiState.attach.mockImplementation((_input, options) =>
       options?.onError?.({ response: { status: 409 } }),
     );
@@ -745,9 +810,13 @@ describe("DocumentReview", () => {
   });
 
   it("opens the approved document register detail after a separate approval succeeds", async () => {
-    apiState.approve.mockImplementation((_input, options) =>
-      options?.onSuccess?.({ id: "approved-bill" }),
-    );
+    apiState.approve
+      .mockImplementationOnce((_input, options) =>
+        options?.onError?.(duplicateError),
+      )
+      .mockImplementation((_input, options) =>
+        options?.onSuccess?.({ id: "approved-bill" }),
+      );
     renderReview();
     fireEvent.click(
       screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
