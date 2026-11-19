@@ -28,10 +28,12 @@ it("shows independent finance evidence even if the latest recognition failed", a
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(await screen.findByLabelText("Odczyt")).toHaveTextContent("Błąd");
-  expect(screen.getByLabelText("Finanse")).toHaveTextContent(
-    "Zatwierdzony",
-  );
+  expect(
+    await screen.findByRole("img", { name: /^Odczyt · Błąd/ }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("img", { name: "Finanse · Zatwierdzony" }),
+  ).toBeVisible();
   expect(
     screen.getByRole("link", { name: "Otwórz w finansach" }),
   ).toHaveAttribute("href", "/finances/documents?bill=bill-owned");
@@ -54,15 +56,13 @@ it("does not invent a finance link from ready OCR", async () => {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(await screen.findByLabelText("Finanse")).toHaveTextContent(
-    "Nie wczytano",
-  );
+  expect(
+    await screen.findByRole("img", { name: "Finanse · Nie wczytano" }),
+  ).toBeVisible();
   expect(
     screen.queryByRole("link", { name: "Otwórz w finansach" }),
   ).not.toBeInTheDocument();
-  expect(
-    screen.getByRole("button", { name: "Sprawdź dane" }),
-  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Sprawdź dane" })).toBeVisible();
 });
 it("opens a toast-linked review even when the document is outside the current list page", async () => {
   const review = processingReview({ status: "ready" });

@@ -1,7 +1,6 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
-  isDocumentWorkActive,
   useDocuments,
   useArchiveDocument,
   useRestoreDocument,
@@ -16,8 +15,12 @@ import { QueryFeedback } from "./QueryFeedback";
 import {
   getDocumentStatus,
   getFinanceDocumentStatus,
+  type DocumentStatusTone,
 } from "./documents/documentStatus";
-import { ProcessingPulse } from "./documents/ProcessingFeedback";
+import {
+  getDocumentOperations,
+  isActiveOperation,
+} from "./documents/documentProcessing";
 import { DocumentIcon, DocumentTooltip } from "./documents/documentControls";
 import { isProcessingActorCurrent } from "../stores/documentProcessingStore";
 
@@ -28,55 +31,34 @@ const statusClass = {
   danger: STATUS_COLORS.error,
 };
 
-function DocumentImportMenu({ documentId }: { documentId: string }) {
-  const [open, setOpen] = useState(false);
-  const button = useRef<HTMLButtonElement>(null);
-  const actionsId = useId();
+const statusIcon = {
+  neutral: "clock",
+  warning: "warning",
+  success: "check",
+  danger: "error",
+} as const;
 
+function DocumentStatusIcon({
+  label,
+  tone,
+  icon,
+}: {
+  label: string;
+  tone: DocumentStatusTone;
+  icon?: "clock" | "finance";
+}) {
   return (
-    <div
-      className="relative"
-      onBlur={(event) => {
-        if (
-          !(event.relatedTarget instanceof Node) ||
-          !event.currentTarget.contains(event.relatedTarget)
-        ) {
-          setOpen(false);
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.key !== "Escape" || !open) return;
-        event.stopPropagation();
-        setOpen(false);
-        button.current?.focus();
-      }}
-    >
-      <DocumentTooltip label={open ? undefined : "Więcej akcji"}>
-        <button
-          ref={button}
-          type="button"
-          aria-label="Więcej akcji"
-          aria-expanded={open}
-          aria-controls={actionsId}
-          className="document-icon-control"
-          onClick={() => setOpen(!open)}
-        >
-          <DocumentIcon name="more" />
-        </button>
-      </DocumentTooltip>
-      <div
-        id={actionsId}
-        hidden={!open}
-        className="absolute right-0 top-full z-10 w-max rounded-lg border border-gray-700 bg-gray-950 p-1 shadow-lg"
+    <DocumentTooltip label={label} alignWithGroup>
+      <span
+        role="img"
+        aria-label={label}
+        tabIndex={0}
+        onClick={(event) => event.currentTarget.focus()}
+        className={`inline-flex size-9 items-center justify-center rounded-lg ${statusClass[tone]}`}
       >
-        <Link
-          to={`/finances/imports?document=${encodeURIComponent(documentId)}`}
-          className="flex min-h-11 items-center rounded-md px-3 text-sm text-gray-200 hover:bg-gray-800"
-        >
-          Użyj do importu
-        </Link>
-      </div>
-    </div>
+        <DocumentIcon name={icon ?? statusIcon[tone]} />
+      </span>
+    </DocumentTooltip>
   );
 }
 
@@ -215,6 +197,7 @@ export function DocumentList() {
                 !archived &&
                 doc.status === "done" &&
                 doc.mime_type === "application/pdf";
+              const reviewLabel = billId ? "Sprawdź szkic" : "Sprawdź dane";
               const retryAt =
                 doc.status === "pending" ? doc.next_attempt_at : null;
               const archiveLabel = archived
@@ -229,7 +212,7 @@ export function DocumentList() {
               return (
                 <li
                   key={doc.id}
-                  className="grid min-w-0 gap-x-4 gap-y-1.5 px-3 py-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(12rem,31%)_13.5rem] lg:items-center lg:px-4"
+                  className="grid min-w-0 gap-1.5 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-4 lg:px-4"
                 >
                   <div className="flex min-w-0 items-start gap-2">
                     <span className="mt-2.5 rounded-lg bg-gray-800 p-1.5 text-gray-300">
@@ -243,7 +226,7 @@ export function DocumentList() {
                       <button
                         type="button"
                         aria-label={`Otwórz dokument: ${doc.original_name}`}
-                        aria-describedby={`document-meta-${doc.id}${hint ? ` document-hint-${doc.id}` : ""}`}
+                        aria-describedby={`document-meta-${doc.id}`}
                         onClick={() => setViewingId(doc.id)}
                         className="block min-h-11 w-full min-w-0 rounded-md text-left hover:underline"
                       >
@@ -261,47 +244,39 @@ export function DocumentList() {
                         {formatFileSize(doc.size_bytes)} ·{" "}
                         {new Date(doc.created_at).toLocaleDateString("pl-PL")}
                       </span>
-                      {hint && (
-                        <p
-                          id={`document-hint-${doc.id}`}
-                          className={`mt-1 text-xs ${doc.status === "error" ? "text-red-300" : "text-amber-300"}`}
-                        >
-                          {hint}
-                        </p>
-                      )}
                     </div>
                   </div>
-                  <div className="flex min-w-0 flex-wrap items-center gap-1.5 pl-10 lg:pl-0">
-                    <span
-                      role="group"
-                      aria-label="Odczyt"
-                      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ${statusClass[reading.tone]}`}
-                    >
-                      {isDocumentWorkActive(doc) ? (
-                        <ProcessingPulse />
-                      ) : (
-                        <DocumentIcon name="scan" />
-                      )}
-                      {reading.label}
-                    </span>
-                    <span
-                      role="group"
-                      aria-label="Finanse"
-                      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ${statusClass[finance.tone]}`}
-                    >
-                      <DocumentIcon name="finance" />
-                      {finance.label}
-                    </span>
-                  </div>
-                  <div className="flex min-w-0 flex-wrap items-center justify-end gap-0.5">
+                  <div className="relative flex min-w-0 flex-wrap items-center justify-end gap-1 justify-self-end">
+                    <DocumentStatusIcon
+                      label={`Odczyt · ${reading.label}${hint ? `. ${hint}` : ""}`}
+                      tone={reading.tone}
+                      icon={
+                        getDocumentOperations(doc).some(isActiveOperation)
+                          ? "clock"
+                          : undefined
+                      }
+                    />
+                    <DocumentStatusIcon
+                      label={`Finanse · ${finance.label}`}
+                      tone={finance.tone}
+                      icon={
+                        finance.tone === "neutral" &&
+                        doc.finance?.state !== "pending"
+                          ? "finance"
+                          : undefined
+                      }
+                    />
                     {canReview && (
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-lg px-2 text-sm font-medium text-[var(--ui-blue)] hover:bg-[var(--ui-hover)] hover:underline"
-                        onClick={() => setReviewingId(doc.id)}
-                      >
-                        {billId ? "Sprawdź szkic" : "Sprawdź dane"}
-                      </button>
+                      <DocumentTooltip label={reviewLabel}>
+                        <button
+                          type="button"
+                          aria-label={reviewLabel}
+                          className="document-icon-control"
+                          onClick={() => setReviewingId(doc.id)}
+                        >
+                          <DocumentIcon name="review" />
+                        </button>
+                      </DocumentTooltip>
                     )}
                     {billId && (
                       <DocumentTooltip label="Otwórz w finansach">
@@ -349,7 +324,17 @@ export function DocumentList() {
                         <DocumentIcon name={archived ? "restore" : "archive"} />
                       </button>
                     </DocumentTooltip>
-                    {canImport && <DocumentImportMenu documentId={doc.id} />}
+                    {canImport && (
+                      <DocumentTooltip label="Użyj do importu">
+                        <Link
+                          aria-label="Użyj do importu"
+                          className="document-icon-control"
+                          to={`/finances/imports?document=${encodeURIComponent(doc.id)}`}
+                        >
+                          <DocumentIcon name="import" />
+                        </Link>
+                      </DocumentTooltip>
+                    )}
                   </div>
                 </li>
               );

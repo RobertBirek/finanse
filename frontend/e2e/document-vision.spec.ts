@@ -221,7 +221,7 @@ test("legacy PDF retains its text-review contract without a vision request", asy
   api.assertClean();
 });
 
-test("the document list keeps long names, icon actions and the import disclosure keyboard accessible", async ({
+test("the document list keeps long names, statuses and right-aligned icon actions keyboard accessible", async ({
   page,
 }, testInfo) => {
   const name = `${"faktura-".repeat(24)}listopad.pdf`;
@@ -232,30 +232,36 @@ test("the document list keeps long names, icon actions and the import disclosure
   ).toHaveValue("");
   const open = page.getByRole("button", { name: `Otwórz dokument: ${name}` });
   const row = page.getByRole("listitem").filter({ has: open });
-  await expect(row.getByText("OCR zakończony — sprawdź dane")).toBeVisible();
+  const readingLabel = "Odczyt · OCR zakończony — sprawdź dane";
+  const reading = row.getByRole("img", { name: readingLabel });
+  await expect(reading).toBeVisible();
+  await expect(row.getByText(readingLabel, { exact: true })).toBeHidden();
+  await reading.focus();
+  await expect(row.getByText(readingLabel, { exact: true })).toBeVisible();
 
-  const more = row.getByRole("button", { name: "Więcej akcji" });
-  await more.focus();
-  await expect(row.getByText("Więcej akcji", { exact: true })).toBeVisible();
-  await page.keyboard.press("Enter");
+  const archive = row.getByRole("button", {
+    name: `Archiwizuj dokument: ${name}`,
+  });
   const importLink = row.getByRole("link", { name: "Użyj do importu" });
   await expect(importLink).toHaveAttribute(
     "href",
     `/finances/imports?document=${visionIds.pdf}`,
   );
+  await archive.focus();
   await page.keyboard.press("Tab");
   await expect(importLink).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(importLink).toBeHidden();
-  await expect(more).toBeFocused();
-  await expect(
-    row.getByRole("button", { name: `Archiwizuj dokument: ${name}` }),
-  ).toHaveCSS("height", "44px");
+  await expect(archive).toHaveCSS("height", "44px");
+  const rowBox = await row.boundingBox();
+  const importBox = await importLink.boundingBox();
+  expect(
+    rowBox!.x + rowBox!.width - importBox!.x - importBox!.width,
+  ).toBeLessThanOrEqual(16);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  await importLink.blur();
   await page.screenshot({ path: testInfo.outputPath("documents.png") });
 
   await open.focus();

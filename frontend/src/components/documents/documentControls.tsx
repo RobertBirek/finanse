@@ -9,10 +9,14 @@ const iconPaths = {
     "M4 5h14a2 2 0 0 1 2 2v12H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm16 5h-5a2 2 0 0 0 0 4h5m-5-2h.01",
   archive: "M3 4h18v4H3zm2 4v12h14V8m-9 4h4",
   restore: "M3 4h18v4H3zm2 4v12h14V8m-7 9v-6m-3 3 3-3 3 3",
-  more: "M5 12h.01M12 12h.01M19 12h.01",
+  review: "M9 5H6v16h12V5h-3M9 3h6v4H9zm1 11 2 2 4-4",
+  import: "M12 3v11m-4-4 4 4 4-4M4 13v8h16v-8",
+  clock: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM12 7v5l3 2",
+  warning: "M12 4 3 20h18zM12 10v4m0 3h.01",
+  check: "m5 12 4 4L19 6",
+  error: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM12 7v6m0 4h.01",
   close: "m6 6 12 12M18 6 6 18",
   download: "M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5",
-  scan: "M3 8V4h4m10 0h4v4m0 8v4h-4m-10 0H3v-4m4-4h10",
 } as const;
 
 export function DocumentIcon({ name }: { name: keyof typeof iconPaths }) {
@@ -36,12 +40,16 @@ export function DocumentIcon({ name }: { name: keyof typeof iconPaths }) {
 export function DocumentTooltip({
   label,
   children,
+  alignWithGroup = false,
 }: {
   label?: string;
   children: ReactNode;
+  alignWithGroup?: boolean;
 }) {
   return (
-    <span className="group/document-tip relative inline-flex shrink-0">
+    <span
+      className={`group/document-tip inline-flex shrink-0 ${alignWithGroup ? "" : "relative"}`}
+    >
       {children}
       {label && (
         <span

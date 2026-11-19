@@ -114,7 +114,9 @@ describe("document retry and admission feedback", () => {
     const open = await screen.findByRole("button", {
       name: "Otwórz dokument: photo.jpg",
     });
-    expect(screen.getByText("Propozycja do sprawdzenia")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Odczyt · Propozycja do sprawdzenia" }),
+    ).toBeInTheDocument();
     fireEvent.click(open);
 
     expect(get.mock.calls.map(([url]) => url)).not.toContain(
@@ -189,14 +191,18 @@ describe("document retry and admission feedback", () => {
   });
   it("shows scheduled retry without promising success", async () => {
     renderDocuments();
-    expect(await screen.findByText(/Ponowna próba/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("img", { name: /Ponowna próba/ }),
+    ).toBeVisible();
   });
   it("does not promise another retry for terminal failures", async () => {
     renderDocuments("error", null);
     await screen.findByRole("button", { name: "Otwórz dokument: saved.pdf" });
-    expect(screen.queryByText(/Ponowna próba/)).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Odczyt nie powiódł się/),
+      screen.queryByRole("img", { name: /Ponowna próba/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /Odczyt nie powiódł się/ }),
     ).toBeInTheDocument();
   });
   it.each([413, 503, 507])(

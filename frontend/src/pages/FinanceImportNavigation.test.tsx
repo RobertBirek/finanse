@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { DocumentList } from "../components/DocumentList";
@@ -33,7 +33,6 @@ it("uses an existing PDF for import without invoice approval or a financial muta
       request.url === "/documents" ? [document] : undefined,
   });
   render(importTestWrapper(<DocumentList />, "/documents").node);
-  fireEvent.click(await screen.findByRole("button", { name: "Więcej akcji" }));
   expect(
     await screen.findByRole("link", { name: "Użyj do importu" }),
   ).toHaveAttribute("href", "/finances/imports?document=document-a");
