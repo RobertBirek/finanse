@@ -15,6 +15,9 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   733 Vitest, build, lint, kontrola typów. Migracje sprawdzone jako SQL.
   Po review downgrade jawnie odmawia, gdy są dane nowych funkcji lub
   zapisane generacje/metryki, których starszy schemat nie umie przechować.
+- CI 44777133436: awaria syntetycznego transportu Vision przez stary host
+  atrapy oraz brak nowego GET ustawień w fixture Playwright (desktop i mobile).
+  Skorygowano jedynie atrapy, bez omijania bramki hosta lub łagodzenia asercji.
 
 ## 2026-11-20 — Pierwszy przyrost panelu AI (Doradca)
 

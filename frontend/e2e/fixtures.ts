@@ -285,6 +285,26 @@ export async function fixtures(
           "image/png",
         ],
       };
+    else if (url.pathname === "/api/advisor/settings")
+      body = {
+        provider: "openai",
+        model: null,
+        server_model: "test-model",
+        active_model:
+          url.searchParams.get("purpose") === "receipt"
+            ? "test-receipt-model"
+            : "test-model",
+        credential_source: "server",
+        custom_key_available: false,
+        server_models: ["test-model"],
+        instructions: null,
+        operational: true,
+      };
+    else if (
+      url.pathname === "/api/advisor/settings/prompts" ||
+      url.pathname === "/api/advisor/settings/usage"
+    )
+      body = [];
     else if (url.pathname === "/api/advisor/conversations")
       body = [
         {
