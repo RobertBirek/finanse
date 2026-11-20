@@ -76,7 +76,14 @@ INVALID_FIELDS = [
 
 @pytest.fixture
 def provider(monkeypatch):
-    client = SimpleNamespace(
+    class Client(SimpleNamespace):
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_exc):
+            await self.close()
+
+    client = Client(
         responses=SimpleNamespace(create=AsyncMock()),
         close=AsyncMock(),
     )

@@ -64,6 +64,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    connection = op.get_bind()
+    for table in ("advisor_ai_usage", "advisor_prompt_versions", "advisor_ai_profiles"):
+        op.execute(f'LOCK TABLE "{table}" IN ACCESS EXCLUSIVE MODE')
+        if connection.scalar(sa.text(f'SELECT EXISTS(SELECT 1 FROM "{table}")')):
+            raise RuntimeError("OpenAI settings and usage must be retained")
     op.drop_table("advisor_ai_usage")
     op.drop_table("advisor_prompt_versions")
     op.drop_table("advisor_ai_profiles")

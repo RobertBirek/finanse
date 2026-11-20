@@ -51,9 +51,15 @@ async def test_image_category_context_is_bounded_and_uses_one_call(monkeypatch, 
 async def test_text_category_context_uses_same_strict_payload_without_extra_call(monkeypatch):
     from app.documents import extractor
 
-    client = SimpleNamespace(
-        responses=SimpleNamespace(create=AsyncMock(return_value=object())),
-        close=AsyncMock(),
+    class Client(SimpleNamespace):
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_exc):
+            await self.close()
+
+    client = Client(
+        responses=SimpleNamespace(create=AsyncMock(return_value=object())), close=AsyncMock()
     )
     monkeypatch.setattr(extractor, "_get_client", lambda: client)
     monkeypatch.setattr(extractor.settings, "DOCUMENT_TEXT_MODEL", "test-model")

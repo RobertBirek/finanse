@@ -11,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.documents.models import Document
-from app.documents.receipt_read_config import ReceiptReadConfig, get_receipt_read_config
+from app.documents.receipt_read_config import (
+    ReceiptReadConfig,
+    get_receipt_read_config,
+    owner_receipt_config,
+)
 from app.documents.receipt_read_jobs import (
     admit_receipt_read,
     lock_receipt_read_stream,
@@ -108,6 +112,8 @@ async def get_receipt_read_context(
     ctx = await load_receipt_context(db, owner, bill_id)
     policy = await get_receipt_read_policy(db)
     config = get_receipt_read_config(settings)
+    if config is not None:
+        config = await owner_receipt_config(db, owner, config)
     enabled = receipt_read_allowed(policy, config) and receipt_blocked_reason(ctx.bill) is None
     q = (
         select(Document)
@@ -181,8 +187,15 @@ async def _export_preview(
     # Authorize ownership before feature gating, including foreign IDs while disabled.
     document = await owned_receipt_read_document(db, owner, data.document_id, lock=lock)
     if config is not None:
+        config = await owner_receipt_config(db, owner, config, linearize=lock)
+    if config is not None:
         stream, prior = await lock_receipt_read_stream(
-            db, owner, bill_id, document.sha256_hash, config.configuration_fingerprint, lock=lock
+            db,
+            owner,
+            bill_id,
+            document.sha256_hash,
+            config.policy_fingerprint or config.configuration_fingerprint,
+            lock=lock,
         )
     else:
         stream, prior = None, None

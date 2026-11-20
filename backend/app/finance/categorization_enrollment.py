@@ -15,7 +15,7 @@ from app.finance.rule_models import (
     TransactionCategorizationSettings as Rules,
 )
 from app.finance.rule_policy import normalize_rule_description
-from app.finance.suggestion_config import get_suggestion_config
+from app.finance.suggestion_config import get_suggestion_config, owner_suggestion_config
 from app.finance.suggestion_models import (
     CategorizationLlmPolicy as Server,
 )
@@ -67,12 +67,18 @@ async def observe_creation_policy(
         )
     ).all()
     policy, _, consent, server = rows[0]
-    config = get_suggestion_config(settings)
+    baseline = get_suggestion_config(settings)
+    config = (
+        await owner_suggestion_config(db, owner, baseline)
+        if consent and consent.enabled
+        else baseline
+    )
     current = bool(
-        config
+        baseline
+        and config
         and server
         and server.enabled
-        and server.configuration_fingerprint == config.fingerprint
+        and server.configuration_fingerprint == baseline.fingerprint
         and consent
         and consent.enabled
         and consent.accepted_server_epoch == server.epoch

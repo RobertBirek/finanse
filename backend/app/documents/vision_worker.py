@@ -3,10 +3,12 @@
 import asyncio
 import hashlib
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from sqlalchemy import select
 
+from app.advisor.ai_settings import CredentialUnavailable, ModelUnavailable
 from app.config import settings
 from app.database import async_session_factory
 from app.documents.category_catalog import load_document_category_catalog
@@ -15,7 +17,9 @@ from app.documents.job_service import (
     JobOutcome,
     claim_processing_job,
     finish_processing_job,
+    lock_vision_admission,
     reserve_vision_call,
+    vision_runtime,
 )
 from app.documents.models import Document
 from app.documents.service import UPLOAD_DIR, read_verified_document_content
@@ -69,11 +73,28 @@ async def process_document_job(ctx: dict[str, object], job_id: str) -> None:
         return
     # The durable quota reservation is the last short transaction before HTTP.
     async with async_session_factory() as db:
+        await lock_vision_admission(db)
+        try:
+            runtime = await vision_runtime(db, claim.user_id, config)
+        except (CredentialUnavailable, ModelUnavailable):
+            await finish_processing_job(
+                db, claim, JobOutcome(error_code="configuration_missing"), now=datetime.now(UTC)
+            )
+            await db.commit()
+            return
         if not await reserve_vision_call(db, claim, now=datetime.now(UTC), config=config):
             await db.commit()
             return
         catalog = await load_document_category_catalog(db, claim.user_id, claim.document_id)
         await db.commit()
+    personal = runtime.fingerprint(config.configuration_fingerprint)
+    config = replace(
+        config,
+        model=runtime.credentials.model,
+        api_key=runtime.credentials.api_key,
+        custom_instructions=runtime.instructions,
+        usage_owner=claim.user_id,
+    )
     try:
         extraction = await extract_image_review(
             derivative, config=config, category_catalog=catalog.public or None
@@ -89,9 +110,14 @@ async def process_document_job(ctx: dict[str, object], job_id: str) -> None:
             model=config.model,
             prompt_version=config.prompt_version,
             schema_version=config.schema_version,
+            personal_configuration=personal,
         )
     except VisionProviderError as error:
-        outcome = JobOutcome(error_code=error.code, retryable=error.retryable)
+        outcome = JobOutcome(
+            error_code=error.code,
+            retryable=error.retryable,
+            personal_configuration=personal,
+        )
     async with async_session_factory() as db:
         await finish_processing_job(db, claim, outcome, now=datetime.now(UTC))
         await db.commit()

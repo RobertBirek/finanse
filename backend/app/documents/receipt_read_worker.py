@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import math
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,12 +11,13 @@ from typing import Protocol, cast
 
 from sqlalchemy import or_, select
 
+from app.advisor.ai_provider import elapsed_ms, record_usage
 from app.config import settings
 from app.database import async_session_factory
 from app.documents.images import ImageNormalizationError, normalize_image
 from app.documents.models import Document
 from app.documents.receipt_read_client import extract_receipt_items
-from app.documents.receipt_read_config import get_receipt_read_config
+from app.documents.receipt_read_config import get_receipt_read_config, owner_receipt_config
 from app.documents.receipt_read_jobs import (
     ReceiptReadPrepared,
     claim_receipt_read,
@@ -36,10 +38,14 @@ class ReadQueue(Protocol):
 async def process_receipt_read(ctx: dict[str, object], job_id: str) -> None:
     del ctx
     config = get_receipt_read_config(settings)
+    parsed = uuid.UUID(job_id)
     async with async_session_factory() as db:
         await reconcile_receipt_read_policy(db, config)
+        locator = await db.get(ReceiptReadJob, parsed)
+        if config and locator:
+            config = await owner_receipt_config(db, locator.user_id, config, linearize=True)
         claim = (
-            await claim_receipt_read(db, uuid.UUID(job_id), now=datetime.now(UTC), config=config)
+            await claim_receipt_read(db, parsed, now=datetime.now(UTC), config=config)
             if config
             else None
         )
@@ -76,6 +82,8 @@ async def process_receipt_read(ctx: dict[str, object], job_id: str) -> None:
     async with async_session_factory() as db:
         current = get_receipt_read_config(settings)
         await reconcile_receipt_read_policy(db, current)
+        if current:
+            current = await owner_receipt_config(db, claim.user_id, current, linearize=True)
         reserved = (
             await reserve_receipt_read_dispatch(
                 db, claim, prepared, now=datetime.now(UTC), config=current
@@ -84,13 +92,26 @@ async def process_receipt_read(ctx: dict[str, object], job_id: str) -> None:
             else False
         )
         await db.commit()
-    if not reserved:
+    if not reserved or current is None:
         return
-    outcome = await extract_receipt_items(prepared.jpeg, config=config)
+    start = time.monotonic()
+    outcome = await extract_receipt_items(prepared.jpeg, config=current)
+    await record_usage(
+        claim.user_id,
+        current.model,
+        "operation",
+        "provider_error" if outcome.error_code else "ok",
+        elapsed_ms(start),
+        None,
+        purpose="receipt",
+        input_tokens=outcome.input_tokens,
+        output_tokens=outcome.output_tokens,
+    )
     async with async_session_factory() as db:
         current = get_receipt_read_config(settings)
         await reconcile_receipt_read_policy(db, current)
         if current:
+            current = await owner_receipt_config(db, claim.user_id, current, linearize=True)
             await finish_receipt_read(
                 db, claim, outcome, prepared, now=datetime.now(UTC), config=current
             )

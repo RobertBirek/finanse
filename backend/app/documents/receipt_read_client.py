@@ -9,6 +9,7 @@ from openai import APIError, APIStatusError, AsyncOpenAI
 from openai.types.responses.response_create_params import ResponseCreateParamsNonStreaming
 from pydantic import ValidationError
 
+from app.advisor.ai_settings import compose_prompt
 from app.documents.receipt_read_config import ReceiptReadConfig
 from app.documents.receipt_read_payload import ReceiptReadPayload, validate_receipt_read_intake
 from app.openai_client import (
@@ -67,7 +68,8 @@ async def extract_receipt_items(
     jpeg: bytes, *, config: ReceiptReadConfig
 ) -> ReceiptReadProviderOutcome:
     if (
-        config.provider != "openai"
+        config.personal_unavailable
+        or config.provider != "openai"
         or not _is_openai_base_url(config.base_url)
         or not config.api_key
     ):
@@ -87,7 +89,10 @@ async def extract_receipt_items(
             {
                 "model": config.model,
                 "input": [
-                    {"role": "developer", "content": _PROMPT},
+                    {
+                        "role": "developer",
+                        "content": compose_prompt(_PROMPT, config.custom_instructions),
+                    },
                     {
                         "role": "user",
                         "content": [

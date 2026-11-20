@@ -1,5 +1,6 @@
 from collections.abc import Callable, Coroutine
 from typing import Annotated, Any, Literal
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -8,6 +9,7 @@ from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.advisor.ai_provider import ProbeResult, probe
+from app.advisor.ai_purpose import purpose_baseline, purpose_view, read_purpose
 from app.advisor.ai_settings import (
     CredentialChange,
     CredentialUnavailable,
@@ -15,6 +17,7 @@ from app.advisor.ai_settings import (
     ModelUnavailable,
     PromptChange,
     PromptVersion,
+    Purpose,
     SettingsView,
     UsageSummary,
     encrypt_credential,
@@ -56,79 +59,112 @@ DB = Annotated[AsyncSession, Depends(get_db)]
 ProbeRate = Annotated[None, Depends(limit_advisor(get_current_user))]
 
 
+async def _view(user_id: UUID, db: AsyncSession, purpose: Purpose) -> SettingsView:
+    if purpose == "advisor":
+        return await settings_view(db, user_id)
+    return await purpose_view(db, user_id, purpose)
+
+
+def _server_models(purpose: Purpose) -> list[str]:
+    if purpose == "advisor":
+        return server_models()
+    model = purpose_baseline(purpose).credentials.model
+    return [model] if model else []
+
+
 @router.get("")
-async def view(user: Owner, db: DB) -> SettingsView:
-    return await settings_view(db, user.id)
+async def view(user: Owner, db: DB, purpose: Purpose = "advisor") -> SettingsView:
+    return await _view(user.id, db, purpose)
 
 
 @router.put("/model")
-async def update_model(body: ModelChange, user: Owner, db: DB) -> SettingsView:
-    profile = await lock_profile(db, user.id)
+async def update_model(
+    body: ModelChange, user: Owner, db: DB, purpose: Purpose = "advisor"
+) -> SettingsView:
+    profile = await lock_profile(db, user.id, purpose=purpose)
     if (
         body.model is not None
         and profile.encrypted_key is None
-        and body.model not in server_models()
+        and body.model not in _server_models(purpose)
     ):
         raise HTTPException(422, "Wybierz model serwera lub dodaj własny klucz OpenAI.")
-    profile.model = body.model
-    await log_event(db, user.id, "advisor_ai_settings", str(user.id), "model_changed")
-    return await settings_view(db, user.id)
+    if profile.model != body.model:
+        profile.model, profile.configuration_id = body.model, uuid4()
+        await log_event(db, user.id, "advisor_ai_settings", str(profile.id), "model_changed")
+    return await _view(user.id, db, purpose)
 
 
 @router.put("/credential")
-async def replace_credential(body: CredentialChange, user: Owner, db: DB) -> SettingsView:
+async def replace_credential(
+    body: CredentialChange, user: Owner, db: DB, purpose: Purpose = "advisor"
+) -> SettingsView:
     try:
         encrypted = encrypt_credential(
             settings.ADVISOR_CREDENTIAL_ENCRYPTION_KEY.get_secret_value(),
             user.id,
             body.api_key.get_secret_value(),
+            purpose=purpose,
         )
     except CredentialUnavailable:
         raise HTTPException(503, "Własny klucz nie jest dostępny w tej instalacji.") from None
-    profile = await lock_profile(db, user.id)
-    profile.encrypted_key = encrypted
-    await log_event(db, user.id, "advisor_ai_settings", str(user.id), "credential_replaced")
-    return await settings_view(db, user.id)
+    profile = await lock_profile(db, user.id, purpose=purpose)
+    profile.encrypted_key, profile.configuration_id = encrypted, uuid4()
+    await log_event(db, user.id, "advisor_ai_settings", str(profile.id), "credential_replaced")
+    return await _view(user.id, db, purpose)
 
 
 @router.delete("/credential")
-async def remove_credential(user: Owner, db: DB) -> SettingsView:
-    profile = await lock_profile(db, user.id)
-    profile.encrypted_key = None
-    if profile.model is not None and profile.model not in server_models():
-        profile.model = None
-    await log_event(db, user.id, "advisor_ai_settings", str(user.id), "credential_removed")
-    return await settings_view(db, user.id)
+async def remove_credential(user: Owner, db: DB, purpose: Purpose = "advisor") -> SettingsView:
+    profile = await lock_profile(db, user.id, purpose=purpose)
+    if profile.encrypted_key is not None:
+        profile.encrypted_key, profile.configuration_id = None, uuid4()
+        if profile.model is not None and profile.model not in _server_models(purpose):
+            profile.model = None
+        await log_event(db, user.id, "advisor_ai_settings", str(profile.id), "credential_removed")
+    return await _view(user.id, db, purpose)
 
 
 @router.get("/prompts")
-async def versions(user: Owner, db: DB) -> list[PromptVersion]:
-    return [PromptVersion.model_validate(row) for row in await prompt_history(db, user.id)]
+async def versions(user: Owner, db: DB, purpose: Purpose = "advisor") -> list[PromptVersion]:
+    return [
+        PromptVersion.model_validate(row)
+        for row in await prompt_history(db, user.id, purpose=purpose)
+    ]
 
 
 @router.post("/prompts", status_code=201)
-async def save_prompt(body: PromptChange, user: Owner, db: DB) -> PromptVersion:
-    await lock_profile(db, user.id)
-    row = AdvisorPromptVersion(user_id=user.id, instructions=body.instructions)
+async def save_prompt(
+    body: PromptChange, user: Owner, db: DB, purpose: Purpose = "advisor"
+) -> PromptVersion:
+    profile = await lock_profile(db, user.id, purpose=purpose)
+    profile.configuration_id = uuid4()
+    row = AdvisorPromptVersion(user_id=user.id, instructions=body.instructions, purpose=purpose)
     db.add(row)
-    await log_event(db, user.id, "advisor_ai_settings", str(user.id), "prompt_changed")
+    await log_event(db, user.id, "advisor_ai_settings", str(profile.id), "prompt_changed")
     return PromptVersion.model_validate(row)
 
 
 @router.post("/test")
-async def test_connection(user: Owner, db: DB, _limit: ProbeRate) -> ProbeResult:
-    profile = await get_profile(db, user.id)
+async def test_connection(
+    user: Owner, db: DB, _limit: ProbeRate, purpose: Purpose = "advisor"
+) -> ProbeResult:
     try:
-        credentials = resolve_credentials(settings, user.id, profile)
+        if purpose == "advisor":
+            profile = await get_profile(db, user.id)
+            credentials = resolve_credentials(settings, user.id, profile)
+        else:
+            credentials = (await read_purpose(db, user.id, purpose)).credentials
     except CredentialUnavailable:
         raise HTTPException(503, "Nie można odczytać własnego klucza OpenAI.") from None
     except ModelUnavailable:
         raise HTTPException(422, "Wybierz model dostępny z kluczem serwera.") from None
-    return await probe(user.id, credentials)
+    return await probe(user.id, credentials, purpose=purpose)
 
 
 @router.get("/usage")
-async def get_usage(user: Owner, db: DB, days: Annotated[int, Query()] = 30) -> list[UsageSummary]:
+async def get_usage(
+    user: Owner, db: DB, days: Annotated[int, Query()] = 30, purpose: Purpose = "advisor"
+) -> list[UsageSummary]:
     window: Literal[7, 30, 90]
     if days == 7:
         window = 7
@@ -138,4 +174,4 @@ async def get_usage(user: Owner, db: DB, days: Annotated[int, Query()] = 30) -> 
         window = 90
     else:
         raise HTTPException(422, "Wybierz okres 7, 30 lub 90 dni.")
-    return await usage_summary(db, user.id, window)
+    return await usage_summary(db, user.id, window, purpose=purpose)

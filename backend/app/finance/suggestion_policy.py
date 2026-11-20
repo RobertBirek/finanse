@@ -11,7 +11,12 @@ from app.config import settings
 from app.finance.categorization_context import CategorizationError, digest
 from app.finance.models import FinanceCommandReceipt
 from app.finance.rule_policy import category_path, get_settings, policy_locks
-from app.finance.suggestion_config import PRIVACY_TEXT, SuggestionConfig, get_suggestion_config
+from app.finance.suggestion_config import (
+    PRIVACY_TEXT,
+    SuggestionConfig,
+    get_suggestion_config,
+    owner_suggestion_config,
+)
 from app.finance.suggestion_models import CategorizationLlmPolicy as Policy
 from app.finance.suggestion_models import CategorizationSuggestionSettings as Consent
 from app.finance.suggestion_schemas import SuggestionSettingsChange, SuggestionSettingsResponse
@@ -36,12 +41,14 @@ async def suggestion_policy_snapshot(
 ) -> SuggestionSettingsResponse:
     row = await current_consent(db, owner)
     server = await current_policy(db)
-    config = get_suggestion_config(settings)
+    baseline = get_suggestion_config(settings)
+    config = await owner_suggestion_config(db, owner, baseline)
     available = bool(
-        config
+        baseline
+        and config
         and server
         and server.enabled
-        and server.configuration_fingerprint == config.fingerprint
+        and server.configuration_fingerprint == baseline.fingerprint
     )
     marker = await get_settings(db, owner)
     marker_valid = False

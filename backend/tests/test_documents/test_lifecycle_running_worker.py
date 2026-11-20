@@ -33,7 +33,7 @@ async def test_archive_rejects_while_running_worker_holds_document_lock(
         started.set()
         await release.wait()
 
-    async def fake_extract(_text):
+    async def fake_extract(_text, **_options):
         started.set()
         await release.wait()
         return ReviewSuggestion.model_validate(

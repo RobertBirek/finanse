@@ -11,6 +11,8 @@ from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.advisor.ai_purpose import PurposeBaseline, PurposeRuntime, read_purpose
+from app.advisor.ai_settings import AdvisorCredentials, CredentialUnavailable, ModelUnavailable
 from app.config import settings
 from app.documents.category_catalog import CategoryCatalog, resolve_category
 from app.documents.job_models import (
@@ -22,6 +24,7 @@ from app.documents.lifecycle import require_document_processing_allowed
 from app.documents.models import Document, DocumentExtractionRevision
 from app.documents.review_schemas import ReviewSuggestion
 from app.documents.vision_config import VisionConfig, get_vision_config
+from app.openai_client import _is_openai_base_url
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,22 @@ class JobOutcome:
     error_code: str | None = None
     retryable: bool = False
     completed: bool = False
+    personal_configuration: str | None = None
+
+
+async def vision_runtime(
+    db: AsyncSession, user_id: uuid.UUID, config: VisionConfig
+) -> PurposeRuntime:
+    return await read_purpose(
+        db,
+        user_id,
+        "vision",
+        linearize=True,
+        baseline=PurposeBaseline(
+            AdvisorCredentials(config.model, config.api_key),
+            config.provider.strip().lower() == "openai" and _is_openai_base_url(config.base_url),
+        ),
+    )
 
 
 def _terminalize_vision_document(document: Document) -> None:
@@ -60,6 +79,10 @@ def _terminalize_vision_document(document: Document) -> None:
 
 async def _admission_lock(db: AsyncSession) -> None:
     await db.execute(text("SELECT pg_advisory_xact_lock(hashtext('document-vision-admission'))"))
+
+
+async def lock_vision_admission(db: AsyncSession) -> None:
+    await _admission_lock(db)
 
 
 async def _locked_policy(db: AsyncSession) -> DocumentVisionPolicy | None:
@@ -442,6 +465,22 @@ async def finish_processing_job(
                 revision.status, revision.error_code = "incomplete", "configuration_missing"
             _terminalize_vision_document(document)
             return False
+        if outcome.personal_configuration is not None:
+            try:
+                runtime = await vision_runtime(db, claim.user_id, current_config)
+                unchanged = (
+                    runtime.fingerprint(current_config.configuration_fingerprint)
+                    == outcome.personal_configuration
+                )
+            except (CredentialUnavailable, ModelUnavailable):
+                unchanged = False
+            if not unchanged:
+                job.state, job.error_code = "paused", "vision_configuration_changed"
+                job.lease_token = job.lease_expires_at = None
+                if revision is not None:
+                    revision.status, revision.error_code = "incomplete", job.error_code
+                _terminalize_vision_document(document)
+                return False
         if (
             not settings.DOCUMENT_VISION_ENABLED
             or policy is None

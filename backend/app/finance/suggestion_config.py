@@ -1,7 +1,12 @@
 """Immutable finance-only policy scope, with no credential-bearing repr or hash."""
 
-from dataclasses import dataclass, field
+import uuid
+from dataclasses import dataclass, field, replace
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.advisor.ai_purpose import PurposeBaseline, read_purpose
+from app.advisor.ai_settings import AdvisorCredentials, CredentialUnavailable, ModelUnavailable
 from app.config import Settings
 from app.finance.categorization_context import digest
 from app.finance.suggestion_schemas import SuggestionPayload
@@ -31,10 +36,18 @@ class SuggestionConfig:
     max_job_age_hours: int
     review_page_size: int
     timeout_seconds: float
+    owner_fingerprint: str | None = None
+    custom_instructions: str | None = field(default=None, repr=False)
 
     @property
     def fingerprint(self) -> str:
-        scope = {k: v for k, v in vars(self).items() if k != "api_key"}
+        if self.owner_fingerprint is not None:
+            return self.owner_fingerprint
+        scope = {
+            k: v
+            for k, v in vars(self).items()
+            if k not in {"api_key", "owner_fingerprint", "custom_instructions"}
+        }
         return digest(
             {
                 **scope,
@@ -46,6 +59,34 @@ class SuggestionConfig:
                 "privacy_text": PRIVACY_TEXT,
             }
         )
+
+
+async def owner_suggestion_config(
+    db: AsyncSession,
+    owner: uuid.UUID,
+    baseline: SuggestionConfig | None,
+    *,
+    linearize: bool = False,
+) -> SuggestionConfig | None:
+    if baseline is None:
+        return None
+    try:
+        runtime = await read_purpose(
+            db,
+            owner,
+            "categorization",
+            linearize=linearize,
+            baseline=PurposeBaseline(AdvisorCredentials(baseline.model, baseline.api_key), True),
+        )
+    except (CredentialUnavailable, ModelUnavailable):
+        return None
+    return replace(
+        baseline,
+        model=runtime.credentials.model,
+        api_key=runtime.credentials.api_key,
+        owner_fingerprint=runtime.fingerprint(baseline.fingerprint),
+        custom_instructions=runtime.instructions,
+    )
 
 
 def get_suggestion_config(settings: Settings) -> SuggestionConfig | None:

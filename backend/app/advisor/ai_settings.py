@@ -19,7 +19,8 @@ from app.config import settings
 
 ModelName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")]
 UsageDays = Literal[7, 30, 90]
-CallKind = Literal["chat", "test"]
+CallKind = Literal["chat", "test", "operation"]
+Purpose = Literal["advisor", "document_text", "vision", "receipt", "categorization"]
 
 
 class CredentialUnavailable(ValueError):
@@ -40,18 +41,31 @@ def _cipher(encoded: str) -> AESGCM:
         raise CredentialUnavailable("Klucz szyfrowania nie jest skonfigurowany.") from None
 
 
-def _aad(owner: uuid.UUID) -> bytes:
-    return b"personal-advisor:openai:key:v1:" + owner.bytes
+def _aad(owner: uuid.UUID, purpose: Purpose) -> bytes:
+    prefix = b"personal-advisor:openai:key:v1:"
+    return (
+        prefix + owner.bytes
+        if purpose == "advisor"
+        else prefix + owner.bytes + b":" + purpose.encode()
+    )
 
 
-def encrypt_credential(encoded: str, owner: uuid.UUID, key: str) -> bytes:
+def encrypt_credential(
+    encoded: str, owner: uuid.UUID, key: str, *, purpose: Purpose = "advisor"
+) -> bytes:
     nonce = os.urandom(12)
-    return nonce + _cipher(encoded).encrypt(nonce, key.encode(), _aad(owner))
+    return nonce + _cipher(encoded).encrypt(nonce, key.encode(), _aad(owner, purpose))
 
 
-def decrypt_credential(encoded: str, owner: uuid.UUID, ciphertext: bytes) -> str:
+def decrypt_credential(
+    encoded: str, owner: uuid.UUID, ciphertext: bytes, *, purpose: Purpose = "advisor"
+) -> str:
     try:
-        return _cipher(encoded).decrypt(ciphertext[:12], ciphertext[12:], _aad(owner)).decode()
+        return (
+            _cipher(encoded)
+            .decrypt(ciphertext[:12], ciphertext[12:], _aad(owner, purpose))
+            .decode()
+        )
     except (InvalidTag, ValueError):
         raise CredentialUnavailable("Nie można odczytać własnego klucza OpenAI.") from None
 
@@ -160,6 +174,7 @@ class SettingsView(BaseModel):
     custom_key_available: bool
     server_models: list[str]
     instructions: str | None
+    operational: bool = True
 
 
 class UsageSummary(BaseModel):
@@ -173,29 +188,51 @@ class UsageSummary(BaseModel):
     reports_with_tokens: int
 
 
-async def get_profile(db: AsyncSession, owner: uuid.UUID) -> AdvisorAIProfile | None:
-    return await db.scalar(select(AdvisorAIProfile).where(AdvisorAIProfile.user_id == owner))
+async def get_profile(
+    db: AsyncSession, owner: uuid.UUID, *, purpose: Purpose = "advisor"
+) -> AdvisorAIProfile | None:
+    return await db.scalar(
+        select(AdvisorAIProfile)
+        .where(AdvisorAIProfile.user_id == owner, AdvisorAIProfile.purpose == purpose)
+        .execution_options(populate_existing=True)
+    )
 
 
-async def lock_profile(db: AsyncSession, owner: uuid.UUID) -> AdvisorAIProfile:
+async def lock_profile(
+    db: AsyncSession, owner: uuid.UUID, *, purpose: Purpose = "advisor"
+) -> AdvisorAIProfile:
+    await lock_purpose(db, owner, purpose)
     await db.execute(
         insert(AdvisorAIProfile)
-        .values(user_id=owner)
-        .on_conflict_do_nothing(index_elements=["user_id"])
+        .values(user_id=owner, purpose=purpose)
+        .on_conflict_do_nothing(index_elements=["user_id", "purpose"])
     )
     return (
         await db.execute(
-            select(AdvisorAIProfile).where(AdvisorAIProfile.user_id == owner).with_for_update()
+            select(AdvisorAIProfile)
+            .where(AdvisorAIProfile.user_id == owner, AdvisorAIProfile.purpose == purpose)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
     ).scalar_one()
 
 
+async def lock_purpose(db: AsyncSession, owner: uuid.UUID, purpose: Purpose) -> None:
+    await db.execute(
+        select(
+            func.pg_advisory_xact_lock(
+                func.hashtextextended(f"openai-settings:{owner}:{purpose}", 0)
+            )
+        )
+    )
+
+
 async def prompt_history(
-    db: AsyncSession, owner: uuid.UUID, *, limit: int = 30
+    db: AsyncSession, owner: uuid.UUID, *, limit: int = 30, purpose: Purpose = "advisor"
 ) -> list[AdvisorPromptVersion]:
     query = (
         select(AdvisorPromptVersion)
-        .where(AdvisorPromptVersion.user_id == owner)
+        .where(AdvisorPromptVersion.user_id == owner, AdvisorPromptVersion.purpose == purpose)
         .order_by(AdvisorPromptVersion.revision.desc())
         .limit(limit)
     )
@@ -236,7 +273,9 @@ def server_models() -> list[str]:
     )
 
 
-async def usage_summary(db: AsyncSession, owner: uuid.UUID, days: UsageDays) -> list[UsageSummary]:
+async def usage_summary(
+    db: AsyncSession, owner: uuid.UUID, days: UsageDays, *, purpose: Purpose = "advisor"
+) -> list[UsageSummary]:
     event = AdvisorAIUsage
     rows = await db.execute(
         select(
@@ -251,7 +290,11 @@ async def usage_summary(db: AsyncSession, owner: uuid.UUID, days: UsageDays) -> 
                 case((event.input_tokens.is_not(None) & event.output_tokens.is_not(None), 1))
             ),
         )
-        .where(event.user_id == owner, event.created_at >= datetime.now(UTC) - timedelta(days=days))
+        .where(
+            event.user_id == owner,
+            event.purpose == purpose,
+            event.created_at >= datetime.now(UTC) - timedelta(days=days),
+        )
         .group_by(event.kind, event.model)
         .order_by(event.kind, func.count().desc(), event.model)
     )

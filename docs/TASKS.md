@@ -9,7 +9,7 @@ Backlog zadań ze statusami.
   pomiary oraz poprawki czatu i egzekwowania potwierdzeń.
 - [ ] Potwierdzić migrację i regresje integracyjne z użyciem izolowanego
   PostgreSQL przed publikacją. Bez konfiguracji i wdrożenia produkcyjnego.
-- [ ] Rozszerzyć konfigurację, instrukcje i statystyki na pozostałe wywołania
+- [x] Rozszerzyć konfigurację, instrukcje i statystyki na pozostałe wywołania
   aplikacji, zachowując reguły domen, rezerwacje i epoki zadań.
 
 ## Uzgodnienie `main` i kolejny etap AI — 2026-11-20

@@ -102,7 +102,7 @@ export function useSendMessage() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: ["advisor", "settings", "usage"],
+        queryKey: ["advisor", "settings", "advisor", "usage"],
       });
     },
   });

@@ -2,6 +2,20 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-20 — Drugi przyrost panelu OpenAI
+
+- Pięć odrębnych celów: Doradca, tekst, vision, pozycje paragonów i kategoryzacja.
+  Konfiguracja zachowuje wersję per właściciel/cel; zmiany nie dają uprawnień
+  i nie są przyjmowane jako aktualna konfiguracja dla wcześniej zatwierdzonej
+  pracy. Dotychczasowy hash globalnej polityki nie zmienia się bez zmian
+  ustawień serwera.
+- Użytkownik zatwierdził publikację jako draft PR i testy CI na izolowanej
+  bazie. Bez zgody na merge, produkcyjną migrację lub wdrożenie.
+- Kontrole lokalne: 541 testów backendu bez PostgreSQL, kolekcja offline,
+  733 Vitest, build, lint, kontrola typów. Migracje sprawdzone jako SQL.
+  Po review downgrade jawnie odmawia, gdy są dane nowych funkcji lub
+  zapisane generacje/metryki, których starszy schemat nie umie przechować.
+
 ## 2026-11-20 — Pierwszy przyrost panelu AI (Doradca)
 
 - `feat/openai-settings` bazuje na uzgodnionym `b9a09bf`. Kontrole lokalne

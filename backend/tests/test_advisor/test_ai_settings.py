@@ -177,6 +177,15 @@ async def test_profile_and_statistics_are_isolated_between_two_owners(db_session
         assert "synthetic-own-key" not in result.text
         result = await client.put("/settings/model", json={"model": "personal-model"})
         assert result.status_code == 200
+        result = await client.put(
+            "/settings/credential?purpose=document_text", json={"api_key": "synthetic-text-key"}
+        )
+        assert result.status_code == 200
+        result = await client.put(
+            "/settings/model?purpose=document_text", json={"model": "separate-model"}
+        )
+        assert result.json()["active_model"] == "separate-model"
+        assert (await client.get("/settings")).json()["active_model"] == "personal-model"
         for text in ("Wersja 1", "Wersja 2"):
             result = await client.post("/settings/prompts", json={"instructions": text})
             assert result.status_code == 201
@@ -217,7 +226,9 @@ async def test_profile_and_statistics_are_isolated_between_two_owners(db_session
             }
         ]
         profile = await db_session.scalar(
-            select(AdvisorAIProfile).where(AdvisorAIProfile.user_id == a.id)
+            select(AdvisorAIProfile).where(
+                AdvisorAIProfile.user_id == a.id, AdvisorAIProfile.purpose == "advisor"
+            )
         )
         assert b"synthetic-own-key" not in profile.encrypted_key
 

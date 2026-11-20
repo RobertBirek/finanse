@@ -45,7 +45,8 @@ def receipt_read_allowed(
         settings.DOCUMENT_RECEIPT_ITEMS_ENABLED
         and policy.enabled
         and config
-        and policy.fingerprint == config.configuration_fingerprint
+        and not config.personal_unavailable
+        and policy.fingerprint == (config.policy_fingerprint or config.configuration_fingerprint)
     )
 
 

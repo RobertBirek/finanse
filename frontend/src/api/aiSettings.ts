@@ -3,6 +3,12 @@ import api from "../lib/api";
 
 export const aiSettingsPath = "/advisor/settings";
 export const aiSettingsKey = ["advisor", "settings"] as const;
+export type AIPurpose =
+  "advisor" | "document_text" | "vision" | "receipt" | "categorization";
+
+export function purposeParams(purpose: AIPurpose) {
+  return { params: { purpose } };
+}
 
 export interface AISettingsView {
   provider: "openai";
@@ -13,6 +19,7 @@ export interface AISettingsView {
   custom_key_available: boolean;
   server_models: string[];
   instructions: string | null;
+  operational?: boolean;
 }
 
 export interface PromptVersion {
@@ -22,7 +29,7 @@ export interface PromptVersion {
 }
 
 export interface AIUsage {
-  kind: "chat" | "test";
+  kind: "chat" | "test" | "operation";
   model: string;
   requests: number;
   errors: number;
@@ -40,28 +47,35 @@ export interface ProbeResult {
   duration_ms: number;
 }
 
-export function useAISettings() {
+export function useAISettings(purpose: AIPurpose = "advisor") {
   return useQuery({
-    queryKey: aiSettingsKey,
-    queryFn: async () => (await api.get<AISettingsView>(aiSettingsPath)).data,
-  });
-}
-
-export function useAIPrompts() {
-  return useQuery({
-    queryKey: [...aiSettingsKey, "prompts"],
+    queryKey: [...aiSettingsKey, purpose],
     queryFn: async () =>
-      (await api.get<PromptVersion[]>(`${aiSettingsPath}/prompts`)).data,
+      (await api.get<AISettingsView>(aiSettingsPath, purposeParams(purpose)))
+        .data,
   });
 }
 
-export function useAIUsage(days: UsageDays) {
+export function useAIPrompts(purpose: AIPurpose) {
   return useQuery({
-    queryKey: [...aiSettingsKey, "usage", days],
+    queryKey: [...aiSettingsKey, purpose, "prompts"],
+    queryFn: async () =>
+      (
+        await api.get<PromptVersion[]>(
+          `${aiSettingsPath}/prompts`,
+          purposeParams(purpose),
+        )
+      ).data,
+  });
+}
+
+export function useAIUsage(days: UsageDays, purpose: AIPurpose) {
+  return useQuery({
+    queryKey: [...aiSettingsKey, purpose, "usage", days],
     queryFn: async () =>
       (
         await api.get<AIUsage[]>(`${aiSettingsPath}/usage`, {
-          params: { days },
+          params: { days, purpose },
         })
       ).data,
   });
@@ -72,31 +86,50 @@ type SettingChange =
   | { kind: "prompt"; value: string | null }
   | { kind: "removeCredential" };
 
-export function useAISettingChange() {
+export function useAISettingChange(purpose: AIPurpose) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (change: SettingChange) => {
       if (change.kind === "model") {
-        await api.put(`${aiSettingsPath}/model`, { model: change.value });
+        await api.put(
+          `${aiSettingsPath}/model`,
+          { model: change.value },
+          purposeParams(purpose),
+        );
       } else if (change.kind === "prompt") {
-        await api.post(`${aiSettingsPath}/prompts`, {
-          instructions: change.value,
-        });
+        await api.post(
+          `${aiSettingsPath}/prompts`,
+          {
+            instructions: change.value,
+          },
+          purposeParams(purpose),
+        );
       } else {
-        await api.delete(`${aiSettingsPath}/credential`);
+        await api.delete(
+          `${aiSettingsPath}/credential`,
+          purposeParams(purpose),
+        );
       }
     },
     onSuccess: async () =>
-      client.invalidateQueries({ queryKey: aiSettingsKey }),
+      client.invalidateQueries({ queryKey: [...aiSettingsKey, purpose] }),
   });
 }
 
-export function useProbeAI() {
+export function useProbeAI(purpose: AIPurpose) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async () =>
-      (await api.post<ProbeResult>(`${aiSettingsPath}/test`)).data,
+      (
+        await api.post<ProbeResult>(
+          `${aiSettingsPath}/test`,
+          undefined,
+          purposeParams(purpose),
+        )
+      ).data,
     onSuccess: async () =>
-      client.invalidateQueries({ queryKey: [...aiSettingsKey, "usage"] }),
+      client.invalidateQueries({
+        queryKey: [...aiSettingsKey, purpose, "usage"],
+      }),
   });
 }

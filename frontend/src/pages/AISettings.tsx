@@ -4,12 +4,14 @@ import { Link } from "react-router-dom";
 import {
   aiSettingsKey,
   aiSettingsPath,
+  purposeParams,
   useAIPrompts,
   useAISettingChange,
   useAISettings,
   useAIUsage,
   useProbeAI,
   type AISettingsView,
+  type AIPurpose,
   type UsageDays,
 } from "../api/aiSettings";
 import { QueryFeedback } from "../components/QueryFeedback";
@@ -27,10 +29,15 @@ const statusLabels: Record<string, string> = {
   provider_error: "Nie udało się połączyć z OpenAI.",
 };
 
-function CredentialForm({ settings }: { settings: AISettingsView }) {
+interface PurposeSettings {
+  settings: AISettingsView;
+  purpose: AIPurpose;
+}
+
+function CredentialForm({ settings, purpose }: PurposeSettings) {
   const client = useQueryClient();
   const field = useRef<HTMLInputElement>(null);
-  const remove = useAISettingChange();
+  const remove = useAISettingChange(purpose);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ error: boolean; text: string } | null>(
     null,
@@ -45,8 +52,12 @@ function CredentialForm({ settings }: { settings: AISettingsView }) {
     setNotice(null);
     setSaving(true);
     try {
-      await api.put(`${aiSettingsPath}/credential`, { api_key: key });
-      await client.invalidateQueries({ queryKey: aiSettingsKey });
+      await api.put(
+        `${aiSettingsPath}/credential`,
+        { api_key: key },
+        purposeParams(purpose),
+      );
+      await client.invalidateQueries({ queryKey: [...aiSettingsKey, purpose] });
       setNotice({ error: false, text: "Zapisano własny klucz." });
     } catch {
       setNotice({
@@ -67,7 +78,7 @@ function CredentialForm({ settings }: { settings: AISettingsView }) {
         {settings.credential_source === "custom"
           ? "Zapisano własny klucz. Nie można go ponownie wyświetlić."
           : settings.credential_source === "server"
-            ? "Doradca korzysta z klucza serwera."
+            ? "Ta funkcja korzysta z klucza serwera."
             : "Nie skonfigurowano klucza OpenAI."}
       </p>
       {settings.custom_key_available ? (
@@ -128,10 +139,10 @@ function CredentialForm({ settings }: { settings: AISettingsView }) {
   );
 }
 
-function Connection({ settings }: { settings: AISettingsView }) {
+function Connection({ settings, purpose }: PurposeSettings) {
   const [draft, setDraft] = useState<string | null>(null);
-  const update = useAISettingChange();
-  const probe = useProbeAI();
+  const update = useAISettingChange(purpose);
+  const probe = useProbeAI(purpose);
   const model = draft ?? settings.model ?? "";
   const busy = update.isPending || probe.isPending;
 
@@ -150,7 +161,7 @@ function Connection({ settings }: { settings: AISettingsView }) {
     <section className="card space-y-4" aria-labelledby="ai-model-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="ai-model-title" className="text-lg font-semibold">
-          Połączenie Doradcy
+          Połączenie z OpenAI
         </h2>
         <span className="font-mono text-xs text-gray-300">
           OPENAI / RESPONSES
@@ -164,7 +175,7 @@ function Connection({ settings }: { settings: AISettingsView }) {
       </div>
       <form onSubmit={save} className="space-y-2">
         <label htmlFor="ai-model" className="block text-sm">
-          Model Doradcy
+          Model {purpose === "advisor" ? "Doradcy" : "OpenAI"}
         </label>
         {settings.credential_source === "custom" ? (
           <>
@@ -191,7 +202,7 @@ function Connection({ settings }: { settings: AISettingsView }) {
             id="ai-model"
             className="input w-full"
             value={model}
-            disabled={busy}
+            disabled={busy || settings.operational === false}
             onChange={(event) => setDraft(event.target.value)}
           >
             <option value="">Domyślny model serwera</option>
@@ -212,7 +223,7 @@ function Connection({ settings }: { settings: AISettingsView }) {
           <button
             className="btn-secondary"
             type="button"
-            disabled={busy}
+            disabled={busy || settings.operational === false}
             onClick={() => probe.mutate()}
           >
             {probe.isPending ? "Testowanie…" : "Testuj zapisane połączenie"}
@@ -232,7 +243,10 @@ function Connection({ settings }: { settings: AISettingsView }) {
             role={probe.data.status === "ok" ? "status" : "alert"}
             className="text-sm"
           >
-            {statusLabels[probe.data.status] ?? statusLabels.provider_error}
+            {probe.data.status === "ok" && purpose !== "advisor"
+              ? "Połączenie działa. Próba odczytu danych syntetycznych zakończyła się poprawnie."
+              : (statusLabels[probe.data.status] ??
+                statusLabels.provider_error)}
             {probe.data.status === "ok" && ` (${probe.data.duration_ms} ms)`}
           </p>
         )}
@@ -244,9 +258,15 @@ function Connection({ settings }: { settings: AISettingsView }) {
   );
 }
 
-function Instructions({ active }: { active: string | null }) {
-  const history = useAIPrompts();
-  const change = useAISettingChange();
+function Instructions({
+  active,
+  purpose,
+}: {
+  active: string | null;
+  purpose: AIPurpose;
+}) {
+  const history = useAIPrompts(purpose);
+  const change = useAISettingChange(purpose);
   const [draft, setDraft] = useState<string | null>(null);
   const value = draft ?? active ?? "";
 
@@ -259,7 +279,7 @@ function Instructions({ active }: { active: string | null }) {
   return (
     <section className="card space-y-3" aria-labelledby="ai-prompt-title">
       <h2 id="ai-prompt-title" className="text-lg font-semibold">
-        Instrukcje Doradcy
+        Własne instrukcje
       </h2>
       <p className="text-sm text-gray-400">
         Ustaw ton lub sposób odpowiedzi. Te instrukcje nie zmieniają uprawnień
@@ -350,9 +370,9 @@ function format(value: number | null) {
   return value === null ? "—" : number.format(value);
 }
 
-function Usage() {
+function Usage({ purpose }: { purpose: AIPurpose }) {
   const [days, setDays] = useState<UsageDays>(30);
-  const usage = useAIUsage(days);
+  const usage = useAIUsage(days, purpose);
   return (
     <section className="card space-y-3" aria-labelledby="ai-usage-title">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -413,7 +433,9 @@ function Usage() {
                     className="border-t border-gray-700"
                   >
                     <th scope="row" className="p-2 font-normal">
-                      {row.kind === "chat" ? "Doradca" : "Test połączenia"}
+                      {row.kind === "test"
+                        ? "Test połączenia"
+                        : "Użycie funkcji"}
                       <span className="block break-all font-mono text-xs">
                         {row.model}
                       </span>
@@ -447,8 +469,19 @@ function Usage() {
   );
 }
 
+const purposeLabels: Record<AIPurpose, string> = {
+  advisor: "Doradca",
+  document_text: "Tekst dokumentów",
+  vision: "Analiza zdjęć",
+  receipt: "Pozycje paragonów",
+  categorization: "Kategoryzacja",
+};
+
+const purposes = Object.keys(purposeLabels) as AIPurpose[];
+
 export function AISettings() {
-  const query = useAISettings();
+  const [purpose, setPurpose] = useState<AIPurpose>("advisor");
+  const query = useAISettings(purpose);
   const data = query.data;
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -458,10 +491,26 @@ export function AISettings() {
         </Link>
         <h1 className="my-2 text-2xl font-bold">Ustawienia AI</h1>
         <p className="text-sm text-gray-400">
-          Ustawienia dotyczą Doradcy. Dokumenty i kategoryzacja nadal używają
-          konfiguracji serwera.
+          Każda funkcja ma osobny model, klucz, instrukcje i statystyki.
         </p>
       </header>
+      <div
+        role="group"
+        aria-label="Funkcja AI"
+        className="flex flex-wrap gap-2"
+      >
+        {purposes.map((item) => (
+          <button
+            key={item}
+            type="button"
+            aria-pressed={purpose === item}
+            className={purpose === item ? "btn-primary" : "btn-secondary"}
+            onClick={() => setPurpose(item)}
+          >
+            {purposeLabels[item]}
+          </button>
+        ))}
+      </div>
       <QueryFeedback
         loading={query.isLoading}
         error={query.isError}
@@ -469,11 +518,39 @@ export function AISettings() {
         onRetry={query.refetch}
       >
         {data && (
-          <div className="space-y-4">
-            <Connection key={data.credential_source} settings={data} />
-            <CredentialForm settings={data} />
-            <Instructions active={data.instructions} />
-            <Usage />
+          <div key={purpose} className="space-y-4">
+            {data.operational === false && (
+              <p className="text-sm text-gray-400">
+                Ta funkcja nie ma aktywnej konfiguracji na serwerze. Zapis
+                ustawień nie uruchamia przetwarzania.
+              </p>
+            )}
+            {purpose === "categorization" && (
+              <p className="text-sm text-gray-400">
+                Po zmianie ustawień potwierdź ponownie wysyłanie danych w{" "}
+                <Link
+                  className="underline"
+                  to="/settings/finances/categorization"
+                >
+                  ustawieniach kategoryzacji
+                </Link>
+                .
+              </p>
+            )}
+            {purpose === "receipt" && (
+              <p className="text-sm text-gray-400">
+                Zdjęcie paragonu trafi do wybranego modelu dopiero po osobnym
+                potwierdzeniu odczytu.
+              </p>
+            )}
+            <Connection
+              key={data.credential_source}
+              settings={data}
+              purpose={purpose}
+            />
+            <CredentialForm settings={data} purpose={purpose} />
+            <Instructions active={data.instructions} purpose={purpose} />
+            <Usage purpose={purpose} />
           </div>
         )}
       </QueryFeedback>

@@ -2,6 +2,20 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Draft PR] — 2026-11-20 — Ustawienia wszystkich funkcji OpenAI
+
+### Added
+
+- Oddzielne konfiguracje, wersje instrukcji, syntetyczne testy i statystyki
+  dla tekstu i zdjęć dokumentów, pozycji paragonu oraz sugestii kategorii.
+  Modele i klucze Doradcy pozostają niezależne.
+
+### Changed
+
+- Nowy profil nie nadaje zgód. Kategoryzacja wymaga odnowienia zgody po zmianie;
+  podgląd paragonu jest związany z wybraną konfiguracją. Dane historyczne i
+  limity operacji bez zmian.
+
 ## [Lokalnie] — 2026-11-20 — Ustawienia OpenAI dla Doradcy
 
 ### Added

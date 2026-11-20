@@ -39,14 +39,62 @@ it("does not display the saved key and clears the submitted key from the form", 
     fireEvent.change(key, { target: { value: "synthetic-key" } });
     fireEvent.click(screen.getByRole("button", { name: "Zapisz klucz" }));
     await waitFor(() =>
-      expect(put).toHaveBeenCalledWith("/advisor/settings/credential", {
-        api_key: "synthetic-key",
-      }),
+      expect(put).toHaveBeenCalledWith(
+        "/advisor/settings/credential",
+        {
+          api_key: "synthetic-key",
+        },
+        { params: { purpose: "advisor" } },
+      ),
     );
     expect(key).toHaveValue("");
     expect(client.getMutationCache().getAll()).toHaveLength(0);
   } finally {
     put.mockRestore();
+    get.mockRestore();
+  }
+});
+
+it("loads a separate receipt profile and stops connection tests when not configured", async () => {
+  const get = vi.spyOn(api, "get").mockImplementation(async (path, options) => {
+    const isReceipt =
+      (options?.params as { purpose?: unknown } | undefined)?.purpose ===
+      "receipt";
+    return {
+      data:
+        path === "/advisor/settings"
+          ? {
+              provider: "openai",
+              model: null,
+              active_model: isReceipt ? "receipt-model" : "chat-model",
+              credential_source: "server",
+              custom_key_available: true,
+              server_models: [],
+              instructions: null,
+              operational: !isReceipt,
+            }
+          : [],
+    };
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  try {
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <AISettings />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("chat-model")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Pozycje paragonów" }));
+    expect(await screen.findByText("receipt-model")).toBeVisible();
+    expect(screen.queryByText("chat-model")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Testuj zapisane połączenie" }),
+    ).toBeDisabled();
+  } finally {
     get.mockRestore();
   }
 });

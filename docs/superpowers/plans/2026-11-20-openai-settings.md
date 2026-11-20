@@ -14,9 +14,9 @@ niezmienne granice danych i potwierdzeń.
   pozostałych funkcji.
 - [x] Doradca: odróżnić awarię od odpowiedzi, ograniczyć kontekst wysyłany
   do dostawcy i zachować potwierdzanie po stronie serwera.
-- [ ] Rozszerzenie na ekstrakcję tekstu i vision, po związaniu rewizji
+- [x] Rozszerzenie na ekstrakcję tekstu i vision, po związaniu rewizji
   ustawień z kolejką i dotychczasowymi limitami/epokami.
-- [ ] Rozszerzenie na pozycje paragonów i sugestie kategorii z zachowaniem
+- [x] Rozszerzenie na pozycje paragonów i sugestie kategorii z zachowaniem
   ich odrębnych rezerwacji limitu i ochrony przed zastosowaniem starego wyniku.
 - [ ] Pełny przegląd, testy i odbiór lokalny. Migracja produkcyjna i wdrożenie
   poza zakresem; wymagają osobnego przygotowania i zgody.
@@ -34,5 +34,6 @@ niezmienne granice danych i potwierdzeń.
 - Każda próba połączenia ma stały syntetyczny input, wywołanie allowlistowanego
   `api.openai.com`, limity i brak narzędzi aplikacji. Statystyki rozróżniają
   próby czatu i testy połączenia. Brak raportu tokenów to nie zero.
-- Pełny zakres promptów, logów i wywołań pozostałych usług nie jest częścią
-  pierwszego przyrostu; interfejs nie przedstawia go jako dostępnego.
+- Drugi przyrost dodaje parametr `purpose` do tych samych operacji. Dotychczasowy
+  brak parametru oznacza Doradcę. Skonfigurowanie klucza nie zastępuje polityk
+  serwera, zgody kategoryzacji ani potwierdzenia odczytu paragonu.
