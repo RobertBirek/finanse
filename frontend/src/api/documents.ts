@@ -98,6 +98,7 @@ export type DocumentReview = {
 };
 export type DocumentUploadCapabilities = {
   max_file_bytes: number;
+  max_scan_pages?: number;
   accepted_mime_types: string[];
   automatic_image_vision: boolean;
   vision_provider_label: string | null;
@@ -136,6 +137,7 @@ export function useDocuments(params?: {
   status?: string;
   archived?: boolean;
   query?: string;
+  worklist?: DocumentWorklist;
 }) {
   const actor = useDocumentActor();
   return useInfiniteQuery({
@@ -170,6 +172,22 @@ export function useDocuments(params?: {
       }
       return false;
     },
+  });
+}
+
+export type DocumentWorklist = "review" | "errors";
+
+export function useDocumentWorklistCounts() {
+  const actor = useDocumentActor();
+  return useQuery({
+    queryKey: ["documents", "worklists", actor.ownerId, actor.generation],
+    queryFn: async ({ signal }) =>
+      (
+        await api.get<Record<DocumentWorklist, number>>(
+          "/documents/worklists",
+          { signal },
+        )
+      ).data,
   });
 }
 
@@ -210,9 +228,13 @@ export function useUploadDocument() {
   const queryClient = useQueryClient();
   return useMutation({
     onMutate: () => captureProcessingActor(),
-    mutationFn: async (file: File) => {
+    mutationFn: async (upload: File | File[]) => {
       const formData = new FormData();
-      formData.append("file", file);
+      if (Array.isArray(upload)) {
+        for (const page of upload) formData.append("pages", page);
+      } else {
+        formData.append("file", upload);
+      }
       const { data } = await api.post<DocumentUploadResponse>(
         "/documents/upload",
         formData,
@@ -294,11 +316,13 @@ export function useSuggestDocumentCategory() {
       revisionId: string;
     }) =>
       (
-        await api.post<{ suggested_category_id: string | null }>(
-          `/documents/${documentId}/review/category-suggestion`,
-          undefined,
-          { params: { revision_id: revisionId } },
-        )
+        await api.post<{
+          suggested_category_id: string | null;
+          source?: "history" | "ai" | null;
+          history_count?: number | null;
+        }>(`/documents/${documentId}/review/category-suggestion`, undefined, {
+          params: { revision_id: revisionId },
+        })
       ).data,
   });
 }

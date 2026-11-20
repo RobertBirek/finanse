@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import {
   useTasks,
@@ -7,8 +8,10 @@ import {
   useTimeBlocks,
 } from "../api/work";
 import { useFinancialSummary } from "../api/finance";
+import { useDocumentWorklistCounts } from "../api/documents";
 import { QueryFeedback } from "../components/QueryFeedback";
 import { DocumentUpload } from "../components/DocumentUpload";
+import { DocumentIcon } from "../components/documents/documentControls";
 import { formatPLN } from "../lib/format";
 import { formatLocalTime, localDayRange, useLocalNow } from "../lib/date";
 
@@ -24,6 +27,7 @@ export function Today() {
   });
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
+  const documentCounts = useDocumentWorklistCounts();
   const [newTitle, setNewTitle] = useState("");
   const activeTasks =
     tasks.data?.filter(
@@ -96,6 +100,29 @@ export function Today() {
           </p>
         )}
         <DocumentUpload cameraOnly />
+        <nav
+          aria-label="Kolejka dokumentów"
+          className="mt-3 flex flex-wrap gap-2"
+        >
+          {(
+            [
+              ["review", "Do sprawdzenia", "review"],
+              ["errors", "Błędy odczytu", "warning"],
+            ] as const
+          ).map(([worklist, label, icon]) => (
+            <Link
+              key={worklist}
+              to={`/documents?worklist=${worklist}`}
+              className="btn-secondary inline-flex items-center gap-2 text-sm"
+            >
+              <DocumentIcon name={icon} />
+              {label}
+              <span className="ml-1 tabular-nums text-gray-400">
+                {documentCounts.data?.[worklist] ?? "—"}
+              </span>
+            </Link>
+          ))}
+        </nav>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="card">

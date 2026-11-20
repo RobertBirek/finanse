@@ -16,6 +16,7 @@ def normalize_image(
     max_pixels: int,
     max_edge: int,
     quality: int,
+    as_pdf: bool = False,
 ) -> bytes:
     from PIL import Image, ImageOps
 
@@ -45,7 +46,17 @@ def normalize_image(
         else:
             image = image.convert("RGB")
         output = BytesIO()
-        image.save(output, format="JPEG", quality=quality, optimize=True)
+        if as_pdf:
+            image.save(
+                output,
+                format="PDF",
+                quality=quality,
+                title="",
+                creationDate=None,
+                modDate=None,
+            )
+        else:
+            image.save(output, format="JPEG", quality=quality, optimize=True)
         return output.getvalue()
 
 
@@ -65,6 +76,7 @@ def main() -> None:
         max_pixels=limits["pixels"],
         max_edge=limits["edge"],
         quality=limits["quality"],
+        as_pdf=limits["as_pdf"],
     )
     if len(output) > limits["output_bytes"]:
         raise ValueError("Image derivative exceeds output limit")

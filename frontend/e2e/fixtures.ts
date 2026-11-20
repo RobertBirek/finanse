@@ -252,6 +252,8 @@ export async function fixtures(
         archived_at: null,
       };
     else if (url.pathname === "/api/documents/active") body = [];
+    else if (url.pathname === "/api/documents/worklists")
+      body = { review: 0, errors: 0 };
     else if (url.pathname === "/api/documents")
       body =
         !url.searchParams.get("status") ||
@@ -272,6 +274,7 @@ export async function fixtures(
     else if (url.pathname === "/api/documents/upload-capabilities")
       body = {
         max_file_bytes: 20 * 1024 * 1024,
+        max_scan_pages: 12,
         accepted_mime_types: [
           "application/pdf",
           "image/heic",

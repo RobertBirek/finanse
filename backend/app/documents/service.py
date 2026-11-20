@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.documents.job_models import DocumentVisionPolicy
 from app.documents.models import Document, DocumentText
-from app.documents.schemas import DocumentResponse, DocumentStatus
+from app.documents.schemas import DocumentResponse, DocumentStatus, DocumentWorklist
 from app.documents.upload_limits import enforce_storage_admission
 from app.documents.validation import (
     UnsupportedDocumentFormatError,
@@ -194,6 +194,7 @@ async def get_documents(
     archived: bool = False,
     query: str | None = None,
     before: uuid.UUID | None = None,
+    worklist: DocumentWorklist | None = None,
 ) -> list[Document]:
     stmt = select(Document).where(Document.user_id == user_id)
     stmt = stmt.where(
@@ -201,6 +202,13 @@ async def get_documents(
     )
     if status:
         stmt = stmt.where(Document.status == status)
+    if worklist is not None:
+        from app.documents.processing_queries import document_worklist
+
+        lists = document_worklist(user_id)
+        stmt = stmt.join(lists, lists.c.document_id == Document.id).where(
+            lists.c.worklist == worklist
+        )
     if query and (name := query.strip()):
         stmt = stmt.where(Document.original_name.icontains(name, autoescape=True))
     if before is not None:

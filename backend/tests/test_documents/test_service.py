@@ -224,7 +224,9 @@ class TestAtomicStorage:
             filename="test.pdf",
             headers=Headers({"content-type": "application/pdf"}),
         )
-        response = await router.upload_document(file, SimpleNamespace(id=uuid.uuid4()), None, None)
+        response = await router.upload_document(
+            file=file, current_user=SimpleNamespace(id=uuid.uuid4()), _limit=None, db=None
+        )
         assert response.status_code == 503
         assert b"private-path-secret" not in response.body
 
@@ -244,7 +246,9 @@ class TestAtomicStorage:
             headers=Headers({"content-type": "application/pdf"}),
         )
 
-        response = await router.upload_document(file, SimpleNamespace(id=uuid.uuid4()), None, None)
+        response = await router.upload_document(
+            file=file, current_user=SimpleNamespace(id=uuid.uuid4()), _limit=None, db=None
+        )
 
         assert response.status_code == 400
         assert not list(tmp_path.rglob("*"))
@@ -308,14 +312,14 @@ class TestAtomicStorage:
         caplog.set_level("WARNING", logger="app.documents.router")
 
         response = await router.upload_document(
-            UploadFile(
+            file=UploadFile(
                 io.BytesIO(b"safe"),
                 filename="private-receipt.pdf",
                 headers=Headers({"content-type": "application/pdf"}),
             ),
-            SimpleNamespace(id=uuid.uuid4()),
-            None,
-            None,
+            current_user=SimpleNamespace(id=uuid.uuid4()),
+            _limit=None,
+            db=None,
         )
 
         assert json.loads(response.body) == {

@@ -8,6 +8,7 @@ import {
   formatFileSize,
   STATUS_LABELS,
   STATUS_COLORS,
+  type DocumentWorklist,
 } from "../api/documents";
 import { DocumentViewer } from "./DocumentViewer";
 import { DocumentReview } from "./documents/DocumentReview";
@@ -66,6 +67,12 @@ export function DocumentList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedReview = searchParams.get("review");
   const archived = searchParams.get("archived") === "true";
+  const requestedWorklist = searchParams.get("worklist");
+  const worklist =
+    !archived &&
+    (requestedWorklist === "review" || requestedWorklist === "errors")
+      ? requestedWorklist
+      : undefined;
   const linkedReviewId =
     requestedReview &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -101,6 +108,7 @@ export function DocumentList() {
     status: statusFilter,
     archived,
     query: filenameQuery || undefined,
+    worklist,
   });
   const archiveDoc = useArchiveDocument();
   const restoreDoc = useRestoreDocument();
@@ -108,6 +116,16 @@ export function DocumentList() {
   const documents = query.data?.pages.flatMap((page) => page.items) ?? [];
   // Resolve from current query data so a polling result also updates an open viewer.
   const viewingDoc = documents.find((doc) => doc.id === viewingId);
+  const selectWorklist = (value: DocumentWorklist | undefined) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("review");
+    if (value) next.set("worklist", value);
+    else next.delete("worklist");
+    setViewingId(null);
+    setReviewingId(null);
+    setStatusFilter(undefined);
+    setSearchParams(next);
+  };
 
   return (
     <div>
@@ -126,6 +144,7 @@ export function DocumentList() {
               onClick={() => {
                 const next = new URLSearchParams(searchParams);
                 next.delete("review");
+                next.delete("worklist");
                 if (value) next.set("archived", "true");
                 else next.delete("archived");
                 setViewingId(null);
@@ -158,6 +177,32 @@ export function DocumentList() {
           </select>
         </label>
       </div>
+      {!archived && (
+        <div
+          role="group"
+          aria-label="Kolejka dokumentów"
+          className="mb-3 flex flex-wrap gap-2"
+        >
+          {(
+            [
+              ["review", "Do sprawdzenia"],
+              ["errors", "Błędy odczytu"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={worklist === value}
+              className={worklist === value ? "btn-primary" : "btn-secondary"}
+              onClick={() =>
+                selectWorklist(worklist === value ? undefined : value)
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       <label className="mb-3 block text-sm text-gray-300 sm:max-w-sm">
         Szukaj po nazwie pliku
         <input
@@ -196,11 +241,15 @@ export function DocumentList() {
                 ? "Brak dokumentów pasujących do wyszukiwania."
                 : statusFilter
                   ? "Brak dokumentów o wybranym statusie."
-                  : archived
-                    ? "Archiwum jest puste."
-                    : "Brak dokumentów. Wybierz plik powyżej lub zrób zdjęcie."}
+                  : worklist === "review"
+                    ? "Brak dokumentów oczekujących na sprawdzenie."
+                    : worklist === "errors"
+                      ? "Brak dokumentów z błędem odczytu."
+                      : archived
+                        ? "Archiwum jest puste."
+                        : "Brak dokumentów. Wybierz plik powyżej lub zrób zdjęcie."}
             </p>
-            {(filenameQuery || statusFilter) && (
+            {(filenameQuery || statusFilter || worklist) && (
               <button
                 type="button"
                 className="btn-secondary mt-3"
@@ -208,6 +257,7 @@ export function DocumentList() {
                   setFilename("");
                   setFilenameQuery("");
                   setStatusFilter(undefined);
+                  if (worklist) selectWorklist(undefined);
                 }}
               >
                 Pokaż wszystkie dokumenty

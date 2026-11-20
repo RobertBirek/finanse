@@ -71,6 +71,7 @@ vi.mock("../api/documents", async (original) => ({
   useDocumentUploadCapabilities: () => ({
     data: { max_file_bytes: 20 * 1024 * 1024, accepted_mime_types: [] },
   }),
+  useDocumentWorklistCounts: () => ({ data: { review: 0, errors: 0 } }),
   useDeleteDocument: () => ({ mutate: mocks.mutate }),
   useArchiveDocument: () => ({ mutate: mocks.mutate, isPending: false }),
   useRestoreDocument: () => ({ mutate: mocks.mutate, isPending: false }),
@@ -124,7 +125,11 @@ describe("trustworthy query states", () => {
     mocks.tasks.mockReturnValue(failed);
     mocks.blocks.mockReturnValue(failed);
     mocks.summary.mockReturnValue(failed);
-    render(<Today />);
+    render(
+      <MemoryRouter>
+        <Today />
+      </MemoryRouter>,
+    );
     expect(screen.getAllByRole("alert")).toHaveLength(3);
     expect(screen.queryByText("0 PLN")).not.toBeInTheDocument();
     expect(screen.queryByText(/Brak aktywnych zadań/)).not.toBeInTheDocument();
@@ -135,7 +140,11 @@ describe("trustworthy query states", () => {
   });
   it("keeps loading distinct from successful emptiness and formats money", () => {
     mocks.tasks.mockReturnValue({ ...query(undefined), isLoading: true });
-    render(<Today />);
+    render(
+      <MemoryRouter>
+        <Today />
+      </MemoryRouter>,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("Ładowanie");
     expect(screen.queryByText(/Brak aktywnych zadań/)).not.toBeInTheDocument();
     expect(screen.getByText(/1.*234,56 PLN/)).toBeInTheDocument();
@@ -282,7 +291,11 @@ describe("calendar and live local date", () => {
   it("refreshes today's date across local midnight without reloading the app", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 20, 23, 59, 50));
-    render(<Today />);
+    render(
+      <MemoryRouter>
+        <Today />
+      </MemoryRouter>,
+    );
     const first =
       mocks.blocks.mock.calls[mocks.blocks.mock.calls.length - 1]![0]
         .start_time;

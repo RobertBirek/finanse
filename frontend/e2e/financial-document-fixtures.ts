@@ -19,6 +19,7 @@ export async function financialDocumentFixtures(
     missingReview?: boolean;
     invoiceTotalMinor?: number;
     candidateEvidence?: boolean;
+    categoryHistory?: boolean;
   } = {},
 ) {
   const base = await fixtures(page);
@@ -435,7 +436,13 @@ export async function financialDocumentFixtures(
       method === "POST"
     ) {
       expect(url.searchParams.get("revision_id")).toBe("r");
-      return route.fulfill({ json: { suggested_category_id: "c1" } });
+      return route.fulfill({
+        json: {
+          suggested_category_id: "c1",
+          source: options.categoryHistory ? "history" : "ai",
+          history_count: options.categoryHistory ? 3 : null,
+        },
+      });
     }
     if (
       path === `/api/finance/bills/${ids.bill}/payment-declaration` &&

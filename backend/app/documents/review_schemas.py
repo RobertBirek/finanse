@@ -87,3 +87,5 @@ class ReviewCategoryChoice(BaseModel):
 
 class ReviewCategoryResponse(BaseModel):
     suggested_category_id: uuid.UUID | None
+    source: Literal["history", "ai"] | None = None
+    history_count: int | None = None

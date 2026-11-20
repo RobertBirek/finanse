@@ -86,7 +86,7 @@ async def suggest_document_category(
     _limit: Annotated[None, Depends(processing_action_rate_limit)],
 ) -> ReviewCategoryResponse:
     try:
-        category_id = await suggest_review_category(
+        return await suggest_review_category(
             db, current_user.id, document_id, revision_id=revision_id
         )
     except DocumentLifecycleError as error:
@@ -96,7 +96,6 @@ async def suggest_document_category(
     except ReviewExtractionError as error:
         status = {"category_read_unavailable": 409, "llm_unavailable": 503}.get(error.code, 502)
         raise HTTPException(status, error.code) from None
-    return ReviewCategoryResponse(suggested_category_id=category_id)
 
 
 @router.post("/{document_id}/vision/prepare", response_model=ReviewResponse, status_code=202)

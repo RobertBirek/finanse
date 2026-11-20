@@ -11,7 +11,7 @@ from app.audit.service import log_event
 from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
 from app.documents.lifecycle import require_document_processing_allowed
 from app.documents.models import Document, DocumentExtractionRevision, DocumentText
-from app.documents.review_schemas import ReviewResponse, ReviewSuggestion
+from app.documents.review_schemas import ReviewCategoryResponse, ReviewResponse, ReviewSuggestion
 from app.documents.schemas import DocumentStatus
 from app.documents.service import get_document
 from app.finance.bills_schemas import MutationContext
@@ -193,8 +193,12 @@ async def get_review(
 
 async def suggest_review_category(
     db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID, *, revision_id: uuid.UUID
-) -> uuid.UUID | None:
-    from app.documents.category_catalog import load_owned_category_catalog, resolve_category
+) -> ReviewCategoryResponse:
+    from app.documents.category_catalog import (
+        load_owned_category_catalog,
+        match_category_history,
+        resolve_category,
+    )
     from app.documents.extractor import suggest_category_from_review
 
     document = await get_document(db, user_id, document_id)
@@ -213,15 +217,26 @@ async def suggest_review_category(
     ):
         raise ReviewExtractionError("category_read_unavailable")
 
+    history = await match_category_history(
+        db, user_id, document_id, supplier=supplier, supplier_tax_id=review.fields.supplier_tax_id
+    )
+    if history is not None:
+        history_category_id, count = history
+        return ReviewCategoryResponse(
+            suggested_category_id=history_category_id, source="history", history_count=count
+        )
     catalog = await load_owned_category_catalog(db, user_id)
     if not catalog.public:
-        return None
+        return ReviewCategoryResponse(suggested_category_id=None)
     # Release the connection and the session activity update before the provider call.
     await db.commit()
     key = await suggest_category_from_review(
         supplier=supplier, description=description, catalog=catalog.public
     )
-    return await resolve_category(db, user_id, catalog, key)
+    category_id = await resolve_category(db, user_id, catalog, key)
+    return ReviewCategoryResponse(
+        suggested_category_id=category_id, source="ai" if category_id is not None else None
+    )
 
 
 async def process_review_revision(

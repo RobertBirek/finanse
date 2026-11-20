@@ -390,6 +390,27 @@ test("a saved legacy PDF suggests a category and submits it only on approval", a
   api.assertClean();
 });
 
+test("a category from approvals shows its source and supporting count", async ({
+  page,
+}) => {
+  const api = await financialDocumentFixtures(page, { categoryHistory: true });
+  await page.goto(`/documents?review=${ids.oldPdf}`);
+  const review = page.getByRole("dialog", { name: "Sprawdź dane dokumentu" });
+  await review.getByRole("button", { name: "Podpowiedz kategorię" }).click();
+  await expect(
+    review
+      .getByRole("status")
+      .filter({ hasText: "Z historii zatwierdzeń — Usługi" }),
+  ).toContainText("Na podstawie 3 zatwierdzonych dokumentów.");
+  await expect(review.getByLabel("Kategoria", { exact: true })).toHaveValue(
+    "c1",
+  );
+  expect(api.mutations.map(({ path }) => path)).toEqual([
+    `/api/documents/${ids.oldPdf}/review/category-suggestion`,
+  ]);
+  api.assertClean();
+});
+
 for (const viewport of [375, 1440]) {
   test(`synthetic HEIF upload attaches a second original without a cost at ${viewport}px`, async ({
     page,

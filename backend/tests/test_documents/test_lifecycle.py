@@ -48,14 +48,14 @@ async def make_document(db, **values):
     return doc
 
 
-async def make_revision(db, doc, *, status="ready", method="image", number=1):
+async def make_revision(db, doc, *, status="ready", method="image", number=1, kind="other"):
     revision = DocumentExtractionRevision(
         user_id=doc.user_id,
         document_id=doc.id,
         revision=number,
         status=status,
         input_method=method,
-        data={"document_type": "other", "fields": {}},
+        data={"document_type": kind, "fields": {}},
         field_provenance={},
     )
     db.add(revision)
@@ -80,6 +80,55 @@ async def make_job(db, doc, *, state="succeeded", revision=None):
 
 def authenticate(owner):
     app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=owner)
+
+
+async def test_worklist_counts_and_filtered_lists_share_document_state(db_session, async_client):
+    ready = await make_document(db_session)
+    await make_revision(db_session, ready, kind="invoice")
+    failed = await make_document(db_session, user_id=ready.user_id)
+    await make_revision(db_session, failed, kind="receipt")
+    await make_revision(db_session, failed, kind="receipt", status="incomplete", number=2)
+    pending = await make_document(db_session, user_id=ready.user_id)
+    await make_revision(db_session, pending, kind="invoice")
+    await make_job(db_session, pending, state="processing")
+    unsupported = await make_document(db_session, user_id=ready.user_id)
+    await make_revision(db_session, unsupported, kind="statement", status="incomplete")
+    archived = await make_document(db_session, user_id=ready.user_id, archived_at=datetime.now(UTC))
+    await make_revision(db_session, archived, kind="invoice")
+    imported = await make_document(
+        db_session, user_id=ready.user_id, processing_method="bank_import"
+    )
+    await make_revision(db_session, imported, kind="receipt")
+    foreign = await make_document(db_session)
+    await make_revision(db_session, foreign, kind="invoice")
+    approved = await make_document(db_session, user_id=ready.user_id)
+    await make_revision(db_session, approved, kind="invoice")
+    bill = FinancialDocument(
+        user_id=ready.user_id,
+        kind="invoice",
+        supplier_name="Test",
+        description="Test",
+        total_minor=1,
+        currency="PLN",
+        review="approved",
+    )
+    db_session.add(bill)
+    await db_session.flush()
+    db_session.add(
+        FinancialDocumentSource(
+            user_id=ready.user_id, document_id=approved.id, financial_document_id=bill.id
+        )
+    )
+    await db_session.flush()
+
+    authenticate(ready.user_id)
+    counts = await async_client.get("/api/documents/worklists")
+    assert counts.status_code == 200
+    assert counts.json() == {"review": 1, "errors": 1}
+    for kind, doc in [("review", ready), ("errors", failed)]:
+        response = await async_client.get("/api/documents", params={"worklist": kind})
+        assert response.status_code == 200
+        assert [row["id"] for row in response.json()] == [str(doc.id)]
 
 
 async def test_filename_search_paginates_within_owner_status_and_archive(db_session, async_client):

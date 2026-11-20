@@ -29,7 +29,10 @@ async def test_review_can_read_exact_pinned_revision_without_reextracting():
     assert revision_id in query.compile().params.values()
 
 
-@pytest.mark.parametrize("result", ["matched", "no_match", "foreign_revision", "archived"])
+@pytest.mark.parametrize(
+    "result",
+    ["history", "matched", "conflicting_history", "no_match", "foreign_revision", "archived"],
+)
 @pytest.mark.asyncio
 async def test_explicit_category_request_uses_the_owned_saved_read_without_creating_work(
     monkeypatch, result
@@ -75,16 +78,22 @@ async def test_explicit_category_request_uses_the_owned_saved_read_without_creat
         name="Internet",
     )
     categories = SimpleNamespace(scalars=lambda: [category])
+    previous = SimpleNamespace(category_id=category_id, total=3)
+    history = {
+        "history": [previous],
+        "conflicting_history": [previous, SimpleNamespace(category_id=uuid.uuid4(), total=2)],
+    }.get(result, [])
     db = SimpleNamespace(
         execute=AsyncMock(
             side_effect=[
                 scalar(document),
                 scalar(None if result == "foreign_revision" else revision),
+                SimpleNamespace(all=lambda: history),
                 categories,
                 categories,
             ]
         ),
-        scalar=AsyncMock(return_value=None),
+        scalar=AsyncMock(side_effect=[None, category_id]),
         commit=AsyncMock(),
     )
     provider = AsyncMock(return_value=None if result == "no_match" else "c01")
@@ -112,15 +121,27 @@ async def test_explicit_category_request_uses_the_owned_saved_read_without_creat
         db.commit.assert_not_awaited()
         return
     assert response.status_code == 200
-    assert response.json() == {
-        "suggested_category_id": str(category_id) if result == "matched" else None
-    }
-    provider.assert_awaited_once_with(
-        supplier="Dostawca",
-        description="Internet domowy",
-        catalog=[{"key": "c01", "path": "Internet"}],
-    )
-    db.commit.assert_awaited_once()
+    if result == "history":
+        assert response.json() == {
+            "suggested_category_id": str(category_id),
+            "source": "history",
+            "history_count": 3,
+        }
+        provider.assert_not_awaited()
+        db.commit.assert_not_awaited()
+    else:
+        suggestion = str(category_id) if result != "no_match" else None
+        assert response.json() == {
+            "suggested_category_id": suggestion,
+            "source": "ai" if suggestion else None,
+            "history_count": None,
+        }
+        provider.assert_awaited_once_with(
+            supplier="Dostawca",
+            description="Internet domowy",
+            catalog=[{"key": "c01", "path": "Internet"}],
+        )
+        db.commit.assert_awaited_once()
     document_query, review_query = (call.args[0] for call in db.execute.call_args_list[:2])
     assert set(document_query.compile().params.values()) == {doc_id, owner}
     assert {doc_id, owner, revision_id} <= set(review_query.compile().params.values())

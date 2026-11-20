@@ -17,15 +17,23 @@ import {
 import {
   captureProcessingActor,
   isProcessingActorCurrent,
+  type ProcessingActor,
 } from "../stores/documentProcessingStore";
 
 import { DocumentIcon, DocumentTooltip } from "./documents/documentControls";
+import { CameraScanDialog } from "./documents/CameraScanDialog";
+import {
+  cameraAccept,
+  cameraMimeTypes,
+  invalidPhotoMessage,
+  isCameraPhoto,
+} from "./documents/cameraFiles";
 
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif"];
-const ACCEPTED_TYPES = ["application/pdf", ...IMAGE_TYPES];
+const ACCEPTED_TYPES = ["application/pdf", ...cameraMimeTypes];
 type UploadItem = {
   id: number;
-  file: File;
+  upload: File | File[];
+  name: string;
   state: "queued" | "uploading" | "success" | "error";
   error?: string;
   archivedDocumentId?: string;
@@ -75,6 +83,10 @@ export function DocumentUpload({
   const [dragActive, setDragActive] = useState(false);
   const [items, setItems] = useState<UploadItem[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [scan, setScan] = useState<{
+    firstPhoto: File;
+    actor: ProcessingActor;
+  } | null>(null);
   const nextId = useRef(0);
   const queue = useRef<UploadItem[]>([]);
   const draining = useRef(false);
@@ -91,7 +103,7 @@ export function DocumentUpload({
       );
       try {
         const actor = captureProcessingActor();
-        const result = await upload.mutateAsync(item.file);
+        const result = await upload.mutateAsync(item.upload);
         if (!isProcessingActorCurrent(actor)) {
           queue.current = [];
           draining.current = false;
@@ -103,6 +115,7 @@ export function DocumentUpload({
               ? {
                   ...entry,
                   state: "success",
+                  name: result.document.original_name || entry.name,
                   archivedDocumentId: result.document.archived_at
                     ? result.document.id
                     : undefined,
@@ -122,32 +135,33 @@ export function DocumentUpload({
     }
     draining.current = false;
   };
-  const addFiles = (files: FileList | File[]) => {
-    setValidationError(null);
-    const acceptedTypes = cameraOnly ? IMAGE_TYPES : ACCEPTED_TYPES;
-    const valid = Array.from(files).filter(
-      (file) =>
-        file.size > 0 &&
-        (file.type === "" ||
-          file.type === "application/octet-stream" ||
-          acceptedTypes.includes(file.type)),
-    );
-    if (!valid.length) {
-      setValidationError(
-        cameraOnly
-          ? "Wybierz niepuste zdjęcie w formacie JPG, PNG, HEIC lub HEIF."
-          : "Wybierz niepusty plik PDF, JPG, PNG, HEIC lub HEIF. CSV nie jest dokumentem do sprawdzenia.",
-      );
-      return;
-    }
-    const newItems = valid.map((file) => ({
+  const enqueue = (uploads: (File | File[])[]) => {
+    const newItems = uploads.map((input) => ({
       id: nextId.current++,
-      file,
+      upload: input,
+      name: Array.isArray(input) ? "Skan dokumentu.pdf" : input.name,
       state: "queued" as const,
     }));
     setItems((current) => [...current, ...newItems]);
     queue.current.push(...newItems);
     void drainQueue();
+  };
+  const addFiles = (files: FileList | File[]) => {
+    setValidationError(null);
+    const valid = Array.from(files).filter(
+      (file) =>
+        file.size > 0 &&
+        (file.type === "" ||
+          file.type === "application/octet-stream" ||
+          ACCEPTED_TYPES.includes(file.type)),
+    );
+    if (!valid.length) {
+      setValidationError(
+        "Wybierz niepusty plik PDF, JPG, PNG, HEIC lub HEIF. CSV nie jest dokumentem do sprawdzenia.",
+      );
+      return;
+    }
+    enqueue(valid);
   };
   const retry = (item: UploadItem) => {
     const queued = { ...item, state: "queued" as const, error: undefined };
@@ -160,6 +174,17 @@ export function DocumentUpload({
   const onChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) addFiles(event.target.files);
     event.target.value = "";
+  };
+  const onCameraChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const photo = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!photo) return;
+    if (!isCameraPhoto(photo)) {
+      setValidationError(invalidPhotoMessage);
+      return;
+    }
+    setValidationError(null);
+    setScan({ firstPhoto: photo, actor: captureProcessingActor() });
   };
   const onDrop = (event: DragEvent) => {
     event.preventDefault();
@@ -264,11 +289,24 @@ export function DocumentUpload({
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif"
+        accept={cameraAccept}
         capture="environment"
         className="hidden"
-        onChange={onChange}
+        onChange={onCameraChange}
       />
+      {scan && isProcessingActorCurrent(scan.actor) && (
+        <CameraScanDialog
+          firstPhoto={scan.firstPhoto}
+          maxPages={capabilities.data?.max_scan_pages ?? 1}
+          maxBytes={capabilities.data?.max_file_bytes}
+          onClose={() => setScan(null)}
+          onSend={(photos) => {
+            setScan(null);
+            if (isProcessingActorCurrent(scan.actor))
+              enqueue([photos.length === 1 ? photos[0] : photos]);
+          }}
+        />
+      )}
       {validationError && (
         <p role="alert" className="mt-2 text-sm text-red-300">
           {validationError}
@@ -289,7 +327,7 @@ export function DocumentUpload({
               className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-900 p-3 text-sm"
             >
               <span className="min-w-0 flex-1 truncate text-gray-200">
-                {item.file.name}
+                {item.name}
               </span>
               <span role="status" className="text-gray-400">
                 {item.archivedDocumentId

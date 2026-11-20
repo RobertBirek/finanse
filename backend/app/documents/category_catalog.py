@@ -2,16 +2,19 @@
 
 import hashlib
 import json
+import re
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.documents.finance_draft_models import DocumentFinanceDraftIntent
-from app.finance.models import Category
+from app.finance.models import Category, FinancialDocument, FinancialDocumentSource
+
+EXCLUDED_CATEGORY_SOURCES = ("opening_balance", "system", "technical", "uncategorized")
 
 
 @dataclass(frozen=True)
@@ -30,7 +33,7 @@ def build_category_catalog(categories: Sequence[Category], owner: uuid.UUID) -> 
         if cat.user_id == owner
         and cat.type == "expense"
         and cat.is_active
-        and cat.source not in {"opening_balance", "system", "technical", "uncategorized"}
+        and cat.source not in EXCLUDED_CATEGORY_SOURCES
     }
     paths: list[dict[str, str]] = []
     private: dict[str, uuid.UUID] = {}
@@ -84,6 +87,65 @@ async def _owned_categories(db: AsyncSession, user_id: uuid.UUID) -> list[Catego
 
 async def load_owned_category_catalog(db: AsyncSession, user_id: uuid.UUID) -> CategoryCatalog:
     return build_category_catalog(await _owned_categories(db, user_id), user_id)
+
+
+async def match_category_history(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    document_id: uuid.UUID,
+    *,
+    supplier: str,
+    supplier_tax_id: str | None,
+) -> tuple[uuid.UUID, int] | None:
+    tax_id = re.sub(r"[-\s]", "", supplier_tax_id or "").upper()
+    if re.fullmatch(r"(?:PL)?[0-9]{10}", tax_id):
+        stored_tax_id = func.regexp_replace(
+            func.upper(FinancialDocument.supplier_tax_id), "[[:space:]-]+", "", "g"
+        )
+        match = func.regexp_replace(stored_tax_id, "^PL", "") == tax_id.removeprefix("PL")
+    elif supplier.strip():
+        stored_name = func.lower(
+            func.btrim(
+                func.regexp_replace(FinancialDocument.supplier_name, "[[:space:]]+", " ", "g")
+            )
+        )
+        match = stored_name == func.lower(" ".join(supplier.split()))
+    else:
+        return None
+
+    matches = (
+        await db.execute(
+            select(FinancialDocument.category_id, func.count().label("total"))
+            .where(
+                FinancialDocument.user_id == user_id,
+                FinancialDocument.review == "approved",
+                FinancialDocument.lifecycle != "cancelled",
+                FinancialDocument.category_id.is_not(None),
+                match,
+                ~select(FinancialDocumentSource.id)
+                .where(
+                    FinancialDocumentSource.user_id == user_id,
+                    FinancialDocumentSource.document_id == document_id,
+                    FinancialDocumentSource.financial_document_id == FinancialDocument.id,
+                )
+                .exists(),
+            )
+            .group_by(FinancialDocument.category_id)
+            .limit(2)
+        )
+    ).all()
+    if len(matches) != 1 or matches[0].total < settings.DOCUMENT_CATEGORY_HISTORY_MIN_MATCHES:
+        return None
+    category_id = await db.scalar(
+        select(Category.id).where(
+            Category.id == matches[0].category_id,
+            Category.user_id == user_id,
+            Category.is_active.is_(True),
+            Category.type == "expense",
+            Category.source.not_in(EXCLUDED_CATEGORY_SOURCES),
+        )
+    )
+    return (category_id, matches[0].total) if category_id is not None else None
 
 
 async def load_document_category_catalog(

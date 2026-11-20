@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     DOCUMENT_VALIDATION_CONCURRENCY: PositiveInt = 2
     DOCUMENT_VALIDATION_QUEUE_SECONDS: PositiveFloat = 2
     DOCUMENT_MAX_PAGES: PositiveInt = 100
+    DOCUMENT_SCAN_MAX_PAGES: int = Field(default=12, ge=2, le=100)
+    DOCUMENT_SCAN_TIMEOUT_SECONDS: PositiveFloat = 45
     FINANCE_IMPORT_MAX_CSV_ROWS: PositiveInt = 100000
     FINANCE_IMPORT_MAX_TEXT_CHARS: PositiveInt = 2 * 1024 * 1024
     FINANCE_IMPORT_MAX_ATTEMPTS: PositiveInt = 3
@@ -160,6 +162,7 @@ class Settings(BaseSettings):
     DOCUMENT_TEXT_REASONING_EFFORT: str = "none"
     DOCUMENT_CATEGORY_MAX_CATEGORIES: PositiveInt = Field(default=200, le=1000)
     DOCUMENT_CATEGORY_MAX_BYTES: PositiveInt = Field(default=32768, le=262144)
+    DOCUMENT_CATEGORY_HISTORY_MIN_MATCHES: int = Field(default=2, ge=2)
     CORS_ORIGINS: str = DEFAULT_CORS_ORIGINS
     TRUSTED_ORIGINS: str | None = None
     TRUSTED_PROXY_HOSTS: str = "frontend"

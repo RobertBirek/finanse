@@ -85,12 +85,12 @@ async def test_malformed_heic_is_rejected_without_storage(tmp_path, monkeypatch)
 
     monkeypatch.setattr(service, "UPLOAD_DIR", tmp_path)
     response = await router.upload_document(
-        UploadFile(
+        file=UploadFile(
             BytesIO(b"not a HEIC"), filename="blob", headers=Headers({"content-type": "image/heic"})
         ),
-        SimpleNamespace(id=uuid.uuid4()),
-        None,
-        None,
+        current_user=SimpleNamespace(id=uuid.uuid4()),
+        _limit=None,
+        db=None,
     )
 
     assert response.status_code == 400

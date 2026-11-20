@@ -20,8 +20,9 @@ async def normalize_image(
     thumbnail: bool = False,
     max_edge: int | None = None,
     max_output_bytes: int | None = None,
+    as_pdf: bool = False,
 ) -> bytes:
-    """Return a metadata-free JPEG from an admitted document image."""
+    """Return a metadata-free JPEG or one-page PDF from an admitted image."""
     if mime not in {"image/jpeg", "image/png", "image/heif"}:
         raise ImageNormalizationError("Unsupported image format")
     if max_edge is not None and max_edge <= 0:
@@ -46,6 +47,7 @@ async def normalize_image(
             "output_bytes": output_bytes,
             "mime": mime,
             "thumbnail": thumbnail,
+            "as_pdf": as_pdf,
         }
         process = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -85,7 +87,12 @@ async def normalize_image(
             raise ImageNormalizationError("Image conversion failed") from None
         if process.returncode != 0 or len(output) > output_bytes:
             raise ImageNormalizationError("Image conversion failed")
-        if not output.startswith(b"\xff\xd8") or not output.endswith(b"\xff\xd9"):
+        valid = (
+            output.startswith(b"%PDF-") and output.rstrip().endswith(b"%%EOF")
+            if as_pdf
+            else output.startswith(b"\xff\xd8") and output.endswith(b"\xff\xd9")
+        )
+        if not valid:
             raise ImageNormalizationError("Image conversion failed")
         return bytes(output)
     except OSError as error:

@@ -6,14 +6,19 @@ import {
   processingReview,
 } from "../src/test/documentFixtures";
 
+const photoBytes = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAMCAIAAADQ/GvKAAAAFUlEQVR4nGP8//8/AzbAhFV0REsAAInrAxV4Pe4oAAAAAElFTkSuQmCC",
+  "base64",
+);
+
 test("Today opens the camera picker and uploads the photo as a document", async ({
   page,
 }) => {
   const base = await fixtures(page);
   const document = processingDocument({
     user_id: "qa",
-    original_name: "zdjecie-faktury.jpg",
-    mime_type: "image/jpeg",
+    original_name: "zdjecie-faktury.png",
+    mime_type: "image/png",
     status: "done",
     review: null,
   });
@@ -22,8 +27,9 @@ test("Today opens the camera picker and uploads the photo as a document", async 
     const request = route.request();
     const path = new URL(request.url()).pathname;
     if (path === "/api/documents/upload" && request.method() === "POST") {
-      expect(request.postData()).toContain('filename="zdjecie-faktury.jpg"');
-      expect(request.postData()).toContain("synthetic-photo");
+      expect(request.postData()).toContain(
+        'name="file"; filename="zdjecie-faktury.png"',
+      );
       uploads += 1;
       return route.fulfill({ json: { document, is_duplicate: false } });
     }
@@ -47,10 +53,23 @@ test("Today opens the camera picker and uploads the photo as a document", async 
   );
   expect(uploads).toBe(0);
   await chooser.setFiles({
-    name: "zdjecie-faktury.jpg",
-    mimeType: "image/jpeg",
-    buffer: Buffer.from("synthetic-photo"),
+    name: "zdjecie-faktury.png",
+    mimeType: "image/png",
+    buffer: photoBytes,
   });
+  const scan = page.getByRole("dialog", { name: "Podgląd skanu" });
+  await expect(
+    scan.getByRole("img", { name: "Podgląd zdjęcia dokumentu" }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      scan
+        .getByRole("img")
+        .evaluate((image: HTMLImageElement) => image.naturalWidth),
+    )
+    .toBe(8);
+  expect(uploads).toBe(0);
+  await scan.getByRole("button", { name: "Wyślij zdjęcie" }).click();
   await expect(
     page.getByRole("list", { name: "Stan przesyłania" }),
   ).toContainText("Przesłano");
@@ -59,9 +78,90 @@ test("Today opens the camera picker and uploads the photo as a document", async 
   await page.getByRole("link", { name: "Otwórz dokumenty" }).click();
   await expect(page).toHaveURL(/\/documents$/);
   await expect(
-    page.getByRole("button", { name: "Otwórz dokument: zdjecie-faktury.jpg" }),
+    page.getByRole("button", { name: "Otwórz dokument: zdjecie-faktury.png" }),
   ).toBeVisible();
   expect(base.mutations).toEqual([]);
+  await base.assertClean();
+});
+
+test("a scan can retake and reorder photos before uploading one PDF", async ({
+  page,
+}) => {
+  const base = await fixtures(page);
+  const uploads: string[][] = [];
+  const document = processingDocument({
+    user_id: "qa",
+    original_name: "Skan dokumentu.pdf",
+    mime_type: "application/pdf",
+    review: null,
+  });
+  await page.route("**/api/documents/upload", async (route) => {
+    const payload = route.request().postData() ?? "";
+    uploads.push(
+      [...payload.matchAll(/name="pages"; filename="([^"]+)"/g)].map(
+        (match) => match[1],
+      ),
+    );
+    return route.fulfill({ json: { document, is_duplicate: false } });
+  });
+  await page.goto("/today");
+  for (const [action, name] of [
+    ["Zrób zdjęcie dokumentu", "nieostre.png"],
+    ["Powtórz zdjęcie", "pierwsza.png"],
+    ["Dodaj stronę", "druga.png"],
+  ]) {
+    const [chooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.getByRole("button", { name: action, exact: true }).click(),
+    ]);
+    await chooser.setFiles({ name, mimeType: "image/png", buffer: photoBytes });
+  }
+  const scan = page.getByRole("dialog", { name: "Podgląd skanu" });
+  await expect(scan.getByRole("button", { name: "Strona 2" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await scan.getByRole("button", { name: "Przesuń wcześniej" }).click();
+  await expect(scan.getByRole("button", { name: "Strona 1" })).toHaveAttribute(
+    "title",
+    "druga.png",
+  );
+  expect(uploads).toEqual([]);
+  await scan.getByRole("button", { name: "Wyślij jako PDF" }).click();
+  await expect(
+    page.getByRole("list", { name: "Stan przesyłania" }),
+  ).toContainText("Skan dokumentu.pdf");
+  expect(uploads).toEqual([["druga.png", "pierwsza.png"]]);
+  await base.assertClean();
+});
+
+test("Today counters open separate document worklists", async ({ page }) => {
+  const base = await fixtures(page);
+  await page.route("**/api/documents/worklists", (route) =>
+    route.fulfill({ json: { review: 1, errors: 1 } }),
+  );
+  await page.route("**/api/documents?**", async (route) => {
+    const kind = new URL(route.request().url()).searchParams.get("worklist");
+    if (!kind) return route.fallback();
+    const document = processingDocument({
+      original_name:
+        kind === "review" ? "Gotowy odczyt.pdf" : "Uszkodzony odczyt.pdf",
+      status: kind === "review" ? "done" : "error",
+      review: null,
+    });
+    return route.fulfill({ json: [document] });
+  });
+  await page.goto("/today");
+  const queues = page.getByRole("navigation", { name: "Kolejka dokumentów" });
+  await queues.getByRole("link", { name: "Do sprawdzenia 1" }).click();
+  await expect(page).toHaveURL(/worklist=review/);
+  await expect(page.getByText("Gotowy odczyt.pdf")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Błędy odczytu", exact: true })
+    .click();
+  await expect(page).toHaveURL(/worklist=errors/);
+  await expect(page.getByText("Uszkodzony odczyt.pdf")).toBeVisible();
+  await expect(page.getByText("Gotowy odczyt.pdf")).toHaveCount(0);
   await base.assertClean();
 });
 

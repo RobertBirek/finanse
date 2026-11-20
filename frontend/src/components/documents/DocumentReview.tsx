@@ -166,6 +166,7 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
   const requestedCategoryId = categoryRequestMatches
     ? suggestCategory.data?.suggested_category_id
     : undefined;
+  const categoryFromHistory = suggestCategory.data?.source === "history";
   const requestedCategory = categories.data?.find(
     (item) =>
       item.id === requestedCategoryId &&
@@ -728,8 +729,9 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                         : "Podpowiedz kategorię"}
                     </button>
                     <p className="text-xs text-gray-400">
-                      AI otrzyma sprzedawcę i opis z odczytu oraz nazwy Twoich
-                      kategorii wydatków.
+                      Najpierw sprawdzimy wcześniejsze zatwierdzenia dostawcy.
+                      Gdy historia nie wystarczy, AI otrzyma sprzedawcę i opis z
+                      odczytu oraz nazwy Twoich kategorii wydatków.
                     </p>
                     {categoryRequestMatches && suggestCategory.isPending && (
                       <p role="status" className="sr-only">
@@ -744,8 +746,16 @@ function DocumentReviewContent({ documentId, onClose }: Props) {
                     {categoryRequestMatches && suggestCategory.isSuccess && (
                       <p role="status" className="text-sm text-gray-300">
                         {requestedCategory
-                          ? `Propozycja AI — ${categoryPath(requestedCategory.id, categories.data ?? [])}`
+                          ? `${categoryFromHistory ? "Z historii zatwierdzeń" : "Propozycja AI"} — ${categoryPath(requestedCategory.id, categories.data ?? [])}`
                           : "Brak pasującej kategorii. Możesz wybrać ją ręcznie."}
+                        {requestedCategory &&
+                          categoryFromHistory &&
+                          suggestCategory.data?.history_count != null && (
+                            <span className="block text-xs text-gray-400">
+                              Na podstawie {suggestCategory.data.history_count}{" "}
+                              zatwierdzonych dokumentów.
+                            </span>
+                          )}
                       </p>
                     )}
                   </div>
