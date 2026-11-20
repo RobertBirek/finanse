@@ -132,7 +132,14 @@ export type BillApprove = {
   declaration?: PaymentDeclaration;
   duplicate_decision?: "separate";
 };
-export type DuplicateCandidate = { id: string; reasons: string[] };
+export type BillComparisonFields = Pick<
+  BillResponse,
+  "supplier_name" | "number" | "issue_date" | "total_minor" | "currency"
+>;
+export type DuplicateCandidate = BillComparisonFields & {
+  id: string;
+  reasons: string[];
+};
 const headers = () => ({ "Idempotency-Key": crypto.randomUUID() });
 export const stableKey = () => crypto.randomUUID();
 function canonicalIntent(value: unknown): unknown {
@@ -256,18 +263,6 @@ export function useAttachBillSource() {
     onSuccess: () => invalidate(client),
   });
 }
-export function useDuplicateCandidates(billId: string | null) {
-  return useQuery({
-    queryKey: ["finance", "bills", billId, "duplicates"],
-    enabled: !!billId,
-    queryFn: async () =>
-      (
-        await api.get<DuplicateCandidate[]>(
-          `/finance/bills/${billId}/duplicates`,
-        )
-      ).data,
-  });
-}
 export function useBill(billId: string | null, enabled = true) {
   const ownerId = useAuthStore((state) => state.user?.id);
   const sessionVersion = useAuthStore((state) => state.sessionVersion);
@@ -279,13 +274,15 @@ export function useBill(billId: string | null, enabled = true) {
   });
 }
 
-export function useBills(filters: BillFilters = {}) {
+export function useBills(filters: BillFilters = {}, enabled = true) {
   const ownerId = useAuthStore((state) => state.user?.id);
   const sessionVersion = useAuthStore((state) => state.sessionVersion);
   return useQuery({
     queryKey: ["finance", "bills", filters, ownerId, sessionVersion],
-    queryFn: async () =>
-      (await api.get<BillPage>("/finance/bills", { params: filters })).data,
+    enabled,
+    queryFn: async ({ signal }) =>
+      (await api.get<BillPage>("/finance/bills", { params: filters, signal }))
+        .data,
   });
 }
 export function useBillCandidates(

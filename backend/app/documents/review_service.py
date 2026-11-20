@@ -11,8 +11,9 @@ from app.audit.service import log_event
 from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
 from app.documents.lifecycle import require_document_processing_allowed
 from app.documents.models import Document, DocumentExtractionRevision, DocumentText
-from app.documents.review_schemas import ReviewResponse, ReviewSuggestion
+from app.documents.review_schemas import ReviewCategoryResponse, ReviewResponse, ReviewSuggestion
 from app.documents.schemas import DocumentStatus
+from app.documents.service import get_document
 from app.finance.bills_schemas import MutationContext
 from app.finance.models import FinanceCommandReceipt
 
@@ -188,6 +189,54 @@ async def get_review(
         )
     ).scalar_one_or_none()
     return _response(revision) if revision is not None else None
+
+
+async def suggest_review_category(
+    db: AsyncSession, user_id: uuid.UUID, document_id: uuid.UUID, *, revision_id: uuid.UUID
+) -> ReviewCategoryResponse:
+    from app.documents.category_catalog import (
+        load_owned_category_catalog,
+        match_category_history,
+        resolve_category,
+    )
+    from app.documents.extractor import suggest_category_from_review
+
+    document = await get_document(db, user_id, document_id)
+    if document is None:
+        raise LookupError("document_not_found")
+    await require_document_processing_allowed(db, document)
+    review = await get_review(db, user_id, document_id, revision_id=revision_id)
+    if review is None:
+        raise LookupError("review_not_found")
+    supplier = (review.fields.supplier_name or "").strip()
+    description = (review.fields.description or "").strip()
+    if (
+        review.status not in {"ready", "incomplete"}
+        or review.document_type not in {"invoice", "receipt"}
+        or not (supplier or description)
+    ):
+        raise ReviewExtractionError("category_read_unavailable")
+
+    history = await match_category_history(
+        db, user_id, document_id, supplier=supplier, supplier_tax_id=review.fields.supplier_tax_id
+    )
+    if history is not None:
+        history_category_id, count = history
+        return ReviewCategoryResponse(
+            suggested_category_id=history_category_id, source="history", history_count=count
+        )
+    catalog = await load_owned_category_catalog(db, user_id)
+    if not catalog.public:
+        return ReviewCategoryResponse(suggested_category_id=None)
+    # Release the connection and the session activity update before the provider call.
+    await db.commit()
+    key = await suggest_category_from_review(
+        supplier=supplier, description=description, catalog=catalog.public
+    )
+    category_id = await resolve_category(db, user_id, catalog, key)
+    return ReviewCategoryResponse(
+        suggested_category_id=category_id, source="ai" if category_id is not None else None
+    )
 
 
 async def process_review_revision(

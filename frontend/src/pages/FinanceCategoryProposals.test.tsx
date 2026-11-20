@@ -39,10 +39,15 @@ it("empty queue distinguishes pending analyses and explains month-independent sc
         : [],
   }));
   mount();
-  await screen.findByText("Brak propozycji do przejrzenia.");
+  expect(
+    screen.queryByText("Brak propozycji do przejrzenia."),
+  ).not.toBeInTheDocument();
   expect(
     await screen.findByText(/Trwa analiza nowych wydatków/),
   ).toBeInTheDocument();
+  expect(
+    screen.queryByText("Brak propozycji do przejrzenia."),
+  ).not.toBeInTheDocument();
   expect(
     screen.getByText(/Nie filtrujemy tej kolejki według miesiąca/),
   ).toBeInTheDocument();

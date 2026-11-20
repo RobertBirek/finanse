@@ -101,3 +101,29 @@ async def test_bank_search_retains_booking_month_and_legacy_reports_keep_fallbac
     assert legacy.date_metadata is None
     march = await service.get_financial_summary(db_session, owner, month=3, year=2026)
     assert march.expense_total_pln == 777
+    legacy_search = await service.search_transactions(
+        db_session,
+        owner,
+        TransactionSearch(date_basis="purchase", date_from=date(2026, 3, 5)),
+    )
+    assert legacy_search.total == 1
+    assert [item.id for item in legacy_search.items] == [legacy.id]
+
+
+async def test_budget_drilldown_search_matches_the_purchase_month_and_category(db_session):
+    owner = await create_owner(db_session)
+    txn, _, food, _ = await split_expense(db_session, owner)
+    results = await service.search_transactions(
+        db_session,
+        owner,
+        TransactionSearch(
+            category_id=food.id,
+            include_descendants=True,
+            budget_accounts_only=True,
+            date_basis="purchase",
+            date_from=date(2026, 1, 1),
+            date_to=date(2026, 1, 31),
+        ),
+    )
+    assert results.total == 1
+    assert [item.id for item in results.items] == [txn.id]

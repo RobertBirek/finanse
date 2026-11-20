@@ -3,6 +3,7 @@ from datetime import date
 from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -15,6 +16,7 @@ from app.finance.bill_payments import (
     unlink_payment,
 )
 from app.finance.bills import (
+    DuplicateDecisionRequired,
     approve_bill,
     attach_source,
     find_duplicate_bills,
@@ -303,6 +305,17 @@ async def approve_bill_endpoint(
         )
         await db.commit()
         return response
+    except DuplicateDecisionRequired as error:
+        await db.rollback()
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": str(error),
+                "duplicate_candidates": [
+                    candidate.model_dump(mode="json") for candidate in error.candidates
+                ],
+            },
+        )
     except (LookupError, RuntimeError, ValueError) as error:
         await db.rollback()
         raise _error(error)

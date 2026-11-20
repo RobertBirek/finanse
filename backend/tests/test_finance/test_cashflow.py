@@ -225,6 +225,79 @@ async def test_forecast_uses_budget_balance_fixed_and_last_actual_amounts(db_ses
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("expense", [95_000, 105_000])
+async def test_daily_limit_respects_the_tightest_day_before_payday(
+    db_session, expense: int
+) -> None:
+    owner = uuid.uuid4()
+    account = await create_account(db_session, owner, AccountCreate(name="Konto", type="checking"))
+    income = await create_category(db_session, owner, CategoryCreate(name="Wpływy", type="income"))
+    rent = await create_category(db_session, owner, CategoryCreate(name="Czynsz", type="expense"))
+    db_session.add(FinanceSettings(user_id=owner, payday_day=28, forecast_horizon_days=8))
+    await create_income(db_session, owner, account.id, income.id, 100_000)
+    await create_scheduled_item(
+        db_session,
+        owner,
+        scheduled_item_data(account.id, rent.id, due_day=21, fixed_amount_pln=expense),
+    )
+    await create_scheduled_item(
+        db_session,
+        owner,
+        scheduled_item_data(
+            account.id, income.id, type="income", name="Zwrot", due_day=24, fixed_amount_pln=81_000
+        ),
+    )
+
+    forecast = await get_cashflow_forecast(db_session, owner, today=date(2026, 11, 20))
+
+    assert forecast.projected_balance_before_next_payday_pln == 181_000 - expense
+    assert forecast.lowest_balance_before_payday.date == date(2026, 11, 21)
+    assert forecast.lowest_balance_before_payday.projected_balance_pln == 100_000 - expense
+    assert forecast.safe_daily_limit_pln == max(0, (100_000 - expense) // 4)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(("horizon", "due_day"), [(1, 21), (30, 21), (30, 28)])
+async def test_missing_coverage_or_recurring_amount_hides_daily_limit(
+    db_session, horizon: int, due_day: int
+) -> None:
+    owner = uuid.uuid4()
+    account = await create_account(db_session, owner, AccountCreate(name="Konto", type="checking"))
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Czynsz", type="expense")
+    )
+    db_session.add(FinanceSettings(user_id=owner, payday_day=28, forecast_horizon_days=horizon))
+    await create_scheduled_item(
+        db_session,
+        owner,
+        scheduled_item_data(
+            account.id,
+            category.id,
+            due_day=due_day,
+            fixed_amount_pln=None,
+            amount_method="last_actual",
+        ),
+    )
+
+    forecast = await get_cashflow_forecast(db_session, owner, today=date(2026, 11, 20))
+
+    if horizon == 1:
+        assert forecast.safe_daily_limit_pln is None
+        assert forecast.projected_balance_before_next_payday_pln is None
+        assert not forecast.has_excluded_obligations_before_payday
+        assert forecast.days[-1].date == date(2026, 11, 20)
+    elif due_day < 28:
+        assert forecast.safe_daily_limit_pln is None
+        assert forecast.projected_balance_before_next_payday_pln == 0
+        assert forecast.has_excluded_obligations_before_payday
+        assert "recurring_amount_unknown" in forecast.excluded_obligation_reasons
+    else:
+        assert forecast.safe_daily_limit_pln == 0
+        assert not forecast.has_excluded_obligations_before_payday
+        assert forecast.has_excluded_obligations
+
+
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_forecast_includes_budget_summary(db_session) -> None:
     user_id = uuid.uuid4()

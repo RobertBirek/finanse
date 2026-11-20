@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
+from fastapi import FastAPI
 
 from app.documents.category_catalog import CategoryCatalog
 from app.documents.review_schemas import ReviewSuggestion
@@ -25,6 +27,124 @@ async def test_review_can_read_exact_pinned_revision_without_reextracting():
     assert await get_review(db, owner, doc_id, revision_id=revision_id) is None
     query = db.execute.call_args.args[0]
     assert revision_id in query.compile().params.values()
+
+
+@pytest.mark.parametrize(
+    "result",
+    ["history", "matched", "conflicting_history", "no_match", "foreign_revision", "archived"],
+)
+@pytest.mark.asyncio
+async def test_explicit_category_request_uses_the_owned_saved_read_without_creating_work(
+    monkeypatch, result
+):
+    from app.database import get_db
+    from app.documents import extractor, review_router
+    from app.identity.router import get_current_user
+
+    owner, doc_id, revision_id, category_id = (uuid.uuid4() for _ in range(4))
+    document = SimpleNamespace(
+        id=doc_id,
+        user_id=owner,
+        processing_method="legacy_ocr",
+        archived_at="archived" if result == "archived" else None,
+    )
+    revision = SimpleNamespace(
+        id=revision_id,
+        document_id=doc_id,
+        revision=2,
+        status="ready",
+        data={
+            "document_type": "invoice",
+            "fields": {
+                "supplier_name": "  Dostawca  ",
+                "description": "Internet domowy",
+                "total": "39.99",
+                "currency": "PLN",
+            },
+            "provenance": {},
+        },
+        error_code=None,
+        suggested_category_id=None,
+        input_method="text",
+        warnings=[],
+    )
+    category = SimpleNamespace(
+        id=category_id,
+        user_id=owner,
+        type="expense",
+        is_active=True,
+        source="manual",
+        parent_id=None,
+        name="Internet",
+    )
+    categories = SimpleNamespace(scalars=lambda: [category])
+    previous = SimpleNamespace(category_id=category_id, total=3)
+    history = {
+        "history": [previous],
+        "conflicting_history": [previous, SimpleNamespace(category_id=uuid.uuid4(), total=2)],
+    }.get(result, [])
+    db = SimpleNamespace(
+        execute=AsyncMock(
+            side_effect=[
+                scalar(document),
+                scalar(None if result == "foreign_revision" else revision),
+                SimpleNamespace(all=lambda: history),
+                categories,
+                categories,
+            ]
+        ),
+        scalar=AsyncMock(side_effect=[None, category_id]),
+        commit=AsyncMock(),
+    )
+    provider = AsyncMock(return_value=None if result == "no_match" else "c01")
+    monkeypatch.setattr(extractor, "suggest_category_from_review", provider)
+    app = FastAPI()
+    app.include_router(review_router.router, prefix="/api/documents")
+    app.dependency_overrides.update(
+        {
+            get_current_user: lambda: SimpleNamespace(id=owner),
+            get_db: lambda: db,
+            review_router.processing_action_rate_limit: lambda: None,
+        }
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="https://test.invalid"
+    ) as client:
+        response = await client.post(
+            f"/api/documents/{doc_id}/review/category-suggestion",
+            params={"revision_id": revision_id},
+        )
+
+    if result in {"archived", "foreign_revision"}:
+        assert response.status_code == (409 if result == "archived" else 404)
+        provider.assert_not_awaited()
+        db.commit.assert_not_awaited()
+        return
+    assert response.status_code == 200
+    if result == "history":
+        assert response.json() == {
+            "suggested_category_id": str(category_id),
+            "source": "history",
+            "history_count": 3,
+        }
+        provider.assert_not_awaited()
+        db.commit.assert_not_awaited()
+    else:
+        suggestion = str(category_id) if result != "no_match" else None
+        assert response.json() == {
+            "suggested_category_id": suggestion,
+            "source": "ai" if suggestion else None,
+            "history_count": None,
+        }
+        provider.assert_awaited_once_with(
+            supplier="Dostawca",
+            description="Internet domowy",
+            catalog=[{"key": "c01", "path": "Internet"}],
+        )
+        db.commit.assert_awaited_once()
+    document_query, review_query = (call.args[0] for call in db.execute.call_args_list[:2])
+    assert set(document_query.compile().params.values()) == {doc_id, owner}
+    assert {doc_id, owner, revision_id} <= set(review_query.compile().params.values())
 
 
 @pytest.mark.asyncio

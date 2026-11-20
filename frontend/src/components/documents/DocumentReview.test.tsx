@@ -6,6 +6,26 @@ import { useAuthStore } from "../../stores/authStore";
 import type { DocumentReview as DocumentReviewData } from "../../api/documents";
 import { DocumentReview } from "./DocumentReview";
 
+const duplicateError = vi.hoisted(() => ({
+  response: {
+    status: 422,
+    data: {
+      detail: "duplicate_decision_required",
+      duplicate_candidates: [
+        {
+          id: "bill-existing",
+          reasons: ["same_number"],
+          supplier_name: "Sklep",
+          number: "FV-11",
+          issue_date: "2026-10-03",
+          total_minor: 1234,
+          currency: "PLN",
+        },
+      ],
+    },
+  },
+}));
+
 const apiState = vi.hoisted(() => ({
   review: {
     id: "review-1",
@@ -28,16 +48,29 @@ const apiState = vi.hoisted(() => ({
   retryOcr: vi.fn(),
   prepareVision: vi.fn(),
   attach: vi.fn(),
-  approve: vi.fn(),
+  approve: vi.fn((input, options) => {
+    if (input.data.duplicate_decision !== "separate")
+      options?.onError?.(duplicateError);
+  }),
   approveError: null as unknown,
   prepareError: null as unknown,
   retryOcrError: null as unknown,
   navigate: vi.fn(),
   archived: false,
+  metadata: {} as {
+    mime_type?: string;
+    has_extracted_text?: boolean;
+    status?: string;
+  },
   refetchBill: vi
     .fn()
     .mockResolvedValue({ data: { id: "draft-1", version: 5 } }),
 }));
+const comparisonBill = {
+  ...duplicateError.response.data.duplicate_candidates[0],
+  review: "approved",
+  lifecycle: "active",
+};
 beforeEach(() =>
   useAuthStore.setState({
     user: {
@@ -54,7 +87,10 @@ vi.mock("react-router-dom", () => ({ useNavigate: () => apiState.navigate }));
 vi.mock("../../api/documents", async (original) => ({
   ...(await original<typeof import("../../api/documents")>()),
   useDocumentMetadata: () => ({
-    data: { archived_at: apiState.archived ? "2026-11-03T12:00:00Z" : null },
+    data: {
+      ...apiState.metadata,
+      archived_at: apiState.archived ? "2026-11-03T12:00:00Z" : null,
+    },
   }),
   useRestoreDocument: () => ({ mutate: vi.fn(), isPending: false }),
   useDocumentReview: () => ({
@@ -88,12 +124,15 @@ vi.mock("../../api/bills", () => ({
     isPending: false,
     error: apiState.approveError,
   }),
-  useDuplicateCandidates: () => ({
-    data: [{ id: "bill-existing", reasons: ["same_number"] }],
-    isLoading: false,
-  }),
-  useBill: () => ({
-    data: { id: "bill-existing", version: 9 },
+  useBill: (id: string | null) => ({
+    data: id
+      ? {
+          ...comparisonBill,
+          number: id === "bill-second" ? "FV-22" : "FV-11",
+          id,
+          version: 9,
+        }
+      : undefined,
     isLoading: false,
     refetch: apiState.refetchBill,
   }),
@@ -370,6 +409,59 @@ describe("DocumentReview", () => {
       }
     },
   );
+  it("retries a PDF extraction from existing OCR text through text review", () => {
+    const previous = apiState.review;
+    apiState.metadata = {
+      mime_type: "application/pdf",
+      has_extracted_text: true,
+      status: "done",
+    };
+    apiState.review = {
+      ...previous!,
+      status: "incomplete",
+      error_code: "invalid_model_output",
+    };
+    apiState.prepare.mockClear();
+    apiState.prepareVision.mockClear();
+    apiState.retryOcr.mockClear();
+    try {
+      renderReview();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Ponów analizę tekstu" }),
+      );
+      expect(apiState.prepare).toHaveBeenCalledWith({
+        documentId: "document-1",
+        refresh: true,
+      });
+      expect(apiState.prepareVision).not.toHaveBeenCalled();
+      expect(apiState.retryOcr).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("Sprzedawca")).toBeVisible();
+    } finally {
+      apiState.metadata = {};
+      apiState.review = previous;
+    }
+  });
+
+  it("offers explicit local OCR when an older failed PDF has no review", () => {
+    const previous = apiState.review;
+    apiState.metadata = { mime_type: "application/pdf", status: "error" };
+    apiState.review = undefined;
+    apiState.retryOcr.mockClear();
+    try {
+      renderReview();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Ponów lokalny OCR" }),
+      );
+      expect(apiState.retryOcr).toHaveBeenCalledWith({
+        documentId: "document-1",
+        intentKey: expect.any(String),
+      });
+    } finally {
+      apiState.metadata = {};
+      apiState.review = previous;
+    }
+  });
+
   it("review_shows_llm_error_and_manual_fields", () => {
     renderReview();
     expect(screen.getByText(/zewnętrzny dostawca/i)).toBeInTheDocument();
@@ -446,6 +538,126 @@ describe("DocumentReview", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("prepares and approves in one submit when no duplicate is returned", () => {
+    apiState.approve.mockClear();
+    apiState.approve.mockImplementationOnce((_input, options) =>
+      options?.onSuccess?.({ id: "approved-directly" }),
+    );
+    renderReview();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    expect(apiState.approve).toHaveBeenCalledTimes(1);
+    expect(apiState.approve.mock.calls[0][0]).toMatchObject({
+      billId: "draft-1",
+      data: { version: 4, supplier_name: "Sklep", total_minor: 1234 },
+    });
+    expect(apiState.approve.mock.calls[0][0].data).not.toHaveProperty(
+      "duplicate_decision",
+    );
+    expect(apiState.navigate).toHaveBeenCalledWith(
+      "/finances/documents?bill=approved-directly",
+    );
+    expect(screen.queryByText(/podobny dokument/i)).not.toBeInTheDocument();
+  });
+
+  it("shows an inline amount error and submits a grouped Polish amount in exact minor units", () => {
+    apiState.prepare.mockClear();
+    apiState.approve.mockClear();
+    renderReview();
+    const amount = screen.getByLabelText("Kwota");
+    const submit = screen.getByRole("button", {
+      name: "Zatwierdź do rejestru",
+    });
+    for (const invalid of ["0", "12 34,00", "123,456", "90071992547409,92"]) {
+      fireEvent.change(amount, { target: { value: invalid } });
+      fireEvent.click(submit);
+      expect(amount).toHaveAccessibleDescription(/Wpisz poprawną kwotę/);
+      expect(apiState.prepare).not.toHaveBeenCalled();
+    }
+    fireEvent.change(amount, { target: { value: "1 234,50" } });
+    expect(amount).not.toHaveAttribute("aria-invalid");
+    fireEvent.click(submit);
+    expect(apiState.approve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ total_minor: 123450 }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("compares each duplicate and attaches only the chosen entry", async () => {
+    const originalData = duplicateError.response.data;
+    apiState.approve.mockImplementationOnce((_input, options) =>
+      options?.onError?.({
+        response: {
+          status: 422,
+          data: {
+            ...originalData,
+            duplicate_candidates: [
+              ...originalData.duplicate_candidates,
+              { ...comparisonBill, id: "bill-second", number: "FV-22" },
+            ],
+          },
+        },
+      }),
+    );
+    apiState.attach.mockClear();
+    renderReview();
+    fireEvent.change(screen.getByLabelText("Numer dokumentu"), {
+      target: { value: "FV-bieżący" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    const panel = await screen.findByRole("region", {
+      name: "Podobne wpisy w rejestrze",
+    });
+    expect(within(panel).getByRole("heading", { level: 3 })).toHaveFocus();
+    expect(within(panel).getByText("FV-bieżący")).toBeVisible();
+    expect(within(panel).getByText("FV-11")).toBeVisible();
+    const [first, second] = within(panel).getAllByRole("listitem");
+    expect(within(second).getByText("FV-22")).toBeVisible();
+    fireEvent.click(
+      within(second).getByRole("button", { name: "Dołącz do istniejącego" }),
+    );
+    expect(
+      within(first).queryByRole("button", { name: "Potwierdź dołączenie" }),
+    ).toBeNull();
+    fireEvent.click(
+      within(second).getByRole("button", { name: "Potwierdź dołączenie" }),
+    );
+    expect(apiState.attach).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ billId: "bill-second", expectedVersion: 9 }),
+      expect.anything(),
+    );
+  });
+
+  it("requires a fresh duplicate check after editing the submitted fields", async () => {
+    apiState.approve.mockClear();
+    renderReview();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    await screen.findByRole("button", { name: "Zarejestruj osobno" });
+    fireEvent.change(screen.getByLabelText("Kwota"), {
+      target: { value: "23.45" },
+    });
+    expect(
+      screen.queryByRole("button", { name: "Zarejestruj osobno" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
+    );
+    expect(apiState.approve).toHaveBeenCalledTimes(2);
+    expect(apiState.approve.mock.calls[1][0].data).toMatchObject({
+      total_minor: 2345,
+    });
+    expect(apiState.approve.mock.calls[1][0].data).not.toHaveProperty(
+      "duplicate_decision",
+    );
+  });
+
   it("offers explicit duplicate attach or separate approval with full manual fields", async () => {
     renderReview();
     fireEvent.change(screen.getByLabelText("Data sprzedaży"), {
@@ -460,7 +672,9 @@ describe("DocumentReview", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
     );
-    expect(await screen.findByText(/podobny dokument/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "Podobne wpisy w rejestrze" }),
+    ).toBeVisible();
     expect(
       screen.getByRole("button", { name: /Dołącz do istniejącego/ }),
     ).toBeInTheDocument();
@@ -551,12 +765,16 @@ describe("DocumentReview", () => {
   });
 
   it("keeps manual fields visible and tells the reviewer to refresh after a 409 approval conflict", async () => {
-    apiState.approve.mockImplementation((_input, options) => {
-      apiState.approveError = {
-        response: { status: 409, data: { detail: "version_conflict" } },
-      };
-      options?.onError?.(apiState.approveError);
-    });
+    apiState.approve
+      .mockImplementationOnce((_input, options) =>
+        options?.onError?.(duplicateError),
+      )
+      .mockImplementation((_input, options) => {
+        apiState.approveError = {
+          response: { status: 409, data: { detail: "version_conflict" } },
+        };
+        options?.onError?.(apiState.approveError);
+      });
     const rendered = renderReview();
     fireEvent.change(screen.getByLabelText("Data sprzedaży"), {
       target: { value: "2026-10-03" },
@@ -597,6 +815,9 @@ describe("DocumentReview", () => {
 
   it("blocks an attach conflict until a refreshed target version is acknowledged", async () => {
     apiState.attach.mockReset();
+    apiState.refetchBill.mockResolvedValueOnce({
+      data: { ...comparisonBill, id: "bill-existing", version: 5 },
+    });
     apiState.attach.mockImplementation((_input, options) =>
       options?.onError?.({ response: { status: 409 } }),
     );
@@ -633,16 +854,22 @@ describe("DocumentReview", () => {
   });
 
   it("requires a target refetch after attach 409 even when a draft conflict was acknowledged", async () => {
-    apiState.approve.mockImplementation((_input, options) =>
-      options?.onError?.({ response: { status: 409 } }),
-    );
+    apiState.approve
+      .mockImplementationOnce((_input, options) =>
+        options?.onError?.(duplicateError),
+      )
+      .mockImplementation((_input, options) =>
+        options?.onError?.({ response: { status: 409 } }),
+      );
     apiState.attach.mockImplementation((_input, options) =>
       options?.onError?.({ response: { status: 409 } }),
     );
     apiState.refetchBill
       .mockReset()
       .mockResolvedValueOnce({ data: { id: "draft-1", version: 5 } })
-      .mockResolvedValueOnce({ data: { id: "bill-existing", version: 6 } });
+      .mockResolvedValueOnce({
+        data: { ...comparisonBill, id: "bill-existing", version: 6 },
+      });
     renderReview();
     fireEvent.click(
       screen.getByRole("button", { name: "Zatwierdź do rejestru" }),
@@ -684,9 +911,13 @@ describe("DocumentReview", () => {
   });
 
   it("opens the approved document register detail after a separate approval succeeds", async () => {
-    apiState.approve.mockImplementation((_input, options) =>
-      options?.onSuccess?.({ id: "approved-bill" }),
-    );
+    apiState.approve
+      .mockImplementationOnce((_input, options) =>
+        options?.onError?.(duplicateError),
+      )
+      .mockImplementation((_input, options) =>
+        options?.onSuccess?.({ id: "approved-bill" }),
+      );
     renderReview();
     fireEvent.click(
       screen.getByRole("button", { name: "Zatwierdź do rejestru" }),

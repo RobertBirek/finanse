@@ -39,6 +39,12 @@ from app.finance.models import (
 )
 
 
+class DuplicateDecisionRequired(ValueError):
+    def __init__(self, candidates: list[DuplicateCandidate]) -> None:
+        super().__init__("duplicate_decision_required")
+        self.candidates = candidates
+
+
 def _canonical_hash(payload: dict[str, object]) -> str:
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
@@ -302,7 +308,7 @@ async def find_duplicate_bills(
         FinancialDocument.total_minor == data.total_minor,
         FinancialDocument.lifecycle == "active",
     )
-    candidates = list((await db.execute(stmt)).scalars())
+    candidates = list((await db.execute(stmt.order_by(FinancialDocument.id))).scalars())
     answer: list[DuplicateCandidate] = []
     tax_id = (data.supplier_tax_id or "").replace("-", "").replace(" ", "").upper()
     number = (data.number or "").strip().upper()
@@ -327,7 +333,17 @@ async def find_duplicate_bills(
         ):
             reasons.append("supplier_amount_currency")
         if reasons:
-            answer.append(DuplicateCandidate(id=candidate.id, reasons=reasons))
+            answer.append(
+                DuplicateCandidate(
+                    id=candidate.id,
+                    reasons=reasons,
+                    supplier_name=candidate.supplier_name,
+                    number=candidate.number,
+                    issue_date=candidate.issue_date,
+                    total_minor=data.total_minor,
+                    currency=data.currency,
+                )
+            )
     return answer
 
 
@@ -363,7 +379,7 @@ async def approve_bill(
         await _validate_links(db, user_id, data)
         duplicates = await find_duplicate_bills(db, user_id, data)
         if duplicates and data.duplicate_decision != "separate":
-            raise ValueError("duplicate_decision_required")
+            raise DuplicateDecisionRequired(duplicates)
         for name, value in data.model_dump(exclude={"version", "duplicate_decision"}).items():
             setattr(bill, name, value)
         bill.review = "approved"

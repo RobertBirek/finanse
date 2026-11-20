@@ -6,6 +6,7 @@ import {
   isDocumentWorkActive,
 } from "../api/documents";
 import { Dialog } from "./Dialog";
+import { DocumentIcon, DocumentTooltip } from "./documents/documentControls";
 import { QueryFeedback } from "./QueryFeedback";
 import { getDocumentStatus } from "./documents/documentStatus";
 
@@ -32,68 +33,94 @@ export function DocumentViewer({ document: doc, onClose, onReview }: Props) {
       onClose={onClose}
       panelClassName="w-full max-w-2xl rounded-xl border border-gray-700 bg-gray-900"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 p-4 border-b border-gray-800">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-semibold text-white break-all">
-            {doc.original_name}
-          </h2>
-          <p className="text-sm text-gray-400">
-            {formatFileSize(doc.size_bytes)} ·{" "}
-            {new Date(doc.created_at).toLocaleString("pl-PL")}
-          </p>
+      <header className="border-b border-gray-800 px-4 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold break-words text-white">
+              {doc.original_name}
+            </h2>
+            <p className="mt-1 text-xs text-gray-400">
+              {formatFileSize(doc.size_bytes)} ·{" "}
+              {new Date(doc.created_at).toLocaleString("pl-PL")}
+            </p>
+          </div>
+          <DocumentTooltip label="Zamknij">
+            <button
+              type="button"
+              aria-label="Zamknij"
+              onClick={onClose}
+              className="document-icon-control"
+            >
+              <DocumentIcon name="close" />
+            </button>
+          </DocumentTooltip>
         </div>
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${STATUS_COLORS[color]}`}
-        >
-          {status.label}
-        </span>
-        <div className="flex gap-2">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <span
+            className={`rounded-md px-2 py-1 text-xs ${STATUS_COLORS[color]}`}
+          >
+            {status.label}
+          </span>
           {onReview && (
-            <button type="button" onClick={onReview} className="btn-primary">
+            <button
+              type="button"
+              onClick={onReview}
+              className="btn-primary min-h-11"
+            >
               Sprawdź dane
             </button>
           )}
-          <button type="button" onClick={onClose} className="btn-secondary">
-            Zamknij
-          </button>
         </div>
-      </div>
-      <div className="p-4">
+      </header>
+      <section aria-label="Odczytany tekst" className="p-4">
         {isDocumentWorkActive(doc) ||
         (!doc.review &&
           (doc.status === "pending" || doc.status === "processing")) ? (
           <p role="status" className="py-8 text-center text-gray-300">
             Dokument jest przetwarzany…
           </p>
-        ) : doc.status === "error" ? (
-          <p role="alert" className="py-8 text-red-300">
-            Nie udało się odczytać dokumentu. Oryginał pozostaje zachowany.
-            Możesz ponownie przesłać ten sam plik, aby ponowić odczyt.
-          </p>
-        ) : !doc.has_extracted_text ? (
-          <p className="py-8 text-gray-400">
-            Tekst OCR nie jest dostępny dla tego dokumentu.
-          </p>
         ) : (
-          <QueryFeedback
-            loading={text.isLoading}
-            error={text.isError}
-            errorMessage="Nie udało się pobrać odczytanego tekstu."
-            onRetry={text.refetch}
-          >
-            {text.data?.extracted_text.trim() ? (
-              <pre className="text-sm text-gray-300 whitespace-pre-wrap break-words font-mono bg-gray-950 p-4 rounded-lg">
-                {text.data.extracted_text}
-              </pre>
-            ) : (
-              <p className="py-8 text-gray-400">
-                Nie znaleziono tekstu w dokumencie. Sprawdź, czy plik zawiera
-                czytelny tekst lub wyraźne zdjęcie.
+          <>
+            {doc.status === "error" && (
+              <p role="alert" className="mb-3 text-sm text-red-300">
+                Ostatni odczyt zakończył się błędem. Oryginał jest zachowany.
+                {onReview &&
+                  doc.mime_type === "application/pdf" &&
+                  !doc.archived_at &&
+                  " W sekcji „Sprawdź dane” możesz ponowić lokalny OCR."}
               </p>
             )}
-          </QueryFeedback>
+            {!doc.has_extracted_text ? (
+              <p className="py-8 text-gray-400">
+                Tekst OCR nie jest dostępny dla tego dokumentu.
+              </p>
+            ) : (
+              <QueryFeedback
+                loading={text.isLoading}
+                error={text.isError}
+                errorMessage="Nie udało się pobrać odczytanego tekstu."
+                onRetry={text.refetch}
+              >
+                {text.data?.extracted_text.trim() ? (
+                  <>
+                    <h3 className="mb-2 text-sm font-medium text-gray-300">
+                      Odczytany tekst
+                    </h3>
+                    <pre className="max-h-[56dvh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-gray-950 p-4 font-mono text-sm text-gray-300">
+                      {text.data.extracted_text}
+                    </pre>
+                  </>
+                ) : (
+                  <p className="py-8 text-gray-400">
+                    Nie znaleziono tekstu w dokumencie. Sprawdź, czy plik
+                    zawiera czytelny tekst lub wyraźne zdjęcie.
+                  </p>
+                )}
+              </QueryFeedback>
+            )}
+          </>
         )}
-      </div>
+      </section>
     </Dialog>
   );
 }

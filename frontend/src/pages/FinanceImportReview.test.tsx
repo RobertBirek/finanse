@@ -526,14 +526,9 @@ describe("bank review and frozen confirmation", () => {
     expect(
       screen.getByRole("button", { name: "Przygotuj podgląd" }),
     ).toBeDisabled();
-    await waitFor(() =>
-      expect(
-        within(panel).getByRole("button", { name: "Zatwierdź wybrane grupy" }),
-      ).toBeEnabled(),
-    );
-    fireEvent.click(
-      within(panel).getByRole("button", { name: "Zatwierdź wybrane grupy" }),
-    );
+    const retry = screen.getByRole("button", { name: "Ponów tę samą decyzję" });
+    await waitFor(() => expect(retry).toBeEnabled());
+    fireEvent.click(retry);
     await screen.findByText(/Zapisano wynik importu/);
     const commits = server.requests.filter((request) =>
       request.url.endsWith("/commit"),

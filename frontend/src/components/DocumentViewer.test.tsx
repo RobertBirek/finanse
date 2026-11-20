@@ -61,3 +61,27 @@ it.each(["pending", "processing"] as const)(
     client.clear();
   },
 );
+
+it("keeps saved text readable after a legacy PDF OCR failure", async () => {
+  const doc = processingDocument({
+    mime_type: "application/pdf",
+    processing_method: "legacy_ocr",
+    status: "error",
+    has_extracted_text: true,
+    review: null,
+  });
+  const client = new QueryClient();
+  vi.spyOn(api, "get").mockResolvedValue({
+    data: { extracted_text: "synthetic saved OCR" },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <DocumentViewer document={doc} onClose={vi.fn()} onReview={vi.fn()} />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "możesz ponowić lokalny OCR",
+  );
+  expect(await screen.findByText("synthetic saved OCR")).toBeVisible();
+  client.clear();
+});

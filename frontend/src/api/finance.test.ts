@@ -331,6 +331,10 @@ describe("invalidateFinanceLedger", () => {
   });
 });
 
+const idempotencyOptions = {
+  headers: { "Idempotency-Key": expect.any(String) },
+};
+
 describe("transaction mutation hooks", () => {
   it("posts only the small refund command and refreshes all ledger projections", async () => {
     const post = vi
@@ -363,11 +367,44 @@ describe("transaction mutation hooks", () => {
       expect(post).toHaveBeenCalledWith(
         "/finance/transactions/expense-refund",
         input,
+        idempotencyOptions,
       );
       for (const key of keys)
         expect(client.getQueryState(["finance", key])?.isInvalidated).toBe(
           true,
         );
+    } finally {
+      post.mockRestore();
+    }
+  });
+  it("reuses the command key after a lost reply and starts a new intent after success", async () => {
+    const post = vi
+      .spyOn(api, "post")
+      .mockRejectedValueOnce(new Error("lost reply"))
+      .mockResolvedValue({ data: { id: "tx" } } as unknown as AxiosResponse);
+    try {
+      const client = new QueryClient();
+      const { result } = renderHook(() => useCreateExpenseRefund(), {
+        wrapper: queryClientWrapper(client),
+      });
+      const intent = {
+        account_id: "a1",
+        category_id: "c1",
+        amount_minor: 1400,
+        transaction_date: "2026-11-12",
+        description: "Zwrot",
+      };
+      await expect(result.current.mutateAsync(intent)).rejects.toThrow(
+        "lost reply",
+      );
+      await result.current.mutateAsync(intent);
+      await result.current.mutateAsync(intent);
+      const keys = post.mock.calls.map(
+        (call) => call[2]?.headers?.["Idempotency-Key"],
+      );
+      expect(keys[0]).toBeTruthy();
+      expect(keys[1]).toBe(keys[0]);
+      expect(keys[2]).not.toBe(keys[0]);
     } finally {
       post.mockRestore();
     }
@@ -700,13 +737,17 @@ describe("exchange transaction hook", () => {
       description: "Przewalutowanie",
     });
 
-    expect(postSpy).toHaveBeenCalledWith("/finance/transactions/exchange", {
-      from_account_id: "acc-from",
-      to_account_id: "acc-to",
-      from_amount: 2500,
-      transaction_date: "2026-08-16",
-      description: "Przewalutowanie",
-    });
+    expect(postSpy).toHaveBeenCalledWith(
+      "/finance/transactions/exchange",
+      {
+        from_account_id: "acc-from",
+        to_account_id: "acc-to",
+        from_amount: 2500,
+        transaction_date: "2026-08-16",
+        description: "Przewalutowanie",
+      },
+      idempotencyOptions,
+    );
     postSpy.mockRestore();
   });
 
@@ -728,12 +769,16 @@ describe("exchange transaction hook", () => {
       description: "Przewalutowanie",
     });
 
-    expect(postSpy).toHaveBeenCalledWith("/finance/transactions/exchange", {
-      from_account_id: "acc-from",
-      to_account_id: "acc-to",
-      from_amount: 2500,
-      description: "Przewalutowanie",
-    });
+    expect(postSpy).toHaveBeenCalledWith(
+      "/finance/transactions/exchange",
+      {
+        from_account_id: "acc-from",
+        to_account_id: "acc-to",
+        from_amount: 2500,
+        description: "Przewalutowanie",
+      },
+      idempotencyOptions,
+    );
     postSpy.mockRestore();
   });
 });

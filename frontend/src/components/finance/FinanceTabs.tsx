@@ -1,19 +1,10 @@
+import { useId, useRef, useState } from "react";
 import { NavLink, useInRouterContext, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { RuleEventWatcher } from "./RuleEventWatcher";
 import { SuggestionActivityWatcher } from "./SuggestionActivityWatcher";
 import { financePeriodSearch, periodFromSearch } from "./useFinancePeriod";
-
-const tabs = [
-  ["/finances", "Przegląd", true],
-  ["/finances/transactions", "Transakcje", false],
-  ["/finances/budgets", "Budżet", false],
-  ["/finances/cashflow", "Nadchodzące", false],
-  ["/finances/documents", "Dokumenty", false],
-  ["/finances/imports", "Import", false],
-  ["/finances/proposals", "Propozycje", false],
-  ["/finances/reports", "Raporty", false],
-] as const;
+import { primaryFinanceItems, secondaryFinanceItems } from "../navigation";
 
 export function FinanceTabs() {
   const inRouter = useInRouterContext();
@@ -31,43 +22,59 @@ export function FinanceTabs() {
 
 function FinanceTabLinks() {
   const location = useLocation();
+  const [expandedAt, setExpandedAt] = useState<string | null>(null);
+  const expanded = expandedAt === location.key;
+  const extraId = useId();
+  const toggle = useRef<HTMLButtonElement>(null);
   const periodSearch = financePeriodSearch(
     periodFromSearch(new URLSearchParams(location.search)),
   );
   return (
     <nav
-      className="mb-7 flex gap-6 overflow-x-auto border-b border-gray-800"
+      className="finance-tabs"
       aria-label="Widoki finansów"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && expanded) {
+          setExpandedAt(null);
+          toggle.current?.focus();
+        }
+      }}
     >
-      {tabs.map(([to, label, end]) => (
-        <NavLink
-          key={to}
-          to={`${to}${periodSearch}`}
-          end={end}
-          className={({ isActive }) =>
-            `shrink-0 border-b-2 px-1 pb-3 text-sm ${isActive ? "border-current font-semibold text-gray-950 dark:text-white" : "border-transparent text-gray-500 hover:text-gray-950 dark:hover:text-white"}`
-          }
-        >
+      {primaryFinanceItems.map(({ to, label, end }) => (
+        <NavLink key={to} to={`${to}${periodSearch}`} end={end}>
           {label}
         </NavLink>
       ))}
+      <button
+        type="button"
+        className="finance-tabs-toggle"
+        ref={toggle}
+        aria-expanded={expanded}
+        aria-controls={extraId}
+        onClick={() => setExpandedAt(expanded ? null : location.key)}
+      >
+        Więcej
+      </button>
+      <div id={extraId} className="finance-tabs-more" data-expanded={expanded}>
+        {secondaryFinanceItems.map(({ to, label }) => (
+          <NavLink
+            key={to}
+            to={`${to}${periodSearch}`}
+            onClick={() => setExpandedAt(null)}
+          >
+            {label}
+          </NavLink>
+        ))}
+      </div>
     </nav>
   );
 }
 
 function FinanceTabLabels() {
   return (
-    <nav
-      className="mb-7 flex gap-6 overflow-x-auto border-b border-gray-800"
-      aria-label="Widoki finansów"
-    >
-      {tabs.map(([, label]) => (
-        <span
-          key={label}
-          className="shrink-0 border-b-2 border-transparent px-1 pb-3 text-sm text-gray-500"
-        >
-          {label}
-        </span>
+    <nav className="finance-tabs" aria-label="Widoki finansów">
+      {[...primaryFinanceItems, ...secondaryFinanceItems].map(({ label }) => (
+        <span key={label}>{label}</span>
       ))}
     </nav>
   );

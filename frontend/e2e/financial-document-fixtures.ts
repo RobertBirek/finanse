@@ -16,8 +16,10 @@ export async function financialDocumentFixtures(
   page: Page,
   options: {
     reviewError?: boolean;
+    missingReview?: boolean;
     invoiceTotalMinor?: number;
     candidateEvidence?: boolean;
+    categoryHistory?: boolean;
   } = {},
 ) {
   const base = await fixtures(page);
@@ -226,6 +228,8 @@ export async function financialDocumentFixtures(
           ],
         },
       });
+    if (options.missingReview && path === `/api/documents/${ids.oldPdf}/review`)
+      return route.fulfill({ status: 404 });
     if (
       [ids.oldPdf, ids.heic].includes(path.split("/")[3]) &&
       path.endsWith("/text")
@@ -339,20 +343,6 @@ export async function financialDocumentFixtures(
         },
       });
     if (
-      path === `/api/finance/bills/${ids.bill}/duplicates` &&
-      method === "GET"
-    )
-      return route.fulfill({ json: [] });
-    if (path === "/api/finance/bills/heif-draft/duplicates" && method === "GET")
-      return route.fulfill({
-        json: [{ id: ids.bill, reasons: ["same_purchase"] }],
-      });
-    if (
-      path === "/api/finance/bills/receipt-draft/duplicates" &&
-      method === "GET"
-    )
-      return route.fulfill({ json: [] });
-    if (
       path === `/api/finance/bills/${ids.bill}/candidates` &&
       method === "GET"
     )
@@ -442,6 +432,19 @@ export async function financialDocumentFixtures(
         key: req.headerValue("Idempotency-Key"),
       });
     if (
+      path === `/api/documents/${ids.oldPdf}/review/category-suggestion` &&
+      method === "POST"
+    ) {
+      expect(url.searchParams.get("revision_id")).toBe("r");
+      return route.fulfill({
+        json: {
+          suggested_category_id: "c1",
+          source: options.categoryHistory ? "history" : "ai",
+          history_count: options.categoryHistory ? 3 : null,
+        },
+      });
+    }
+    if (
       path === `/api/finance/bills/${ids.bill}/payment-declaration` &&
       method === "POST"
     ) {
@@ -519,6 +522,26 @@ export async function financialDocumentFixtures(
         status: 201,
         json: { ...bill(), id: "receipt-draft", review: "draft", version: 1 },
       });
+    if (path === "/api/finance/bills/heif-draft/approve" && method === "POST") {
+      expect(req.postDataJSON()).not.toHaveProperty("duplicate_decision");
+      return route.fulfill({
+        status: 422,
+        json: {
+          detail: "duplicate_decision_required",
+          duplicate_candidates: [
+            {
+              id: ids.bill,
+              reasons: ["same_purchase"],
+              supplier_name: bill().supplier_name,
+              number: bill().number,
+              issue_date: bill().issue_date,
+              total_minor: bill().total_minor,
+              currency: bill().currency,
+            },
+          ],
+        },
+      });
+    }
     if (path === `/api/finance/bills/${ids.bill}/approve` && method === "POST")
       return route.fulfill({ json: bill() });
     if (

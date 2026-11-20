@@ -15,6 +15,7 @@ for (const viewport of [375, 1440]) {
         .getByRole("button", { name: "Otwórz dokument: synthetic-photo.jpg" })
         .click();
       await page
+        .getByRole("dialog")
         .getByRole("button", { name: "Sprawdź dane", exact: true })
         .click();
       await expect(
@@ -23,6 +24,20 @@ for (const viewport of [375, 1440]) {
       await page.getByLabel("Kwota").fill("99.99");
       await page.getByLabel("Konto płatności").selectOption("a1");
       await page.getByLabel("Kategoria").selectOption("c1");
+      if (viewport === 375) {
+        await page
+          .getByRole("button", { name: "Oryginał", exact: true })
+          .click();
+        await expect(
+          page.getByRole("region", { name: "Oryginał dokumentu" }),
+        ).toBeVisible();
+        await expect(page.getByLabel("Kwota")).toBeHidden();
+        await page.getByRole("button", { name: "Dane", exact: true }).click();
+      } else {
+        await expect(
+          page.getByRole("region", { name: "Oryginał dokumentu" }),
+        ).toBeVisible();
+      }
       await expect(page.getByLabel("Sprzedawca")).toHaveValue("Delayed shop", {
         timeout: 6_000,
       });
@@ -62,7 +77,10 @@ test("error, limit, and refusal retain private original and require explicit dis
   await page
     .getByRole("button", { name: "Otwórz dokument: synthetic-photo.jpg" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sprawdź dane", exact: true })
+    .click();
   await expect(page.getByRole("alert")).toContainText(
     "Możesz uzupełnić pola ręcznie",
   );
@@ -101,7 +119,10 @@ test("synthetic JPEG upload posts multipart and its pending vision review become
   await page
     .getByRole("button", { name: "Otwórz dokument: synthetic-upload.jpg" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sprawdź dane", exact: true })
+    .click();
   await expect(page.getByLabel("Sprzedawca")).toHaveValue("");
   await expect(page.getByLabel("Sprzedawca")).toHaveValue("Delayed shop", {
     timeout: 6_000,
@@ -123,14 +144,24 @@ test("review fetches binary private preview and original and offers a download l
   const originalResponse = page.waitForResponse((response) =>
     response.url().endsWith(`/documents/${visionIds.image}/original`),
   );
-  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sprawdź dane", exact: true })
+    .click();
   expect((await previewResponse).status()).toBe(200);
   expect(await (await originalResponse).body()).toEqual(
     Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
   );
-  await expect(
-    page.getByRole("link", { name: "Pobierz autoryzowany oryginał" }),
-  ).toHaveAttribute("download", "dokument");
+  const originalTab = page.getByRole("button", {
+    name: "Oryginał",
+    exact: true,
+  });
+  if (await originalTab.isVisible()) await originalTab.click();
+  const download = page.getByRole("link", {
+    name: "Pobierz autoryzowany oryginał",
+  });
+  await expect(download).toBeVisible();
+  await expect(download).toHaveAttribute("download", "dokument");
   expect(api.privateRequests.map(({ path }) => path)).toEqual([
     `/api/documents/${visionIds.image}/preview`,
     `/api/documents/${visionIds.image}/original`,
@@ -152,7 +183,10 @@ test("HTTP 429 from an explicit vision retry leaves manual fields available", as
   await page
     .getByRole("button", { name: "Otwórz dokument: synthetic-photo.jpg" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sprawdź dane", exact: true })
+    .click();
   await expect(page.getByLabel("Sprzedawca")).toBeVisible();
   await page.getByLabel("Sprzedawca").fill("Ręcznie wpisany sprzedawca");
   await page.getByRole("button", { name: "Ponów AI" }).click();
@@ -178,8 +212,65 @@ test("legacy PDF retains its text-review contract without a vision request", asy
   await page
     .getByRole("button", { name: "Otwórz dokument: legacy.pdf" })
     .click();
-  await page.getByRole("button", { name: "Sprawdź dane", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sprawdź dane", exact: true })
+    .click();
   await expect(page.getByLabel("Sprzedawca")).toHaveValue("Legacy");
   expect(api.requests).toEqual([]);
+  api.assertClean();
+});
+
+test("the document list keeps long names, statuses and right-aligned icon actions keyboard accessible", async ({
+  page,
+}, testInfo) => {
+  const name = `${"faktura-".repeat(24)}listopad.pdf`;
+  const api = await documentVisionFixtures(page, { pdfName: name });
+  await page.goto("/documents");
+  await expect(
+    page.getByRole("combobox", { name: "Status dokumentów" }),
+  ).toHaveValue("");
+  const open = page.getByRole("button", { name: `Otwórz dokument: ${name}` });
+  const row = page.getByRole("listitem").filter({ has: open });
+  const readingLabel = "Odczyt · OCR zakończony — sprawdź dane";
+  const reading = row.getByRole("img", { name: readingLabel });
+  await expect(reading).toBeVisible();
+  await expect(row.getByText(readingLabel, { exact: true })).toBeHidden();
+  await reading.focus();
+  await expect(row.getByText(readingLabel, { exact: true })).toBeVisible();
+
+  const archive = row.getByRole("button", {
+    name: `Archiwizuj dokument: ${name}`,
+  });
+  const importLink = row.getByRole("link", { name: "Użyj do importu" });
+  await expect(importLink).toHaveAttribute(
+    "href",
+    `/finances/imports?document=${visionIds.pdf}`,
+  );
+  await archive.focus();
+  await page.keyboard.press("Tab");
+  await expect(importLink).toBeFocused();
+  await expect(archive).toHaveCSS("height", "44px");
+  const rowBox = await row.boundingBox();
+  const importBox = await importLink.boundingBox();
+  expect(
+    rowBox!.x + rowBox!.width - importBox!.x - importBox!.width,
+  ).toBeLessThanOrEqual(16);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await importLink.blur();
+  await page.screenshot({ path: testInfo.outputPath("documents.png") });
+
+  await open.focus();
+  await page.keyboard.press("Enter");
+  const viewer = page.getByRole("dialog", { name: `Dokument: ${name}` });
+  await expect(viewer.getByText("Synthetic legacy PDF")).toBeVisible();
+  await viewer.getByRole("button", { name: "Zamknij" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(viewer).toBeHidden();
+  await expect(open).toBeFocused();
   api.assertClean();
 });

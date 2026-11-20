@@ -18,9 +18,11 @@ from app.finance.models import (
     LoanAgreement,
     Posting,
     ScheduledFinanceItem,
+    TransactionDateMetadata,
 )
 from app.finance.rule_origin_reads import attach_assignment_origins
-from app.finance.schemas import TransactionResponse, TransactionSearch, TransactionSearchResponse
+from app.finance.schemas import TransactionSearch, TransactionSearchItem, TransactionSearchResponse
+from app.finance.transaction_dates import purchase_date_expression
 from app.work.models import Project
 
 
@@ -195,6 +197,7 @@ async def search_transactions(
         txn.user_id == user_id,
         select(Posting.id).where(Posting.transaction_id == txn.id, *account_leg).exists(),
     ]
+    category_amount: ColumnElement[int] | None = None
     if filters.category_id:
         category_ids = select(Category.id).where(
             Category.id == filters.category_id, Category.user_id == user_id
@@ -215,10 +218,47 @@ async def search_transactions(
             )
             .exists()
         )
+        category_amount = (
+            select(
+                func.sum(
+                    case(
+                        (
+                            (Category.type == "income") & (Posting.direction == "debit"),
+                            Posting.base_amount_pln,
+                        ),
+                        (
+                            (Category.type == "expense") & (Posting.direction == "credit"),
+                            Posting.base_amount_pln,
+                        ),
+                        else_=-Posting.base_amount_pln,
+                    )
+                )
+            )
+            .select_from(Posting)
+            .join(Category, Category.id == Posting.category_id)
+            .where(
+                Posting.transaction_id == txn.id,
+                Posting.account_id.is_(None),
+                Posting.category_id.in_(category_ids),
+            )
+            .scalar_subquery()
+        )
+    count_stmt = select(func.count()).select_from(txn)
+    rows_stmt = select(txn).options(selectinload(txn.postings))
+    if category_amount is not None:
+        rows_stmt = rows_stmt.add_columns(category_amount)
+    date_expression = txn.date.expression
+    if filters.date_basis == "purchase":
+        date_join = (TransactionDateMetadata.transaction_id == txn.id) & (
+            TransactionDateMetadata.user_id == txn.user_id
+        )
+        count_stmt = count_stmt.outerjoin(TransactionDateMetadata, date_join)
+        rows_stmt = rows_stmt.outerjoin(TransactionDateMetadata, date_join)
+        date_expression = purchase_date_expression()
     if filters.date_from:
-        conditions.append(txn.date >= filters.date_from)
+        conditions.append(date_expression >= filters.date_from)
     if filters.date_to:
-        conditions.append(txn.date <= filters.date_to)
+        conditions.append(date_expression <= filters.date_to)
     if filters.type:
         conditions.append(txn.type == filters.type)
     if filters.q:
@@ -275,23 +315,30 @@ async def search_transactions(
                 .exists(),
             )
         )
-    total = await db.scalar(select(func.count()).select_from(txn).where(*conditions))
+    total = await db.scalar(count_stmt.where(*conditions))
     result = await db.execute(
-        select(txn)
-        .options(selectinload(txn.postings))
-        .where(*conditions)
-        .order_by(txn.date.desc(), txn.created_at.desc(), txn.id.desc())
+        rows_stmt.where(*conditions)
+        .order_by(date_expression.desc(), txn.created_at.desc(), txn.id.desc())
         .limit(filters.limit)
         .offset(filters.offset)
     )
+    rows = result.all()
+    amount_by_id = (
+        {row[0].id: int(row[1]) for row in rows if row[1] is not None}
+        if category_amount is not None
+        else {}
+    )
+    transactions = await attach_annotations(
+        db,
+        user_id,
+        await attach_assignment_origins(db, user_id, [row[0] for row in rows]),
+    )
     return TransactionSearchResponse(
         items=[
-            TransactionResponse.model_validate(txn)
-            for txn in await attach_annotations(
-                db,
-                user_id,
-                await attach_assignment_origins(db, user_id, list(result.scalars().all())),
+            TransactionSearchItem.model_validate(transaction).model_copy(
+                update={"matched_category_amount_pln": amount_by_id.get(transaction.id)}
             )
+            for transaction in transactions
         ],
         total=total or 0,
         limit=filters.limit,

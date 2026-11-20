@@ -1,5 +1,12 @@
-import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type DragEvent,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { isAxiosError } from "axios";
+import { Link } from "react-router-dom";
 import {
   formatFileSize,
   useDocumentUploadCapabilities,
@@ -10,18 +17,23 @@ import {
 import {
   captureProcessingActor,
   isProcessingActorCurrent,
+  type ProcessingActor,
 } from "../stores/documentProcessingStore";
 
-const ACCEPTED_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/heic",
-  "image/heif",
-];
+import { DocumentIcon, DocumentTooltip } from "./documents/documentControls";
+import { CameraScanDialog } from "./documents/CameraScanDialog";
+import {
+  cameraAccept,
+  cameraMimeTypes,
+  invalidPhotoMessage,
+  isCameraPhoto,
+} from "./documents/cameraFiles";
+
+const ACCEPTED_TYPES = ["application/pdf", ...cameraMimeTypes];
 type UploadItem = {
   id: number;
-  file: File;
+  upload: File | File[];
+  name: string;
   state: "queued" | "uploading" | "success" | "error";
   error?: string;
   archivedDocumentId?: string;
@@ -55,7 +67,14 @@ function errorMessage(error: unknown) {
   return "Nie udało się przesłać dokumentu.";
 }
 
-export function DocumentUpload() {
+export function DocumentUpload({
+  cameraOnly = false,
+}: {
+  cameraOnly?: boolean;
+}) {
+  const uploadId = useId();
+  const privacyId = `${uploadId}-privacy`;
+  const formatsId = `${uploadId}-formats`;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadDocument();
@@ -64,6 +83,10 @@ export function DocumentUpload() {
   const [dragActive, setDragActive] = useState(false);
   const [items, setItems] = useState<UploadItem[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [scan, setScan] = useState<{
+    firstPhoto: File;
+    actor: ProcessingActor;
+  } | null>(null);
   const nextId = useRef(0);
   const queue = useRef<UploadItem[]>([]);
   const draining = useRef(false);
@@ -80,7 +103,7 @@ export function DocumentUpload() {
       );
       try {
         const actor = captureProcessingActor();
-        const result = await upload.mutateAsync(item.file);
+        const result = await upload.mutateAsync(item.upload);
         if (!isProcessingActorCurrent(actor)) {
           queue.current = [];
           draining.current = false;
@@ -92,6 +115,7 @@ export function DocumentUpload() {
               ? {
                   ...entry,
                   state: "success",
+                  name: result.document.original_name || entry.name,
                   archivedDocumentId: result.document.archived_at
                     ? result.document.id
                     : undefined,
@@ -111,6 +135,17 @@ export function DocumentUpload() {
     }
     draining.current = false;
   };
+  const enqueue = (uploads: (File | File[])[]) => {
+    const newItems = uploads.map((input) => ({
+      id: nextId.current++,
+      upload: input,
+      name: Array.isArray(input) ? "Skan dokumentu.pdf" : input.name,
+      state: "queued" as const,
+    }));
+    setItems((current) => [...current, ...newItems]);
+    queue.current.push(...newItems);
+    void drainQueue();
+  };
   const addFiles = (files: FileList | File[]) => {
     setValidationError(null);
     const valid = Array.from(files).filter(
@@ -126,14 +161,7 @@ export function DocumentUpload() {
       );
       return;
     }
-    const newItems = valid.map((file) => ({
-      id: nextId.current++,
-      file,
-      state: "queued" as const,
-    }));
-    setItems((current) => [...current, ...newItems]);
-    queue.current.push(...newItems);
-    void drainQueue();
+    enqueue(valid);
   };
   const retry = (item: UploadItem) => {
     const queued = { ...item, state: "queued" as const, error: undefined };
@@ -147,86 +175,138 @@ export function DocumentUpload() {
     if (event.target.files) addFiles(event.target.files);
     event.target.value = "";
   };
+  const onCameraChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const photo = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!photo) return;
+    if (!isCameraPhoto(photo)) {
+      setValidationError(invalidPhotoMessage);
+      return;
+    }
+    setValidationError(null);
+    setScan({ firstPhoto: photo, actor: captureProcessingActor() });
+  };
   const onDrop = (event: DragEvent) => {
     event.preventDefault();
     setDragActive(false);
-    addFiles(event.dataTransfer.files);
+    if (event.dataTransfer.files.length) addFiles(event.dataTransfer.files);
   };
   const limit = capabilities.data
     ? `do ${formatFileSize(capabilities.data.max_file_bytes)}`
     : "zgodnie z limitem konta";
 
-  return (
-    <div className="mb-6">
-      <p className="mb-3 text-sm text-gray-400">
-        Odczyt AI może przekazać dostawcy treść dokumentu oraz nazwy i ścieżki
-        Twoich kategorii wydatków, aby zaproponować kategorię. Po odczycie
-        przygotujemy szkic w finansach. Szkic wymaga Twojego zatwierdzenia; nie
-        tworzy płatności ani transakcji.
-      </p>
+  const cameraButton = (
+    <button
+      type="button"
+      aria-label={cameraOnly ? undefined : "Aparat"}
+      aria-describedby={privacyId}
+      className={
+        cameraOnly
+          ? "btn-secondary inline-flex min-h-11 shrink-0 items-center justify-center gap-2"
+          : "document-icon-control"
+      }
+      onClick={() => cameraInputRef.current?.click()}
+    >
+      <DocumentIcon name="camera" />
+      {cameraOnly && "Zrób zdjęcie dokumentu"}
+    </button>
+  );
+  const privacyNotice = (
+    <p
+      id={privacyId}
+      className={`text-xs leading-relaxed text-gray-400 ${cameraOnly ? "max-w-lg" : "mb-2"}`}
+    >
       {capabilities.data?.automatic_image_vision ? (
-        <p role="status" className="mb-3 text-sm text-gray-300">
-          Zdjęcia są automatycznie wysyłane do{" "}
-          {capabilities.data.vision_provider_label ?? "dostawcy"} do odczytu AI.
-          Dane wymagają sprawdzenia. Informacje widoczne na zdjęciu są
-          przekazywane dostawcy.
-        </p>
-      ) : null}
-      <button
-        type="button"
-        aria-label="Wybierz dokument do przesłania"
-        aria-describedby="upload-formats"
-        className={`w-full border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive ? "border-advisor-400 bg-advisor-400/10" : "border-gray-700 hover:border-gray-500 bg-gray-900"}`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragActive(true);
-        }}
-        onDragLeave={() => setDragActive(false)}
-        onDrop={onDrop}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <span className="block text-gray-300 font-medium">
-          Wybierz dokument do przesłania
+        <span role="status">
+          Zdjęcia automatycznie trafiają do{" "}
+          {capabilities.data.vision_provider_label ?? "dostawcy"} do odczytu
+          AI.{" "}
         </span>
-      </button>
-      <span
-        id="upload-formats"
-        className="block text-center text-gray-400 text-sm mt-1"
-      >
-        PDF, JPG, PNG, HEIC, HEIF — {limit}
-      </span>
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,application/pdf,image/jpeg,image/png,image/heic,image/heif"
-        className="hidden"
-        onChange={onChange}
-      />
+      ) : null}
+      {cameraOnly
+        ? "Odczyt AI może przekazać dostawcy zdjęcie oraz nazwy i ścieżki kategorii wydatków. Szkic zatwierdzisz w Dokumentach."
+        : "Odczyt AI może przekazać dostawcy treść pliku oraz nazwy i ścieżki Twoich kategorii wydatków. Szkic wymaga Twojego zatwierdzenia i sam nie tworzy płatności ani transakcji."}
+    </p>
+  );
+
+  return (
+    <div
+      className={
+        cameraOnly ? "mt-4 min-w-0 border-t border-gray-800 pt-3" : "mb-5"
+      }
+    >
+      {cameraOnly ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          {cameraButton}
+          {privacyNotice}
+        </div>
+      ) : (
+        <>
+          {privacyNotice}
+          <div
+            className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-dashed px-3 py-2.5 ${dragActive ? "border-advisor-400 bg-advisor-400/10" : "border-gray-700 bg-gray-900"}`}
+            onDragOver={(event) => {
+              if (!event.dataTransfer.types.includes("Files")) return;
+              event.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={(event) => {
+              if (
+                !(event.relatedTarget instanceof Node) ||
+                !event.currentTarget.contains(event.relatedTarget)
+              ) {
+                setDragActive(false);
+              }
+            }}
+            onDrop={onDrop}
+          >
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-describedby={`${formatsId} ${privacyId}`}
+                className="btn-primary inline-flex min-h-11 items-center gap-2"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <DocumentIcon name="upload" />
+                Dodaj dokument
+              </button>
+              <DocumentTooltip label="Aparat">{cameraButton}</DocumentTooltip>
+            </div>
+            <span id={formatsId} className="text-xs text-gray-400">
+              PDF, JPG, PNG, HEIC, HEIF · {limit}
+            </span>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,application/pdf,image/jpeg,image/png,image/heic,image/heif"
+            className="hidden"
+            onChange={onChange}
+          />
+        </>
+      )}
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif"
+        accept={cameraAccept}
         capture="environment"
         className="hidden"
-        onChange={onChange}
+        onChange={onCameraChange}
       />
-      <div className="flex gap-3 mt-3">
-        <button
-          type="button"
-          onClick={() => cameraInputRef.current?.click()}
-          className="min-h-11 flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 text-sm"
-        >
-          Aparat
-        </button>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="min-h-11 flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-300 text-sm"
-        >
-          Galeria lub pliki
-        </button>
-      </div>
+      {scan && isProcessingActorCurrent(scan.actor) && (
+        <CameraScanDialog
+          firstPhoto={scan.firstPhoto}
+          maxPages={capabilities.data?.max_scan_pages ?? 1}
+          maxBytes={capabilities.data?.max_file_bytes}
+          onClose={() => setScan(null)}
+          onSend={(photos) => {
+            setScan(null);
+            if (isProcessingActorCurrent(scan.actor))
+              enqueue([photos.length === 1 ? photos[0] : photos]);
+          }}
+        />
+      )}
       {validationError && (
         <p role="alert" className="mt-2 text-sm text-red-300">
           {validationError}
@@ -247,7 +327,7 @@ export function DocumentUpload() {
               className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-900 p-3 text-sm"
             >
               <span className="min-w-0 flex-1 truncate text-gray-200">
-                {item.file.name}
+                {item.name}
               </span>
               <span role="status" className="text-gray-400">
                 {item.archivedDocumentId
@@ -315,6 +395,17 @@ export function DocumentUpload() {
           {documentArchiveError(restore.error)}
         </p>
       )}
+      {cameraOnly &&
+        items.some(
+          (item) => item.state === "success" && !item.archivedDocumentId,
+        ) && (
+          <Link
+            to="/documents"
+            className="mt-2 inline-flex min-h-11 items-center rounded-md text-sm text-[var(--ui-blue)] underline"
+          >
+            Otwórz dokumenty
+          </Link>
+        )}
     </div>
   );
 }

@@ -64,6 +64,11 @@ class BillUpdate(BaseModel):
 class DuplicateCandidate(BaseModel):
     id: uuid.UUID
     reasons: list[str]
+    supplier_name: str | None
+    number: str | None
+    issue_date: dt.date | None
+    total_minor: int | None
+    currency: Literal["PLN", "EUR", "USD"] | None
 
 
 class BillLifecycleUpdate(BaseModel):

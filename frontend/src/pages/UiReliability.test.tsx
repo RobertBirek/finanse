@@ -71,6 +71,7 @@ vi.mock("../api/documents", async (original) => ({
   useDocumentUploadCapabilities: () => ({
     data: { max_file_bytes: 20 * 1024 * 1024, accepted_mime_types: [] },
   }),
+  useDocumentWorklistCounts: () => ({ data: { review: 0, errors: 0 } }),
   useDeleteDocument: () => ({ mutate: mocks.mutate }),
   useArchiveDocument: () => ({ mutate: mocks.mutate, isPending: false }),
   useRestoreDocument: () => ({ mutate: mocks.mutate, isPending: false }),
@@ -104,7 +105,7 @@ beforeEach(() => {
   mocks.summary.mockReturnValue(
     query({ net_total_pln: 123456, month: 10, year: 2026 }),
   );
-  mocks.docs.mockReturnValue(query([doc]));
+  mocks.docs.mockReturnValue(query({ pages: [{ items: [doc] }] }));
   mocks.text.mockReturnValue(query({ extracted_text: "Treść" }));
   mocks.upload.mockReturnValue({ mutate: mocks.mutate, isPending: false });
   mocks.settings.mockReturnValue(
@@ -124,7 +125,11 @@ describe("trustworthy query states", () => {
     mocks.tasks.mockReturnValue(failed);
     mocks.blocks.mockReturnValue(failed);
     mocks.summary.mockReturnValue(failed);
-    render(<Today />);
+    render(
+      <MemoryRouter>
+        <Today />
+      </MemoryRouter>,
+    );
     expect(screen.getAllByRole("alert")).toHaveLength(3);
     expect(screen.queryByText("0 PLN")).not.toBeInTheDocument();
     expect(screen.queryByText(/Brak aktywnych zadań/)).not.toBeInTheDocument();
@@ -135,7 +140,11 @@ describe("trustworthy query states", () => {
   });
   it("keeps loading distinct from successful emptiness and formats money", () => {
     mocks.tasks.mockReturnValue({ ...query(undefined), isLoading: true });
-    render(<Today />);
+    render(
+      <MemoryRouter>
+        <Today />
+      </MemoryRouter>,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("Ładowanie");
     expect(screen.queryByText(/Brak aktywnych zadań/)).not.toBeInTheDocument();
     expect(screen.getByText(/1.*234,56 PLN/)).toBeInTheDocument();
@@ -167,24 +176,29 @@ describe("trustworthy query states", () => {
 describe("document recovery UI", () => {
   it("keeps filters available when their result is empty", () => {
     mocks.docs.mockImplementation((params) =>
-      query(params?.status ? [] : [doc]),
+      query({ pages: [{ items: params?.status ? [] : [doc] }] }),
     );
     render(
       <MemoryRouter>
         <DocumentList />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Oczekuje" }));
+    const status = screen.getByRole("combobox", { name: "Status dokumentów" });
+    fireEvent.change(status, { target: { value: "pending" } });
     expect(
       screen.getByText("Brak dokumentów o wybranym statusie."),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Wszystkie" }));
+    fireEvent.change(status, { target: { value: "" } });
     expect(
       screen.getByRole("button", { name: "Otwórz dokument: example.pdf" }),
     ).toBeInTheDocument();
   });
   it("does not disguise document errors as no documents", () => {
-    mocks.docs.mockReturnValue({ ...query(undefined), isError: true });
+    mocks.docs.mockReturnValue({
+      ...query(undefined),
+      isError: true,
+      isLoadingError: true,
+    });
     render(
       <MemoryRouter>
         <DocumentList />
@@ -249,7 +263,7 @@ describe("document recovery UI", () => {
   it("has an accessible upload action and rejects empty files", () => {
     render(<DocumentUpload />);
     expect(
-      screen.getByRole("button", { name: "Wybierz dokument do przesłania" }),
+      screen.getByRole("button", { name: "Dodaj dokument" }),
     ).toBeInTheDocument();
     const input = document.querySelector('input[type="file"]')!;
     fireEvent.change(input, { target: { files: [new File([], "empty.pdf")] } });
@@ -277,7 +291,11 @@ describe("calendar and live local date", () => {
   it("refreshes today's date across local midnight without reloading the app", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 20, 23, 59, 50));
-    render(<Today />);
+    render(
+      <MemoryRouter>
+        <Today />
+      </MemoryRouter>,
+    );
     const first =
       mocks.blocks.mock.calls[mocks.blocks.mock.calls.length - 1]![0]
         .start_time;

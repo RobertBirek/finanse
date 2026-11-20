@@ -77,3 +77,15 @@ class ReviewResponse(ReviewSuggestion):
     warnings: tuple[
         Literal["unreadable", "missing_required_fields", "unsupported_document"], ...
     ] = ()
+
+
+class ReviewCategoryChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    category_key: str | None = Field(max_length=32)
+
+
+class ReviewCategoryResponse(BaseModel):
+    suggested_category_id: uuid.UUID | None
+    source: Literal["history", "ai"] | None = None
+    history_count: int | None = None

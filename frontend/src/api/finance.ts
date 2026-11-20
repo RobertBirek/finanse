@@ -1,4 +1,7 @@
+import { isAxiosError } from "axios";
+import { useRef } from "react";
 import {
+  keepPreviousData,
   type QueryClient,
   useMutation,
   useQuery,
@@ -104,6 +107,7 @@ export interface PostingInput {
 }
 
 export interface Transaction {
+  matched_category_amount_pln?: number | null;
   annotations?:
     import("./transactionAnnotations").TransactionAnnotations | null;
   effective_description?: string;
@@ -250,7 +254,12 @@ export interface ScheduledFinanceConfirmation {
 }
 
 export type CashflowStatus =
-  "due" | "overdue" | "overdue_uncertain" | "matched_actual" | "amount_unknown";
+  | "due"
+  | "overdue"
+  | "overdue_uncertain"
+  | "matched_actual"
+  | "amount_unknown"
+  | "match_uncertain";
 
 type CashflowSuggestionCommon = {
   name: string;
@@ -281,17 +290,21 @@ export interface CashflowBudgetSummary {
   remaining_pln: number;
 }
 
+export type CashflowDay = { date: string; projected_balance_pln: number };
+
 export interface CashflowForecast {
   last_payday: string;
   next_payday: string;
   opening_balance_pln: number;
-  projected_balance_before_next_payday_pln: number;
-  safe_daily_limit_pln: number;
+  projected_balance_before_next_payday_pln: number | null;
+  safe_daily_limit_pln: number | null;
   lowest_balance_pln: number;
-  days: Array<{ date: string; projected_balance_pln: number }>;
+  lowest_balance_before_payday?: CashflowDay;
+  days: CashflowDay[];
   suggestions: CashflowSuggestion[];
   budgets: CashflowBudgetSummary;
   has_excluded_obligations?: boolean;
+  has_excluded_obligations_before_payday?: boolean;
   excluded_obligation_reasons?: string[];
 }
 
@@ -302,6 +315,7 @@ export function cashflowStatusLabel(status: CashflowStatus) {
     overdue_uncertain: "Po terminie - kwota niepewna",
     matched_actual: "Zaksięgowane",
     amount_unknown: "Brak ostatniej kwoty",
+    match_uncertain: "Niejednoznaczne dopasowanie płatności",
   };
   return labels[status];
 }
@@ -618,6 +632,7 @@ export interface TransactionSearchParams {
   category_id?: string;
   date_from?: string;
   date_to?: string;
+  date_basis?: "booking" | "purchase";
   currency?: string;
   type?: string;
   min_amount_pln?: number;
@@ -694,7 +709,32 @@ export function invalidateFinanceLedger(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["finance", "cashflow"] });
 }
 
+function useManualTransactionPost(path: string) {
+  const pending = useRef(new Map<string, string>());
+  return async (payload: object) => {
+    const identity = JSON.stringify([
+      useAuthStore.getState().sessionVersion,
+      payload,
+    ]);
+    const key = pending.current.get(identity) ?? crypto.randomUUID();
+    pending.current.set(identity, key);
+    try {
+      const { data } = await api.post<Transaction>(path, payload, {
+        headers: { "Idempotency-Key": key },
+      });
+      pending.current.delete(identity);
+      return data;
+    } catch (error) {
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      if (status && status < 500 && status !== 408)
+        pending.current.delete(identity);
+      throw error;
+    }
+  };
+}
+
 export function useCreateTransaction() {
+  const post = useManualTransactionPost("/finance/transactions");
   const queryClient = useQueryClient();
   return useMutation({
     onMutate: () => ({ session: useAuthStore.getState().sessionVersion }),
@@ -708,8 +748,7 @@ export function useCreateTransaction() {
       project_id?: string;
       postings: PostingInput[];
     }) => {
-      const { data } = await api.post<Transaction>("/finance/transactions", tx);
-      return data;
+      return post(tx);
     },
     onSuccess: (_data, _variables, context) => {
       if (context?.session !== useAuthStore.getState().sessionVersion) return;
@@ -731,16 +770,11 @@ export interface ExpenseRefundInput {
 }
 
 export function useCreateExpenseRefund() {
+  const post = useManualTransactionPost("/finance/transactions/expense-refund");
   const queryClient = useQueryClient();
   return useMutation({
     onMutate: () => ({ session: useAuthStore.getState().sessionVersion }),
-    mutationFn: async (input: ExpenseRefundInput) => {
-      const { data } = await api.post<Transaction>(
-        "/finance/transactions/expense-refund",
-        input,
-      );
-      return data;
-    },
+    mutationFn: (input: ExpenseRefundInput) => post(input),
     onSuccess: (_data, _variables, context) => {
       if (context?.session !== useAuthStore.getState().sessionVersion) return;
       invalidateFinanceLedger(queryClient);
@@ -749,8 +783,10 @@ export function useCreateExpenseRefund() {
 }
 
 export function useCreateExchange() {
+  const post = useManualTransactionPost("/finance/transactions/exchange");
   const queryClient = useQueryClient();
   return useMutation({
+    onMutate: () => ({ session: useAuthStore.getState().sessionVersion }),
     mutationFn: async (input: ExchangeInput) => {
       const { fx_rate, transaction_date, ...rest } = input;
       const payload = {
@@ -758,13 +794,12 @@ export function useCreateExchange() {
         ...(fx_rate != null ? { fx_rate } : {}),
         ...(transaction_date !== undefined ? { transaction_date } : {}),
       };
-      const { data } = await api.post<Transaction>(
-        "/finance/transactions/exchange",
-        payload,
-      );
-      return data;
+      return post(payload);
     },
-    onSuccess: () => invalidateFinanceLedger(queryClient),
+    onSuccess: (_data, _variables, context) => {
+      if (context?.session === useAuthStore.getState().sessionVersion)
+        invalidateFinanceLedger(queryClient);
+    },
   });
 }
 
@@ -821,6 +856,7 @@ export function useFinancialSummary(period?: FinancialPeriod) {
 
   return useQuery({
     queryKey: ["finance", "summary", { month: m, year: y }],
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data } = await api.get<FinancialSummary>("/finance/summary", {
         params: { month: m, year: y },
@@ -854,8 +890,9 @@ function invalidateBudgetMutationQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["finance", "cashflow"] });
 }
 
-export function useBudgets() {
+export function useBudgets(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: ["finance", "budgets"],
     queryFn: async () => {
       const { data } = await api.get<CategoryBudget[]>("/finance/budgets");
@@ -1031,9 +1068,18 @@ export function useDeleteScheduledFinanceItem() {
 export function useConfirmScheduledFinanceItem() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({
+      id,
+      due_date,
+      expected_amount_pln,
+    }: {
+      id: string;
+      due_date: string;
+      expected_amount_pln: number;
+    }) => {
       const { data } = await api.post<ScheduledFinanceConfirmation>(
         `/finance/cashflow/items/${id}/confirm`,
+        { due_date, expected_amount_pln },
       );
       return data;
     },

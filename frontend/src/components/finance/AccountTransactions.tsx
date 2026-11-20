@@ -9,7 +9,7 @@ import {
   type Account,
   type Transaction,
 } from "../../api/finance";
-import { formatPLN } from "../../lib/format";
+import { formatPLN, formatPostingAmount } from "../../lib/format";
 import { TransactionDateLabel } from "./TransactionDateLabel";
 import { TransactionDatesDialog } from "./TransactionDatesDialog";
 import { TransactionCategorizationDialog } from "./TransactionCategorizationDialog";
@@ -300,9 +300,7 @@ export function TransactionList({
         );
         const isIncome = posting?.direction === "credit";
         const sourceCurrency = posting?.source_currency;
-        const formattedAmount = posting
-          ? `${isIncome ? "+" : "−"}${formatPLN(posting.source_amount)} ${sourceCurrency}`
-          : "Kwota niedostępna";
+        const formattedAmount = formatPostingAmount(posting);
         const baseAmount =
           posting && sourceCurrency !== "PLN"
             ? `Równowartość: ${formatPLN(posting.base_amount_pln)} PLN`
@@ -435,6 +433,12 @@ export function TransactionList({
               className={`shrink-0 font-mono text-sm font-medium ${isIncome ? "text-green-400" : "text-red-400"}`}
             >
               {formattedAmount}
+              {transaction.matched_category_amount_pln != null ? (
+                <span className="block text-xs font-normal text-gray-400">
+                  W tej kategorii{" "}
+                  {formatPLN(transaction.matched_category_amount_pln)} PLN
+                </span>
+              ) : null}
               {baseAmount && (
                 <span className="block text-xs font-normal text-gray-400">
                   {baseAmount}

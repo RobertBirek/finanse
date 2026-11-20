@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import {
   buildCategoryTree,
   type CategorySummary,
@@ -7,12 +8,13 @@ import {
 } from "../../api/finance";
 import { categoryColorMap, entityColor } from "../../lib/financeColors";
 import { formatPLN } from "../../lib/format";
-import { financePeriodSearch } from "./useFinancePeriod";
+import { categoryTransactionsHref } from "./useFinancePeriod";
 
 type CategorySpendTreeProps = {
   summary?: CategorySummary;
   loading: boolean;
   error: boolean;
+  onRetry?: () => void;
   title: string;
   categories?: Category[];
 };
@@ -21,6 +23,7 @@ export function CategorySpendTree({
   summary,
   loading,
   error,
+  onRetry,
   title,
   categories = [],
 }: CategorySpendTreeProps) {
@@ -57,8 +60,13 @@ export function CategorySpendTree({
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-advisor-500 border-t-transparent" />
         </div>
       ) : error ? (
-        <p className="py-4 text-sm text-red-400">
+        <p role="alert" className="py-4 text-sm text-red-400">
           Nie udało się pobrać wydatków według kategorii.
+          {onRetry ? (
+            <button type="button" className="ml-2 underline" onClick={onRetry}>
+              Spróbuj ponownie
+            </button>
+          ) : null}
         </p>
       ) : !summary || (!tree?.length && groups.length === 0) ? (
         <p className="py-4 text-sm text-gray-500">
@@ -138,18 +146,16 @@ function SpendNode({
   colors: Map<string, string>;
   maximum: number;
 }) {
-  const month = String(summary.month).padStart(2, "0");
-  const lastDay = new Date(summary.year, summary.month, 0).getDate();
-  const href = `/finances/transactions${financePeriodSearch({ month: summary.month, year: summary.year })}&category_id=${encodeURIComponent(node.category_id)}&include_descendants=true&budget_accounts_only=true&date_from=${summary.year}-${month}-01&date_to=${summary.year}-${month}-${lastDay}`;
+  const href = categoryTransactionsHref(summary, node.category_id);
   const color = colors.get(node.category_id) ?? entityColor(node.category_id);
 
   return (
     <div>
       <div className="flex min-w-0 items-start justify-between gap-4 text-sm text-gray-200">
         <div className="min-w-0">
-          <a
+          <Link
             className="break-words font-medium [overflow-wrap:anywhere]"
-            href={href}
+            to={href}
           >
             <span
               aria-hidden="true"
@@ -157,7 +163,7 @@ function SpendNode({
               style={{ backgroundColor: color }}
             />
             {node.name}
-          </a>
+          </Link>
           {!node.is_active ? (
             <span className="ml-2 text-xs text-gray-500">archiwalna</span>
           ) : null}

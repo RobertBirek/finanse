@@ -125,21 +125,27 @@ async def project_bill_cashflows(
     )
     covered = {(row.scheduled_item_id, row.occurrence_date) for row in coverage_rows}
     covered_bill_ids = {row.financial_document_id for row in coverage_rows}
+    payable_bills = [bill for bill in bills if bill.declaration != "declared_paid"]
+    paid_by_bill: dict[uuid.UUID, int] = {}
+    if payable_bills:
+        allocations = await db.execute(
+            select(
+                DocumentPaymentAllocation.financial_document_id,
+                func.sum(DocumentPaymentAllocation.amount_minor),
+            )
+            .where(
+                DocumentPaymentAllocation.financial_document_id.in_(
+                    [bill.id for bill in payable_bills]
+                )
+            )
+            .group_by(DocumentPaymentAllocation.financial_document_id)
+        )
+        paid_by_bill = {bill_id: int(amount) for bill_id, amount in allocations}
     entries: list[CashflowSuggestion] = []
     changes: dict[date, int] = {}
     exclusions: list[str] = []
-    for bill in bills:
-        if bill.declaration == "declared_paid":
-            continue
-        paid = int(
-            await db.scalar(
-                select(func.coalesce(func.sum(DocumentPaymentAllocation.amount_minor), 0)).where(
-                    DocumentPaymentAllocation.financial_document_id == bill.id
-                )
-            )
-            or 0
-        )
-        remaining = max((bill.total_minor or 0) - paid, 0)
+    for bill in payable_bills:
+        remaining = max((bill.total_minor or 0) - paid_by_bill.get(bill.id, 0), 0)
         if remaining <= 0:
             continue
         eligibility = await bill_forecast_eligibility(

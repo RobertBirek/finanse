@@ -161,6 +161,8 @@ export async function fixtures(
       };
     else if (url.pathname === "/api/finance/categorization/proposals")
       body = { items: [], next_cursor: null, page_size: 20 };
+    else if (url.pathname === "/api/finance/imports/history")
+      body = { items: [], total: 0, offset: 0, limit: 25 };
     else if (url.pathname === "/api/finance/accounts") body = [account];
     else if (url.pathname === "/api/finance/credit-cards") body = [];
     else if (url.pathname === "/api/finance/categories") body = [];
@@ -252,6 +254,8 @@ export async function fixtures(
         archived_at: null,
       };
     else if (url.pathname === "/api/documents/active") body = [];
+    else if (url.pathname === "/api/documents/worklists")
+      body = { review: 0, errors: 0 };
     else if (url.pathname === "/api/documents")
       body =
         !url.searchParams.get("status") ||
@@ -272,6 +276,7 @@ export async function fixtures(
     else if (url.pathname === "/api/documents/upload-capabilities")
       body = {
         max_file_bytes: 20 * 1024 * 1024,
+        max_scan_pages: 12,
         accepted_mime_types: [
           "application/pdf",
           "image/heic",

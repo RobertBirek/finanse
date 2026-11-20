@@ -47,8 +47,20 @@ const accounts = [
 ];
 
 const categories = [
-  { id: "c-income", name: "Wynagrodzenie", parent_id: null, type: "income" },
-  { id: "c-expense", name: "Czynsz", parent_id: null, type: "expense" },
+  {
+    id: "c-income",
+    name: "Wynagrodzenie",
+    is_active: true,
+    parent_id: null,
+    type: "income",
+  },
+  {
+    id: "c-expense",
+    name: "Czynsz",
+    is_active: true,
+    parent_id: null,
+    type: "expense",
+  },
 ];
 
 const settings = {
@@ -180,7 +192,7 @@ describe("FinanceCashflow", () => {
     expect(screen.queryByLabelText("Kwota (PLN)")).not.toBeInTheDocument();
   });
 
-  it("wyłącza przycisk potwierdzenia dla niekwalifikującej się sugestii", () => {
+  it("ukrywa akcję potwierdzenia dla niekwalifikującej się sugestii", () => {
     hooks.useCashflowForecast.mockReturnValue({
       data: {
         ...forecast,
@@ -203,10 +215,12 @@ describe("FinanceCashflow", () => {
 
     renderCashflow();
 
-    expect(screen.getByRole("button", { name: "Potwierdź" })).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Potwierdź" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("otwiera dialog dla pozycji due-today i wywołuje confirm z id", () => {
+  it("potwierdza dokładny termin i kwotę pozycji", () => {
     const confirmMutate = vi.fn();
     hooks.useConfirmScheduledFinanceItem.mockReturnValue({
       mutate: confirmMutate,
@@ -245,7 +259,11 @@ describe("FinanceCashflow", () => {
     fireEvent.click(confirmButton);
 
     expect(confirmMutate).toHaveBeenCalledTimes(1);
-    expect(confirmMutate.mock.calls[0][0]).toBe("item-1");
+    expect(confirmMutate.mock.calls[0][0]).toEqual({
+      id: "item-1",
+      due_date: "2000-01-01",
+      expected_amount_pln: 250000,
+    });
   });
 
   it("wypełnia pola formularza przy przejściu z trybu tworzenia do edycji", () => {

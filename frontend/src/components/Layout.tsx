@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useLogout } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
@@ -39,7 +39,7 @@ export function Layout() {
     <div className="app-shell h-dvh flex overflow-hidden bg-gray-950">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-gray-800 focus:p-3"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-[var(--ui-surface)] focus:p-3 focus:text-[var(--ui-ink)] focus:ring-2 focus:ring-[var(--ui-blue)]"
       >
         Przejdź do treści
       </a>
@@ -121,7 +121,9 @@ export function Layout() {
           tabIndex={0}
           className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 lg:p-8"
         >
-          <Outlet />
+          <Suspense fallback={<p role="status">Ładowanie widoku…</p>}>
+            <Outlet />
+          </Suspense>
         </div>
         <nav
           className="mobile-bottom-nav lg:hidden"

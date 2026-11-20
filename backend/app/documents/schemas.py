@@ -52,6 +52,14 @@ class DocumentStatus:
     ERROR = "error"
 
 
+DocumentWorklist = Literal["review", "errors"]
+
+
+class DocumentWorklistCounts(BaseModel):
+    review: int
+    errors: int
+
+
 class DocumentResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
@@ -96,6 +104,7 @@ class DocumentUploadResponse(BaseModel):
 
 class DocumentUploadCapabilities(BaseModel):
     max_file_bytes: int
+    max_scan_pages: int = 1
     accepted_mime_types: list[str]
     automatic_image_vision: bool = False
     vision_provider_label: str | None = None

@@ -303,12 +303,16 @@ class TransactionResponse(BaseModel):
         return self
 
 
+TransactionDateBasis = Literal["booking", "purchase"]
+
+
 class TransactionSearch(BaseModel):
     q: str = Field(default="", max_length=200)
     account_id: uuid.UUID | None = None
     category_id: uuid.UUID | None = None
     include_descendants: bool = False
     budget_accounts_only: bool = False
+    date_basis: TransactionDateBasis = "booking"
     date_from: dt.date | None = None
     date_to: dt.date | None = None
     currency: Literal["PLN", "EUR", "USD"] | None = None
@@ -332,11 +336,20 @@ class TransactionSearch(BaseModel):
         return self
 
 
+class TransactionSearchItem(TransactionResponse):
+    matched_category_amount_pln: int | None = None
+
+
 class TransactionSearchResponse(BaseModel):
-    items: list[TransactionResponse]
+    items: list[TransactionSearchItem]
     total: int
     limit: int
     offset: int
+
+
+class ScheduledFinanceConfirmationRequest(BaseModel):
+    due_date: dt.date
+    expected_amount_pln: int = Field(gt=0, strict=True)
 
 
 class ScheduledFinanceConfirmationResponse(BaseModel):
@@ -458,7 +471,9 @@ class CashflowSuggestion(BaseModel):
     amount_minor: int | None = None
     currency: str = "PLN"
     amount_pln: int | None
-    status: Literal["due", "overdue", "overdue_uncertain", "matched_actual", "amount_unknown"]
+    status: Literal[
+        "due", "overdue", "overdue_uncertain", "matched_actual", "amount_unknown", "match_uncertain"
+    ]
     included_in_forecast: bool
     actual_transaction_id: uuid.UUID | None = None
     exclusion_reasons: list[str] = Field(default_factory=list)
@@ -485,13 +500,15 @@ class CashflowForecastResponse(BaseModel):
     last_payday: dt.date
     next_payday: dt.date
     opening_balance_pln: int
-    projected_balance_before_next_payday_pln: int
-    safe_daily_limit_pln: int
+    projected_balance_before_next_payday_pln: int | None
+    safe_daily_limit_pln: int | None
     lowest_balance_pln: int
+    lowest_balance_before_payday: CashflowDay
     days: list[CashflowDay]
     suggestions: list[CashflowSuggestion]
     budgets: CashflowBudgetSummary
     has_excluded_obligations: bool = False
+    has_excluded_obligations_before_payday: bool = False
     excluded_obligation_reasons: list[str] = Field(default_factory=list)
 
 

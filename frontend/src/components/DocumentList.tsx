@@ -8,6 +8,7 @@ import {
   formatFileSize,
   STATUS_LABELS,
   STATUS_COLORS,
+  type DocumentWorklist,
 } from "../api/documents";
 import { DocumentViewer } from "./DocumentViewer";
 import { DocumentReview } from "./documents/DocumentReview";
@@ -15,15 +16,63 @@ import { QueryFeedback } from "./QueryFeedback";
 import {
   getDocumentStatus,
   getFinanceDocumentStatus,
+  type DocumentStatusTone,
 } from "./documents/documentStatus";
-import { ProcessingPulse } from "./documents/ProcessingFeedback";
-import { isDocumentWorkActive } from "../api/documents";
+import {
+  getDocumentOperations,
+  isActiveOperation,
+} from "./documents/documentProcessing";
+import { DocumentIcon, DocumentTooltip } from "./documents/documentControls";
 import { isProcessingActorCurrent } from "../stores/documentProcessingStore";
+
+const statusClass = {
+  neutral: STATUS_COLORS.pending,
+  warning: STATUS_COLORS.processing,
+  success: STATUS_COLORS.done,
+  danger: STATUS_COLORS.error,
+};
+
+const statusIcon = {
+  neutral: "clock",
+  warning: "warning",
+  success: "check",
+  danger: "error",
+} as const;
+
+function DocumentStatusIcon({
+  label,
+  tone,
+  icon,
+}: {
+  label: string;
+  tone: DocumentStatusTone;
+  icon?: "clock" | "finance";
+}) {
+  return (
+    <DocumentTooltip label={label} alignWithGroup>
+      <span
+        role="img"
+        aria-label={label}
+        tabIndex={0}
+        onClick={(event) => event.currentTarget.focus()}
+        className={`inline-flex size-9 items-center justify-center rounded-lg ${statusClass[tone]}`}
+      >
+        <DocumentIcon name={icon ?? statusIcon[tone]} />
+      </span>
+    </DocumentTooltip>
+  );
+}
 
 export function DocumentList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedReview = searchParams.get("review");
   const archived = searchParams.get("archived") === "true";
+  const requestedWorklist = searchParams.get("worklist");
+  const worklist =
+    !archived &&
+    (requestedWorklist === "review" || requestedWorklist === "errors")
+      ? requestedWorklist
+      : undefined;
   const linkedReviewId =
     requestedReview &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -32,6 +81,15 @@ export function DocumentList() {
       ? requestedReview
       : null;
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [filename, setFilename] = useState("");
+  const [filenameQuery, setFilenameQuery] = useState("");
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setFilenameQuery(filename.trim()),
+      250,
+    );
+    return () => window.clearTimeout(timer);
+  }, [filename]);
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   useEffect(() => {
@@ -46,42 +104,115 @@ export function DocumentList() {
       setSearchParams(next, { replace: true });
     }
   };
-  const query = useDocuments({ status: statusFilter, archived });
+  const query = useDocuments({
+    status: statusFilter,
+    archived,
+    query: filenameQuery || undefined,
+    worklist,
+  });
   const archiveDoc = useArchiveDocument();
   const restoreDoc = useRestoreDocument();
   const [feedback, setFeedback] = useState<string | null>(null);
-  const documents = query.data ?? [];
+  const documents = query.data?.pages.flatMap((page) => page.items) ?? [];
   // Resolve from current query data so a polling result also updates an open viewer.
   const viewingDoc = documents.find((doc) => doc.id === viewingId);
+  const selectWorklist = (value: DocumentWorklist | undefined) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("review");
+    if (value) next.set("worklist", value);
+    else next.delete("worklist");
+    setViewingId(null);
+    setReviewingId(null);
+    setStatusFilter(undefined);
+    setSearchParams(next);
+  };
 
   return (
     <div>
-      <div
-        role="group"
-        aria-label="Widoczność dokumentów"
-        className="mb-3 flex gap-2"
-      >
-        {[false, true].map((value) => (
-          <button
-            key={String(value)}
-            type="button"
-            aria-pressed={archived === value}
-            className={archived === value ? "btn-primary" : "btn-secondary"}
-            onClick={() => {
-              const next = new URLSearchParams(searchParams);
-              next.delete("review");
-              if (value) next.set("archived", "true");
-              else next.delete("archived");
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div
+          role="group"
+          aria-label="Widoczność dokumentów"
+          className="flex gap-2"
+        >
+          {[false, true].map((value) => (
+            <button
+              key={String(value)}
+              type="button"
+              aria-pressed={archived === value}
+              className={`min-h-11 ${archived === value ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.delete("review");
+                next.delete("worklist");
+                if (value) next.set("archived", "true");
+                else next.delete("archived");
+                setViewingId(null);
+                setReviewingId(null);
+                setStatusFilter(undefined);
+                setSearchParams(next);
+              }}
+            >
+              {value ? "Archiwum" : "Aktywne"}
+            </button>
+          ))}
+        </div>
+        <label className="flex min-w-0 items-center gap-2 text-sm text-gray-300">
+          Status
+          <select
+            aria-label="Status dokumentów"
+            className="input min-h-11 min-w-0"
+            value={statusFilter ?? ""}
+            onChange={(event) => {
+              setStatusFilter(event.target.value || undefined);
               setViewingId(null);
-              setReviewingId(null);
-              setStatusFilter(undefined);
-              setSearchParams(next);
             }}
           >
-            {value ? "Archiwum" : "Aktywne"}
-          </button>
-        ))}
+            <option value="">Wszystkie</option>
+            {Object.entries(STATUS_LABELS).map(([status, label]) => (
+              <option key={status} value={status}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
+      {!archived && (
+        <div
+          role="group"
+          aria-label="Kolejka dokumentów"
+          className="mb-3 flex flex-wrap gap-2"
+        >
+          {(
+            [
+              ["review", "Do sprawdzenia"],
+              ["errors", "Błędy odczytu"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={worklist === value}
+              className={worklist === value ? "btn-primary" : "btn-secondary"}
+              onClick={() =>
+                selectWorklist(worklist === value ? undefined : value)
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <label className="mb-3 block text-sm text-gray-300 sm:max-w-sm">
+        Szukaj po nazwie pliku
+        <input
+          type="search"
+          className="input mt-1 min-h-11 w-full"
+          maxLength={500}
+          value={filename}
+          onChange={(event) => setFilename(event.target.value)}
+        />
+      </label>
       {archived && (
         <p className="mb-3 text-sm text-gray-400">
           Archiwizacja ukrywa dokument na zwykłej liście. Pliki i powiązania
@@ -97,192 +228,216 @@ export function DocumentList() {
           {feedback}
         </p>
       )}
-      <div
-        className="flex gap-2 mb-4 flex-wrap"
-        role="group"
-        aria-label="Status dokumentów"
-      >
-        {[undefined, "pending", "processing", "done", "error"].map((status) => (
-          <button
-            key={status ?? "all"}
-            type="button"
-            aria-pressed={statusFilter === status}
-            onClick={() => {
-              setStatusFilter(status);
-              setViewingId(null);
-            }}
-            className={`min-h-11 px-3 py-2 rounded-lg text-sm ${statusFilter === status ? "bg-advisor-700 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"}`}
-          >
-            {status ? STATUS_LABELS[status] : "Wszystkie"}
-          </button>
-        ))}
-      </div>
       <QueryFeedback
         loading={query.isLoading}
-        error={query.isError}
+        error={query.isLoadingError}
         errorMessage="Nie udało się pobrać dokumentów."
         onRetry={query.refetch}
       >
         {documents.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-400">
             <p>
-              {statusFilter
-                ? "Brak dokumentów o wybranym statusie."
-                : archived
-                  ? "Archiwum jest puste."
-                  : "Brak dokumentów. Wybierz plik powyżej lub zrób zdjęcie."}
+              {filenameQuery
+                ? "Brak dokumentów pasujących do wyszukiwania."
+                : statusFilter
+                  ? "Brak dokumentów o wybranym statusie."
+                  : worklist === "review"
+                    ? "Brak dokumentów oczekujących na sprawdzenie."
+                    : worklist === "errors"
+                      ? "Brak dokumentów z błędem odczytu."
+                      : archived
+                        ? "Archiwum jest puste."
+                        : "Brak dokumentów. Wybierz plik powyżej lub zrób zdjęcie."}
             </p>
-            {statusFilter && (
+            {(filenameQuery || statusFilter || worklist) && (
               <button
                 type="button"
                 className="btn-secondary mt-3"
-                onClick={() => setStatusFilter(undefined)}
+                onClick={() => {
+                  setFilename("");
+                  setFilenameQuery("");
+                  setStatusFilter(undefined);
+                  if (worklist) selectWorklist(undefined);
+                }}
               >
                 Pokaż wszystkie dokumenty
               </button>
             )}
           </div>
         ) : (
-          <ul className="space-y-2">
+          <ul className="divide-y divide-gray-800 rounded-xl border border-gray-800 bg-gray-900">
             {documents.map((doc) => {
-              const reviewStatus = getDocumentStatus(doc);
-              const statusColor =
-                reviewStatus.tone === "danger"
-                  ? "error"
-                  : reviewStatus.tone === "success"
-                    ? "done"
-                    : reviewStatus.tone === "warning"
-                      ? "processing"
-                      : "pending";
+              const reading = getDocumentStatus(doc);
+              const finance = getFinanceDocumentStatus(doc);
+              const billId = doc.finance?.bill_id;
+              const canReview =
+                !archived && (!billId || doc.finance?.review === "draft");
+              const canImport =
+                !archived &&
+                doc.status === "done" &&
+                doc.mime_type === "application/pdf";
+              const reviewLabel = billId ? "Sprawdź szkic" : "Sprawdź dane";
+              const retryAt =
+                doc.status === "pending" ? doc.next_attempt_at : null;
+              const archiveLabel = archived
+                ? "Przywróć dokument"
+                : "Archiwizuj dokument";
+              const hint =
+                doc.status === "error"
+                  ? "Odczyt nie powiódł się. Otwórz dokument, aby sprawdzić dostępne opcje."
+                  : retryAt
+                    ? `Ponowna próba od ${new Date(retryAt).toLocaleString("pl-PL")} (próby: ${doc.attempt_count}).`
+                    : null;
               return (
                 <li
                   key={doc.id}
-                  className="flex flex-wrap items-center gap-2 p-3 bg-gray-900 rounded-lg"
+                  className="grid min-w-0 gap-1.5 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-4 lg:px-4"
                 >
-                  <div className="min-w-0 flex-1">
-                    <button
-                      type="button"
-                      aria-label={`Otwórz dokument: ${doc.original_name}`}
-                      aria-describedby={`document-meta-${doc.id}${doc.status === "pending" && doc.next_attempt_at ? ` document-pending-${doc.id}` : ""}${doc.status === "error" ? ` document-error-${doc.id}` : ""}`}
-                      onClick={() => setViewingId(doc.id)}
-                      className="min-h-11 w-full min-w-0 rounded-lg p-2 text-left hover:bg-gray-800"
-                    >
-                      <span className="block truncate text-sm font-medium text-gray-200">
-                        {doc.original_name}
-                      </span>
-                    </button>
-                    <span
-                      id={`document-meta-${doc.id}`}
-                      className="block text-xs text-gray-400"
-                    >
-                      {formatFileSize(doc.size_bytes)} ·{" "}
-                      {new Date(doc.created_at).toLocaleDateString("pl-PL")}
+                  <div className="flex min-w-0 items-start gap-2">
+                    <span className="mt-2.5 rounded-lg bg-gray-800 p-1.5 text-gray-300">
+                      <DocumentIcon
+                        name={
+                          doc.mime_type?.startsWith("image/") ? "image" : "file"
+                        }
+                      />
                     </span>
-                    {!archived &&
-                    doc.status === "done" &&
-                    doc.mime_type === "application/pdf" ? (
-                      <Link
-                        className="mt-1 inline-block text-sm underline"
-                        to={`/finances/imports?document=${encodeURIComponent(doc.id)}`}
+                    <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        aria-label={`Otwórz dokument: ${doc.original_name}`}
+                        aria-describedby={`document-meta-${doc.id}`}
+                        onClick={() => setViewingId(doc.id)}
+                        className="block min-h-11 w-full min-w-0 rounded-md text-left hover:underline"
                       >
-                        Użyj do importu
-                      </Link>
-                    ) : null}
-                    {doc.status === "pending" && doc.next_attempt_at && (
+                        <span
+                          className="block truncate text-sm font-semibold text-gray-100"
+                          title={doc.original_name}
+                        >
+                          {doc.original_name}
+                        </span>
+                      </button>
                       <span
-                        id={`document-pending-${doc.id}`}
-                        className="block text-xs text-yellow-300"
+                        id={`document-meta-${doc.id}`}
+                        className="block text-xs font-normal text-gray-400"
                       >
-                        Ponowna próba od{" "}
-                        {new Date(doc.next_attempt_at).toLocaleString("pl-PL")}{" "}
-                        (wykonano prób: {doc.attempt_count}).
+                        {formatFileSize(doc.size_bytes)} ·{" "}
+                        {new Date(doc.created_at).toLocaleDateString("pl-PL")}
                       </span>
-                    )}
-                    {doc.status === "error" && (
-                      <span
-                        id={`document-error-${doc.id}`}
-                        className="block text-xs text-red-300"
-                      >
-                        Przetwarzanie zakończone błędem. Automatyczne próby
-                        zakończone.
-                      </span>
-                    )}
+                    </div>
                   </div>
-                  <span
-                    aria-label="Odczyt"
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium shrink-0 ${STATUS_COLORS[statusColor]}`}
-                  >
-                    {isDocumentWorkActive(doc) && <ProcessingPulse />}
-                    {reviewStatus.label}
-                  </span>
-                  <div className="flex flex-col gap-1 text-xs">
-                    <span
-                      aria-label="Finanse"
-                      className="rounded-full border border-gray-700 px-2 py-1 text-gray-300"
-                    >
-                      Finanse: {getFinanceDocumentStatus(doc).label}
-                    </span>
-                    {doc.finance?.bill_id && (
-                      <Link
-                        className="px-2 text-advisor-400 underline"
-                        to={`/finances/documents?bill=${encodeURIComponent(doc.finance.bill_id)}`}
-                      >
-                        Otwórz w finansach
-                      </Link>
-                    )}
-                    {!archived &&
-                      (!doc.finance?.bill_id ||
-                        doc.finance.review === "draft") && (
+                  <div className="relative flex min-w-0 flex-wrap items-center justify-end gap-1 justify-self-end">
+                    <DocumentStatusIcon
+                      label={`Odczyt · ${reading.label}${hint ? `. ${hint}` : ""}`}
+                      tone={reading.tone}
+                      icon={
+                        getDocumentOperations(doc).some(isActiveOperation)
+                          ? "clock"
+                          : undefined
+                      }
+                    />
+                    <DocumentStatusIcon
+                      label={`Finanse · ${finance.label}`}
+                      tone={finance.tone}
+                      icon={
+                        finance.tone === "neutral" &&
+                        doc.finance?.state !== "pending"
+                          ? "finance"
+                          : undefined
+                      }
+                    />
+                    {canReview && (
+                      <DocumentTooltip label={reviewLabel}>
                         <button
                           type="button"
-                          className="min-h-11 px-2 text-left text-advisor-400 underline"
+                          aria-label={reviewLabel}
+                          className="document-icon-control"
                           onClick={() => setReviewingId(doc.id)}
                         >
-                          {doc.finance?.bill_id
-                            ? "Sprawdź szkic"
-                            : "Sprawdź dane i przygotuj szkic"}
+                          <DocumentIcon name="review" />
                         </button>
-                      )}
+                      </DocumentTooltip>
+                    )}
+                    {billId && (
+                      <DocumentTooltip label="Otwórz w finansach">
+                        <Link
+                          aria-label="Otwórz w finansach"
+                          className="document-icon-control"
+                          to={`/finances/documents?bill=${encodeURIComponent(billId)}`}
+                        >
+                          <DocumentIcon name="finance" />
+                        </Link>
+                      </DocumentTooltip>
+                    )}
+                    <DocumentTooltip label={archiveLabel}>
+                      <button
+                        type="button"
+                        aria-label={`${archiveLabel}: ${doc.original_name}`}
+                        disabled={archiveDoc.isPending || restoreDoc.isPending}
+                        onClick={() => {
+                          if (
+                            !archived &&
+                            !window.confirm(
+                              "Przenieść dokument do archiwum? Plik, historia odczytu i powiązania finansowe pozostaną zachowane.",
+                            )
+                          )
+                            return;
+                          const mutation = archived ? restoreDoc : archiveDoc;
+                          mutation.mutate(
+                            { documentId: doc.id },
+                            {
+                              onSuccess: (_result, _variables, actor) => {
+                                if (!isProcessingActorCurrent(actor)) return;
+                                setViewingId(null);
+                                closeReview();
+                                setFeedback(
+                                  archived
+                                    ? "Dokument przywrócony."
+                                    : "Dokument przeniesiony do archiwum.",
+                                );
+                              },
+                            },
+                          );
+                        }}
+                        className="document-icon-control"
+                      >
+                        <DocumentIcon name={archived ? "restore" : "archive"} />
+                      </button>
+                    </DocumentTooltip>
+                    {canImport && (
+                      <DocumentTooltip label="Użyj do importu">
+                        <Link
+                          aria-label="Użyj do importu"
+                          className="document-icon-control"
+                          to={`/finances/imports?document=${encodeURIComponent(doc.id)}`}
+                        >
+                          <DocumentIcon name="import" />
+                        </Link>
+                      </DocumentTooltip>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    aria-label={`${archived ? "Przywróć" : "Archiwizuj"} dokument: ${doc.original_name}`}
-                    disabled={archiveDoc.isPending || restoreDoc.isPending}
-                    onClick={() => {
-                      if (
-                        !archived &&
-                        !window.confirm(
-                          "Przenieść dokument do archiwum? Plik, historia odczytu i powiązania finansowe pozostaną zachowane.",
-                        )
-                      )
-                        return;
-                      const mutation = archived ? restoreDoc : archiveDoc;
-                      mutation.mutate(
-                        { documentId: doc.id },
-                        {
-                          onSuccess: (_result, _variables, actor) => {
-                            if (!isProcessingActorCurrent(actor)) return;
-                            setViewingId(null);
-                            closeReview();
-                            setFeedback(
-                              archived
-                                ? "Dokument przywrócony."
-                                : "Dokument przeniesiony do archiwum.",
-                            );
-                          },
-                        },
-                      );
-                    }}
-                    className="min-h-11 px-2 text-sm text-red-300 rounded-lg hover:bg-gray-800 disabled:opacity-50"
-                  >
-                    {archived ? "Przywróć" : "Archiwizuj"}
-                  </button>
                 </li>
               );
             })}
           </ul>
         )}
       </QueryFeedback>
+      {query.hasNextPage && (
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+          {query.isFetchNextPageError && (
+            <p role="alert" className="text-sm text-red-300">
+              Nie udało się wczytać kolejnych dokumentów.
+            </p>
+          )}
+          <button
+            type="button"
+            className="btn-secondary min-h-11"
+            disabled={query.isFetching}
+            onClick={() => void query.fetchNextPage({ cancelRefetch: false })}
+          >
+            {query.isFetchingNextPage ? "Wczytywanie…" : "Wczytaj więcej"}
+          </button>
+        </div>
+      )}
       {(archiveDoc.isError || restoreDoc.isError) && (
         <p role="alert" className="mt-3 text-sm text-red-300">
           {documentArchiveError(archiveDoc.error ?? restoreDoc.error)}

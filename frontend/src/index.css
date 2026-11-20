@@ -279,6 +279,10 @@
   }
 }
 
+.document-icon-control {
+  @apply inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--ui-muted)] hover:bg-[var(--ui-hover)] hover:text-[var(--ui-ink)] focus-visible:outline-2 focus-visible:outline-sky-300 disabled:cursor-default disabled:opacity-50;
+}
+
 /* Native dialogs use the browser top layer and keep the background inert. */
 .app-dialog {
   position: fixed;

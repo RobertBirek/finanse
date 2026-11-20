@@ -10,7 +10,11 @@ beforeEach(() => {
 });
 it("a fast completed first read refreshes proposals and usage, never itself", async () => {
   vi.spyOn(api, "get").mockResolvedValue({
-    data: { active_jobs: [], recent_outcomes: [], poll_after_ms: 20 },
+    data: {
+      active_jobs: [],
+      recent_outcomes: [{ id: "completed", state: "completed" }],
+      poll_after_ms: 20,
+    },
   });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -32,6 +36,12 @@ it("a fast completed first read refreshes proposals and usage, never itself", as
   expect(invalidate).not.toHaveBeenCalledWith({
     queryKey: ["finance", "suggestion-activity"],
   });
+  await act(async () => {
+    await client.refetchQueries({
+      queryKey: ["finance", "suggestion-activity"],
+    });
+  });
+  expect(invalidate).toHaveBeenCalledTimes(2);
 });
 it("old-session completion cannot refresh a new user's state", async () => {
   let resolve!: (v: { data: unknown }) => void;

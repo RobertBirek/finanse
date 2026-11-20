@@ -1,3 +1,4 @@
+import { MemoryRouter } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CategorySpendTree } from "./CategorySpendTree";
@@ -46,6 +47,7 @@ describe("CategorySpendTree", () => {
           ],
         }}
       />,
+      { wrapper: MemoryRouter },
     );
     expect(screen.getByRole("img", { name: "Wydatki: Zakupy" })).toHaveStyle({
       width: "100%",
@@ -124,6 +126,7 @@ describe("CategorySpendTree", () => {
           ],
         }}
       />,
+      { wrapper: MemoryRouter },
     );
     expect(screen.getByRole("img", { name: "Wydatki: Dom" })).toHaveStyle({
       backgroundColor: "#123ABC",
@@ -167,6 +170,7 @@ describe("CategorySpendTree", () => {
           ],
         }}
       />,
+      { wrapper: MemoryRouter },
     );
 
     expect(
@@ -223,6 +227,7 @@ describe("CategorySpendTree", () => {
           ],
         }}
       />,
+      { wrapper: MemoryRouter },
     );
 
     expect(screen.getByText("Dom")).toBeInTheDocument();
@@ -234,7 +239,7 @@ describe("CategorySpendTree", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Rachunki/ })).toHaveAttribute(
       "href",
-      "/finances/transactions?month=2&year=2026&category_id=utilities&include_descendants=true&budget_accounts_only=true&date_from=2026-02-01&date_to=2026-02-28",
+      "/finances/transactions?month=2&year=2026&category_id=utilities&include_descendants=true&budget_accounts_only=true&date_basis=purchase&date_from=2026-02-01&date_to=2026-02-28",
     );
     expect(screen.getByText("archiwalna")).toBeInTheDocument();
   });

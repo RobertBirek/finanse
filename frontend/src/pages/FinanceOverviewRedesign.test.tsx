@@ -132,11 +132,11 @@ describe("Approved finance overview", () => {
         <Finances />
       </MemoryRouter>,
     );
-    expect(screen.getByLabelText("Łączne saldo kont")).toHaveTextContent(
+    expect(screen.getByLabelText("Saldo aktywnych kont")).toHaveTextContent(
       "1440,00",
     );
     fireEvent.click(screen.getByRole("button", { name: "Budżetowe" }));
-    expect(screen.getByLabelText("Łączne saldo kont")).toHaveTextContent(
+    expect(screen.getByLabelText("Saldo kont budżetowych")).toHaveTextContent(
       "440,00",
     );
     expect(screen.queryByText("Zamknięte")).not.toBeInTheDocument();

@@ -35,6 +35,14 @@ import { ScheduleConfirmation } from "./ScheduleConfirmation";
 import { ScheduleReceipt } from "./ScheduleReceipt";
 import { ScheduleSourceComparison } from "./ScheduleSourceComparison";
 
+import { ImportUpload } from "./ImportUpload";
+import {
+  importConfirmationKey,
+  readImportConfirmation,
+  writeImportConfirmation,
+  type ImportConfirmationIntent,
+} from "./importConfirmationIntent";
+
 export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
   const actor = useImportActor();
   const { ownerId, generation } = actor;
@@ -56,7 +64,9 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
   } | null>(null);
   const [comparisonAck, setComparisonAck] = useState<string | null>(null);
   const revisionId =
-    revisionChoice?.sourceId === source?.id &&
+    revisionChoice &&
+    source &&
+    revisionChoice.sourceId === source.id &&
     [source?.current_revision_id, source?.candidate_revision_id].includes(
       revisionChoice.id,
     )
@@ -113,22 +123,22 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
   const [receipt, setReceipt] = useState<ScheduleResult | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const [uncertain, setUncertain] = useState(false);
-  const intent = useRef<{ previewId: string; key: string } | null>(null);
+  const storageKey = importConfirmationKey(ownerId, batch.id);
+  const [pending, setPending] = useState(() =>
+    readImportConfirmation(storageKey),
+  );
+  const uncertain = pending !== null;
   const recoveryApplied = useRef<string | null>(null);
   const prepare = useSchedulePreview();
   const activate = useActivateSchedule();
   const parse = usePrepareImportSource();
   const busy = prepare.isPending || activate.isPending || parse.isPending;
-  const recovered = useScheduleCommandResult(
-    batch.id,
-    uncertain ? (intent.current?.key ?? null) : null,
-  );
+  const recovered = useScheduleCommandResult(batch.id, pending?.key ?? null);
   useEffect(() => {
     const captured = { ownerId, generation };
     if (
       !recovered.data ||
-      !preview ||
+      !pending ||
       !isProcessingActorCurrent(captured) ||
       recoveryApplied.current === recovered.data.receipt_id
     )
@@ -137,18 +147,27 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
       const result = validScheduleResult(
         recovered.data,
         batch.id,
-        preview.request_hash,
+        pending.requestHash,
       );
       recoveryApplied.current = result.receipt_id;
       setReceipt(result);
-      setUncertain(false);
+      writeImportConfirmation(storageKey, null);
+      setPending(null);
       setProblem(null);
       invalidateScheduleQueries(client, captured);
       void client.invalidateQueries({ queryKey: importQueryKey(captured) });
     } catch {
       /* Only a matching receipt may resolve an uncertain intent. */
     }
-  }, [recovered.data, preview, ownerId, generation, batch.id, client]);
+  }, [
+    recovered.data,
+    pending,
+    ownerId,
+    generation,
+    batch.id,
+    client,
+    storageKey,
+  ]);
   const current =
     !!preview &&
     preview.version === batch.version &&
@@ -171,13 +190,11 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
     setTarget(value);
     setAck(false);
     setPreview(null);
-    intent.current = null;
     setProblem(null);
   }
   async function makePreview() {
     if (!source || !ready || !mapped || !ack || busy || uncertain) return;
     setProblem(null);
-    intent.current = null;
     try {
       const value = await prepare.mutateAsync({
         batchId: batch.id,
@@ -201,36 +218,55 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
       }
     }
   }
-  async function commit() {
-    if (!preview || !current || busy || preview.existing_activation) return;
+  async function commitIntent(intent: ImportConfirmationIntent) {
+    if (busy) return;
     setProblem(null);
-    if (intent.current?.previewId !== preview.id)
-      intent.current = { previewId: preview.id, key: crypto.randomUUID() };
+    writeImportConfirmation(storageKey, intent);
     try {
       const result = await activate.mutateAsync({
         batchId: batch.id,
-        idempotencyKey: intent.current.key,
-        data: { preview_id: preview.id, request_hash: preview.request_hash },
+        idempotencyKey: intent.key,
+        data: {
+          preview_id: intent.previewId,
+          request_hash: intent.requestHash,
+        },
       });
-      if (isProcessingActorCurrent(actor)) {
-        setReceipt(result);
-        setUncertain(false);
-      }
+      if (!isProcessingActorCurrent(actor)) return;
+      writeImportConfirmation(storageKey, null);
+      setPending(null);
+      setReceipt(result);
     } catch (error) {
       if (!isProcessingActorCurrent(actor)) return;
       const status = (error as AxiosError).response?.status;
       setProblem(importError(error));
       if (status && status < 500 && status !== 408) {
         setPreview(null);
-        intent.current = null;
-        setUncertain(false);
-      } else setUncertain(true);
+        writeImportConfirmation(storageKey, null);
+        setPending(null);
+      } else setPending(intent);
     }
+  }
+
+  async function commit() {
+    if (!preview || !current || preview.existing_activation || uncertain)
+      return;
+    await commitIntent({
+      previewId: preview.id,
+      requestHash: preview.request_hash,
+      key: crypto.randomUUID(),
+    });
   }
   if (receipt) return <ScheduleReceipt result={receipt} />;
   return (
     <div className="space-y-5">
       <p className="card font-medium">Harmonogram nie księguje spłat</p>
+      {!source && !batch.archived_at ? (
+        <ImportUpload
+          batchId={batch.id}
+          kind="loan_schedule"
+          disabled={busy || uncertain}
+        />
+      ) : null}
       <ImportSources
         sources={batch.sources}
         selected={source?.id ?? null}
@@ -243,7 +279,6 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
           setAck(false);
           setRevisionChoice(null);
           setComparisonAck(null);
-          intent.current = null;
         }}
         onPrepare={async (id) => {
           if (busy || uncertain) return;
@@ -271,7 +306,6 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
                 setRevisionChoice({ sourceId: source.id, id: e.target.value });
                 setComparisonAck(null);
                 setPreview(null);
-                intent.current = null;
                 setOffset(0);
               }}
             >
@@ -309,13 +343,30 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
               onChange={(e) => {
                 setComparisonAck(e.target.checked ? comparisonToken : null);
                 setPreview(null);
-                intent.current = null;
               }}
             />
             Porównałem odczyty z oryginałem i świadomie wybieram wskazaną
             rewizję kandydującą
           </label>
         </>
+      ) : null}
+      {uncertain ? (
+        <section className="card space-y-2">
+          <p>
+            Wynik zapisu jest nieznany. Sprawdź potwierdzenie lub ponów tę samą
+            decyzję.
+          </p>
+          <button className="btn-secondary" onClick={() => recovered.refetch()}>
+            Sprawdź potwierdzenie
+          </button>
+          <button
+            className="btn-secondary"
+            disabled={busy}
+            onClick={() => void commitIntent(pending)}
+          >
+            Ponów tę samą decyzję
+          </button>
+        </section>
       ) : null}
       {stored ? (
         <ScheduleReceipt result={stored} />
@@ -351,7 +402,12 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
             ) : rows.isError ? (
               <p role="alert">Nie udało się pobrać rat źródłowych.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div
+                className="overflow-x-auto"
+                tabIndex={0}
+                role="region"
+                aria-label="Wiersze harmonogramu"
+              >
                 <table className="w-full text-sm">
                   <thead>
                     <tr>
@@ -422,7 +478,6 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
                 onChange={(e) => {
                   setAck(e.target.checked);
                   setPreview(null);
-                  intent.current = null;
                 }}
               />
               Sprawdziłem przypisanie harmonogramu do kredytu i wskazanych kont
@@ -451,27 +506,6 @@ export function ScheduleImportWorkspace({ batch }: { batch: ImportBatch }) {
             <p role="alert" className="card">
               {problem}
             </p>
-          ) : null}
-          {uncertain ? (
-            <section className="card space-y-2">
-              <p>
-                Wynik niepewny. Nie twórz nowej decyzji; sprawdź zapisane
-                potwierdzenie.
-              </p>
-              <button
-                className="btn-secondary"
-                onClick={() => recovered.refetch()}
-              >
-                Sprawdź potwierdzenie
-              </button>
-              <button
-                className="btn-secondary"
-                disabled={busy}
-                onClick={commit}
-              >
-                Ponów tę samą decyzję
-              </button>
-            </section>
           ) : null}
           {preview?.existing_activation ? (
             <section className="space-y-3">

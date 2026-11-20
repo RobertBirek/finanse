@@ -27,6 +27,7 @@ export async function documentVisionFixtures(
     error?:
       "provider_unavailable" | "vision_daily_limit" | "invalid_model_output";
     visionRetryStatus?: 429;
+    pdfName?: string;
   } = {},
 ) {
   const base = await fixtures(page);
@@ -76,7 +77,7 @@ export async function documentVisionFixtures(
   });
   const docs = [
     document(visionIds.image, "synthetic-photo.jpg", "image/jpeg", true),
-    document(visionIds.pdf, "legacy.pdf", "application/pdf"),
+    document(visionIds.pdf, options.pdfName ?? "legacy.pdf", "application/pdf"),
   ];
   await page.route("**/api/**", async (route) => {
     const request = route.request();

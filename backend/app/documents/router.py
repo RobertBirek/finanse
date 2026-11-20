@@ -1,9 +1,10 @@
 import asyncio
 import logging
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse, Response
 from redis.exceptions import RedisError
 from sqlalchemy import select
@@ -15,12 +16,15 @@ from app.documents import service
 from app.documents.images import ImageNormalizationError, normalize_image
 from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
 from app.documents.lifecycle import DocumentLifecycleError, set_document_archived
+from app.documents.scan import ScanTooLargeError, assemble_scan, scan_page_limit
 from app.documents.schemas import (
     DocumentResponse,
     DocumentStatus,
     DocumentTextResponse,
     DocumentUploadCapabilities,
     DocumentUploadResponse,
+    DocumentWorklist,
+    DocumentWorklistCounts,
 )
 from app.documents.upload_limits import DocumentStorageFullError, StorageQuotaExceededError
 from app.documents.validation import DocumentValidationUnavailableError
@@ -106,6 +110,7 @@ async def upload_capabilities(
     provider_label = config.provider if automatic and config is not None else None
     return DocumentUploadCapabilities(
         max_file_bytes=settings.DOCUMENT_MAX_FILE_BYTES,
+        max_scan_pages=scan_page_limit(),
         accepted_mime_types=sorted(mime for mime in ALLOWED_MIME_TYPES if mime),
         automatic_image_vision=automatic,
         vision_provider_label=provider_label,
@@ -115,34 +120,59 @@ async def upload_capabilities(
     )
 
 
-@router.post("/upload", response_model=DocumentUploadResponse)
-async def upload_document(
-    file: Annotated[UploadFile, File(...)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    _limit: Annotated[None, Depends(upload_rate_limit)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
-    declared_mime = file.content_type or ""
-    if declared_mime not in ALLOWED_MIME_TYPES:
-        return _document_rejection("document_mime_unsupported", declared_mime, None, 0)
+async def _read_upload(file: UploadFile, remaining: int) -> bytes:
     content = bytearray()
     while chunk := await file.read(64 * 1024):
         content.extend(chunk)
-        if len(content) > settings.DOCUMENT_MAX_FILE_BYTES:
-            return JSONResponse(
-                content={"detail": "File exceeds configured size limit."}, status_code=413
-            )
-    if not content:
-        return _document_rejection("document_empty", declared_mime, None, 0)
+        if len(content) > remaining:
+            raise HTTPException(413, "File exceeds configured size limit.")
+    return bytes(content)
 
+
+@router.post("/upload", response_model=DocumentUploadResponse)
+async def upload_document(
+    current_user: Annotated[User, Depends(get_current_user)],
+    _limit: Annotated[None, Depends(upload_rate_limit)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    file: Annotated[UploadFile | None, File()] = None,
+    pages: Annotated[list[UploadFile] | None, File()] = None,
+):
+    if (file is None) == (pages is None):
+        raise HTTPException(422, "Provide a file or scan pages.")
+    declared_mime = (file.content_type or "") if file is not None else "application/pdf"
+    if declared_mime not in ALLOWED_MIME_TYPES:
+        return _document_rejection("document_mime_unsupported", declared_mime, None, 0)
+    content = b""
     try:
+        if file is not None:
+            content = await _read_upload(file, settings.DOCUMENT_MAX_FILE_BYTES)
+            if not content:
+                return _document_rejection("document_empty", declared_mime, None, 0)
+            filename = file.filename or "untitled"
+        else:
+            assert pages is not None
+            if not 2 <= len(pages) <= scan_page_limit():
+                raise ScanTooLargeError
+            images = []
+            remaining = settings.DOCUMENT_MAX_FILE_BYTES
+            for page in pages:
+                photo = await _read_upload(page, remaining)
+                remaining -= len(photo)
+                images.append((photo, page.content_type or ""))
+            async with asyncio.timeout(settings.DOCUMENT_SCAN_TIMEOUT_SECONDS):
+                content = await assemble_scan(images)
+            filename = datetime.now(UTC).strftime("Skan %Y-%m-%d %H-%M-%S.pdf")
         doc, is_duplicate = await service.store_document(
             db,
             current_user.id,
-            bytes(content),
-            file.filename or "untitled",
+            content,
+            filename,
             declared_mime,
         )
+    except ScanTooLargeError:
+        return JSONResponse(content={"detail": "Scan exceeds configured limits."}, status_code=413)
+    except ImageNormalizationError:
+        return _document_rejection("document_validation_failed", None, None, len(content))
     except StorageQuotaExceededError:
         return JSONResponse(content={"detail": "Document storage quota exceeded"}, status_code=413)
     except DocumentStorageFullError:
@@ -154,7 +184,7 @@ async def upload_document(
             error.detected_mime,
             len(content),
         )
-    except (OSError, DocumentValidationUnavailableError):
+    except (OSError, TimeoutError, DocumentValidationUnavailableError):
         logger.warning("Document storage failed; original was not overwritten")
         return JSONResponse(
             content={
@@ -251,6 +281,16 @@ async def active_documents(
     return await service.document_responses(db, current_user.id, documents)
 
 
+@router.get("/worklists")
+async def document_worklist_counts(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> DocumentWorklistCounts:
+    from app.documents.processing_queries import get_document_worklist_counts
+
+    return await get_document_worklist_counts(db, current_user.id)
+
+
 @router.get("", response_model=list[DocumentResponse])
 async def list_documents(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -259,9 +299,20 @@ async def list_documents(
     offset: Annotated[int, Query(ge=0)] = 0,
     status: Annotated[str | None, Query(pattern=r"^(pending|processing|done|error)$")] = None,
     archived: bool = False,
-):
+    query: Annotated[str | None, Query(max_length=500)] = None,
+    before: uuid.UUID | None = None,
+    worklist: DocumentWorklist | None = None,
+) -> list[DocumentResponse]:
     docs = await service.get_documents(
-        db, current_user.id, limit=limit, offset=offset, status=status, archived=archived
+        db,
+        current_user.id,
+        limit=limit,
+        offset=offset,
+        status=status,
+        archived=archived,
+        query=query,
+        before=before,
+        worklist=worklist,
     )
     return await service.document_responses(db, current_user.id, docs)
 

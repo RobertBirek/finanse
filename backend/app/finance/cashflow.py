@@ -1,19 +1,22 @@
 """Finance schedules, forecast and explicitly confirmed scheduled transactions."""
 
 import uuid
+from collections import defaultdict
 from datetime import date, timedelta
 from typing import Literal, cast
 
-from sqlalchemy import case, func, select
+from sqlalchemy import Select, case, func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.finance.budgets import get_budget_status
+from app.finance.categorization_context import digest
 from app.finance.dates import _add_month, _local_today, _payday_bounds
 from app.finance.models import (
     Account,
     Category,
     DocumentPaymentAllocation,
+    FinanceCommandReceipt,
     FinanceSettings,
     FinancialTransaction,
     Posting,
@@ -28,11 +31,22 @@ from app.finance.schemas import (
     CashflowSuggestion,
     FinanceSettingsUpdate,
     PostingCreate,
+    ScheduledFinanceConfirmationRequest,
     ScheduledFinanceItemCreate,
     ScheduledFinanceItemUpdate,
     TransactionCreate,
 )
 from app.finance.transactions import create_transaction
+
+SCHEDULE_CONFIRM_ACTION = "confirm_scheduled_occurrence"
+
+
+class ScheduleConfirmationConflict(ValueError):
+    pass
+
+
+def _occurrence_key(item_id: uuid.UUID, due_date: date) -> str:
+    return f"recurring:{item_id}:{due_date.isoformat()}"
 
 
 async def get_or_create_finance_settings(db: AsyncSession, user_id: uuid.UUID) -> FinanceSettings:
@@ -193,6 +207,69 @@ async def delete_scheduled_item(db: AsyncSession, user_id: uuid.UUID, item_id: u
     return True
 
 
+type ActualKey = tuple[str, uuid.UUID, uuid.UUID]
+
+
+def _actual_key(item: ScheduledFinanceItem) -> ActualKey:
+    return item.type, item.account_id, item.category_id
+
+
+def _actuals_query(
+    user_id: uuid.UUID,
+    keys: set[ActualKey],
+    *,
+    start: date | None = None,
+    end: date | None = None,
+    exclude_transaction_ids: set[uuid.UUID] | None = None,
+    latest_per_key: bool = False,
+) -> Select[tuple[FinancialTransaction, int, uuid.UUID, uuid.UUID]]:
+    account_posting = aliased(Posting)
+    category_posting = aliased(Posting)
+    account_id = account_posting.account_id
+    category_id = category_posting.category_id
+    key_fields = (FinancialTransaction.type, account_id, category_id)
+    allocated = (
+        select(1)
+        .select_from(Posting)
+        .join(DocumentPaymentAllocation, DocumentPaymentAllocation.posting_id == Posting.id)
+        .where(Posting.transaction_id == FinancialTransaction.id)
+        .correlate(FinancialTransaction)
+        .exists()
+    )
+    stmt = (
+        select(FinancialTransaction, category_posting.base_amount_pln, account_id, category_id)
+        .join(account_posting, account_posting.transaction_id == FinancialTransaction.id)
+        .join(category_posting, category_posting.transaction_id == FinancialTransaction.id)
+        .where(
+            FinancialTransaction.user_id == user_id,
+            tuple_(*key_fields).in_(keys),
+            account_posting.category_id.is_(None),
+            category_posting.account_id.is_(None),
+            category_posting.direction
+            == case((FinancialTransaction.type == "expense", "credit"), else_="debit"),
+            account_posting.direction
+            == case((FinancialTransaction.type == "expense", "debit"), else_="credit"),
+            ~allocated,
+        )
+    )
+    if start is not None:
+        stmt = stmt.where(FinancialTransaction.date >= start)
+    if end is not None:
+        stmt = stmt.where(FinancialTransaction.date <= end)
+    if exclude_transaction_ids:
+        stmt = stmt.where(FinancialTransaction.id.not_in(exclude_transaction_ids))
+    if latest_per_key:
+        stmt = stmt.distinct(*key_fields).order_by(*key_fields)
+    stmt = stmt.order_by(
+        FinancialTransaction.date.desc(),
+        FinancialTransaction.created_at.desc(),
+        FinancialTransaction.id.desc(),
+        category_posting.id,
+    )
+    # The tuple membership test requires both IDs even though the columns are nullable.
+    return cast("Select[tuple[FinancialTransaction, int, uuid.UUID, uuid.UUID]]", stmt)
+
+
 async def _matching_actuals(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -202,40 +279,52 @@ async def _matching_actuals(
     end: date | None = None,
     exclude_transaction_ids: set[uuid.UUID] | None = None,
 ) -> list[tuple[FinancialTransaction, int]]:
-    account_posting = aliased(Posting)
-    category_posting = aliased(Posting)
-    stmt = (
-        select(FinancialTransaction, category_posting.base_amount_pln)
-        .join(account_posting, account_posting.transaction_id == FinancialTransaction.id)
-        .join(category_posting, category_posting.transaction_id == FinancialTransaction.id)
-        .where(
-            FinancialTransaction.user_id == user_id,
-            FinancialTransaction.type == item.type,
-            account_posting.account_id == item.account_id,
-            account_posting.category_id.is_(None),
-            category_posting.account_id.is_(None),
-            category_posting.category_id == item.category_id,
+    result = await db.execute(
+        _actuals_query(
+            user_id,
+            {_actual_key(item)},
+            start=start,
+            end=end,
+            exclude_transaction_ids=exclude_transaction_ids,
         )
-        .order_by(FinancialTransaction.date.desc(), FinancialTransaction.created_at.desc())
     )
-    if start is not None:
-        stmt = stmt.where(FinancialTransaction.date >= start)
-    if end is not None:
-        stmt = stmt.where(FinancialTransaction.date <= end)
-    result = await db.execute(stmt)
-    rows = [(transaction, int(amount)) for transaction, amount in result.all()]
-    allocated = set(
-        (
-            await db.scalars(
-                select(FinancialTransaction.id)
-                .join(Posting, Posting.transaction_id == FinancialTransaction.id)
-                .join(DocumentPaymentAllocation, DocumentPaymentAllocation.posting_id == Posting.id)
-                .where(FinancialTransaction.user_id == user_id)
+    return [(transaction, amount) for transaction, amount, _, _ in result]
+
+
+async def _forecast_actuals(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    items: list[ScheduledFinanceItem],
+    *,
+    today: date,
+    horizon_end: date,
+    grace: timedelta,
+    earliest_due: date,
+) -> tuple[dict[ActualKey, list[tuple[FinancialTransaction, int]]], dict[ActualKey, int]]:
+    recent: dict[ActualKey, list[tuple[FinancialTransaction, int]]] = defaultdict(list)
+    if items:
+        result = await db.execute(
+            _actuals_query(
+                user_id,
+                {_actual_key(item) for item in items},
+                start=earliest_due - grace,
+                end=horizon_end + grace,
             )
-        ).all()
-    )
-    excluded = allocated | (exclude_transaction_ids or set())
-    return [row for row in rows if row[0].id not in excluded]
+        )
+        for txn, amount, account_id, category_id in result:
+            recent[(txn.type, account_id, category_id)].append((txn, amount))
+
+    estimates: dict[ActualKey, int] = {}
+    estimated_keys = {_actual_key(item) for item in items if item.amount_method == "last_actual"}
+    if estimated_keys:
+        result = await db.execute(
+            _actuals_query(user_id, estimated_keys, end=today, latest_per_key=True)
+        )
+        estimates = {
+            (txn.type, account_id, category_id): amount
+            for txn, amount, account_id, category_id in result
+        }
+    return recent, estimates
 
 
 async def _resolve_scheduled_amount(
@@ -248,10 +337,13 @@ async def _resolve_scheduled_amount(
 ) -> int | None:
     if item.amount_method == "fixed":
         return item.fixed_amount_pln
-    actuals = await _matching_actuals(
-        db, user_id, item, end=today, exclude_transaction_ids=exclude_transaction_ids
+    result = await db.execute(
+        _actuals_query(
+            user_id, {_actual_key(item)}, end=today, exclude_transaction_ids=exclude_transaction_ids
+        ).limit(1)
     )
-    return actuals[0][1] if actuals else None
+    actual = result.first()
+    return actual[1] if actual else None
 
 
 async def _budget_balance(db: AsyncSession, user_id: uuid.UUID) -> int:
@@ -296,88 +388,137 @@ async def get_cashflow_forecast(
             overdue_grace_days=3,
         )
     horizon_end = today + timedelta(days=settings.forecast_horizon_days - 1)
+    last_payday, next_payday = _payday_bounds(today, settings.payday_day)
+    grace = timedelta(days=settings.overdue_grace_days)
     items = [item for item in await get_scheduled_items(db, user_id) if item.is_active]
     from app.finance.bill_forecast import project_bill_cashflows
 
     bill_projection = await project_bill_cashflows(
         db, user_id, today=today, horizon_end=horizon_end
     )
+    current_month = today.replace(day=1)
+    grace_start = today - grace
+    month = grace_start.replace(day=1)
+    occurrences: list[tuple[ScheduledFinanceItem, date]] = []
+    while month <= horizon_end:
+        for item in items:
+            due_date = month.replace(day=item.due_day)
+            if due_date <= horizon_end and (month >= current_month or due_date >= grace_start):
+                occurrences.append((item, due_date))
+        month = _add_month(month)
+
+    confirmed: dict[str, uuid.UUID] = {}
+    if occurrences:
+        confirmed = {
+            key: transaction_id
+            for key, transaction_id in await db.execute(
+                select(FinanceCommandReceipt.key, FinancialTransaction.id)
+                .join(
+                    FinancialTransaction, FinancialTransaction.id == FinanceCommandReceipt.entity_id
+                )
+                .where(
+                    FinanceCommandReceipt.user_id == user_id,
+                    FinanceCommandReceipt.action == SCHEDULE_CONFIRM_ACTION,
+                    FinancialTransaction.user_id == user_id,
+                    FinanceCommandReceipt.key.in_(
+                        [_occurrence_key(item.id, due) for item, due in occurrences]
+                    ),
+                )
+            )
+        }
+    actuals, estimates = await _forecast_actuals(
+        db,
+        user_id,
+        items,
+        today=today,
+        horizon_end=horizon_end,
+        grace=grace,
+        earliest_due=min((due for _, due in occurrences), default=current_month),
+    )
     day_changes = {
         today + timedelta(days=offset): 0 for offset in range(settings.forecast_horizon_days)
     }
     suggestions: list[CashflowSuggestion] = []
+    consumed_actuals = set(confirmed.values())
+    candidates: dict[str, set[uuid.UUID]] = {}
+    candidate_counts: dict[uuid.UUID, int] = defaultdict(int)
+    for item, due_date in occurrences:
+        occurrence_key = _occurrence_key(item.id, due_date)
+        lookup_key = _actual_key(item)
+        if (
+            occurrence_key in confirmed
+            or (item.id, due_date) in bill_projection.covered_occurrences
+        ):
+            continue
+        amount = (
+            item.fixed_amount_pln if item.amount_method == "fixed" else estimates.get(lookup_key)
+        )
+        matching = {
+            txn.id
+            for txn, actual_amount in actuals.get(lookup_key, ())
+            if txn.id not in consumed_actuals
+            and actual_amount == amount
+            and due_date - grace <= txn.date <= due_date + grace
+        }
+        candidates[occurrence_key] = matching
+        for transaction_id in matching:
+            candidate_counts[transaction_id] += 1
 
-    month = date(today.year, today.month, 1)
-    while month <= horizon_end:
-        for item in items:
-            due_date = date(month.year, month.month, item.due_day)
-            if due_date > horizon_end:
-                continue
-            amount = await _resolve_scheduled_amount(db, user_id, item, today)
-            if (item.id, due_date) in bill_projection.covered_occurrences:
-                suggestions.append(
-                    CashflowSuggestion(
-                        source="recurring",
-                        source_key=f"recurring:{item.id}:{due_date.isoformat()}",
-                        scheduled_item_id=item.id,
-                        name=item.name,
-                        type=cast(Literal["income", "expense"], item.type),
-                        due_date=due_date,
-                        amount_minor=amount,
-                        currency=item.currency,
-                        amount_pln=amount,
-                        status="matched_actual",
-                        included_in_forecast=False,
-                        exclusion_reasons=["covered_by_financial_document"],
-                    )
-                )
-                continue
-            actual_id = None
-            matching = await _matching_actuals(
-                db,
-                user_id,
-                item,
-                start=due_date - timedelta(days=settings.overdue_grace_days),
-                end=due_date + timedelta(days=settings.overdue_grace_days),
+    for item, due_date in occurrences:
+        occurrence_key = _occurrence_key(item.id, due_date)
+        key = _actual_key(item)
+        amount = item.fixed_amount_pln if item.amount_method == "fixed" else estimates.get(key)
+        actual_id = confirmed.get(occurrence_key)
+        matching = candidates.get(occurrence_key, set())
+        exclusion_reasons: list[str] = []
+        included = False
+        status: Literal[
+            "due",
+            "overdue",
+            "overdue_uncertain",
+            "matched_actual",
+            "amount_unknown",
+            "match_uncertain",
+        ]
+        if actual_id is not None:
+            status = "matched_actual"
+        elif (item.id, due_date) in bill_projection.covered_occurrences:
+            status = "matched_actual"
+            exclusion_reasons = ["covered_by_financial_document"]
+        elif len(matching) == 1 and candidate_counts[next(iter(matching))] == 1:
+            status = "matched_actual"
+            actual_id = next(iter(matching))
+        elif matching:
+            status = "match_uncertain"
+            exclusion_reasons = ["recurring_match_uncertain"]
+        elif due_date < grace_start:
+            status = "overdue_uncertain"
+            exclusion_reasons = ["recurring_overdue_uncertain"]
+        elif amount is None:
+            status = "amount_unknown"
+            exclusion_reasons = ["recurring_amount_unknown"]
+        else:
+            status = "due" if due_date >= today else "overdue"
+            included = True
+            direction = 1 if item.type == "income" else -1
+            day_changes[max(today, due_date)] += direction * amount
+        suggestions.append(
+            CashflowSuggestion(
+                source="recurring",
+                source_key=occurrence_key,
+                scheduled_item_id=item.id,
+                name=item.name,
+                type=cast(Literal["income", "expense"], item.type),
+                due_date=due_date,
+                amount_minor=amount,
+                currency=item.currency,
+                amount_pln=amount,
+                status=status,
+                included_in_forecast=included,
+                actual_transaction_id=actual_id,
+                exclusion_reasons=exclusion_reasons,
             )
-            matching = [match for match in matching if amount is not None and match[1] == amount]
-            status: Literal[
-                "due", "overdue", "overdue_uncertain", "matched_actual", "amount_unknown"
-            ]
-            if matching:
-                status = "matched_actual"
-                included = False
-                actual_id = matching[0][0].id
-            elif due_date < today - timedelta(days=settings.overdue_grace_days):
-                status = "overdue_uncertain"
-                included = False
-            elif amount is None:
-                status = "amount_unknown"
-                included = False
-            else:
-                status = "due" if due_date >= today else "overdue"
-                included = True
-                effective_date = max(today, due_date)
-                if effective_date <= horizon_end:
-                    direction = 1 if item.type == "income" else -1
-                    day_changes[effective_date] += direction * amount
-            suggestions.append(
-                CashflowSuggestion(
-                    source="recurring",
-                    source_key=f"recurring:{item.id}:{due_date.isoformat()}",
-                    scheduled_item_id=item.id,
-                    name=item.name,
-                    type=cast(Literal["income", "expense"], item.type),
-                    due_date=due_date,
-                    amount_minor=amount,
-                    currency=item.currency,
-                    amount_pln=amount,
-                    status=status,
-                    included_in_forecast=included,
-                    actual_transaction_id=actual_id,
-                )
-            )
-        month = _add_month(month)
+        )
 
     for projected_day, change in bill_projection.day_changes_pln.items():
         if projected_day in day_changes:
@@ -389,10 +530,34 @@ async def get_cashflow_forecast(
     for day, change in day_changes.items():
         balance += change
         days.append(CashflowDay(date=day, projected_balance_pln=balance))
-    _, next_payday = _payday_bounds(today, settings.payday_day)
-    before_payday = [day.projected_balance_pln for day in days if day.date < next_payday]
-    projected_before_payday = before_payday[-1] if before_payday else opening_balance
-    remaining_days = max((next_payday - today).days, 1)
+    before_payday = [day for day in days if day.date < next_payday]
+    covered_until_payday = horizon_end >= next_payday - timedelta(days=1)
+    omitted_expenses = [
+        suggestion
+        for suggestion in suggestions
+        if suggestion.type == "expense"
+        and suggestion.exclusion_reasons
+        and suggestion.status != "matched_actual"
+    ]
+    omitted_before_payday = any(
+        expense.due_date is None or expense.due_date < next_payday for expense in omitted_expenses
+    )
+    projected_before_payday = (
+        before_payday[-1].projected_balance_pln if covered_until_payday else None
+    )
+    daily_limit = None
+    if covered_until_payday and not omitted_before_payday:
+        tightest_daily_limit = min(
+            day.projected_balance_pln // elapsed for elapsed, day in enumerate(before_payday, 1)
+        )
+        daily_limit = max(0, tightest_daily_limit) if opening_balance >= 0 else 0
+    lowest_before_payday = min(
+        [CashflowDay(date=today, projected_balance_pln=opening_balance), *before_payday],
+        key=lambda day: day.projected_balance_pln,
+    )
+    exclusion_reasons = sorted(
+        {reason for expense in omitted_expenses for reason in expense.exclusion_reasons}
+    )
     budget_status = await get_budget_status(db, user_id, today.month, today.year)
     budgets = CashflowBudgetSummary(
         total_budget_pln=budget_status.total_budget_pln,
@@ -400,19 +565,21 @@ async def get_cashflow_forecast(
         remaining_pln=budget_status.remaining_pln,
     )
     return CashflowForecastResponse(
-        last_payday=_payday_bounds(today, settings.payday_day)[0],
+        last_payday=last_payday,
         next_payday=next_payday,
         opening_balance_pln=opening_balance,
         projected_balance_before_next_payday_pln=projected_before_payday,
-        safe_daily_limit_pln=max(projected_before_payday, 0) // remaining_days,
+        safe_daily_limit_pln=daily_limit,
         lowest_balance_pln=min([opening_balance, *(day.projected_balance_pln for day in days)]),
+        lowest_balance_before_payday=lowest_before_payday,
         days=days,
         suggestions=sorted(
             suggestions, key=lambda suggestion: (suggestion.due_date or date.max, suggestion.name)
         ),
         budgets=budgets,
-        has_excluded_obligations=bool(bill_projection.exclusions),
-        excluded_obligation_reasons=bill_projection.exclusions,
+        has_excluded_obligations=bool(exclusion_reasons),
+        has_excluded_obligations_before_payday=omitted_before_payday,
+        excluded_obligation_reasons=exclusion_reasons,
     )
 
 
@@ -421,6 +588,7 @@ async def confirm_scheduled_item(
     user_id: uuid.UUID,
     item_id: uuid.UUID,
     *,
+    expected: ScheduledFinanceConfirmationRequest | None = None,
     today: date | None = None,
 ) -> FinancialTransaction | None:
     from app.finance.document_guards import lock_document_mutations
@@ -477,9 +645,18 @@ async def confirm_scheduled_item(
             if candidate.scheduled_item_id == item.id
             and candidate.due_date is not None
             and candidate.due_date <= effective_today
+            and (expected is None or candidate.due_date == expected.due_date)
         ),
         None,
     )
+    if expected is not None and (
+        suggestion is None
+        or suggestion.status not in {"due", "overdue"}
+        or suggestion.amount_pln != expected.expected_amount_pln
+    ):
+        raise ScheduleConfirmationConflict(
+            "Pozycja się zmieniła. Odśwież prognozę i sprawdź termin oraz kwotę."
+        )
     if suggestion is None:
         raise ValueError("Scheduled item has no confirmable occurrence")
     if suggestion.status not in {"due", "overdue"} or suggestion.amount_pln is None:
@@ -501,7 +678,7 @@ async def confirm_scheduled_item(
     amount = suggestion.amount_pln
     account_direction = "credit" if item.type == "income" else "debit"
     category_direction = "debit" if item.type == "income" else "credit"
-    return await create_transaction(
+    transaction = await create_transaction(
         db,
         user_id,
         TransactionCreate(
@@ -531,3 +708,23 @@ async def confirm_scheduled_item(
             ],
         ),
     )
+    key = _occurrence_key(item.id, suggestion.due_date)
+    receipt = await db.scalar(
+        select(FinanceCommandReceipt).where(
+            FinanceCommandReceipt.user_id == user_id,
+            FinanceCommandReceipt.action == SCHEDULE_CONFIRM_ACTION,
+            FinanceCommandReceipt.key == key,
+        )
+    )
+    confirmation = {
+        "due_date": suggestion.due_date.isoformat(),
+        "expected_amount_pln": amount,
+    }
+    if receipt is None:
+        receipt = FinanceCommandReceipt(user_id=user_id, action=SCHEDULE_CONFIRM_ACTION, key=key)
+        db.add(receipt)
+    receipt.request_hash = digest(confirmation)
+    receipt.response_json = confirmation
+    receipt.entity_id = transaction.id
+    await db.flush()
+    return transaction

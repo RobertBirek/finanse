@@ -4,6 +4,7 @@ from datetime import date
 import pytest
 
 from app.documents.models import Document
+from app.finance.models import FinancialDocument
 from app.identity.models import User
 from tests.test_finance.test_account_currency import client_for
 from tests.test_finance.test_bill_payments import create_owner, setup_bill
@@ -113,3 +114,59 @@ async def test_lifecycle_route_requires_server_side_forecast_confirmation(db_ses
     assert replay.json() == confirmed.json()
     assert stale.status_code == 409
     assert reopened.status_code == 200
+
+
+async def test_approval_returns_owner_duplicate_candidates_for_submitted_fields(db_session) -> None:
+    owner = await create_owner(db_session)
+    other = await create_owner(db_session)
+    existing = await setup_bill(db_session, owner)
+    second = await setup_bill(db_session, owner)
+    foreign = await setup_bill(db_session, other)
+    existing.issue_date = second.issue_date = foreign.issue_date = date(2026, 10, 28)
+    existing.number, second.number, foreign.number = "FV-1", "FV-2", "FV-3"
+    draft = FinancialDocument(user_id=owner)
+    db_session.add(draft)
+    await db_session.flush()
+    draft_id = str(draft.id)
+    candidate_ids = {str(existing.id): "FV-1", str(second.id): "FV-2"}
+    await db_session.commit()
+    payload = {
+        "version": 1,
+        "kind": "invoice",
+        "supplier_name": "Supplier",
+        "issue_date": "2026-10-28",
+        "description": "Manually entered PDF values",
+        "total_minor": 10_000,
+        "currency": "PLN",
+    }
+    async with client_for(db_session, owner) as client:
+        duplicate = await client.post(
+            f"/api/finance/bills/{draft_id}/approve",
+            json=payload,
+            headers={"Idempotency-Key": "check-duplicate"},
+        )
+        unchanged = await client.get(f"/api/finance/bills/{draft_id}")
+        approved = await client.post(
+            f"/api/finance/bills/{draft_id}/approve",
+            json={**payload, "duplicate_decision": "separate"},
+            headers={"Idempotency-Key": "approve-separately"},
+        )
+    assert duplicate.status_code == 422
+    assert duplicate.json()["detail"] == "duplicate_decision_required"
+    candidates = duplicate.json()["duplicate_candidates"]
+    assert {item["id"]: item["number"] for item in candidates} == candidate_ids
+    for candidate in candidates:
+        assert candidate == {
+            "id": candidate["id"],
+            "reasons": ["supplier_amount_currency"],
+            "supplier_name": "Supplier",
+            "number": candidate_ids[candidate["id"]],
+            "issue_date": "2026-10-28",
+            "total_minor": 10_000,
+            "currency": "PLN",
+        }
+    assert unchanged.json()["review"] == "draft"
+    assert unchanged.json()["version"] == 1
+    assert approved.status_code == 200
+    assert approved.json()["review"] == "approved"
+    assert approved.json()["version"] == 2

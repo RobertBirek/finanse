@@ -157,7 +157,7 @@ describe("DocumentUpload", () => {
 
     const notice = await screen.findByRole("status");
     expect(notice).toHaveTextContent(
-      "Zdjęcia są automatycznie wysyłane do Configured provider do odczytu AI. Dane wymagają sprawdzenia. Informacje widoczne na zdjęciu są przekazywane dostawcy.",
+      "Zdjęcia automatycznie trafiają do Configured provider do odczytu AI.",
     );
     expect(
       notice.compareDocumentPosition(
@@ -186,7 +186,7 @@ describe("DocumentUpload", () => {
     );
 
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "Zdjęcia są automatycznie wysyłane do dostawcy do odczytu AI.",
+      "Zdjęcia automatycznie trafiają do dostawcy do odczytu AI.",
     );
   });
 });

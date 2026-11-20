@@ -7,14 +7,14 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.documents.job_models import DocumentVisionPolicy
 from app.documents.models import Document, DocumentText
-from app.documents.schemas import DocumentResponse, DocumentStatus
+from app.documents.schemas import DocumentResponse, DocumentStatus, DocumentWorklist
 from app.documents.upload_limits import enforce_storage_admission
 from app.documents.validation import (
     UnsupportedDocumentFormatError,
@@ -192,14 +192,33 @@ async def get_documents(
     status: str | None = None,
     *,
     archived: bool = False,
+    query: str | None = None,
+    before: uuid.UUID | None = None,
+    worklist: DocumentWorklist | None = None,
 ) -> list[Document]:
-    stmt = select(Document).where(Document.user_id == user_id).order_by(Document.created_at.desc())
+    stmt = select(Document).where(Document.user_id == user_id)
     stmt = stmt.where(
         Document.archived_at.is_not(None) if archived else Document.archived_at.is_(None)
     )
     if status:
         stmt = stmt.where(Document.status == status)
-    stmt = stmt.limit(limit).offset(offset)
+    if worklist is not None:
+        from app.documents.processing_queries import document_worklist
+
+        lists = document_worklist(user_id)
+        stmt = stmt.join(lists, lists.c.document_id == Document.id).where(
+            lists.c.worklist == worklist
+        )
+    if query and (name := query.strip()):
+        stmt = stmt.where(Document.original_name.icontains(name, autoescape=True))
+    if before is not None:
+        anchor = (
+            select(Document.created_at, Document.id)
+            .where(Document.user_id == user_id, Document.id == before)
+            .scalar_subquery()
+        )
+        stmt = stmt.where(tuple_(Document.created_at, Document.id) < anchor)
+    stmt = stmt.order_by(Document.created_at.desc(), Document.id.desc()).limit(limit).offset(offset)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

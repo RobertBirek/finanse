@@ -2,6 +2,7 @@ import { useState, type SelectHTMLAttributes } from "react";
 import type { Account, Category } from "../../api/finance";
 import { SEARCH_FIELDS, TRANSACTION_TYPES } from "../../lib/transactionSearch";
 import { categoryOptions } from "../../lib/categories";
+import { retainFinancePeriod } from "./useFinancePeriod";
 
 export function TransactionFilters({
   search,
@@ -24,8 +25,8 @@ export function TransactionFilters({
       className="card space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        const form = new FormData(event.currentTarget),
-          next = new URLSearchParams();
+        const form = new FormData(event.currentTarget);
+        const next = retainFinancePeriod(search);
         for (const field of SEARCH_FIELDS) {
           const value = String(form.get(field) ?? "").trim();
           if (value) next.set(field, value);
@@ -130,6 +131,19 @@ export function TransactionFilters({
             </SearchSelect>
           </label>
           <label className="text-sm text-gray-300">
+            Podstawa daty
+            <SearchSelect
+              name="date_basis"
+              defaultValue={
+                search.get("date_basis") === "purchase" ? "purchase" : ""
+              }
+              className="input w-full mt-1"
+            >
+              <option value="">Data księgowania</option>
+              <option value="purchase">Data zakupu</option>
+            </SearchSelect>
+          </label>
+          <label className="text-sm text-gray-300">
             Data od
             <input
               type="date"
@@ -138,10 +152,6 @@ export function TransactionFilters({
               className="input w-full min-w-0 mt-1"
             />
           </label>
-          <p className="text-sm text-gray-400">
-            Zakres dat księgowania; dla historii bez oznaczenia — dotychczasowej
-            daty. Nie filtruje po dacie zakupu.
-          </p>
           <label className="text-sm text-gray-300">
             Data do
             <input

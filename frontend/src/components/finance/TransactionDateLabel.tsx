@@ -36,9 +36,8 @@ export function TransactionDateLabel({
 export function ExpenseDateBasis() {
   return (
     <p className="text-sm text-gray-400">
-      Wydatki i budżety według daty zakupu. Gdy jej nie ustalono, używamy
-      dotychczasowej daty transakcji. Historia konta i wyszukiwanie pozostają
-      według daty księgowania lub nieoznaczonej daty historycznej.
+      Wydatki i budżety według daty zakupu. Gdy jej brakuje, używamy daty
+      księgowania lub daty historycznej.
     </p>
   );
 }

@@ -1,12 +1,27 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { usePeople } from "../api/people";
+import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { PersonEditor } from "../components/finance/PersonEditor";
+import { retainFinancePeriod } from "../components/finance/useFinancePeriod";
+import { listPage, setListPage } from "../lib/listPage";
 import { QueryFeedback } from "../components/QueryFeedback";
 
 export function FinancePeople() {
-  const [offset, setOffset] = useState(0);
-  const [archived, setArchived] = useState(false);
+  const [search, setSearch] = useSearchParams();
+  const page = listPage(search.get("page"));
+  const offset = (page - 1) * 50;
+  const archived = search.get("archived") === "1";
+  const detailsSearch = retainFinancePeriod(search);
+  if (archived) detailsSearch.set("archived", "1");
+  setListPage(detailsSearch, "page", page);
+  function changePage(page: number) {
+    setSearch((current) => {
+      const next = new URLSearchParams(current);
+      setListPage(next, "page", page);
+      return next;
+    });
+  }
   const [creating, setCreating] = useState(false);
   const people = usePeople({ include_archived: archived, offset });
   return (
@@ -23,13 +38,20 @@ export function FinancePeople() {
           Dodaj osobę
         </button>
       </header>
+      <FinanceTabs />
       <label className="flex items-center gap-2">
         <input
           type="checkbox"
           checked={archived}
           onChange={(e) => {
-            setArchived(e.target.checked);
-            setOffset(0);
+            const includeArchived = e.target.checked;
+            setSearch((current) => {
+              const next = new URLSearchParams(current);
+              if (includeArchived) next.set("archived", "1");
+              else next.delete("archived");
+              next.delete("page");
+              return next;
+            });
           }}
         />
         Pokaż również archiwalne
@@ -53,8 +75,11 @@ export function FinancePeople() {
               key={p.id}
             >
               <Link
-                className="text-advisor-400 underline font-medium"
-                to={`/finances/people/${p.id}`}
+                className="text-advisor-700 dark:text-advisor-400 underline font-medium"
+                to={{
+                  pathname: `/finances/people/${p.id}`,
+                  search: detailsSearch.toString(),
+                }}
               >
                 {p.name}
               </Link>
@@ -68,14 +93,14 @@ export function FinancePeople() {
           <button
             className="btn-secondary"
             disabled={!offset}
-            onClick={() => setOffset((v) => Math.max(0, v - 50))}
+            onClick={() => changePage(page - 1)}
           >
             Poprzednia strona
           </button>
           <button
             className="btn-secondary"
             disabled={!people.data || offset + 50 >= people.data.total}
-            onClick={() => setOffset((v) => v + 50)}
+            onClick={() => changePage(page + 1)}
           >
             Następna strona
           </button>
