@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Repozytorium] — 2026-11-20 — Uzgodnienie gałęzi
+
+### Changed
+
+- Zaktualizowano lokalny `main` o 57 commitów metodą fast-forward do
+  `86c6870`. GitHub Actions dla tego SHA: 11 zakończonych pomyślnie jobów.
+  Pierwotne lokalne wersje dokumentacji bilansu otwarcia zachowano osobno.
+- PR #11 (Node 24.22.3) przeszedł 11/11 jobów CI i został scalony jako
+  `481178b`. Zestawienie pozostałych gałęzi: [raport uzgodnienia](audits/2026-11-20-main-reconciliation.md).
+  Bez zmian kodu aplikacji, migracji, danych ani wdrożenia.
+
 ## [Main opublikowany; rollout BLOCKED] — 2026-11-18 — Preflight V2
 
 - Po poleceniu użytkownika wypchnięto bez force `0e9e73c` na main i potwierdzono

@@ -2,6 +2,18 @@
 
 Backlog zadań ze statusami.
 
+## Uzgodnienie `main` i kolejny etap AI — 2026-11-20
+
+- [x] Porównać lokalne i zdalne gałęzie, zachować niezacommitowane pliki,
+  uzgodnić główny checkout z aktualnym `origin/main`.
+- [x] Zweryfikować PR #11 na najnowszym `main` (11/11) i scalić jako `481178b`.
+- [ ] Osobno rozstrzygnąć niezakończone prace nad izolatorem preflight.
+  Historyczne A2 oraz prywatne materiały operacyjne nie wchodzą do scalenia.
+- [ ] Po rozstrzygnięciu PR #11 i ponownym potwierdzeniu zgodności `main`
+  z GitHubem rozpocząć ustawienia AI: wyłącznie OpenAI,
+  model per funkcja, klucze i syntetyczne testy, prompty, statystyki oraz
+  poprawki niezawodności `/advisor`.
+
 ## Publikacja i rollout V2 — 2026-11-18
 
 - [x] Push main0e9e73c bez force i niezależne potwierdzenie remoteSHA.

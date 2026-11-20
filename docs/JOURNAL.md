@@ -2,6 +2,23 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-20 — Uzgodnienie checkoutów Git i kolejność prac AI
+
+- Użytkownik zawęził AI do OpenAI i polecił najpierw uzgodnić `main`
+  na hoście i GitHubie. Audyt AI był statyczny; nie zmieniono kodu AI.
+- Kanoniczny checkout zaktualizowano z `593a232` do `86c6870` bez rebase
+  ani force-pusha. Zastane pięć wersji dokumentacji bilansu otwarcia
+  zachowano w celowanym stashu przypiętym lokalną referencją archiwalną;
+  wersje na `main` opisują późniejszy etap.
+- PR #11 zaktualizowano o `86c6870`. Pełne CI 44738125559 dla `12d355a`
+  przeszło 11/11 bez osłabienia audytu. Scalono jako `481178b` z drzewem
+  identycznym z przetestowanym kandydatem; oba lokalne checkouty przesunięto
+  metodą fast-forward. Bez wdrożenia.
+- Porównano pozostałe gałęzie po treści, nie tylko po SHA. Wcześniejsze
+  implementacje CI i wyszukiwania nie wymagają ponownego scalenia.
+  Niezakończone prace i prywatne materiały pozostawiono lokalnie.
+  Szczegóły: [raport uzgodnienia](audits/2026-11-20-main-reconciliation.md).
+
 ## 2026-11-18 — Main0e9e73c pushed, CI zatrzymało rollout
 
 - User „wypchnij do main i wdróż”; push5c37246→0e9e73c55b88f9bc2bf760d9836b28044b993931
