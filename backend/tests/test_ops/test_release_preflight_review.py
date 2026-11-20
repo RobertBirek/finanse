@@ -144,6 +144,101 @@ def test_unknown_ops_stays_blocked_without_scope():
     assert result.reason_codes == ("unknown_change_scope",)
 
 
+def _node_ci_change(policy, service="backend"):
+    return policy.SourceChange(
+        service,
+        ".github/workflows/ci.yml",
+        "100644",
+        "14501064d0b671310fb713ed67f2db0490e43da2",
+        "100644",
+        "15a67462ad13053766cc1359dc11142fc40a245c",
+        "0ed9e79f0ab37b7163481e0fa1db1c99a6a3c9ef2f20214c18b7544bfda71ebe",
+    )
+
+
+def test_reviewed_node_ci_pin_does_not_waive_migration_and_runtime_gates():
+    policy = module("release_preflight_policy")
+    baselines = dict.fromkeys(("backend", "frontend", "worker"), "b" * 40)
+    changes = {
+        "backend": (".github/workflows/ci.yml", "backend/requirements.txt"),
+        "worker": (".github/workflows/ci.yml",),
+        "frontend": (".github/workflows/ci.yml", "frontend/Dockerfile"),
+    }
+    scope = policy.VerifiedToolingScope(
+        proof_sha256="d" * 64,
+        changes=tuple(_node_ci_change(policy, service) for service in baselines),
+        candidate="a" * 40,
+        service_revisions=tuple(sorted(baselines.items())),
+        checker_bundle_sha256="e" * 64,
+    )
+    value = replace(
+        facts(policy, changes, scope),
+        lineage={"head": None, "first": "head", "second": "first"},
+    )
+    assert policy.classify(replace(value, tooling_scope=None)).reason_codes == (
+        "unknown_change_scope",
+    )
+    result = policy.classify(value)
+    assert result.action == "migration_then_app"
+    assert result.pending_migrations == ("first", "second")
+    assert {
+        "approved_tooling_review",
+        "rebuild_and_verify_runtime",
+        "exact_migration_approval",
+        "backup_restore",
+        "verify_release",
+    } <= set(result.required_gates)
+    incomplete = replace(scope, changes=scope.changes[:-1])
+    assert policy.classify(replace(value, tooling_scope=incomplete)).action == "blocked"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("before_mode", "100755"),
+        ("before_blob", "1" * 40),
+        ("before_blob", None),
+        ("after_mode", "100755"),
+        ("after_blob", "2" * 40),
+        ("after_blob", None),
+        ("after_sha256", "3" * 64),
+        ("path", ".github/workflows/release.yml"),
+    ],
+)
+def test_other_ci_transitions_cannot_enter_approved_scope(field, value):
+    policy = module("release_preflight_policy")
+    change = replace(_node_ci_change(policy), **{field: value})
+    assert not policy.valid_tooling_change(change)
+
+
+def test_review_collector_hashes_ci_bytes_and_scope_match_is_exact(source, monkeypatch):
+    policy = module("release_preflight_policy")
+    path = ".github/workflows/ci.yml"
+    before = b'node-version: "22"\n'
+    after = b'node-version: "24.22.3"\n'
+    source.write(path, before)
+    source.base = source.commit()
+    source.write(path, after)
+    source.candidate = source.commit()
+    source.baselines = dict.fromkeys(source.baselines, source.base)
+    monkeypatch.setattr(
+        policy,
+        "REVIEWED_NODE_CI_TRANSITION",
+        (
+            source.git("rev-parse", f"{source.base}:{path}"),
+            source.git("rev-parse", f"{source.candidate}:{path}"),
+            hashlib.sha256(after).hexdigest(),
+        ),
+    )
+    scope = source.verify()
+    assert len(scope.changes) == 3
+    assert all(change.after_sha256 == hashlib.sha256(after).hexdigest() for change in scope.changes)
+    source.write(path, after + b"other-step: not-reviewed\n")
+    source.candidate = source.commit()
+    with pytest.raises(policy.PreflightInputError, match="review_scope_invalid"):
+        source.verify()
+
+
 def test_exact_reviewed_checker_paths_are_reported_not_filtered(source):
     policy = module("release_preflight_policy")
     scope = source.verify()

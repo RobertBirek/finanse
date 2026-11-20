@@ -2,6 +2,21 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-20 — Scalenie ustawień OpenAI i poprawka preflightu
+
+- CI 44779688414 zielone (11/11); PR #12 scalony jako `e7404e2`,
+  a oba lokalne `main` przesunięte do tej samej rewizji. Produkcja bez zmian.
+- Bieżący zakres od wydania obejmuje `ci.yml` z PR #11. Poprawka
+  dopuszcza do osobnego dowodu tylko jej dokładne przejście blobów/mode/hash.
+  Nie wyłącza bramek migracji, runtime ani kopii/odtworzenia.
+- W izolacji sieciowej 241 testów preflight przeszło, w tym 39 testów
+  dowodu zakresu. Niezależnie porównano pełne bajty obu wersji workflow:
+  jedyna różnica to pin Node `22` → `24.22.3`.
+- Dowody ostatniego uruchomienia preflightu używały inventory i receipt v2;
+  publiczny checkout dokumentuje format v1. Nie używać ich zamiennie.
+  Nowy kandydat i nowy checker wymagają zgodnego, niezależnie zatwierdzonego
+  launchera i artefaktów. Nie uruchamiano checkera na produkcji.
+
 ## 2026-11-20 — Drugi przyrost panelu OpenAI
 
 - Pięć odrębnych celów: Doradca, tekst, vision, pozycje paragonów i kategoryzacja.

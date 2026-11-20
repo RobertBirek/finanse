@@ -26,7 +26,15 @@ CHECKER_SOURCE_PATHS = frozenset(
         "ops/preflight-requirements.txt",
     }
 )
-TOOLING_PATHS = CHECKER_SOURCE_PATHS | {".opencode/command/deploy.md"}
+NODE_CI_PATH = ".github/workflows/ci.yml"
+# PR #11 changed only the frontend runner's Node pin: 22 → 24.22.3.
+# This witness makes that transition eligible for review, not trusted by default.
+REVIEWED_NODE_CI_TRANSITION = (
+    "14501064d0b671310fb713ed67f2db0490e43da2",
+    "15a67462ad13053766cc1359dc11142fc40a245c",
+    "0ed9e79f0ab37b7163481e0fa1db1c99a6a3c9ef2f20214c18b7544bfda71ebe",
+)
+TOOLING_PATHS = CHECKER_SOURCE_PATHS | {".opencode/command/deploy.md", NODE_CI_PATH}
 DIGEST = re.compile(r"[0-9a-f]{64}")
 APP_GATES = (
     "approval",
@@ -225,6 +233,12 @@ def valid_tooling_change(value: object) -> bool:
         or value.path not in TOOLING_PATHS
     ):
         return False
+    if value.path == NODE_CI_PATH:
+        return (
+            value.before_mode == value.after_mode == "100644"
+            and (value.before_blob, value.after_blob, value.after_sha256)
+            == REVIEWED_NODE_CI_TRANSITION
+        )
     for mode, blob in (
         (value.before_mode, value.before_blob),
         (value.after_mode, value.after_blob),
