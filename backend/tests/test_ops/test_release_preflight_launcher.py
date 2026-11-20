@@ -19,6 +19,7 @@ CODE = (
     "release_preflight_trust.py",
     "release_preflight_exec.py",
     "release_preflight_snapshot.py",
+    "release_preflight_isolation.py",
     "release_preflight_review.py",
     "prepare_preflight_bundle.py",
     "preflight-requirements.txt",
@@ -149,6 +150,23 @@ def test_valid_bundle_verification_never_imports_checker(bundle):
         owner_uid=os.geteuid(),
     )
     assert value["source_revision"] == "a" * 40
+    assert not bundle.marker.exists()
+
+
+@pytest.mark.parametrize("change", ["omit", "modify"])
+def test_isolated_renderer_is_a_required_pinned_bundle_member(bundle, change):
+    launcher = module("preflight_launcher")
+    name = "code/release_preflight_isolation.py"
+    path = bundle.bundle / name
+    if change == "omit":
+        path.unlink()
+        bundle.manifest["files"] = [
+            member for member in bundle.manifest["files"] if member["path"] != name
+        ]
+    else:
+        path.write_bytes(b"# different synthetic member\n")
+    with pytest.raises(launcher.BootstrapError):
+        launcher.verify_bundle(bundle.bundle, bundle.save(), owner_uid=os.geteuid())
     assert not bundle.marker.exists()
 
 
@@ -301,6 +319,55 @@ def test_unreadable_runtime_subtree_cannot_be_silently_omitted(bundle, monkeypat
     with pytest.raises(launcher.BootstrapError) as error:
         launcher.runtime_tree_digest(root, owner_uid=os.geteuid())
     assert "private-canary" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    ("case", "reason"),
+    [
+        ("matching", None),
+        ("wrong_kernel", "bootstrap_readiness_host_mismatch"),
+        ("missing_report", "bootstrap_readiness_report_required"),
+        ("changed_report", "bootstrap_readiness_report_mismatch"),
+    ],
+)
+def test_readiness_receipt_binds_report_bytes_and_kernel(bundle, case, reason):
+    launcher = module("preflight_launcher")
+    host = os.uname()
+    report = bundle.root / "readiness.json"
+    report.write_bytes(b'{"synthetic":true}\n')
+    report.chmod(0o600)
+    path = bundle.root / "approval.json"
+    path.write_text(
+        json.dumps(
+            {
+                "version": 2,
+                "operator_reference": "synthetic-admin-acceptance",
+                "bundle_sha256": "a" * 64,
+                "toolchain_sha256": "b" * 64,
+                "review_scope_sha256": None,
+                "isolated_readiness": {
+                    "candidate": "c" * 40,
+                    "inventory_sha256": "d" * 64,
+                    "report_sha256": digest(report),
+                    "kernel_release": host.release
+                    + ("-synthetic" if case == "wrong_kernel" else ""),
+                    "kernel_version": host.version,
+                    "machine": host.machine,
+                    "compose_sha256": "f" * 64,
+                },
+            }
+        )
+    )
+    path.chmod(0o600)
+    if case == "changed_report":
+        report.write_bytes(b'{"synthetic":false}\n')
+    args = (path, "a" * 64, "b" * 64, None)
+    kwargs = {} if case == "missing_report" else {"readiness_report": report}
+    if reason is not None:
+        with pytest.raises(launcher.BootstrapError, match=f"^{reason}$"):
+            launcher.check_approval(*args, **kwargs)
+    else:
+        assert launcher.check_approval(*args, **kwargs)["version"] == 2
 
 
 @pytest.mark.parametrize("kind", ["bundle", "toolchain", "scope", "extra", "duplicate"])

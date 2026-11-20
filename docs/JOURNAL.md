@@ -2,6 +2,23 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-20 — Odzyskany launcher preflight Compose
+
+- PR #13 przeszedł 11/11 jobów po ponowieniu CI 44785183448 i został
+  scalony jako `07ec160`. Aktywne wydanie pozostało na `86c6870`.
+- Pakiet poprzedniego wydania pasuje do zachowanych pinów i do źródła
+  `f61fddb` (29/29 plików pakietu, 10/10 plików checkera zgodnych z Git).
+  Do izolowanego worktree przeniesiono wyłącznie wersjonowalne źródła i
+  syntetyczne testy, bez prywatnych dowodów i bez uruchamiania produkcji.
+- Regresja zależności `extends` przeszła RED → GREEN. Zestaw preflight
+  i testy przypiętego Compose na Linuksie: 314 zaliczonych, bez pominięć.
+  Ruff i mypy modułów preflight przeszły.
+- Po przeglądzie launcher sprawdza prywatny raport gotowości względem SHA-256
+  z receipt v2; brak lub zmiana raportu powoduje odmowę. Zestaw launchera:
+  30 testów. Osobna komenda kwalifikacji zapisała JUnit: 2 testy, 0 pominięć.
+- Nowe wydanie wymaga własnego zakresu i inventory oraz osobnej zgody
+  na odczyt i migracje; poprzedni receipt nie przechodzi na nowy pakiet.
+
 ## 2026-11-20 — Scalenie ustawień OpenAI i poprawka preflightu
 
 - CI 44779688414 zielone (11/11); PR #12 scalony jako `e7404e2`,

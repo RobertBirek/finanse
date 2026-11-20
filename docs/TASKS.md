@@ -11,9 +11,12 @@ Backlog zadań ze statusami.
   w CI 44779688414 (11/11); PR #12 scalony jako `e7404e2`.
 - [x] Rozszerzyć konfigurację, instrukcje i statystyki na pozostałe wywołania
   aplikacji, zachowując reguły domen, rezerwacje i epoki zadań.
-- [x] Przygotować wąską poprawkę klasyfikatora dla przejścia Node z PR #11.
-- [ ] Zweryfikować zgodność z faktycznie użytym wariantem launchera, uzyskać
-  akceptację dokładnego pakietu, dowodu zakresu i inventory dla nowej rewizji.
+- [x] Scalić wąską poprawkę klasyfikatora przejścia Node: PR #13 `07ec160`, CI 11/11.
+- [x] Odzyskać i porównać z poprzednim dowodem pakiet preflight zgodny z `extends`.
+- [~] Uzgodnić wersję repozytorium z odzyskanym launcherem oraz odebrać ją
+  na syntetycznych danych i w CI.
+- [ ] Uzyskać osobną akceptację dokładnego pakietu, dowodu zakresu,
+  inventory i odczytu produkcyjnego dla nowej rewizji.
 - [ ] Po akceptacji i preflight: zweryfikowany odbudowany runtime, kopia i
   odtworzenie, akceptacja dwóch migracji, spójny rollout z rollbackiem.
 

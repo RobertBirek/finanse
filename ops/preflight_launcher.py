@@ -25,6 +25,7 @@ CODE_FILES = frozenset(
         "release_preflight_trust.py",
         "release_preflight_exec.py",
         "release_preflight_snapshot.py",
+        "release_preflight_isolation.py",
         "release_preflight_review.py",
         "prepare_preflight_bundle.py",
         "preflight-requirements.txt",
@@ -302,21 +303,25 @@ def check_approval(
     bundle_sha256: str,
     toolchain_sha256: str,
     review_scope_sha256: str | None,
+    *,
+    readiness_report: Path | None = None,
 ) -> dict[str, object]:
     try:
-        record = _object(
-            _json(_read(path, owner_uid=os.geteuid(), private=True)),
-            {
-                "version",
-                "operator_reference",
-                "bundle_sha256",
-                "toolchain_sha256",
-                "review_scope_sha256",
-            },
-        )
+        record = _object(_json(_read(path, owner_uid=os.geteuid(), private=True)))
+        version = record.get("version")
+        keys = {
+            "version",
+            "operator_reference",
+            "bundle_sha256",
+            "toolchain_sha256",
+            "review_scope_sha256",
+        }
+        if version == 2:
+            keys.add("isolated_readiness")
+        _object(record, keys)
         _require(
-            type(record["version"]) is int
-            and record["version"] == 1
+            type(version) is int
+            and version in {1, 2}
             and isinstance(record["operator_reference"], str)
             and record["operator_reference"].strip()
             and record["bundle_sha256"] == _digest(bundle_sha256)
@@ -326,6 +331,45 @@ def check_approval(
         )
         if review_scope_sha256 is not None:
             _digest(review_scope_sha256)
+        if version == 2:
+            evidence = _object(
+                record["isolated_readiness"],
+                {
+                    "candidate",
+                    "inventory_sha256",
+                    "report_sha256",
+                    "kernel_release",
+                    "kernel_version",
+                    "machine",
+                    "compose_sha256",
+                },
+            )
+            candidate = evidence["candidate"]
+            _require(
+                isinstance(candidate, str) and re.fullmatch(r"[0-9a-f]{40}", candidate),
+                "bootstrap_approval_invalid",
+            )
+            for key in ("inventory_sha256", "report_sha256", "compose_sha256"):
+                _digest(evidence[key])
+            if readiness_report is None:
+                raise BootstrapError("bootstrap_readiness_report_required")
+            readiness = _read(readiness_report, owner_uid=os.geteuid(), private=True)
+            _require(
+                hashlib.sha256(readiness).hexdigest() == evidence["report_sha256"],
+                "bootstrap_readiness_report_mismatch",
+            )
+            host = os.uname()
+            _require(
+                (
+                    evidence["kernel_release"],
+                    evidence["kernel_version"],
+                    evidence["machine"],
+                )
+                == (host.release, host.version, host.machine),
+                "bootstrap_readiness_host_mismatch",
+            )
+        else:
+            _require(readiness_report is None, "bootstrap_readiness_report_unexpected")
         return record
     except BootstrapError:
         raise
@@ -406,6 +450,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--review-scope")
     parser.add_argument("--review-report")
     parser.add_argument("--review-scope-sha256")
+    parser.add_argument("--readiness-report", type=Path)
     try:
         args, forwarded = parser.parse_known_args(argv)
         optional = (args.review_scope, args.review_report, args.review_scope_sha256)
@@ -418,6 +463,8 @@ def main(argv: list[str] | None = None) -> int:
         external = [Path(args.toolchain), Path(args.approval)]
         if args.review_scope is not None:
             external += [Path(args.review_scope), Path(args.review_report)]
+        if args.readiness_report is not None:
+            external.append(args.readiness_report)
         validate_external_locations(Path(args.repository), root, *external)
         manifest = verify_bundle(root, args.bundle_sha256)
         _require(
@@ -453,11 +500,12 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 "bootstrap_import_path",
             )
-        check_approval(
+        approval = check_approval(
             Path(args.approval),
             args.bundle_sha256,
             args.toolchain_sha256,
             args.review_scope_sha256,
+            readiness_report=args.readiness_report,
         )
         code, vendor = root / "code", root / "vendor"
         names = {"yaml"} | {
@@ -472,17 +520,27 @@ def main(argv: list[str] | None = None) -> int:
         )
         toolchain_path = _path(args.toolchain)
         tools = trust.load_toolchain(toolchain_path, args.toolchain_sha256)
+        isolated_approval = None
+        if approval["version"] == 2:
+            evidence = _object(approval["isolated_readiness"])
+            _require(
+                evidence["compose_sha256"] == tools.compose.sha256,
+                "bootstrap_readiness_compose_mismatch",
+            )
+            isolated_approval = (evidence["candidate"], evidence["inventory_sha256"])
         context = trust.BootstrapContext(
             bundle_sha256=args.bundle_sha256,
             toolchain_sha256=args.toolchain_sha256,
             toolchain=tools,
             review_scope_sha256=args.review_scope_sha256,
             runtime_root=root,
+            isolated_approval=isolated_approval,
         )
         for name in (
             "release_preflight_policy",
             "release_preflight_exec",
             "release_preflight_snapshot",
+            "release_preflight_isolation",
             "release_preflight_review",
         ):
             import_checked(name, code / (name + ".py"))
