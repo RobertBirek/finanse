@@ -309,7 +309,7 @@ diffs to obtain success. Direct `release_preflight.py` denies unbootstrapped use
   `accepted_no_open_critical_or_important`, and exact `changes`. Each change has
   `service`, `path`, `before_mode/blob`, `after_mode/blob`, `after_sha256` (individual
   fields are named `before_mode`, `before_blob`, etc.; null for missing sides).
-   Only the nine explicit checker files, `.opencode/command/deploy.md`, and
+   Only the explicit `CHECKER_SOURCE_PATHS`, `.opencode/command/deploy.md`, and
    the exact PR #11 transition of `.github/workflows/ci.yml` qualify.
    The workflow witness pins the old/new Git blobs, regular file modes and the
    SHA-256 of the new bytes. It remains blocked without the full approved proof;
@@ -343,7 +343,7 @@ Inputs must identify the exact current environment, not a future release overlay
   an inventory by automatically adopting the observations that this check gathers.
   The tool has no issuer. Never copy an inventory or env values into this repo.
 
-Inventory JSON has exactly `version: 1`, `project`, `active_release_sha256`,
+Inventory v1 has exactly `version: 1`, `project`, `active_release_sha256`,
 `compose_files` (ordered `{path, sha256}` records), `env_file` (`{path, sha256}`),
 `services` (exactly backend/worker/frontend, each `{container_id, image_id, revision}`)
 and `postgres` (`{service, container_id, database, role}`). Paths are absolute,
@@ -351,6 +351,29 @@ container IDs/digests are64lowercase hex, image IDs are `sha256:` plus64hex, ser
 revisions are40hex. Input files and paths may not be symlinks. Extra or duplicate
 inventory keys, changed digests, wrong ownership/modes and ambiguous observations
 block; the check does not chmod, repair or adopt them.
+
+Inventory v2 adds `compose_dependencies`, a list of exact `{path, sha256}`
+records for the reachable `extends.file` inputs, not additional overlays.
+It requires `--isolated-compose`; inventory v1 rejects that flag. Unlisted,
+unused, duplicate or changed dependencies block. The renderer uses a private
+path-preserving snapshot and has no daemon access. Its parent performs only
+pinned read-only observations after successful render and help checks.
+
+Inventory v2 may optionally include `retained_backend_migrators`: at most
+three exact `{container_id, image_id, finished_at}` entries. Each must match
+a historical, successfully exited backend one-off for the approved project,
+including the exact Docker `FinishedAt` timestamp. The active backend must
+be running and not a one-off. Unexpected, missing, duplicate or changed
+containers block; never delete evidence to pass the check.
+
+Isolated mode requires receipt v2: the v1 fields plus `isolated_readiness`
+with exact `candidate`, `inventory_sha256`, `report_sha256`, `kernel_release`,
+`kernel_version`, `machine` and `compose_sha256`. Obtain an independent review
+of the readiness evidence for those inputs and a new administrator acceptance.
+Do not reuse approvals for other candidates or package bytes. The approved
+Compose must match the build qualified by the checker. Pass the exact private
+report file outside the checkout and bundle; the launcher verifies its bytes
+against `report_sha256` before importing the checker.
 
 The adapter requires active metadata fields `release_status: "verified-live"`,
 `service_revisions`, `application_images[S].id`, and `compose_override`. It never
@@ -386,20 +409,37 @@ env -i PATH=/usr/bin:/bin HOME=/nonexistent \
 If applicable append all three: `--review-scope "$APPROVED_SCOPE"`
 `--review-scope-sha256 "$APPROVED_SCOPE_SHA256" --review-report "$PRIVATE_REVIEW_REPORT"`.
 Absent proof still blocks unknown tooling. These are not production credentials.
+For inventory and receipt v2, also append
+`--isolated-compose --readiness-report "$APPROVED_READINESS_REPORT"`.
 
 Git/Docker/Compose use absolute pinned executable bytes and clean environments;
 only `unix:///var/run/docker.sock` is supported. Remote/custom contexts block.
-All consumed Compose/env bytes go into private0600 snapshots under an explicit
+For inventory v1, consumed Compose/env bytes go into private0600 snapshots under an explicit
 empty0700 scratch. `service.env_file` may reference only that approved env-file
 (scalar/list); aliases, merge precedence and `!override/!reset` are preserved by
 token edits. Original project directory and ordered merge stay unchanged.
-Include/extends/label_file, file-based secrets/configs, external env, unknown
-file readers and unsupported forms block before rendering. Bind/build paths
+Inventory v1 rejects `extends`; v2 only supports its approved dependency graph.
+`include`, `label_file`, file-based secrets/configs, external env, unknown
+file readers and unsupported forms block before rendering in both modes. Bind/build paths
 are not read/copied. Missing pinned YAML runtime blocks; no ad hoc install.
 Scratch paths containing `$` are unsupported. Snapshots may contain secrets:
 never log/commit them. Cleanup removes only owned files, does not promise secure
 erase; drift, write or cleanup failure suppresses success. Do not erase a
 non-owned leftover to force green. Original identities and hashes are rechecked.
+
+Run the real-binary isolation and equivalence tests separately from portable CI,
+as a qualified operator on the intended Linux host:
+
+```bash
+ADVISOR_DEV_PYTHON="$QUALIFICATION_PYTHON" \
+FINANSE_TEST_PINNED_COMPOSE="$PINNED_COMPOSE" \
+  bash backend/tests/test_ops/run_preflight_linux_readiness.sh
+```
+
+Retain the generated synthetic JUnit evidence (seven passing tests, no skips),
+and have the readiness report bind it to the exact candidate, bundle,
+inventory, host, and Compose pin. Synthetic qualification alone does not
+authorize access to production.
 
 Schema read is exactly one literal `SELECT version_num FROM alembic_version`
 in the validated PG container/image as explicit numeric postgres OS UID:GID,

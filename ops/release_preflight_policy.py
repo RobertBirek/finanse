@@ -20,6 +20,7 @@ CHECKER_SOURCE_PATHS = frozenset(
         "ops/release_preflight_trust.py",
         "ops/release_preflight_exec.py",
         "ops/release_preflight_snapshot.py",
+        "ops/release_preflight_isolation.py",
         "ops/release_preflight_review.py",
         "ops/preflight_launcher.py",
         "ops/prepare_preflight_bundle.py",

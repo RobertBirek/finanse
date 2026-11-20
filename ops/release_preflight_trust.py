@@ -187,6 +187,7 @@ class BootstrapContext:
     toolchain: Toolchain
     review_scope_sha256: str | None
     runtime_root: Path
+    isolated_approval: tuple[str, str] | None = None  # candidate, inventory SHA-256
 
 
 def verify_pinned_file(pin: FilePin, *, owner_uid: int = 0) -> bytes:

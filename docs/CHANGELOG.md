@@ -2,6 +2,14 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Lokalny preflight, bez wdrożenia] — 2026-11-20
+
+### Changed
+
+- Uzgodniono repozytorium z odzyskanym launcherem obsługującym zatwierdzone
+  zależności Compose `extends` i inventory/receipt v2. Wąska reguła Node
+  z PR #13 (`07ec160`) nadal wymaga dowodu zakresu.
+
 ## [Main, bez wdrożenia] — 2026-11-20 — Ustawienia OpenAI
 
 ### Changed

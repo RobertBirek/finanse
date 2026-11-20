@@ -7,7 +7,7 @@ import json
 import os
 import stat
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Self
@@ -23,6 +23,7 @@ from release_preflight_trust import (
     require,
     strict_json,
     token,
+    verify_pinned_file,
 )
 
 TOP = frozenset(
@@ -135,6 +136,13 @@ class EnvReference:
     end: int
 
 
+@dataclass(frozen=True)
+class _ComposeInspection:
+    env: tuple[EnvReference, ...]
+    services: frozenset[str]
+    extends: dict[str, tuple[Path, str]]
+
+
 def validate_compose_nodes(
     raw: bytes,
     *,
@@ -143,6 +151,25 @@ def validate_compose_nodes(
     approved_env: Path,
     limits: InputLimits,
 ) -> tuple[EnvReference, ...]:
+    return _inspect_compose(
+        raw,
+        source=source,
+        project_directory=project_directory,
+        approved_env=approved_env,
+        limits=limits,
+        allow_extends=False,
+    ).env
+
+
+def _inspect_compose(
+    raw: bytes,
+    *,
+    source: Path,
+    project_directory: Path,
+    approved_env: Path,
+    limits: InputLimits,
+    allow_extends: bool,
+) -> _ComposeInspection:
     """Parse nodes/tokens only: never instantiate YAML constructors."""
     absolute(source)
     project_directory, approved_env = (
@@ -182,7 +209,16 @@ def validate_compose_nodes(
             )
             if name == "ScalarToken":
                 scalars.append(item)
-        root = yaml.compose(text, Loader=yaml.SafeLoader)
+        aliases: set[tuple[int, int]] = set()
+
+        # Load PyYAML only after the launcher has verified the bundled runtime.
+        class TrackingLoader(yaml.SafeLoader):  # type: ignore[name-defined]
+            def compose_node(self, parent: Any, index: Any) -> Any:
+                if self.check_event(yaml.AliasEvent):
+                    aliases.add((id(parent), id(index)))
+                return super().compose_node(parent, index)
+
+        root = yaml.compose(text, Loader=TrackingLoader)
         require(root is not None, "unsupported_compose_input")
         visited: set[int] = set()
         active: set[int] = set()
@@ -265,9 +301,40 @@ def validate_compose_nodes(
         top = fields(root)
         known(top, TOP)
         require("services" in top, "unsupported_compose_input")
-        for service in fields(top["services"]).values():
+        services_node = top["services"]
+        services = fields(services_node)
+        edges: dict[str, tuple[Path, str]] = {}
+
+        def direct(node: Any, name: str) -> bool:
+            return any(
+                key.value == name and (id(node), id(key)) not in aliases
+                for key, _ in node.value
+            )
+
+        for name, service in services.items():
             values = fields(service)
-            known(values, SERVICE)
+            known(values, SERVICE | {"extends"} if allow_extends else SERVICE)
+            if "extends" in values:
+                spec = values["extends"]
+                ext = fields(spec)
+                require(
+                    allow_extends
+                    and direct(root, "services")
+                    and direct(services_node, name)
+                    and direct(service, "extends")
+                    and set(ext) == {"file", "service"}
+                    and all(
+                        direct(spec, field)
+                        and isinstance(value, yaml.ScalarNode)
+                        and value.tag == "tag:yaml.org,2002:str"
+                        and "$" not in value.value
+                        for field, value in ext.items()
+                    )
+                    and len(spec.value) == 2
+                    and bool(ext["service"].value),
+                    "unsupported_compose_input",
+                )
+                edges[name] = (_graph_path(ext["file"].value), ext["service"].value)
             if "build" in values and isinstance(values["build"], yaml.MappingNode):
                 known(fields(values["build"]), BUILD)
             if "env_file" in values:
@@ -284,7 +351,9 @@ def validate_compose_nodes(
                         fields(definition),
                         frozenset({"external", "name", "content", "environment"}),
                     )
-        return tuple(sorted(refs, key=lambda ref: ref.start))
+        return _ComposeInspection(
+            tuple(sorted(refs, key=lambda ref: ref.start)), frozenset(services), edges
+        )
     except PreflightInputError:
         raise
     except (
@@ -327,6 +396,97 @@ def _capture(
         "snapshot_input_changed",
     )
     return _Captured(path, digest, before), content
+
+
+def _graph_path(value: object) -> Path:
+    path = absolute(value, host=False)
+    require(
+        all(part not in {"", ".", ".."} for part in str(value)[1:].split("/"))
+        and "$" not in str(value),
+        "trust_path_invalid",
+    )
+    return path
+
+
+def compose_graph_pins(
+    roots: object, dependencies: object
+) -> tuple[dict[Path, str], dict[Path, str]]:
+    if not isinstance(roots, list) or len(roots) < 2:
+        raise PreflightInputError("snapshot_compose_invalid")
+    if not isinstance(dependencies, list) or len(dependencies) > 32:
+        raise PreflightInputError("compose_dependency_limit")
+    seen: set[Path] = set()
+
+    def pins(records: list[Any]) -> dict[Path, str]:
+        result: dict[Path, str] = {}
+        for entry in records:
+            record = mapping(entry, {"path", "sha256"})
+            path = _graph_path(record["path"])
+            require(path not in seen, "snapshot_compose_invalid")
+            seen.add(path)
+            result[path] = token(record["sha256"])
+        return result
+
+    return pins(roots), pins(dependencies)
+
+
+def capture_compose_graph(
+    roots: object, dependencies: object, *, approved_env: Path, limits: InputLimits
+) -> tuple[tuple[_Captured, bytes], ...]:
+    """Return pinned root inputs in order, then reachable dependency inputs."""
+    ordered, extra = compose_graph_pins(roots, dependencies)
+    pins = ordered | extra
+    require(approved_env not in pins, "snapshot_compose_invalid")
+    project = next(iter(ordered)).parent
+    captured: dict[Path, tuple[_Captured, bytes]] = {}
+    inspections: dict[Path, _ComposeInspection] = {}
+    pending = list(ordered)
+    size = references = 0
+    for path in pending:
+        if path in captured:
+            continue
+        item, raw = _capture(path, pins[path], limits)
+        size += len(raw)
+        require(size <= 8 * 1024 * 1024, "compose_dependency_limit")
+        parsed = _inspect_compose(
+            raw,
+            source=path,
+            project_directory=project,
+            approved_env=approved_env,
+            limits=limits,
+            allow_extends=True,
+        )
+        inspections[path] = parsed
+        captured[path] = (item, raw)
+        references += len(parsed.extends)
+        require(references <= 256, "compose_dependency_limit")
+        for target, _ in parsed.extends.values():
+            require(target in pins, "compose_dependency_unapproved")
+            pending.append(target)
+    require(extra.keys() <= captured.keys(), "compose_dependency_unused")
+
+    active: set[tuple[Path, str]] = set()
+    depths: dict[tuple[Path, str], int] = {}
+
+    def depth(vertex: tuple[Path, str]) -> int:
+        if vertex in depths:
+            return depths[vertex]
+        require(vertex not in active, "compose_dependency_cycle")
+        active.add(vertex)
+        path, service = vertex
+        parsed = inspections[path]
+        require(service in parsed.services, "compose_dependency_service_missing")
+        edge = parsed.extends.get(service)
+        length = 0 if edge is None else 1 + depth(edge)
+        require(length <= 32, "compose_dependency_limit")
+        active.remove(vertex)
+        depths[vertex] = length
+        return length
+
+    for path, parsed in inspections.items():
+        for service in parsed.extends:
+            depth((path, service))
+    return tuple(captured.values())
 
 
 def _cleanup(
@@ -396,6 +556,210 @@ class InputSnapshot:
                 self.verify_originals()
         finally:
             _cleanup(self._root, self._root_identity, self._created)
+
+
+@dataclass
+class IsolatedSnapshot:
+    root: Path
+    compose_files: tuple[Path, ...]
+    env_file: Path
+    project_directory: Path
+    _originals: list[_Captured]
+    _copies: list[_Captured]
+    _directories: dict[Path, tuple[int, int]]
+    _files: dict[Path, tuple[int, int]]
+    _limits: InputLimits
+
+    def __enter__(self) -> Self:
+        return self
+
+    def verify_originals(self) -> None:
+        try:
+            for path, expected in self._directories.items():
+                info = path.lstat()
+                require(
+                    stat.S_ISDIR(info.st_mode)
+                    and (info.st_dev, info.st_ino) == expected
+                    and info.st_uid == 0
+                    and not info.st_mode & 0o022,
+                    "snapshot_input_changed",
+                )
+                require(
+                    all(
+                        child in self._directories or child in self._files
+                        for child in path.iterdir()
+                    ),
+                    "snapshot_input_changed",
+                )
+            for item in (*self._originals, *self._copies):
+                limits = replace(
+                    self._limits,
+                    max_file_bytes=max(self._limits.max_file_bytes, item.state[2]),
+                )
+                current, _ = _capture(item.path, item.sha256, limits)
+                require(current.state == item.state, "snapshot_input_changed")
+        except OSError:
+            raise PreflightInputError("snapshot_input_changed") from None
+
+    def _cleanup(self) -> None:
+        # Validate the owned directory chain before unlinking any descendants.
+        try:
+            for path, expected in self._directories.items():
+                info = path.lstat()
+                require(
+                    stat.S_ISDIR(info.st_mode)
+                    and (info.st_dev, info.st_ino) == expected,
+                    "snapshot_cleanup_failed",
+                )
+            for path, expected in self._files.items():
+                info = path.lstat()
+                require(
+                    stat.S_ISREG(info.st_mode)
+                    and (info.st_dev, info.st_ino) == expected,
+                    "snapshot_cleanup_failed",
+                )
+                path.unlink()
+            for path in reversed(self._directories):
+                path.rmdir()
+        except OSError:
+            raise PreflightInputError("snapshot_cleanup_failed") from None
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        try:
+            if exc_type is None:
+                self.verify_originals()
+        finally:
+            self._cleanup()
+
+
+def capture_isolated_inputs(
+    inventory: dict[str, object],
+    *,
+    inventory_pin: FilePin,
+    active_pin: FilePin,
+    compose_pin: FilePin,
+    scratch: Path,
+    limits: InputLimits,
+) -> IsolatedSnapshot:
+    snapshot = None
+    try:
+        require(
+            type(inventory.get("version")) is int and inventory["version"] == 2,
+            "inventory_version",
+        )
+        scratch = absolute(scratch)
+        info = scratch.stat()
+        require(
+            os.geteuid() == 0
+            and stat.S_ISDIR(info.st_mode)
+            and info.st_uid == 0
+            and stat.S_IMODE(info.st_mode) == 0o700
+            and not any(scratch.iterdir()),
+            "snapshot_scratch_invalid",
+        )
+        for pin in (inventory_pin, active_pin):
+            info = absolute(pin.path).lstat()
+            require(
+                stat.S_IMODE(info.st_mode) == pin.mode and info.st_uid == pin.uid,
+                "snapshot_pin_mismatch",
+            )
+        first, raw = _capture(
+            inventory_pin.path, inventory_pin.sha256, limits, private=True
+        )
+        require(strict_json(raw) == inventory, "snapshot_inventory_mismatch")
+        require(
+            inventory["active_release_sha256"] == active_pin.sha256,
+            "snapshot_active_mismatch",
+        )
+        active, _ = _capture(active_pin.path, active_pin.sha256, limits)
+        env = mapping(inventory["env_file"], {"path", "sha256"})
+        env_item, env_bytes = _capture(
+            _graph_path(env["path"]), token(env["sha256"]), limits
+        )
+        roots, _ = compose_graph_pins(
+            inventory["compose_files"], inventory["compose_dependencies"]
+        )
+        graph = capture_compose_graph(
+            inventory["compose_files"],
+            inventory["compose_dependencies"],
+            approved_env=env_item.path,
+            limits=limits,
+        )
+        reserved = Path("/bin/compose")
+        require(
+            all(
+                item.path != reserved
+                and not item.path.is_relative_to(reserved)
+                and not reserved.is_relative_to(item.path)
+                for item, _ in (*graph, (env_item, env_bytes))
+            ),
+            "snapshot_compose_invalid",
+        )
+        binary_limit = replace(limits, max_file_bytes=128 * 1024 * 1024)
+        binary, binary_bytes = _capture(
+            compose_pin.path, compose_pin.sha256, binary_limit
+        )
+        require(
+            verify_pinned_file(compose_pin) == binary_bytes, "snapshot_input_changed"
+        )
+        root = Path(tempfile.mkdtemp(prefix="preflight-isolated-", dir=scratch))
+        info = root.lstat()
+        snapshot = IsolatedSnapshot(
+            root,
+            tuple(roots),
+            env_item.path,
+            next(iter(roots)).parent,
+            [first, active, env_item, binary, *(item for item, _ in graph)],
+            [],
+            {root: (info.st_dev, info.st_ino)},
+            {},
+            limits,
+        )
+
+        def write(destination: Path, data: bytes, mode: int) -> None:
+            path = root
+            for part in destination.parts[1:-1]:
+                path /= part
+                if path not in snapshot._directories:
+                    path.mkdir(mode=0o755)
+                    info = path.lstat()
+                    snapshot._directories[path] = (info.st_dev, info.st_ino)
+                    path.chmod(0o755)
+            path /= destination.name
+            fd = os.open(
+                path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600
+            )
+            with os.fdopen(fd, "wb") as stream:
+                info = os.fstat(stream.fileno())
+                snapshot._files[path] = (info.st_dev, info.st_ino)
+                stream.write(data)
+                os.fchmod(stream.fileno(), mode)
+            snapshot._copies.append(
+                _Captured(path, _digest(data), identity(path.lstat()))
+            )
+
+        write(reserved, binary_bytes, 0o555)
+        write(env_item.path, env_bytes, 0o444)
+        for item, data in graph:
+            write(item.path, data, 0o444)
+        root.chmod(0o755)
+        snapshot.verify_originals()
+        return snapshot
+    except BaseException as error:
+        if snapshot is not None:
+            snapshot._cleanup()
+        if isinstance(error, PreflightInputError):
+            raise
+        if isinstance(
+            error, (OSError, ValueError, KeyError, TypeError, RecursionError)
+        ):
+            raise PreflightInputError("snapshot_input_invalid") from None
+        raise
 
 
 def capture_inputs(

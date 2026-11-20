@@ -69,6 +69,239 @@ def inputs(tmp_path):
     return Inputs(tmp_path)
 
 
+def test_pinned_graph_captures_shared_dependency_once(inputs):
+    snapshot = module("release_preflight_snapshot")
+    dependency = inputs.root / "shared.yaml"
+    dependency.write_text("services:\n  base:\n    image: synthetic:base\n")
+    inputs.base.write_text(
+        "services:\n"
+        f"  backend:\n    extends: {{file: {dependency}, service: base}}\n"
+        f"  auxiliary:\n    extends: {{file: {dependency}, service: base}}\n"
+    )
+    records = [
+        {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        for path in (inputs.base, inputs.override, dependency)
+    ]
+    assert hasattr(snapshot, "capture_compose_graph")
+    captured = snapshot.capture_compose_graph(
+        records[:2], records[2:], approved_env=inputs.env, limits=inputs.limits
+    )
+    assert [item.path for item, _ in captured] == [inputs.base, inputs.override, dependency]
+    assert captured[-1][1] == dependency.read_bytes()
+
+
+def test_pinned_graph_rejects_symlink_ancestor(inputs):
+    snapshot = module("release_preflight_snapshot")
+    actual = inputs.root / "actual"
+    actual.mkdir()
+    source = actual / "dependency.yaml"
+    source.write_text("services:\n  base:\n    image: synthetic:base\n")
+    alias = inputs.root / "alias"
+    alias.symlink_to(actual, target_is_directory=True)
+    target = alias / source.name
+    inputs.base.write_text(
+        f"services:\n  backend:\n    extends: {{file: {target}, service: base}}\n"
+    )
+    roots = [
+        {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        for path in (inputs.base, inputs.override)
+    ]
+    with pytest.raises(snapshot.PreflightInputError):
+        snapshot.capture_compose_graph(
+            roots,
+            [{"path": str(target), "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}],
+            approved_env=inputs.env,
+            limits=inputs.limits,
+        )
+
+
+@pytest.mark.parametrize(
+    ("case", "reason"),
+    [
+        ("unpinned", "compose_dependency_unapproved"),
+        ("missing-service", "compose_dependency_service_missing"),
+        ("cycle", "compose_dependency_cycle"),
+        ("unused", "compose_dependency_unused"),
+        ("alias", "unsupported_compose_input"),
+        ("merge", "unsupported_compose_input"),
+        ("include", "unsupported_compose_input"),
+    ],
+)
+def test_pinned_graph_rejects_invalid_dependencies(inputs, monkeypatch, case, reason):
+    snapshot = module("release_preflight_snapshot")
+    dependency = inputs.root / "shared.yaml"
+    declaration = f"extends: {{file: {dependency}, service: base}}"
+    inputs.base.write_text(f"services:\n  auxiliary:\n    {declaration}\n")
+    body = "    image: synthetic:base\n"
+    if case == "cycle":
+        inputs.override.write_text(f"services:\n  backend:\n    {declaration}\n")
+        body = f"    extends: {{file: {inputs.override}, service: backend}}\n"
+    if case == "alias":
+        inputs.base.write_text(
+            f"x-shared: &shared\n  {declaration}\nservices:\n  auxiliary: *shared\n"
+        )
+    if case == "merge":
+        inputs.base.write_text(
+            f"x-shared: &shared\n  {declaration}\nservices:\n  auxiliary:\n    <<: *shared\n"
+        )
+    if case == "include":
+        dependency.write_text("include: other.yaml\n")
+    if case == "unused":
+        inputs.base.write_text("services:\n  auxiliary:\n    image: synthetic:base\n")
+    service = "wrong" if case == "missing-service" else "base"
+    if case != "include":
+        dependency.write_text(f"services:\n  {service}:\n{body}")
+    records = [
+        {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        for path in (inputs.base, inputs.override, dependency)
+    ]
+    if case == "unpinned":
+        capture = snapshot._capture
+
+        def exclude_unapproved(path, *args, **kwargs):
+            assert path != dependency
+            return capture(path, *args, **kwargs)
+
+        monkeypatch.setattr(snapshot, "_capture", exclude_unapproved)
+    assert hasattr(snapshot, "capture_compose_graph")
+    with pytest.raises(snapshot.PreflightInputError, match=f"^{reason}$"):
+        snapshot.capture_compose_graph(
+            records[:2],
+            [] if case == "unpinned" else records[2:],
+            approved_env=inputs.env,
+            limits=inputs.limits,
+        )
+
+
+@pytest.mark.parametrize("edges", [32, 33])
+def test_pinned_graph_longest_shared_path(inputs, edges):
+    snapshot = module("release_preflight_snapshot")
+    dep = inputs.root / "chain.yaml"
+    lines = ["services:", f"  shortcut:\n    extends: {{file: {dep}, service: leaf}}"]
+    lines += [f"  long:\n    extends: {{file: {dep}, service: node0}}"]
+    inputs.base.write_text("\n".join(lines) + "\n")
+    dep.write_text(
+        "services:\n  leaf:\n    image: synthetic:base\n"
+        + "".join(
+            f"  node{i}:\n    extends: {{file: {dep}, service: {target}}}\n"
+            for i in range(edges - 1)
+            for target in [f"node{i + 1}" if i < edges - 2 else "leaf"]
+        )
+    )
+    records = [
+        {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        for path in (inputs.base, inputs.override, dep)
+    ]
+    if edges == 32:
+        assert (
+            len(
+                snapshot.capture_compose_graph(
+                    records[:2], records[2:], approved_env=inputs.env, limits=inputs.limits
+                )
+            )
+            == 3
+        )
+    else:
+        with pytest.raises(snapshot.PreflightInputError, match="^compose_dependency_limit$"):
+            snapshot.capture_compose_graph(
+                records[:2], records[2:], approved_env=inputs.env, limits=inputs.limits
+            )
+
+
+@pytest.mark.parametrize("count", [32, 33])
+def test_compose_graph_dependency_file_limit(inputs, count):
+    snapshot = module("release_preflight_snapshot")
+    dependencies = [inputs.root / f"dependency-{index}.yaml" for index in range(count)]
+    inputs.base.write_text(
+        "services:\n"
+        + "".join(
+            f"  app{index}:\n    extends: {{file: {path}, service: base}}\n"
+            for index, path in enumerate(dependencies)
+        )
+    )
+    for path in dependencies:
+        path.write_text("services:\n  base:\n    image: synthetic:base\n")
+    records = [
+        {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        for path in (inputs.base, inputs.override, *dependencies)
+    ]
+    if count == 32:
+        assert (
+            len(
+                snapshot.capture_compose_graph(
+                    records[:2], records[2:], approved_env=inputs.env, limits=inputs.limits
+                )
+            )
+            == 34
+        )
+    else:
+        with pytest.raises(snapshot.PreflightInputError, match="^compose_dependency_limit$"):
+            snapshot.capture_compose_graph(
+                records[:2], records[2:], approved_env=inputs.env, limits=inputs.limits
+            )
+
+
+@pytest.mark.parametrize("count", [256, 257])
+def test_compose_graph_reference_limit(inputs, count):
+    snapshot = module("release_preflight_snapshot")
+    dep = inputs.root / "shared.yaml"
+    dep.write_text("services:\n  base:\n    image: synthetic:base\n")
+    inputs.base.write_text(
+        "services:\n"
+        + "".join(
+            f"  app{index}:\n    extends: {{file: {dep}, service: base}}\n"
+            for index in range(count)
+        )
+    )
+    records = [
+        {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        for path in (inputs.base, inputs.override, dep)
+    ]
+    limits = replace(inputs.limits, max_yaml_nodes=8192)
+    if count == 256:
+        assert (
+            len(
+                snapshot.capture_compose_graph(
+                    records[:2], records[2:], approved_env=inputs.env, limits=limits
+                )
+            )
+            == 3
+        )
+    else:
+        with pytest.raises(snapshot.PreflightInputError, match="^compose_dependency_limit$"):
+            snapshot.capture_compose_graph(
+                records[:2], records[2:], approved_env=inputs.env, limits=limits
+            )
+
+
+@pytest.mark.parametrize("extra", [0, 1])
+def test_compose_graph_total_bytes_limit(inputs, extra, monkeypatch):
+    snapshot = module("release_preflight_snapshot")
+    # Exercise real pinned reads and the aggregate quota independently of YAML
+    # parser performance on a large synthetic comment.
+    inspect = snapshot._inspect_compose
+    monkeypatch.setattr(
+        snapshot, "_inspect_compose", lambda raw, **kwargs: inspect(raw.split(b"#", 1)[0], **kwargs)
+    )
+    total = 8 * 1024 * 1024 + extra
+    base = inputs.base.read_bytes()
+    override = inputs.override.read_bytes()
+    inputs.base.write_bytes(base + b"#" + b" " * (total - len(override) - len(base) - 2) + b"\n")
+    roots = [
+        {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        for path in (inputs.base, inputs.override)
+    ]
+    limits = replace(inputs.limits, max_file_bytes=total)
+    if extra == 0:
+        assert (
+            len(snapshot.capture_compose_graph(roots, [], approved_env=inputs.env, limits=limits))
+            == 2
+        )
+    else:
+        with pytest.raises(snapshot.PreflightInputError, match="^compose_dependency_limit$"):
+            snapshot.capture_compose_graph(roots, [], approved_env=inputs.env, limits=limits)
+
+
 def test_mutation_after_hash_never_changes_consumed_bytes(inputs):
     snapshot = module("release_preflight_snapshot")
     tool_root = inputs.root / "tools"

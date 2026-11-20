@@ -94,27 +94,39 @@ def _checked_file(entry: Any, max_bytes: int) -> str:
 
 
 def _inventory(args: argparse.Namespace, max_bytes: int) -> dict[str, Any]:
+    from release_preflight_exec import RETAINED_MIGRATORS, retained_migrator_pins
+
     content = read_file(args.approved_inventory, private=True, max_bytes=max_bytes)
     require(
         _digest(content) == token(args.inventory_sha256, HEX64),
         "inventory_digest_mismatch",
     )
-    inventory = object_value(
-        json_value(content),
-        {
-            "version",
-            "project",
-            "active_release_sha256",
-            "compose_files",
-            "env_file",
-            "services",
-            "postgres",
-        },
-    )
-    require(
-        type(inventory["version"]) is int and inventory["version"] == 1,
-        "inventory_version",
-    )
+    inventory = object_value(json_value(content))
+    version = inventory.get("version")
+    require(type(version) is int and version in {1, 2}, "inventory_version")
+    keys = {
+        "version",
+        "project",
+        "active_release_sha256",
+        "compose_files",
+        "env_file",
+        "services",
+        "postgres",
+    }
+    if version == 2:
+        keys.add("compose_dependencies")
+        if RETAINED_MIGRATORS in inventory:
+            keys.add(RETAINED_MIGRATORS)
+    inventory = object_value(inventory, keys)
+    if version == 2:
+        from release_preflight_snapshot import compose_graph_pins
+
+        compose_graph_pins(
+            inventory["compose_files"], inventory["compose_dependencies"]
+        )
+        require(args.isolated_compose, "isolated_preflight_not_enabled")
+    else:
+        require(not args.isolated_compose, "inventory_version")
     require(
         token(inventory["project"], NAME) == args.project, "inventory_target_mismatch"
     )
@@ -165,6 +177,7 @@ def _inventory(args: argparse.Namespace, max_bytes: int) -> dict[str, Any]:
         "inventory_target_mismatch",
     )
     require(len(set(ids + [pg["container_id"]])) == 4, "inventory_container_duplicate")
+    retained_migrator_pins(inventory, {*ids, pg["container_id"]})
     return inventory
 
 
@@ -239,8 +252,10 @@ def _container(
     identifier: str,
     project: str,
 ) -> dict[str, Any]:
-    actual = runner.run(runner.compose_prefix + ["ps", "--all", "--quiet", service])
-    require(actual.strip() == identifier, "compose_container_mismatch")
+    require(
+        runner.container_id_for_service(service) == identifier,
+        "compose_container_mismatch",
+    )
     record = _inspect(runner, identifier)
     state = object_value(record.get("State"))
     require(
@@ -250,6 +265,11 @@ def _container(
         "container_not_running",
     )
     labels = object_value(object_value(record.get("Config")).get("Labels"))
+    if service == "backend" and runner.isolated:
+        require(
+            labels.get("com.docker.compose.oneoff") in ("False", "false"),
+            "compose_container_mismatch",
+        )
     require(
         labels.get("com.docker.compose.project") == project
         and labels.get("com.docker.compose.service") == service,
@@ -261,10 +281,26 @@ def _container(
 def _observe(
     runner: ReadOnlyRunner,
     inventory: dict[str, Any],
+    *,
+    isolated_root: Path | None = None,
 ) -> tuple[tuple[str, ...], frozenset[str]]:
-    rendered = object_value(
-        json_value(runner.run(runner.compose_prefix + ["config", "--format", "json"]))
-    )
+    help_text = None
+    if isolated_root is None:
+        raw = runner.run(runner.compose_prefix + ["config", "--format", "json"])
+    else:
+        from release_preflight_isolation import run_isolated_compose
+
+        prefix = tuple(runner.compose_prefix[1:])
+        limit = runner.toolchain.limits.max_output_bytes
+        raw = run_isolated_compose(
+            isolated_root,
+            (*prefix, "config", "--format", "json"),
+            max_output_bytes=limit,
+        )
+        help_text = run_isolated_compose(
+            isolated_root, (*prefix, "up", "--help"), max_output_bytes=limit
+        )
+    rendered = object_value(json_value(raw))
     require(rendered.get("name") == inventory["project"], "compose_project_mismatch")
     services = object_value(rendered.get("services"))
     require(
@@ -296,7 +332,8 @@ def _observe(
                 "image_revision_mismatch",
             )
     heads = runner.schema_heads()
-    help_text = runner.run(runner.compose_prefix + ["up", "--help"])
+    if help_text is None:
+        help_text = runner.run(runner.compose_prefix + ["up", "--help"])
     flags = frozenset(re.findall(r"(?<![\w-])--[a-z][a-z-]*(?![\w-])", help_text))
     return heads, flags
 
@@ -305,10 +342,21 @@ def collect_facts(
     args: argparse.Namespace, bootstrap: BootstrapContext
 ) -> ReleaseFacts:
     from release_preflight_exec import ReadOnlyRunner
-    from release_preflight_snapshot import capture_inputs
+    from release_preflight_snapshot import capture_inputs, capture_isolated_inputs
     from release_preflight_trust import FilePin
 
     token(args.candidate, SHA)
+    if args.isolated_compose:
+        from release_preflight_isolation import ISOLATED_COMPOSE_SHA256
+
+        require(
+            bootstrap.isolated_approval == (args.candidate, args.inventory_sha256),
+            "isolated_approval_mismatch",
+        )
+        require(
+            bootstrap.toolchain.compose.sha256 == ISOLATED_COMPOSE_SHA256,
+            "isolated_compose_pin_mismatch",
+        )
     repository = absolute_path(args.repository)
     require(repository.is_dir(), "repository_invalid")
     inventory = _inventory(args, bootstrap.toolchain.limits.max_file_bytes)
@@ -341,13 +389,35 @@ def collect_facts(
         info = absolute_path(path).lstat()
         return FilePin(Path(path), sha256, stat.S_IMODE(info.st_mode), info.st_uid)
 
-    with capture_inputs(
-        inventory,
-        inventory_pin=pin(args.approved_inventory, args.inventory_sha256),
-        active_pin=pin(args.active_release, inventory["active_release_sha256"]),
-        scratch=absolute_path(args.scratch_directory),
-        limits=bootstrap.toolchain.limits,
-    ) as snapshot:
+    inventory_pin = pin(args.approved_inventory, args.inventory_sha256)
+    active_pin = pin(args.active_release, inventory["active_release_sha256"])
+    scratch = absolute_path(args.scratch_directory)
+    limits = bootstrap.toolchain.limits
+    isolated = (
+        capture_isolated_inputs(
+            inventory,
+            inventory_pin=inventory_pin,
+            active_pin=active_pin,
+            scratch=scratch,
+            limits=limits,
+            compose_pin=bootstrap.toolchain.compose,
+        )
+        if inventory["version"] == 2
+        else None
+    )
+    with (
+        isolated
+        if isolated is not None
+        else capture_inputs(
+            inventory,
+            inventory_pin=inventory_pin,
+            active_pin=active_pin,
+            scratch=scratch,
+            limits=limits,
+        ) as snapshot
+    ):
+        if isolated is not None:
+            isolated.verify_originals()
         runner.bind(
             snapshot.compose_files,
             snapshot.env_file,
@@ -355,7 +425,11 @@ def collect_facts(
             inventory["project"],
             inventory,
         )
-        heads, flags = _observe(runner, inventory)
+        heads, flags = _observe(
+            runner,
+            inventory,
+            isolated_root=isolated.root if isolated is not None else None,
+        )
         facts = ReleaseFacts(
             args.candidate,
             provisional.service_revisions,
@@ -421,6 +495,7 @@ def main(
         epilog="Source/schema classification only; not authorization. External configuration needs review.",
     )
     parser.add_argument("--check", action="store_true", required=True)
+    parser.add_argument("--isolated-compose", action="store_true")
     for name in (
         "repository",
         "candidate",
