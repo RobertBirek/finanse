@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   useAccounts,
@@ -57,6 +57,10 @@ export function FinanceAccounts({
 
   const location = useLocation();
   const navigate = useNavigate();
+  useEffect(() => {
+    if (location.hash === "#new-account")
+      document.getElementById("new-account")?.focus();
+  }, [location.hash]);
   const requestedEditId = new URLSearchParams(location.search).get("edit");
   function cancelEdit() {
     if (requestedEditId) {
@@ -227,6 +231,8 @@ export function FinanceAccounts({
           </section>
 
           <form
+            id="new-account"
+            tabIndex={-1}
             aria-label="Nowe konto"
             onSubmit={handleCreateAccount}
             className="card mb-4"

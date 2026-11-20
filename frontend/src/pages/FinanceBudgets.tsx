@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useLocation } from "react-router-dom";
 import type { AxiosError } from "axios";
 import {
   budgetProgress,
@@ -18,7 +18,10 @@ import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { CategoryPicker } from "../components/finance/CategoryPicker";
-import { useFinancePeriod } from "../components/finance/useFinancePeriod";
+import {
+  categoryTransactionsHref,
+  useFinancePeriod,
+} from "../components/finance/useFinancePeriod";
 import { ExpenseDateBasis } from "../components/finance/TransactionDateLabel";
 
 function apiErrorDetail(error: unknown): string | null {
@@ -30,6 +33,10 @@ function apiErrorDetail(error: unknown): string | null {
 
 export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
   const [period, setPeriod] = useFinancePeriod();
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash === "#new-budget") document.getElementById("new-budget")?.focus();
+  }, [hash]);
   const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
@@ -191,7 +198,19 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
                             entityColor(item.category_id),
                         }}
                       />
-                      {item.name}
+                      {configure ? (
+                        item.name
+                      ) : (
+                        <Link
+                          className="underline"
+                          to={categoryTransactionsHref(
+                            period,
+                            item.category_id,
+                          )}
+                        >
+                          {item.name}
+                        </Link>
+                      )}
                     </h3>
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
                       <div>
@@ -329,7 +348,12 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
       </section>
 
       {configure ? (
-        <form onSubmit={handleSubmit} className="card mb-4">
+        <form
+          id="new-budget"
+          tabIndex={-1}
+          onSubmit={handleSubmit}
+          className="card mb-4"
+        >
           <h2 className="mb-4 text-lg font-semibold text-white">Nowy budżet</h2>
           <div className="flex flex-wrap items-end gap-4">
             <CategoryPicker

@@ -85,6 +85,7 @@ describe("Finances", () => {
     });
     useCashflowForecast.mockReturnValue({
       data: {
+        next_payday: "2026-10-26",
         projected_balance_before_next_payday_pln: 450000,
         lowest_balance_pln: 300000,
         safe_daily_limit_pln: 10000,
@@ -125,6 +126,7 @@ describe("Finances", () => {
             name: "Jedzenie",
             spent_pln: 40000,
             budget_amount_pln: 100000,
+            remaining_pln: 60000,
           },
         ],
       },
@@ -141,7 +143,9 @@ describe("Finances", () => {
     expect(
       screen.getByRole("link", { name: /Przejdź do płynności/ }),
     ).toHaveAttribute("href", "/finances/cashflow?month=2&year=2026");
-    expect(screen.getByText(/Konta budżetowe/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Konta budżetowe" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Stare konto")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Planowane wpływy i wydatki"),
@@ -171,13 +175,12 @@ describe("Finances", () => {
     expect(
       screen.getByRole("link", { name: "Cała historia →" }),
     ).toHaveAttribute("href", "/finances/transactions?month=2&year=2026");
-    expect(screen.getByRole("link", { name: "Szczegóły →" })).toHaveAttribute(
-      "href",
-      "/finances/budgets?month=2&year=2026",
-    );
+    expect(
+      screen.getByRole("link", { name: "Szczegóły budżetu →" }),
+    ).toHaveAttribute("href", "/finances/budgets?month=2&year=2026");
     expect(screen.getByRole("link", { name: /Jedzenie/ })).toHaveAttribute(
       "href",
-      "/finances/transactions?month=2&year=2026&category_id=c-food&include_descendants=true&budget_accounts_only=true&date_from=2026-02-01&date_to=2026-02-28",
+      "/finances/transactions?month=2&year=2026&category_id=c-food&include_descendants=true&budget_accounts_only=true&date_basis=purchase&date_from=2026-02-01&date_to=2026-02-28",
     );
     expect(
       screen.getByRole("link", { name: "Ustawienia kont" }),

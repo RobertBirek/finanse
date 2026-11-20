@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   personError,
   usePerson,
@@ -9,6 +9,8 @@ import {
 } from "../api/people";
 import { useAccounts } from "../api/finance";
 import { PersonEditor } from "../components/finance/PersonEditor";
+import { FinanceTabs } from "../components/finance/FinanceTabs";
+import { retainFinancePeriod } from "../components/finance/useFinancePeriod";
 import { PersonGiftDialog } from "../components/finance/PersonGiftDialog";
 import { TransactionDateLabel } from "../components/finance/TransactionDateLabel";
 import { QueryFeedback } from "../components/QueryFeedback";
@@ -19,6 +21,7 @@ export function FinancePersonDetails() {
   return <PersonDetails key={personId} personId={personId} />;
 }
 function PersonDetails({ personId }: { personId: string }) {
+  const [search] = useSearchParams();
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState(false);
   const [transactionId, setTransactionId] = useState<string | null>(null);
@@ -29,7 +32,14 @@ function PersonDetails({ personId }: { personId: string }) {
   const update = useUpdatePerson();
   return (
     <div className="space-y-6">
-      <Link className="text-advisor-400 underline" to="/finances/people">
+      <FinanceTabs />
+      <Link
+        className="text-advisor-400 underline"
+        to={{
+          pathname: "/finances/people",
+          search: retainFinancePeriod(search).toString(),
+        }}
+      >
         Wszystkie osoby
       </Link>
       <QueryFeedback

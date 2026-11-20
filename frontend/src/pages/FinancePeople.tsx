@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { usePeople } from "../api/people";
+import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { PersonEditor } from "../components/finance/PersonEditor";
+import { retainFinancePeriod } from "../components/finance/useFinancePeriod";
 import { QueryFeedback } from "../components/QueryFeedback";
 
 export function FinancePeople() {
+  const [search] = useSearchParams();
+  const periodSearch = retainFinancePeriod(search).toString();
   const [offset, setOffset] = useState(0);
   const [archived, setArchived] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -23,6 +27,7 @@ export function FinancePeople() {
           Dodaj osobę
         </button>
       </header>
+      <FinanceTabs />
       <label className="flex items-center gap-2">
         <input
           type="checkbox"
@@ -54,7 +59,10 @@ export function FinancePeople() {
             >
               <Link
                 className="text-advisor-400 underline font-medium"
-                to={`/finances/people/${p.id}`}
+                to={{
+                  pathname: `/finances/people/${p.id}`,
+                  search: periodSearch,
+                }}
               >
                 {p.name}
               </Link>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useLogout } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
@@ -121,7 +121,9 @@ export function Layout() {
           tabIndex={0}
           className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 lg:p-8"
         >
-          <Outlet />
+          <Suspense fallback={<p role="status">Ładowanie widoku…</p>}>
+            <Outlet />
+          </Suspense>
         </div>
         <nav
           className="mobile-bottom-nav lg:hidden"

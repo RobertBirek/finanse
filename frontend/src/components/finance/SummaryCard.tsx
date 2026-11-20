@@ -22,23 +22,26 @@ export function SummaryCard({ label, amount, tone }: SummaryCardProps) {
 
 type CashflowMetricProps = {
   label: string;
-  amount: number;
+  amount: number | null;
+  detail?: string;
   neutral?: boolean;
 };
 
 export function CashflowMetric({
   label,
   amount,
+  detail,
   neutral = false,
 }: CashflowMetricProps) {
   return (
     <div>
       <p className="text-xs text-gray-400">{label}</p>
       <p
-        className={`mt-1 text-xl font-bold ${neutral ? "text-white" : amount >= 0 ? "text-green-400" : "text-red-400"}`}
+        className={`mt-1 text-xl font-bold ${neutral || amount === null ? "text-white" : amount >= 0 ? "text-green-400" : "text-red-400"}`}
       >
-        {formatPLN(amount)} PLN
+        {amount === null ? "Niedostępne" : `${formatPLN(amount)} PLN`}
       </p>
+      {detail ? <p className="text-xs text-gray-400">{detail}</p> : null}
     </div>
   );
 }

@@ -115,4 +115,29 @@ describe("CashflowForecast — budżety", () => {
       screen.getByText(/nie obejmuje wszystkich zobowiązań/i),
     ).toBeInTheDocument();
   });
+
+  it("shows the available minimum without inventing a balance for a short horizon", () => {
+    render(
+      <CashflowForecast
+        forecast={makeForecast({
+          projected_balance_before_next_payday_pln: null,
+          safe_daily_limit_pln: null,
+          lowest_balance_before_payday: {
+            date: "2026-08-01",
+            projected_balance_pln: -5000,
+          },
+        })}
+        loading={false}
+        error={false}
+      />,
+    );
+
+    expect(
+      screen.getByText("Horyzont nie obejmuje całego okresu do wypłaty."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Najniższe saldo w dostępnym okresie").parentElement,
+    ).toHaveTextContent("-50,00 PLN1.08.2026");
+    expect(screen.queryByText(/Budżety przekraczają/)).not.toBeInTheDocument();
+  });
 });

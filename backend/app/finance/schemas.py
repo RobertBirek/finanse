@@ -303,12 +303,16 @@ class TransactionResponse(BaseModel):
         return self
 
 
+TransactionDateBasis = Literal["booking", "purchase"]
+
+
 class TransactionSearch(BaseModel):
     q: str = Field(default="", max_length=200)
     account_id: uuid.UUID | None = None
     category_id: uuid.UUID | None = None
     include_descendants: bool = False
     budget_accounts_only: bool = False
+    date_basis: TransactionDateBasis = "booking"
     date_from: dt.date | None = None
     date_to: dt.date | None = None
     currency: Literal["PLN", "EUR", "USD"] | None = None
@@ -485,13 +489,15 @@ class CashflowForecastResponse(BaseModel):
     last_payday: dt.date
     next_payday: dt.date
     opening_balance_pln: int
-    projected_balance_before_next_payday_pln: int
-    safe_daily_limit_pln: int
+    projected_balance_before_next_payday_pln: int | None
+    safe_daily_limit_pln: int | None
     lowest_balance_pln: int
+    lowest_balance_before_payday: CashflowDay
     days: list[CashflowDay]
     suggestions: list[CashflowSuggestion]
     budgets: CashflowBudgetSummary
     has_excluded_obligations: bool = False
+    has_excluded_obligations_before_payday: bool = False
     excluded_obligation_reasons: list[str] = Field(default_factory=list)
 
 

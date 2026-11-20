@@ -46,6 +46,31 @@ export function financePeriodSearch(period: FinancialPeriod): string {
   return `?${search.toString()}`;
 }
 
+export function retainFinancePeriod(search: URLSearchParams): URLSearchParams {
+  const period = new URLSearchParams();
+  for (const field of ["month", "year"]) {
+    const value = search.get(field);
+    if (value) period.set(field, value);
+  }
+  return period;
+}
+
+export function categoryTransactionsHref(
+  period: ValidFinancialPeriod,
+  categoryId: string,
+): string {
+  const month = String(period.month).padStart(2, "0");
+  const lastDay = new Date(period.year, period.month, 0).getDate();
+  const search = new URLSearchParams(financePeriodSearch(period));
+  search.set("category_id", categoryId);
+  search.set("include_descendants", "true");
+  search.set("budget_accounts_only", "true");
+  search.set("date_basis", "purchase");
+  search.set("date_from", `${period.year}-${month}-01`);
+  search.set("date_to", `${period.year}-${month}-${lastDay}`);
+  return `/finances/transactions?${search}`;
+}
+
 export function useFinancePeriod(): [
   ValidFinancialPeriod,
   (period: FinancialPeriod) => void,

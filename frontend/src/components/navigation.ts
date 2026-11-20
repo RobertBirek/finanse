@@ -33,6 +33,21 @@ export type NavigationContext = {
   items: NavigationMenuItem[];
 };
 
+export const primaryFinanceItems = [
+  { label: "Przegląd", to: "/finances", end: true },
+  { label: "Transakcje", to: "/finances/transactions" },
+  { label: "Budżet", to: "/finances/budgets" },
+] satisfies NavigationMenuItem[];
+
+export const secondaryFinanceItems = [
+  { label: "Płynność", to: "/finances/cashflow" },
+  { label: "Dokumenty", to: "/finances/documents" },
+  { label: "Import", to: "/finances/imports" },
+  { label: "Propozycje", to: "/finances/proposals" },
+  { label: "Raporty", to: "/finances/reports" },
+  { label: "Osoby", to: "/finances/people" },
+] satisfies NavigationMenuItem[];
+
 export const navigationContexts: NavigationContext[] = [
   {
     id: "today",
@@ -60,15 +75,7 @@ export const navigationContexts: NavigationContext[] = [
     to: "/finances",
     icon: WalletIcon,
     routePrefixes: ["/finances"],
-    items: [
-      { label: "Finanse", to: "/finances", end: true },
-      { label: "Transakcje", to: "/finances/transactions" },
-      { label: "Osoby", to: "/finances/people" },
-      { label: "Import", to: "/finances/imports" },
-      { label: "Płynność", to: "/finances/cashflow" },
-      { label: "Budżet", to: "/finances/budgets" },
-      { label: "Raporty", to: "/finances/reports" },
-    ],
+    items: [...primaryFinanceItems, ...secondaryFinanceItems],
   },
   {
     id: "advisor",

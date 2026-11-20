@@ -18,9 +18,11 @@ from app.finance.models import (
     LoanAgreement,
     Posting,
     ScheduledFinanceItem,
+    TransactionDateMetadata,
 )
 from app.finance.rule_origin_reads import attach_assignment_origins
 from app.finance.schemas import TransactionResponse, TransactionSearch, TransactionSearchResponse
+from app.finance.transaction_dates import purchase_date_expression
 from app.work.models import Project
 
 
@@ -215,10 +217,20 @@ async def search_transactions(
             )
             .exists()
         )
+    count_stmt = select(func.count()).select_from(txn)
+    rows_stmt = select(txn).options(selectinload(txn.postings))
+    date_expression = txn.date.expression
+    if filters.date_basis == "purchase":
+        date_join = (TransactionDateMetadata.transaction_id == txn.id) & (
+            TransactionDateMetadata.user_id == txn.user_id
+        )
+        count_stmt = count_stmt.outerjoin(TransactionDateMetadata, date_join)
+        rows_stmt = rows_stmt.outerjoin(TransactionDateMetadata, date_join)
+        date_expression = purchase_date_expression()
     if filters.date_from:
-        conditions.append(txn.date >= filters.date_from)
+        conditions.append(date_expression >= filters.date_from)
     if filters.date_to:
-        conditions.append(txn.date <= filters.date_to)
+        conditions.append(date_expression <= filters.date_to)
     if filters.type:
         conditions.append(txn.type == filters.type)
     if filters.q:
@@ -275,12 +287,10 @@ async def search_transactions(
                 .exists(),
             )
         )
-    total = await db.scalar(select(func.count()).select_from(txn).where(*conditions))
+    total = await db.scalar(count_stmt.where(*conditions))
     result = await db.execute(
-        select(txn)
-        .options(selectinload(txn.postings))
-        .where(*conditions)
-        .order_by(txn.date.desc(), txn.created_at.desc(), txn.id.desc())
+        rows_stmt.where(*conditions)
+        .order_by(date_expression.desc(), txn.created_at.desc(), txn.id.desc())
         .limit(filters.limit)
         .offset(filters.offset)
     )

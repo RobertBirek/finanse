@@ -3,6 +3,11 @@ import {
   type CashflowForecast as CashflowForecastData,
 } from "../../api/finance";
 import { formatPLN } from "../../lib/format";
+import { formatCalendarDate } from "../../lib/date";
+import {
+  forecastExclusionLabel,
+  hasPaydayExclusions,
+} from "../../lib/cashflowForecast";
 import { CashflowMetric } from "./SummaryCard";
 
 type CashflowForecastProps = {
@@ -41,6 +46,10 @@ export function CashflowForecast({
   }
 
   const budget = forecast.budgets;
+  const balanceBeforePayday = forecast.projected_balance_before_next_payday_pln;
+  const shortHorizon = balanceBeforePayday == null;
+  const omissions = hasPaydayExclusions(forecast);
+  const lowest = forecast.lowest_balance_before_payday;
   const budgetProgressInfo = budgetProgress(
     budget.total_budget_pln,
     budget.total_spent_pln,
@@ -61,14 +70,30 @@ export function CashflowForecast({
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <CashflowMetric
-          label="Przed wypłatą"
-          amount={forecast.projected_balance_before_next_payday_pln}
+          label={
+            omissions && !shortHorizon
+              ? "Szacunek przed wypłatą"
+              : "Przed wypłatą"
+          }
+          amount={balanceBeforePayday}
+          detail={
+            shortHorizon
+              ? "Horyzont nie obejmuje całego okresu do wypłaty."
+              : undefined
+          }
         />
         <CashflowMetric
-          label="Najniższe saldo"
-          amount={forecast.lowest_balance_pln}
+          label={
+            shortHorizon
+              ? "Najniższe saldo w dostępnym okresie"
+              : lowest
+                ? "Najniższe saldo do wypłaty"
+                : "Najniższe saldo"
+          }
+          amount={lowest?.projected_balance_pln ?? forecast.lowest_balance_pln}
+          detail={lowest && formatCalendarDate(lowest.date)}
         />
-        {forecast.has_excluded_obligations ? (
+        {omissions ? (
           <div>
             <p className="text-xs text-amber-300">Limit dzienny niepewny</p>
             <p className="mt-1 text-sm text-amber-200">
@@ -85,15 +110,16 @@ export function CashflowForecast({
         <div>
           <p className="text-xs text-gray-400">Następna wypłata</p>
           <p className="mt-1 text-xl font-bold text-white">
-            {new Date(forecast.next_payday).toLocaleDateString("pl-PL")}
+            {formatCalendarDate(forecast.next_payday)}
           </p>
         </div>
       </div>
       {forecast.has_excluded_obligations ? (
         <p className="mt-3 text-xs text-amber-300">
           Pominięte pozycje:{" "}
-          {forecast.excluded_obligation_reasons?.join(", ") ||
-            "brak pełnych danych"}
+          {forecast.excluded_obligation_reasons
+            ?.map(forecastExclusionLabel)
+            .join(", ") || "brak pełnych danych"}
           .
         </p>
       ) : null}
@@ -138,17 +164,13 @@ export function CashflowForecast({
                 style={{ width: `${budgetProgressInfo.percent}%` }}
               />
             </div>
-            {budget.remaining_pln >
-              forecast.projected_balance_before_next_payday_pln && (
-              <p className="mt-2 text-xs text-amber-400">
-                Budżety przekraczają prognozowaną płynność o{" "}
-                {formatPLN(
-                  budget.remaining_pln -
-                    forecast.projected_balance_before_next_payday_pln,
-                )}{" "}
-                PLN
-              </p>
-            )}
+            {balanceBeforePayday !== null &&
+              budget.remaining_pln > balanceBeforePayday && (
+                <p className="mt-2 text-xs text-amber-400">
+                  Budżety przekraczają prognozowaną płynność o{" "}
+                  {formatPLN(budget.remaining_pln - balanceBeforePayday)} PLN
+                </p>
+              )}
           </div>
         )}
       </div>
@@ -163,7 +185,7 @@ export function CashflowForecast({
               className="flex items-center justify-between text-sm"
             >
               <span className="text-gray-300">
-                {new Date(day.date).toLocaleDateString("pl-PL")}
+                {formatCalendarDate(day.date)}
               </span>
               <span
                 className={`font-mono ${day.projected_balance_pln >= 0 ? "text-green-400" : "text-red-400"}`}

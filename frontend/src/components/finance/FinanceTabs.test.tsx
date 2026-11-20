@@ -19,7 +19,7 @@ describe("FinanceTabs", () => {
       "href",
       "/finances/reports?month=2&year=2026",
     );
-    expect(screen.getByRole("link", { name: "Nadchodzące" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Płynność" })).toHaveAttribute(
       "href",
       "/finances/cashflow?month=2&year=2026",
     );

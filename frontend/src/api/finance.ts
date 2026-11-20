@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   type QueryClient,
   useMutation,
   useQuery,
@@ -281,17 +282,21 @@ export interface CashflowBudgetSummary {
   remaining_pln: number;
 }
 
+export type CashflowDay = { date: string; projected_balance_pln: number };
+
 export interface CashflowForecast {
   last_payday: string;
   next_payday: string;
   opening_balance_pln: number;
-  projected_balance_before_next_payday_pln: number;
-  safe_daily_limit_pln: number;
+  projected_balance_before_next_payday_pln: number | null;
+  safe_daily_limit_pln: number | null;
   lowest_balance_pln: number;
-  days: Array<{ date: string; projected_balance_pln: number }>;
+  lowest_balance_before_payday?: CashflowDay;
+  days: CashflowDay[];
   suggestions: CashflowSuggestion[];
   budgets: CashflowBudgetSummary;
   has_excluded_obligations?: boolean;
+  has_excluded_obligations_before_payday?: boolean;
   excluded_obligation_reasons?: string[];
 }
 
@@ -618,6 +623,7 @@ export interface TransactionSearchParams {
   category_id?: string;
   date_from?: string;
   date_to?: string;
+  date_basis?: "booking" | "purchase";
   currency?: string;
   type?: string;
   min_amount_pln?: number;
@@ -821,6 +827,7 @@ export function useFinancialSummary(period?: FinancialPeriod) {
 
   return useQuery({
     queryKey: ["finance", "summary", { month: m, year: y }],
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data } = await api.get<FinancialSummary>("/finance/summary", {
         params: { month: m, year: y },

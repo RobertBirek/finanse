@@ -56,7 +56,7 @@ export function FinanceCashflow({
             : settingsSection === "schedules"
               ? "Harmonogramy"
               : "Płynność"
-          : "Nadchodzące"}
+          : "Płynność"}
       </h1>
       {!configure ? <FinanceTabs /> : null}
 

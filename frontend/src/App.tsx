@@ -1,34 +1,117 @@
-import { useEffect } from "react";
+import { lazy, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./stores/authStore";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
-import { Today } from "./pages/Today";
-import { Inbox } from "./pages/Inbox";
-import { Projects } from "./pages/Projects";
-import { ProjectDetail } from "./pages/ProjectDetail";
-import { Calendar } from "./pages/Calendar";
 import { Finances } from "./pages/Finances";
-import { FinanceAccounts } from "./pages/FinanceAccounts";
-import { FinanceTransactions } from "./pages/FinanceTransactions";
-import { FinancePeople } from "./pages/FinancePeople";
-import { FinancePersonDetails } from "./pages/FinancePersonDetails";
-import { FinanceCashflow } from "./pages/FinanceCashflow";
-import { FinanceBudgets } from "./pages/FinanceBudgets";
-import { FinanceReports } from "./pages/FinanceReports";
-import { Advisor } from "./pages/Advisor";
-import { Documents } from "./pages/Documents";
-import { Settings } from "./pages/Settings";
-import { FinanceSettings } from "./pages/FinanceSettings";
-import { FinanceCategorizationSettings } from "./pages/FinanceCategorizationSettings";
-import { FinanceLoans } from "./pages/FinanceLoans";
-import { FinanceCreditCards } from "./pages/FinanceCreditCards";
-import { FinanceCreditCardDetails } from "./pages/FinanceCreditCardDetails";
-import { FinanceDocuments } from "./pages/FinanceDocuments";
-import { FinanceImports } from "./pages/FinanceImports";
-import { FinanceImportReview } from "./pages/FinanceImportReview";
-import { FinanceCategoryProposals } from "./pages/FinanceCategoryProposals";
+
+const Today = lazy(() =>
+  import("./pages/Today").then((module) => ({ default: module.Today })),
+);
+const Inbox = lazy(() =>
+  import("./pages/Inbox").then((module) => ({ default: module.Inbox })),
+);
+const Projects = lazy(() =>
+  import("./pages/Projects").then((module) => ({ default: module.Projects })),
+);
+const ProjectDetail = lazy(() =>
+  import("./pages/ProjectDetail").then((module) => ({
+    default: module.ProjectDetail,
+  })),
+);
+const Calendar = lazy(() =>
+  import("./pages/Calendar").then((module) => ({ default: module.Calendar })),
+);
+const FinanceAccounts = lazy(() =>
+  import("./pages/FinanceAccounts").then((module) => ({
+    default: module.FinanceAccounts,
+  })),
+);
+const FinanceTransactions = lazy(() =>
+  import("./pages/FinanceTransactions").then((module) => ({
+    default: module.FinanceTransactions,
+  })),
+);
+const FinancePeople = lazy(() =>
+  import("./pages/FinancePeople").then((module) => ({
+    default: module.FinancePeople,
+  })),
+);
+const FinancePersonDetails = lazy(() =>
+  import("./pages/FinancePersonDetails").then((module) => ({
+    default: module.FinancePersonDetails,
+  })),
+);
+const FinanceCashflow = lazy(() =>
+  import("./pages/FinanceCashflow").then((module) => ({
+    default: module.FinanceCashflow,
+  })),
+);
+const FinanceBudgets = lazy(() =>
+  import("./pages/FinanceBudgets").then((module) => ({
+    default: module.FinanceBudgets,
+  })),
+);
+const FinanceReports = lazy(() =>
+  import("./pages/FinanceReports").then((module) => ({
+    default: module.FinanceReports,
+  })),
+);
+const Advisor = lazy(() =>
+  import("./pages/Advisor").then((module) => ({ default: module.Advisor })),
+);
+const Documents = lazy(() =>
+  import("./pages/Documents").then((module) => ({ default: module.Documents })),
+);
+const Settings = lazy(() =>
+  import("./pages/Settings").then((module) => ({ default: module.Settings })),
+);
+const FinanceSettings = lazy(() =>
+  import("./pages/FinanceSettings").then((module) => ({
+    default: module.FinanceSettings,
+  })),
+);
+const FinanceCategorizationSettings = lazy(() =>
+  import("./pages/FinanceCategorizationSettings").then((module) => ({
+    default: module.FinanceCategorizationSettings,
+  })),
+);
+const FinanceLoans = lazy(() =>
+  import("./pages/FinanceLoans").then((module) => ({
+    default: module.FinanceLoans,
+  })),
+);
+const FinanceCreditCards = lazy(() =>
+  import("./pages/FinanceCreditCards").then((module) => ({
+    default: module.FinanceCreditCards,
+  })),
+);
+const FinanceCreditCardDetails = lazy(() =>
+  import("./pages/FinanceCreditCardDetails").then((module) => ({
+    default: module.FinanceCreditCardDetails,
+  })),
+);
+const FinanceDocuments = lazy(() =>
+  import("./pages/FinanceDocuments").then((module) => ({
+    default: module.FinanceDocuments,
+  })),
+);
+const FinanceImports = lazy(() =>
+  import("./pages/FinanceImports").then((module) => ({
+    default: module.FinanceImports,
+  })),
+);
+const FinanceImportReview = lazy(() =>
+  import("./pages/FinanceImportReview").then((module) => ({
+    default: module.FinanceImportReview,
+  })),
+);
+const FinanceCategoryProposals = lazy(() =>
+  import("./pages/FinanceCategoryProposals").then((module) => ({
+    default: module.FinanceCategoryProposals,
+  })),
+);
 
 export default function App() {
   const fetchUser = useAuthStore((s) => s.fetchUser);

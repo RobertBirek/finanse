@@ -13,6 +13,7 @@ import {
 } from "../../lib/transactionSearch";
 import { QueryFeedback } from "../QueryFeedback";
 import { TransactionList } from "./AccountTransactions";
+import { retainFinancePeriod } from "./useFinancePeriod";
 
 export function TransactionSearch() {
   const [search, setSearch] = useSearchParams();
@@ -65,7 +66,7 @@ export function TransactionSearch() {
         accounts={accounts.data ?? []}
         categories={categories.data ?? []}
         onApply={setSearch}
-        onClear={() => setSearch({})}
+        onClear={() => setSearch(retainFinancePeriod(search))}
       />
       {(accounts.isError || categories.isError) && (
         <p role="alert" className="text-sm text-red-300">
@@ -103,6 +104,11 @@ export function TransactionSearch() {
                 {page.items.length
                   ? `Wyniki ${page.offset + 1}–${page.offset + page.items.length} z ${page.total}`
                   : `Wyniki: 0 z ${page.total}`}
+              </p>
+              <p className="text-sm text-gray-400">
+                {params.date_basis === "purchase"
+                  ? "Według daty zakupu. Gdy jej brakuje, według daty księgowania lub daty historycznej."
+                  : "Według daty księgowania lub daty historycznej."}
               </p>
               {page.items.length ? (
                 <TransactionList

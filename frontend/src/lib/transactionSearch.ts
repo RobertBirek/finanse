@@ -6,6 +6,7 @@ export const SEARCH_FIELDS = [
   "category_id",
   "date_from",
   "date_to",
+  "date_basis",
   "currency",
   "type",
   "min",
@@ -48,6 +49,9 @@ export function transactionSearchParams(
   }
   if (date_from && date_to && date_from > date_to)
     throw new Error("Data od nie może być późniejsza niż data do.");
+  const dateBasis = text("date_basis");
+  if (dateBasis && dateBasis !== "booking" && dateBasis !== "purchase")
+    throw new Error("Wybierz podstawę daty transakcji.");
   const min_amount_pln = parseSearchAmount(text("min") ?? "");
   const max_amount_pln = parseSearchAmount(text("max") ?? "");
   if (
@@ -88,6 +92,7 @@ export function transactionSearchParams(
     category_id: text("category_id"),
     date_from,
     date_to,
+    ...(dateBasis === "purchase" ? { date_basis: dateBasis } : {}),
     currency,
     type,
     min_amount_pln,
