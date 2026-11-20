@@ -156,6 +156,9 @@ test("AI approval is visible and requires an explicit click", async ({
 }) => {
   const api = await fixtures(page);
   await page.goto("/advisor");
+  await expect(
+    page.getByRole("heading", { name: "Nowa rozmowa" }),
+  ).toBeVisible();
   const history = page.getByRole("button", { name: "Rozmowy", exact: true });
   if (await history.isVisible()) await history.click();
   await page
