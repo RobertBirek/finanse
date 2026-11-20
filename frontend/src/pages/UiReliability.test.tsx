@@ -36,6 +36,9 @@ vi.mock("../api/advisor", () => ({
   useConfirmToolExecution: () => ({ mutate: mocks.confirm }),
   useDenyToolExecution: () => ({ mutate: mocks.deny }),
 }));
+vi.mock("../api/aiSettings", () => ({
+  useAISettings: () => ({ data: undefined }),
+}));
 vi.mock("../stores/authStore", async (original) => {
   const actual = await original<typeof import("../stores/authStore")>();
   actual.useAuthStore.setState({

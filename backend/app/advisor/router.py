@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.advisor.models import Conversation, Message, ToolExecution
+from app.advisor.policies import get_policy_engine
 from app.advisor.schemas import (
     ConversationResponse,
     MessageResponse,
@@ -14,6 +15,8 @@ from app.advisor.schemas import (
 )
 from app.advisor.service import (
     ADVISOR_ERROR,
+    AdvisorUnavailable,
+    ConversationNotFound,
     get_conversation,
     get_conversation_messages,
     get_user_conversations,
@@ -75,6 +78,13 @@ async def send_message_endpoint(
             data.conversation_id,
             data.content,
         )
+    except ConversationNotFound:
+        raise HTTPException(status_code=404, detail="Conversation not found") from None
+    except AdvisorUnavailable as error:
+        raise HTTPException(
+            status_code=409 if error.code == "not_configured" else 502,
+            detail={"code": error.code, "message": ADVISOR_ERROR},
+        ) from None
     except (OpenAIError, SQLAlchemyError, ValueError):
         raise HTTPException(status_code=500, detail=ADVISOR_ERROR) from None
 
@@ -121,11 +131,13 @@ async def confirm_tool_execution(
     tool = get_tool_by_name(te.tool_name)
     if tool is None:
         raise HTTPException(status_code=404, detail="Unknown tool")
+    if not get_policy_engine().requires_confirmation(te.tool_name, tool.autonomy_level):
+        raise HTTPException(status_code=409, detail="Tool no longer accepts confirmation")
 
     try:
         async with db.begin_nested():
             exec_result = await tool.executor(db, str(current_user.id), **(te.arguments or {}))
-            if getattr(tool, "autonomy_level", 0) >= 2 and "error" in exec_result:
+            if "error" in exec_result:
                 raise _MutationResultError
             te.result = exec_result
             te.status = "completed"

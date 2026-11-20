@@ -1,6 +1,8 @@
 import json
 import logging
+import time
 import uuid
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from openai import AsyncOpenAI, OpenAIError
@@ -9,7 +11,18 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.advisor.ai_provider import OPENAI_ENDPOINT, elapsed_ms, provider_error, record_usage
+from app.advisor.ai_settings import (
+    AdvisorCredentials,
+    CredentialUnavailable,
+    ModelUnavailable,
+    compose_prompt,
+    get_profile,
+    prompt_history,
+    resolve_credentials,
+)
 from app.advisor.models import Conversation, Message, ToolExecution
+from app.advisor.policies import get_policy_engine
 from app.advisor.tools.registry import get_openai_tools, get_tool_by_name
 from app.config import settings
 from app.openai_client import ResponseOutputError, create_openai_client, response_text
@@ -41,13 +54,21 @@ Zasady:
 - Kwoty w transakcjach podajesz w groszach (50 PLN = 5000)"""
 
 
-def _get_llm_client() -> AsyncOpenAI:
-    if not settings.LLM_MODEL:
-        raise ValueError("Advisor model is not configured")
+def _get_llm_client(credentials: AdvisorCredentials) -> AsyncOpenAI:
     return create_openai_client(
-        api_key=settings.OPENAI_API_KEY,
-        base_url=settings.LLM_BASE_URL,
+        api_key=credentials.api_key,
+        base_url=OPENAI_ENDPOINT,
         timeout=60,
+    )
+
+
+async def get_chat_configuration(
+    db: AsyncSession, user_id: uuid.UUID
+) -> tuple[AdvisorCredentials, str]:
+    credentials = resolve_credentials(settings, user_id, await get_profile(db, user_id))
+    versions = await prompt_history(db, user_id, limit=1)
+    return credentials, compose_prompt(
+        SYSTEM_PROMPT, versions[0].instructions if versions else None
     )
 
 
@@ -72,20 +93,24 @@ async def get_conversation(
 
 
 async def get_conversation_messages(
-    db: AsyncSession, user_id: uuid.UUID, conversation_id: uuid.UUID
+    db: AsyncSession, user_id: uuid.UUID, conversation_id: uuid.UUID, *, limit: int | None = None
 ) -> list[Message]:
     from sqlalchemy.orm import selectinload
 
     conv = await get_conversation(db, user_id, conversation_id)
     if conv is None:
         return []
-    result = await db.execute(
+    query = (
         select(Message)
         .options(selectinload(Message.tool_executions))
         .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.asc())
     )
-    return list(result.scalars().all())
+    if limit is None:
+        return list(await db.scalars(query.order_by(Message.created_at.asc(), Message.id.asc())))
+    newest = await db.scalars(
+        query.order_by(Message.created_at.desc(), Message.id.desc()).limit(limit)
+    )
+    return list(reversed(newest.all()))
 
 
 async def create_conversation(db: AsyncSession, user_id: uuid.UUID) -> Conversation:
@@ -100,6 +125,16 @@ logger = logging.getLogger(__name__)
 ADVISOR_ERROR = "Nie udało się uzyskać odpowiedzi Doradcy. Spróbuj ponownie."
 TOOL_ERROR = "Nie udało się wykonać narzędzia"
 INVALID_ARGUMENTS = "Nieprawidłowe argumenty narzędzia"
+
+
+class AdvisorUnavailable(Exception):
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(ADVISOR_ERROR)
+
+
+class ConversationNotFound(Exception):
+    pass
 
 
 def _parse_tool_arguments(raw: str) -> dict[str, Any]:
@@ -211,6 +246,22 @@ def _history_messages(history: list[Message]) -> list[dict[str, Any]]:
     return messages
 
 
+def _bytes(value: Any) -> int:
+    return len(json.dumps(value, ensure_ascii=False, default=str).encode())
+
+
+def bounded_history(history: list[Message], *, max_bytes: int) -> list[dict[str, Any]]:
+    selected: list[list[dict[str, Any]]] = []
+    for message in reversed(history):
+        group = _history_messages([message])
+        size = _bytes(group)
+        if size > max_bytes:
+            break
+        selected.append(group)
+        max_bytes -= size
+    return [item for group in reversed(selected) for item in group]
+
+
 async def send_message(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -220,38 +271,58 @@ async def send_message(
     if conversation_id:
         conv = await get_conversation(db, user_id, conversation_id)
         if conv is None:
-            conv = await create_conversation(db, user_id)
-            conversation_id = conv.id
+            raise ConversationNotFound
     else:
         conv = await create_conversation(db, user_id)
         conversation_id = conv.id
 
-    user_msg = Message(conversation_id=conversation_id, role="user", content=content)
-    db.add(user_msg)
+    try:
+        credentials, prompt = await get_chat_configuration(db, user_id)
+        if not credentials.model or not credentials.api_key:
+            raise AdvisorUnavailable("not_configured")
+    except (CredentialUnavailable, ModelUnavailable):
+        raise AdvisorUnavailable("not_configured") from None
+    history = await get_conversation_messages(
+        db, user_id, conversation_id, limit=settings.ADVISOR_HISTORY_MAX_MESSAGES
+    )
+    current = {"role": "user", "content": content}
+    protected = {"role": "developer", "content": prompt}
+    remaining = settings.ADVISOR_CONTEXT_MAX_BYTES - _bytes([protected, current]) - 2
+    if remaining < 0:
+        raise AdvisorUnavailable("context_limit")
+    messages: list[dict[str, Any]] = [
+        protected,
+        *bounded_history(history, max_bytes=remaining),
+        current,
+    ]
+    db.add(
+        Message(
+            conversation_id=conversation_id,
+            role="user",
+            content=content,
+            created_at=datetime.now(UTC),
+        )
+    )
     await db.flush()
 
-    history = await get_conversation_messages(db, user_id, conversation_id)
-    messages: list[dict[str, Any]] = [
-        {"role": "developer", "content": SYSTEM_PROMPT},
-        *_history_messages(history),
-    ]
-
     try:
-        client = _get_llm_client()
+        client = _get_llm_client(credentials)
     except ValueError:
-        client = None
+        raise AdvisorUnavailable("not_configured") from None
     tools = get_openai_tools()
 
     pending_confirmation = False
     try:
         for _iteration in range(MAX_TOOL_ITERATIONS):
-            if client is None:
-                raise ValueError("Advisor client is not configured")
+            if _bytes(messages) > settings.ADVISOR_CONTEXT_MAX_BYTES:
+                raise AdvisorUnavailable("context_limit")
+            start = time.monotonic()
+            response = None
             try:
                 request = cast(
                     ResponseCreateParamsNonStreaming,
                     {
-                        "model": settings.LLM_MODEL,
+                        "model": credentials.model,
                         "input": messages,
                         "tools": tools,
                         "tool_choice": "auto",
@@ -262,37 +333,44 @@ async def send_message(
                     },
                 )
                 response = await client.responses.create(**request)
-            except (OpenAIError, SQLAlchemyError, ValueError, RuntimeError) as error:
-                logger.warning("Advisor provider request failed (%s)", type(error).__name__)
-                assistant_msg = Message(
-                    conversation_id=conversation_id,
-                    role="assistant",
-                    content=ADVISOR_ERROR,
+                if response.status != "completed" or any(
+                    item.type not in ("message", "function_call", "reasoning")
+                    or (
+                        item.type == "message"
+                        and any(part.type == "refusal" for part in item.content)
+                    )
+                    for item in response.output
+                ):
+                    raise ResponseOutputError("response was not usable")
+                function_calls = [item for item in response.output if item.type == "function_call"]
+                answer = None if function_calls else response_text(response, allow_reasoning=True)
+            except (OpenAIError, ValueError, RuntimeError) as error:
+                status = (
+                    "unusable_response"
+                    if isinstance(error, ResponseOutputError)
+                    else provider_error(error)
+                    if isinstance(error, OpenAIError)
+                    else "provider_error"
                 )
-                db.add(assistant_msg)
-                await db.flush()
-                return assistant_msg
+                await record_usage(
+                    user_id, credentials.model, "chat", status, elapsed_ms(start), response
+                )
+                raise AdvisorUnavailable(status) from None
 
-            if response.status != "completed":
-                raise ResponseOutputError("response was not completed")
-            function_calls = [item for item in response.output if item.type == "function_call"]
-            if not function_calls:
-                answer = response_text(response)
+            await record_usage(
+                user_id, credentials.model, "chat", "ok", elapsed_ms(start), response
+            )
+            if answer is not None:
                 assistant_msg = Message(
                     conversation_id=conversation_id,
                     role="assistant",
                     content=answer,
+                    created_at=datetime.now(UTC),
                 )
                 db.add(assistant_msg)
                 await db.flush()
-                _update_conversation_title(conv, content, len(history))
+                _update_conversation_title(conv, content, len(history) + 1)
                 return assistant_msg
-
-            if any(
-                item.type == "message" and any(part.type == "refusal" for part in item.content)
-                for item in response.output
-            ):
-                raise ResponseOutputError("response was refused")
 
             raw_tool_calls = [
                 {
@@ -306,6 +384,7 @@ async def send_message(
                 conversation_id=conversation_id,
                 role="assistant",
                 content="",
+                created_at=datetime.now(UTC),
                 tool_calls=raw_tool_calls,
                 tool_executions=[],
             )
@@ -333,7 +412,7 @@ async def send_message(
                 elif tool is None:
                     result = {"error": f"Unknown tool: {tool_name}"}
                     status_val = "error"
-                elif tool.autonomy_level >= 2:
+                elif get_policy_engine().requires_confirmation(tool_name, tool.autonomy_level):
                     result = {**arguments, "tool": tool_name}
                     status_val = "pending_confirmation"
                     pending_confirmation = True
@@ -364,31 +443,21 @@ async def send_message(
             await db.flush()
 
             if pending_confirmation:
-                _update_conversation_title(conv, content, len(history))
+                _update_conversation_title(conv, content, len(history) + 1)
                 return assistant_msg
 
         assistant_msg = Message(
             conversation_id=conversation_id,
             role="assistant",
             content="Przetworzyłem dane. Czy potrzebujesz dodatkowych informacji?",
+            created_at=datetime.now(UTC),
         )
         db.add(assistant_msg)
-        _update_conversation_title(conv, content, len(history))
-        await db.flush()
-        return assistant_msg
-    except ResponseOutputError:
-        logger.warning("Advisor provider response was not usable")
-        assistant_msg = Message(
-            conversation_id=conversation_id,
-            role="assistant",
-            content=ADVISOR_ERROR,
-        )
-        db.add(assistant_msg)
+        _update_conversation_title(conv, content, len(history) + 1)
         await db.flush()
         return assistant_msg
     finally:
-        if client is not None:
-            await client.close()
+        await client.close()
 
 
 def _update_conversation_title(conv: Conversation, first_message: str, history_length: int):

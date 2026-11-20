@@ -8,6 +8,18 @@ vi.mock("../stores/authStore", () => ({
     select({ user: null }),
 }));
 describe("Settings navigation", () => {
+  it("opens OpenAI settings from global settings", () => {
+    render(
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: "Ustawienia AI" })).toHaveAttribute(
+      "href",
+      "/settings/ai",
+    );
+  });
+
   it("makes all financial definitions reachable from global settings", () => {
     render(
       <MemoryRouter>

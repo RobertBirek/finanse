@@ -5,6 +5,7 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import app.advisor.ai_settings_models
 import app.advisor.models
 import app.audit.models
 import app.documents.models

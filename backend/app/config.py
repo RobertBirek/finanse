@@ -4,7 +4,7 @@ import re
 from typing import Any
 from urllib.parse import urlsplit
 
-from pydantic import Field, PositiveFloat, PositiveInt, PrivateAttr, model_validator
+from pydantic import Field, PositiveFloat, PositiveInt, PrivateAttr, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_CORS_ORIGINS = "http://localhost:5173"
@@ -151,6 +151,12 @@ class Settings(BaseSettings):
     DOCUMENT_PROCESSING_ACTION_RATE_LIMIT: PositiveInt = 10
     DOCUMENT_PROCESSING_ACTION_RATE_LIMIT_WINDOW_SECONDS: PositiveInt = 60
     OPENAI_API_KEY: str = ""
+    ADVISOR_CREDENTIAL_ENCRYPTION_KEY: SecretStr = SecretStr("")
+    ADVISOR_PROBE_TIMEOUT_SECONDS: PositiveFloat = 15
+    ADVISOR_PROBE_MAX_OUTPUT_TOKENS: PositiveInt = 256
+    ADVISOR_ALLOWED_SERVER_MODELS: tuple[str, ...] = ()
+    ADVISOR_HISTORY_MAX_MESSAGES: PositiveInt = Field(default=40, le=200)
+    ADVISOR_CONTEXT_MAX_BYTES: PositiveInt = Field(default=48_000, ge=20_000, le=262_144)
     LLM_BASE_URL: str = "https://api.openai.com/v1"
     LLM_MODEL: str = ""
     LLM_PROVIDER: str = "openai"

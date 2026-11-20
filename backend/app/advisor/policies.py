@@ -4,11 +4,13 @@ from fnmatch import fnmatch
 
 @dataclass
 class PolicyEngine:
-    HIGH_RISK_OPERATIONS: list[str] = field(default_factory=lambda: [
-        "delete_*",
-        "create_financial_*",
-        "send_*",
-    ])
+    HIGH_RISK_OPERATIONS: list[str] = field(
+        default_factory=lambda: [
+            "delete_*",
+            "create_financial_*",
+            "send_*",
+        ]
+    )
 
     def check_autonomy(self, tool_name: str, requested_level: int) -> int:
         max_allowed = 4  # default max for read-only
@@ -17,6 +19,11 @@ class PolicyEngine:
                 max_allowed = 2
                 break
         return min(requested_level, max_allowed)
+
+    def requires_confirmation(self, tool_name: str, declared_level: int) -> bool:
+        return declared_level >= 2 or tool_name.startswith(
+            ("create_", "update_", "delete_", "send_")
+        )
 
 
 _policy_engine = PolicyEngine()
