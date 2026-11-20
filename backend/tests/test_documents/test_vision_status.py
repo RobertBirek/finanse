@@ -75,11 +75,13 @@ async def test_document_mapper_uses_batched_latest_review_and_text_existence(
         event.remove(engine, "before_cursor_execute", count_sql)
 
     assert len(responses) == 50
-    assert responses[0].has_extracted_text is True
+    with_text = next(item for item in responses if item.id == documents[0].id)
+    assert with_text.has_extracted_text is True
     assert all("storage_path" not in item.model_dump() for item in responses)
     assert all(item.review is not None for item in responses)
     assert len(statements) <= 4
-    assert next(item for item in responses if item.id == documents[0].id).review.revision == 2
+    assert with_text.review is not None
+    assert with_text.review.revision == 2
 
 
 @pytest.mark.integration
