@@ -7,6 +7,8 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.advisor.ai_purpose import PurposeRuntime, read_purpose
+from app.advisor.ai_settings import CredentialUnavailable, ModelUnavailable
 from app.audit.service import log_event
 from app.documents.job_models import DocumentProcessingJob, DocumentVisionPolicy
 from app.documents.lifecycle import require_document_processing_allowed
@@ -24,6 +26,15 @@ class ReviewExtractionError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
+
+
+async def _text_runtime(
+    db: AsyncSession, owner: uuid.UUID, *, linearize: bool = False
+) -> PurposeRuntime:
+    try:
+        return await read_purpose(db, owner, "document_text", linearize=linearize)
+    except (CredentialUnavailable, ModelUnavailable):
+        raise ReviewExtractionError("llm_unavailable") from None
 
 
 class OCRRetryResult:
@@ -229,10 +240,17 @@ async def suggest_review_category(
     if not catalog.public:
         return ReviewCategoryResponse(suggested_category_id=None)
     # Release the connection and the session activity update before the provider call.
+    runtime = await _text_runtime(db, user_id)
     await db.commit()
     key = await suggest_category_from_review(
-        supplier=supplier, description=description, catalog=catalog.public
+        supplier=supplier,
+        description=description,
+        catalog=catalog.public,
+        runtime=runtime,
+        owner=user_id,
     )
+    if (await _text_runtime(db, user_id, linearize=True)).version != runtime.version:
+        raise ReviewExtractionError("llm_configuration_changed")
     category_id = await resolve_category(db, user_id, catalog, key)
     return ReviewCategoryResponse(
         suggested_category_id=category_id, source="ai" if category_id is not None else None
@@ -277,15 +295,26 @@ async def process_review_revision(
         from app.documents.extractor import extract_review_with_categories
 
         catalog = await load_document_category_catalog(db, revision.user_id, revision.document_id)
+        runtime = await _text_runtime(db, revision.user_id)
         if catalog.public:
-            extraction = await extract_review_with_categories(text.extracted_text, catalog.public)
+            extraction = await extract_review_with_categories(
+                text.extracted_text,
+                catalog.public,
+                runtime=runtime,
+                owner=revision.user_id,
+            )
             parsed = extraction.suggestion
             revision.warnings = list(extraction.warnings)
             revision.suggested_category_id = await resolve_category(
                 db, revision.user_id, catalog, extraction.category_key
             )
         else:
-            parsed = await extract_review_data(text.extracted_text)
+            parsed = await extract_review_data(
+                text.extracted_text, runtime=runtime, owner=revision.user_id
+            )
+        if (await _text_runtime(db, revision.user_id, linearize=True)).version != runtime.version:
+            revision.suggested_category_id = None
+            raise ReviewExtractionError("llm_configuration_changed")
     except ReviewExtractionError as error:
         revision.status, revision.error_code = "incomplete", error.code
         return revision
@@ -482,7 +511,12 @@ async def pending_review_ids(db: AsyncSession) -> list[uuid.UUID]:
     )
 
 
-async def extract_review_data(text: str) -> ReviewSuggestion:
+async def extract_review_data(
+    text: str,
+    *,
+    runtime: PurposeRuntime | None = None,
+    owner: uuid.UUID | None = None,
+) -> ReviewSuggestion:
     from app.documents.extractor import extract_review_data as extract
 
-    return await extract(text)
+    return await extract(text, runtime=runtime, owner=owner)

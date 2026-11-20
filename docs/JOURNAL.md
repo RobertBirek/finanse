@@ -2,6 +2,42 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-20 — Drugi przyrost panelu OpenAI
+
+- Pięć odrębnych celów: Doradca, tekst, vision, pozycje paragonów i kategoryzacja.
+  Konfiguracja zachowuje wersję per właściciel/cel; zmiany nie dają uprawnień
+  i nie są przyjmowane jako aktualna konfiguracja dla wcześniej zatwierdzonej
+  pracy. Dotychczasowy hash globalnej polityki nie zmienia się bez zmian
+  ustawień serwera.
+- Użytkownik zatwierdził publikację jako draft PR i testy CI na izolowanej
+  bazie. Bez zgody na merge, produkcyjną migrację lub wdrożenie.
+- Kontrole lokalne: 541 testów backendu bez PostgreSQL, kolekcja offline,
+  733 Vitest, build, lint, kontrola typów. Migracje sprawdzone jako SQL.
+  Po review downgrade jawnie odmawia, gdy są dane nowych funkcji lub
+  zapisane generacje/metryki, których starszy schemat nie umie przechować.
+- CI 44777133436: awaria syntetycznego transportu Vision przez stary host
+  atrapy oraz brak nowego GET ustawień w fixture Playwright (desktop i mobile).
+  Skorygowano jedynie atrapy, bez omijania bramki hosta lub łagodzenia asercji.
+
+## 2026-11-20 — Pierwszy przyrost panelu AI (Doradca)
+
+- `feat/openai-settings` bazuje na uzgodnionym `b9a09bf`. Kontrole lokalne
+  korzystają z izolowanego venv Python 3.12 i Node 24.22.3.
+- Własny klucz AES-256-GCM z AAD właściciela, domyślny model z konfiguracji
+  serwera i brak cichego fallbacku po błędzie własnego klucza. Wywołania
+  wyłącznie przez `api.openai.com`, nie użyto rzeczywistych poświadczeń.
+- Wersje promptu, statystyki bez treści, syntetyczna próba zgodności modelu
+  z narzędziem oraz ograniczony kontekst. Addytywna migracja `c435e5526e23`.
+- [Audyt i konfiguracja](audits/2026-11-20-ai-settings-advisor.md). Zakres
+  tego przyrostu nie obejmuje workerów vision, odczytu paragonów,
+  ekstrakcji tekstu ani sugestii kategorii. Nie zmieniano produkcji.
+- Weryfikacja: 71 ukierunkowanych testów backendu, kolekcja offline, lint,
+  mypy/tsc oraz `pip check` bez błędów. Pierwszy pełny Vitest miał jeden
+  timeout na renderze widoku kategoryzacji; powtórka z limitem 2 workerów
+  zgodnym z CI: 732/732 testy, build poprawny. Niezależny przegląd bez
+  ważnych uwag. SQL upgrade wygenerowany offline, bez wykonania DDL i bez
+  testów integracyjnych wymagających PostgreSQL.
+
 ## 2026-11-20 — Uzgodnienie checkoutów Git i kolejność prac AI
 
 - Użytkownik zawęził AI do OpenAI i polecił najpierw uzgodnić `main`

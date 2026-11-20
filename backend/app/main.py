@@ -50,6 +50,7 @@ async def health_check():
     return {"status": "ok", "environment": settings.ENVIRONMENT}
 
 
+from app.advisor.ai_settings_router import router as advisor_settings_router
 from app.advisor.router import router as advisor_router
 from app.audit import models as _audit_models  # noqa: F401 - register audit_events metadata
 from app.documents import job_models as _document_job_models  # noqa: F401 - register job metadata
@@ -75,6 +76,9 @@ app.include_router(work_router, prefix="/api/work", tags=["work"], dependencies=
 app.include_router(inbox_router, prefix="/api/inbox", tags=["inbox"], dependencies=csrf_dependency)
 app.include_router(
     advisor_router, prefix="/api/advisor", tags=["advisor"], dependencies=csrf_dependency
+)
+app.include_router(
+    advisor_settings_router, prefix="/api/advisor", tags=["advisor"], dependencies=csrf_dependency
 )
 app.include_router(
     documents_router, prefix="/api/documents", tags=["documents"], dependencies=csrf_dependency

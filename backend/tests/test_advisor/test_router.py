@@ -125,7 +125,7 @@ async def test_confirm_hides_execution_from_another_user(monkeypatch):
     executor = AsyncMock()
     monkeypatch.setattr(
         "app.advisor.tools.registry.get_tool_by_name",
-        lambda _name: SimpleNamespace(executor=executor),
+        lambda _name: SimpleNamespace(autonomy_level=2, executor=executor),
     )
 
     with pytest.raises(HTTPException) as error:
@@ -176,7 +176,7 @@ async def test_confirm_sanitizes_executor_failure(monkeypatch):
 
     monkeypatch.setattr(
         "app.advisor.tools.registry.get_tool_by_name",
-        lambda _name: SimpleNamespace(executor=executor),
+        lambda _name: SimpleNamespace(autonomy_level=2, executor=executor),
     )
 
     await confirm_tool_execution(
@@ -230,7 +230,7 @@ async def test_confirm_rolls_back_executor_flush_when_audit_fails(monkeypatch):
 
     monkeypatch.setattr(
         "app.advisor.tools.registry.get_tool_by_name",
-        lambda _name: SimpleNamespace(executor=executor),
+        lambda _name: SimpleNamespace(autonomy_level=2, executor=executor),
     )
     monkeypatch.setattr(
         "app.audit.service.log_event",
@@ -304,13 +304,12 @@ async def test_confirm_marks_invalid_create_transaction_as_error(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_confirm_preserves_level_zero_error_result_behavior(monkeypatch):
+async def test_confirm_rejects_read_only_tool_even_if_execution_is_pending(monkeypatch):
     user_id = uuid.uuid4()
     execution = execution_for(user_id)
+    execution.tool_name = "get_accounts"
     audit = AsyncMock()
-
-    async def read_executor(_db, _user_id, **_arguments):
-        return {"error": "Read failed"}
+    read_executor = AsyncMock(return_value={"error": "Read failed"})
 
     monkeypatch.setattr(
         "app.advisor.tools.registry.get_tool_by_name",
@@ -318,15 +317,16 @@ async def test_confirm_preserves_level_zero_error_result_behavior(monkeypatch):
     )
     monkeypatch.setattr("app.audit.service.log_event", audit)
 
-    await confirm_tool_execution(
-        execution.id,
-        SimpleNamespace(id=user_id),
-        FakeSession(execution),
-    )
-
-    assert execution.status == "completed"
-    assert execution.result == {"error": "Read failed"}
-    audit.assert_awaited_once()
+    with pytest.raises(HTTPException) as error:
+        await confirm_tool_execution(
+            execution.id,
+            SimpleNamespace(id=user_id),
+            FakeSession(execution),
+        )
+    assert error.value.status_code == 409
+    assert execution.status == "pending_confirmation"
+    read_executor.assert_not_awaited()
+    audit.assert_not_awaited()
 
 
 class FakeAdvisorSession:
@@ -376,7 +376,20 @@ async def test_send_message_returns_pending_without_relying_on_relationship(monk
         close=AsyncMock(),
     )
     tool = SimpleNamespace(autonomy_level=2, executor=AsyncMock())
-    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda: client)
+    from app.advisor.ai_settings import AdvisorCredentials
+
+    monkeypatch.setattr(
+        advisor_service,
+        "get_chat_configuration",
+        AsyncMock(
+            return_value=(
+                AdvisorCredentials("test-model", "synthetic"),
+                advisor_service.SYSTEM_PROMPT,
+            )
+        ),
+    )
+    monkeypatch.setattr(advisor_service, "record_usage", AsyncMock())
+    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda _credentials: client)
     monkeypatch.setattr(advisor_service, "get_openai_tools", list)
     monkeypatch.setattr(advisor_service, "get_tool_by_name", lambda _name: tool)
     monkeypatch.setattr(advisor_service, "get_conversation", AsyncMock(return_value=conversation))

@@ -100,6 +100,11 @@ export function useSendMessage() {
       });
       queryClient.invalidateQueries({ queryKey: ["advisor", "conversations"] });
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["advisor", "settings", "advisor", "usage"],
+      });
+    },
   });
 }
 

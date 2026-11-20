@@ -94,12 +94,14 @@ def create_openai_client(*, api_key: str, base_url: str, timeout: float) -> Asyn
     )
 
 
-def response_text(response: Response) -> str:
+def response_text(response: Response, *, allow_reasoning: bool = False) -> str:
     """Return only terminal message text, rejecting all partial or unsafe alternatives."""
     if response.status != "completed":
         raise ResponseOutputError("response was not completed")
     text_parts: list[str] = []
     for item in response.output:
+        if allow_reasoning and item.type == "reasoning":
+            continue
         if item.type != "message":
             raise ResponseOutputError("unexpected response output")
         for content in item.content:

@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Dialog } from "../components/Dialog";
 import { QueryFeedback } from "../components/QueryFeedback";
 import { isAxiosError } from "axios";
+import { useAISettings } from "../api/aiSettings";
 import {
   useConversations,
   useMessages,
@@ -18,6 +20,7 @@ function ToolCallBanner({ message }: { message: Message }) {
     pending_confirmation: "Wymaga potwierdzenia",
     denied: "Odrzucono",
     failed: "Błąd",
+    error: "Błąd",
   };
   return (
     <div className="my-2 space-y-2">
@@ -119,6 +122,7 @@ export function Advisor() {
   const conversations = conversationsQuery.data;
   const apiMessages = messagesQuery.data;
   const sendMessage = useSendMessage();
+  const ai = useAISettings().data;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView?.({
@@ -223,7 +227,20 @@ export function Advisor() {
                   "Rozmowa"
                 : "Nowa rozmowa"}
             </h1>
-            <p className="text-xs text-gray-400">Osobisty asystent AI</p>
+            <p className="text-xs text-gray-400">
+              {ai?.active_model
+                ? `OpenAI · ${ai.active_model}`
+                : "Osobisty asystent AI"}
+              {ai && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <Link className="underline" to="/settings/ai">
+                    Ustawienia AI
+                  </Link>
+                </>
+              )}
+            </p>
           </div>
           <button
             type="button"
@@ -325,8 +342,11 @@ export function Advisor() {
           </QueryFeedback>
           {sendMessage.isError && (
             <p role="alert" className="text-sm text-red-300">
-              Nie udało się wysłać wiadomości. Treść pozostała w polu — spróbuj
-              ponownie.
+              {isAxiosError(sendMessage.error) &&
+              sendMessage.error.response?.data?.detail?.code ===
+                "not_configured"
+                ? "Sprawdź klucz i model Doradcy w ustawieniach AI. Treść pozostała w polu."
+                : "Nie udało się wysłać wiadomości. Treść pozostała w polu — spróbuj ponownie."}
             </p>
           )}
           <div ref={messagesEndRef} />
@@ -342,6 +362,7 @@ export function Advisor() {
               id="advisor-message"
               type="text"
               value={input}
+              maxLength={4000}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Zadaj pytanie Doradcy..."

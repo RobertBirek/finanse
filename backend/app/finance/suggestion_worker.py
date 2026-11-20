@@ -1,5 +1,6 @@
 """ARQ transports only IDs; PostgreSQL owns all recovery and single-send admission."""
 
+import time
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -7,10 +8,9 @@ from typing import Any
 from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.config import settings
+from app.advisor.ai_provider import elapsed_ms, record_usage
 from app.database import async_session_factory
 from app.finance.suggestion_client import call_suggestion_provider
-from app.finance.suggestion_config import get_suggestion_config
 from app.finance.suggestion_jobs import (
     admit_suggestion_dispatch,
     claim_suggestion_job,
@@ -58,21 +58,32 @@ async def _process_suggestion_job(ctx: dict[str, Any], job_id: str) -> str:
             await db.commit()
         if version is None:
             return "cancelled"
-        config = get_suggestion_config(settings)
-        if not config:
-            return "not_admitted"
         async with async_session_factory() as db:
             ticket = await admit_suggestion_dispatch(db, lease, version)
             await db.commit()
-        if ticket is None:
+        if ticket is None or ticket.provider_config is None:
             return "not_admitted"
     except (SQLAlchemyError, ValueError, RuntimeError, OSError):
         # Expired predispatch leases recover; any persisted dispatching is terminal uncertain.
         return "not_admitted"
+    config = ticket.provider_config
+    started = time.monotonic()
     outcome = await call_suggestion_provider(packet, config)
+    duration = elapsed_ms(started)
     async with async_session_factory() as db:
         await record_suggestion_usage(db, ticket, outcome.usage)
         await db.commit()
+    await record_usage(
+        ticket.owner_id,
+        config.model,
+        "operation",
+        "provider_error" if outcome.error_code else "ok",
+        duration,
+        None,
+        purpose="categorization",
+        input_tokens=outcome.usage.input_tokens,
+        output_tokens=outcome.usage.output_tokens,
+    )
     async with async_session_factory() as db:
         result = await finish_suggestion_job(db, ticket, outcome)
         await db.commit()

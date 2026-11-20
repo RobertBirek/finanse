@@ -27,7 +27,7 @@ from app.finance.models import FinancialDocument, FinancialDocumentSource, Posti
 
 
 def _config() -> VisionConfig:
-    return VisionConfig("test", "https://vision.example.test/v1", "model", "secret", "p1", "s1")
+    return VisionConfig("openai", "https://api.openai.com/v1", "model", "secret", "p1", "s1")
 
 
 async def _vision_job(db_session):

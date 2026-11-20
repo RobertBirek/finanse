@@ -9,6 +9,8 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
+from app.advisor.ai_purpose import PurposeRuntime
+from app.advisor.ai_settings import AdvisorCredentials
 from app.documents.category_catalog import CategoryCatalog
 from app.documents.review_schemas import ReviewSuggestion
 from app.documents.vision_schemas import VisionExtraction
@@ -38,7 +40,7 @@ async def test_explicit_category_request_uses_the_owned_saved_read_without_creat
     monkeypatch, result
 ):
     from app.database import get_db
-    from app.documents import extractor, review_router
+    from app.documents import extractor, review_router, review_service
     from app.identity.router import get_current_user
 
     owner, doc_id, revision_id, category_id = (uuid.uuid4() for _ in range(4))
@@ -98,6 +100,8 @@ async def test_explicit_category_request_uses_the_owned_saved_read_without_creat
     )
     provider = AsyncMock(return_value=None if result == "no_match" else "c01")
     monkeypatch.setattr(extractor, "suggest_category_from_review", provider)
+    runtime = PurposeRuntime(AdvisorCredentials("model", "synthetic"), None, None)
+    monkeypatch.setattr(review_service, "_text_runtime", AsyncMock(return_value=runtime))
     app = FastAPI()
     app.include_router(review_router.router, prefix="/api/documents")
     app.dependency_overrides.update(
@@ -140,6 +144,8 @@ async def test_explicit_category_request_uses_the_owned_saved_read_without_creat
             supplier="Dostawca",
             description="Internet domowy",
             catalog=[{"key": "c01", "path": "Internet"}],
+            runtime=runtime,
+            owner=owner,
         )
         db.commit.assert_awaited_once()
     document_query, review_query = (call.args[0] for call in db.execute.call_args_list[:2])
@@ -182,6 +188,8 @@ async def test_text_pipeline_publishes_revalidated_category_without_second_extra
     )
     enriched = AsyncMock(return_value=extraction)
     legacy = AsyncMock()
+    runtime = PurposeRuntime(AdvisorCredentials("model", "synthetic"), None, None)
+    monkeypatch.setattr(review_service, "_text_runtime", AsyncMock(return_value=runtime))
     monkeypatch.setattr(extractor, "extract_review_with_categories", enriched)
     monkeypatch.setattr(review_service, "extract_review_data", legacy)
     result = await review_service.process_review_revision(db, revision.id)

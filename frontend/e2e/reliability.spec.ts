@@ -159,6 +159,9 @@ test("AI approval is visible and requires an explicit click", async ({
   await expect(
     page.getByRole("heading", { name: "Nowa rozmowa" }),
   ).toBeVisible();
+  await expect(
+    page.getByText("OpenAI · test-model", { exact: false }),
+  ).toBeVisible();
   const history = page.getByRole("button", { name: "Rozmowy", exact: true });
   if (await history.isVisible()) await history.click();
   await page
@@ -173,5 +176,28 @@ test("AI approval is visible and requires an explicit click", async ({
   expect(api.mutations).toEqual([
     "POST /api/advisor/tool-executions/e1/confirm",
   ]);
+  api.assertClean();
+});
+
+test("AI settings isolate the receipt model from the Advisor model", async ({
+  page,
+}) => {
+  const api = await fixtures(page);
+  await page.goto("/settings");
+  await page.getByRole("link", { name: "Ustawienia AI" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Ustawienia AI" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("test-model", { exact: true }).first(),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Pozycje paragonów" }).click();
+  await expect(
+    page.getByText("test-receipt-model", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Zdjęcie paragonu trafi", { exact: false }),
+  ).toBeVisible();
+  expect(api.mutations).toEqual([]);
   api.assertClean();
 });

@@ -24,6 +24,23 @@ class FakeSession:
         yield self
 
 
+@pytest.fixture(autouse=True)
+def fake_chat_configuration(monkeypatch):
+    from app.advisor.ai_settings import AdvisorCredentials
+
+    monkeypatch.setattr(
+        advisor_service,
+        "get_chat_configuration",
+        AsyncMock(
+            return_value=(
+                AdvisorCredentials("sol-test", "synthetic"),
+                advisor_service.SYSTEM_PROMPT,
+            )
+        ),
+    )
+    monkeypatch.setattr(advisor_service, "record_usage", AsyncMock())
+
+
 def llm_response(*, content=None, tool_calls=None):
     if tool_calls:
         output = tool_calls
@@ -56,7 +73,7 @@ def setup_service(monkeypatch, responses, tool=None, history=None):
         responses=SimpleNamespace(create=AsyncMock(side_effect=responses)),
         close=AsyncMock(),
     )
-    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda: client)
+    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda _credentials: client)
     monkeypatch.setattr(advisor_service, "get_openai_tools", list)
     monkeypatch.setattr(advisor_service, "get_conversation", AsyncMock(return_value=conversation))
     monkeypatch.setattr(
@@ -245,12 +262,12 @@ async def test_second_user_turn_replays_prior_tool_result(monkeypatch):
     )
     history_calls = 0
 
-    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda: client)
+    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda _credentials: client)
     monkeypatch.setattr(advisor_service, "get_openai_tools", list)
     monkeypatch.setattr(advisor_service, "get_conversation", AsyncMock(return_value=conversation))
     monkeypatch.setattr(advisor_service, "get_tool_by_name", lambda _name: tool)
 
-    async def conversation_history(_db, _user_id, _conversation_id):
+    async def conversation_history(_db, _user_id, _conversation_id, *, limit):
         nonlocal history_calls
         history_calls += 1
         if history_calls == 1:
@@ -306,8 +323,9 @@ async def test_non_object_arguments_never_execute_or_request_approval(monkeypatc
 @pytest.mark.asyncio
 async def test_provider_error_does_not_leak_credentials(monkeypatch, caplog):
     setup_service(monkeypatch, [RuntimeError("SECRET_PROVIDER_CREDENTIAL")])
-    result = await advisor_service.send_message(FakeSession(), uuid.uuid4(), uuid.uuid4(), "Test")
-    assert result.content == advisor_service.ADVISOR_ERROR
+    with pytest.raises(advisor_service.AdvisorUnavailable) as error:
+        await advisor_service.send_message(FakeSession(), uuid.uuid4(), uuid.uuid4(), "Test")
+    assert error.value.code == "provider_error"
     assert "SECRET_PROVIDER_CREDENTIAL" not in caplog.text
 
 
@@ -380,12 +398,11 @@ async def test_responses_tool_roundtrip_replays_reasoning_and_matching_output(mo
     executor = AsyncMock(return_value={"accounts": []})
     tool = SimpleNamespace(name="get_accounts", autonomy_level=0, executor=executor)
     conversation = SimpleNamespace(id=uuid.uuid4(), title="Nowa rozmowa")
-    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda: client)
+    monkeypatch.setattr(advisor_service, "_get_llm_client", lambda _credentials: client)
     monkeypatch.setattr(advisor_service, "get_openai_tools", list)
     monkeypatch.setattr(advisor_service, "get_tool_by_name", lambda _name: tool)
     monkeypatch.setattr(advisor_service, "get_conversation", AsyncMock(return_value=conversation))
     monkeypatch.setattr(advisor_service, "get_conversation_messages", AsyncMock(return_value=[]))
-    monkeypatch.setattr(advisor_service.settings, "LLM_MODEL", "sol-test")
     monkeypatch.setattr(advisor_service.settings, "LLM_MAX_OUTPUT_TOKENS", 4096)
     monkeypatch.setattr(advisor_service.settings, "LLM_REASONING_EFFORT", "low")
 
@@ -440,9 +457,9 @@ async def test_terminal_or_refused_tool_output_never_executes(monkeypatch, respo
     _, client = setup_service(monkeypatch, [response], tool=tool)
     db = FakeSession()
 
-    result = await advisor_service.send_message(db, uuid.uuid4(), uuid.uuid4(), "Pokaż konta")
-
-    assert result.content == advisor_service.ADVISOR_ERROR
+    with pytest.raises(advisor_service.AdvisorUnavailable) as error:
+        await advisor_service.send_message(db, uuid.uuid4(), uuid.uuid4(), "Pokaż konta")
+    assert error.value.code == "unusable_response"
     executor.assert_not_awaited()
     assert not [item for item in db.added if item.__class__.__name__ == "ToolExecution"]
     client.close.assert_awaited_once()

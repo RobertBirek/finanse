@@ -26,6 +26,7 @@ from app.documents.receipt_read_payload import (
     validate_receipt_read_intake,
 )
 from app.documents.receipt_read_policy import (
+    get_receipt_read_policy,
     receipt_read_admission,
     receipt_read_allowed,
     reconcile_receipt_read_policy,
@@ -116,7 +117,7 @@ async def admit_receipt_read(
         owner,
         source.bill.id,
         source.document.sha256_hash,
-        config.configuration_fingerprint,
+        config.policy_fingerprint or config.configuration_fingerprint,
         lock=True,
     )
     if prior and data.reread_of_job_id is None:
@@ -147,15 +148,13 @@ async def admit_receipt_read(
             user_id=owner,
             bill_id=source.bill.id,
             source_sha256=source.document.sha256_hash,
-            configuration_fingerprint=config.configuration_fingerprint,
+            configuration_fingerprint=config.policy_fingerprint or config.configuration_fingerprint,
             version=1,
         )
         db.add(stream)
         await db.flush([stream])
     else:
         stream.version += 1
-    from app.documents.receipt_read_policy import get_receipt_read_policy
-
     policy = await get_receipt_read_policy(db)
     job = ReceiptReadJob(
         id=uuid.uuid4(),
@@ -224,7 +223,13 @@ async def _locked_read(
     db: AsyncSession, job_id: uuid.UUID, config: ReceiptReadConfig
 ) -> tuple[ReceiptReadJob | None, "ReceiptReadSource | None"]:
     await receipt_read_admission(db)
-    policy = await reconcile_receipt_read_policy(db, config)
+    # Only the baseline may revoke the global policy. A user's unreadable
+    # credential or changed prompt must not affect other owners.
+    policy = (
+        await get_receipt_read_policy(db)
+        if config.policy_fingerprint is not None
+        else await reconcile_receipt_read_policy(db, config)
+    )
     locator = await db.scalar(
         select(ReceiptReadJob)
         .where(ReceiptReadJob.id == job_id)

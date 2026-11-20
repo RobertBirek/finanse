@@ -42,9 +42,7 @@ from test_documents.fixtures import valid_jpeg_bytes, valid_pdf_bytes
 
 
 def _config() -> VisionConfig:
-    return VisionConfig(
-        "test-provider", "https://vision.example.test/v1", "test-model", "test-key", "p1", "s1"
-    )
+    return VisionConfig("openai", "https://api.openai.com/v1", "test-model", "test-key", "p1", "s1")
 
 
 async def _records(db_session):
@@ -73,7 +71,7 @@ async def _records(db_session):
 
 
 def _provider_response(request: httpx.Request) -> httpx.Response:
-    assert request.url.host == "vision.example.test"
+    assert request.url.host == "api.openai.com"
     payload = {
         "document_type": "receipt",
         "fields": {
@@ -134,7 +132,7 @@ def test_acceptance_provider_obeys_requested_recognition_contract(with_catalog):
     response = _provider_response(
         httpx.Request(
             "POST",
-            "https://vision.example.test/v1/responses",
+            "https://api.openai.com/v1/responses",
             json={"text": {"format": {"schema": schema}}},
         )
     )

@@ -3,6 +3,7 @@
 import base64
 import json
 import logging
+import time
 from typing import Any, cast
 
 import httpx
@@ -10,6 +11,8 @@ from openai import APIError, APIStatusError, APITimeoutError, AsyncOpenAI
 from openai.types.responses.response_create_params import ResponseCreateParamsNonStreaming
 from pydantic import ValidationError
 
+from app.advisor.ai_provider import elapsed_ms, provider_error, record_usage
+from app.advisor.ai_settings import compose_prompt
 from app.config import settings
 from app.documents.vision_config import VisionConfig
 from app.documents.vision_schemas import (
@@ -113,7 +116,10 @@ async def extract_image_review(
             {
                 "model": config.model,
                 "input": [
-                    {"role": "developer", "content": prompt},
+                    {
+                        "role": "developer",
+                        "content": compose_prompt(prompt, config.custom_instructions),
+                    },
                     {
                         "role": "user",
                         "content": content,
@@ -132,13 +138,34 @@ async def extract_image_review(
                 },
             },
         )
+        start = time.monotonic()
         response = await client.responses.create(**request)
     except APIError as error:
+        if config.usage_owner is not None:
+            await record_usage(
+                config.usage_owner,
+                config.model,
+                "operation",
+                provider_error(error),
+                elapsed_ms(start),
+                None,
+                purpose="vision",
+            )
         safe_error = _provider_error(error)
         logger.warning("Document vision provider request failed: %s", safe_error.code)
         raise safe_error from None
     finally:
         await client.close()
+    if config.usage_owner is not None:
+        await record_usage(
+            config.usage_owner,
+            config.model,
+            "operation",
+            "ok" if response.status == "completed" else "unusable_response",
+            elapsed_ms(start),
+            response,
+            purpose="vision",
+        )
 
     try:
         output = response_text(response)

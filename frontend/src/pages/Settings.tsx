@@ -81,6 +81,9 @@ export function Settings() {
             Zmiana poziomu autonomii nie jest dostępna w tym widoku. Ten ekran
             nie zmienia uprawnień ani zasad zatwierdzania.
           </p>
+          <Link className="sidebar-link mt-3" to="/settings/ai">
+            Ustawienia AI
+          </Link>
         </section>
         <section className="card">
           <h2 className="text-lg font-semibold text-white mb-4">O aplikacji</h2>

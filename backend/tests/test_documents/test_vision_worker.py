@@ -18,7 +18,7 @@ from test_documents.fixtures import valid_jpeg_bytes
 
 
 def _config() -> VisionConfig:
-    return VisionConfig("test", "https://vision.example.test/v1", "model", "secret", "p1", "s1")
+    return VisionConfig("openai", "https://api.openai.com/v1", "model", "secret", "p1", "s1")
 
 
 @pytest.mark.integration

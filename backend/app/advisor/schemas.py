@@ -11,7 +11,7 @@ class ChatRequest(BaseModel):
 
 class SendMessageRequest(BaseModel):
     conversation_id: uuid.UUID | None = None
-    content: str = Field(min_length=1)
+    content: str = Field(min_length=1, max_length=4000)
 
 
 class ToolExecutionResponse(BaseModel):

@@ -2,8 +2,13 @@
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass, field
+import uuid
+from dataclasses import asdict, dataclass, field, replace
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.advisor.ai_purpose import PurposeBaseline, read_purpose
+from app.advisor.ai_settings import AdvisorCredentials, CredentialUnavailable, ModelUnavailable
 from app.config import Settings
 from app.openai_client import _is_openai_base_url
 
@@ -32,14 +37,51 @@ class ReceiptReadConfig:
     max_discounts: int
     max_discount_shares: int
     item_name_max_chars: int
+    policy_fingerprint: str | None = None
+    personal_fingerprint: str | None = None
+    custom_instructions: str | None = field(default=None, repr=False)
+    personal_unavailable: bool = False
 
     @property
     def configuration_fingerprint(self) -> str:
+        if self.personal_fingerprint is not None:
+            return self.personal_fingerprint
         values = asdict(self)
-        values.pop("api_key")
+        for key in (
+            "api_key",
+            "policy_fingerprint",
+            "personal_fingerprint",
+            "custom_instructions",
+            "personal_unavailable",
+        ):
+            values.pop(key)
         return hashlib.sha256(
             json.dumps(values, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
+
+
+async def owner_receipt_config(
+    db: AsyncSession, owner: uuid.UUID, config: ReceiptReadConfig, *, linearize: bool = False
+) -> ReceiptReadConfig:
+    baseline = config.configuration_fingerprint
+    try:
+        runtime = await read_purpose(
+            db,
+            owner,
+            "receipt",
+            linearize=linearize,
+            baseline=PurposeBaseline(AdvisorCredentials(config.model, config.api_key), True),
+        )
+    except (CredentialUnavailable, ModelUnavailable):
+        return replace(config, policy_fingerprint=baseline, personal_unavailable=True)
+    return replace(
+        config,
+        model=runtime.credentials.model,
+        api_key=runtime.credentials.api_key,
+        policy_fingerprint=baseline,
+        personal_fingerprint=runtime.fingerprint(baseline),
+        custom_instructions=runtime.instructions,
+    )
 
 
 def get_receipt_read_config(settings: Settings) -> ReceiptReadConfig | None:

@@ -67,6 +67,11 @@ const Documents = lazy(() =>
 const Settings = lazy(() =>
   import("./pages/Settings").then((module) => ({ default: module.Settings })),
 );
+const AISettings = lazy(() =>
+  import("./pages/AISettings").then((module) => ({
+    default: module.AISettings,
+  })),
+);
 const FinanceSettings = lazy(() =>
   import("./pages/FinanceSettings").then((module) => ({
     default: module.FinanceSettings,
@@ -172,6 +177,7 @@ export default function App() {
         <Route path="/advisor" element={<Advisor />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/ai" element={<AISettings />} />
         <Route path="/settings/finances" element={<FinanceSettings />}>
           <Route index element={<Navigate to="accounts" replace />} />
           <Route

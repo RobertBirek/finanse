@@ -1,7 +1,7 @@
 """Durable, creation-only generation with separate dispatch and publication authority."""
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import and_, or_, select
@@ -15,7 +15,11 @@ from app.finance.models import FinancialTransaction
 from app.finance.rule_events import eligible_unclassified
 from app.finance.rule_policy import get_settings, policy_locks
 from app.finance.suggestion_client import ProviderOutcome
-from app.finance.suggestion_config import SuggestionConfig, get_suggestion_config
+from app.finance.suggestion_config import (
+    SuggestionConfig,
+    get_suggestion_config,
+    owner_suggestion_config,
+)
 from app.finance.suggestion_models import (
     CategorizationLlmUsageReservation as Reservation,
 )
@@ -48,6 +52,7 @@ class DispatchTicket:
     dispatch_nonce: uuid.UUID
     reservation_id: uuid.UUID
     reservation_version: int
+    provider_config: SuggestionConfig | None = field(default=None, repr=False, compare=False)
 
 
 async def record_new_suggestion_intent(
@@ -149,16 +154,18 @@ async def validated_context(db: AsyncSession, job: Job) -> tuple[LedgerContext, 
     rules = await get_settings(db, job.user_id)
     consent = await current_consent(db, job.user_id, lock=True)
     server = await current_policy(db, lock=True)
-    config = get_suggestion_config(settings)
+    baseline = get_suggestion_config(settings)
+    config = await owner_suggestion_config(db, job.user_id, baseline, linearize=True)
     if (
-        not config
+        not baseline
+        or not config
         or not consent
         or not consent.enabled
         or consent.version != job.user_epoch
         or not server
         or not server.enabled
         or server.epoch != job.server_epoch
-        or server.configuration_fingerprint != config.fingerprint
+        or server.configuration_fingerprint != baseline.fingerprint
         or consent.accepted_server_epoch != server.epoch
         or consent.accepted_configuration_fingerprint != config.fingerprint
         or job.configuration_fingerprint != config.fingerprint
@@ -256,7 +263,13 @@ async def admit_suggestion_dispatch(
     reservation.state, reservation.dispatch_nonce = "dispatching", nonce
     await db.flush()
     return DispatchTicket(
-        job.id, job.user_id, lease.token, nonce, reservation.id, reservation.reservation_version
+        job.id,
+        job.user_id,
+        lease.token,
+        nonce,
+        reservation.id,
+        reservation.reservation_version,
+        provider_config=config,
     )
 
 

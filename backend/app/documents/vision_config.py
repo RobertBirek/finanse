@@ -1,5 +1,6 @@
 import hashlib
 import json
+import uuid
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
@@ -14,6 +15,8 @@ class VisionConfig:
     api_key: str = field(repr=False)
     prompt_version: str = ""
     schema_version: str = ""
+    custom_instructions: str | None = field(default=None, repr=False)
+    usage_owner: uuid.UUID | None = None
 
     @property
     def configuration_fingerprint(self) -> str:

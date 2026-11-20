@@ -5,6 +5,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+from app.advisor.ai_settings import compose_prompt
 from app.finance.categorization_context import CategorizationError, LedgerContext, columns, digest
 from app.finance.models import Category
 from app.finance.suggestion_config import PROMPT_TEXT, SuggestionConfig
@@ -82,7 +83,7 @@ def build_suggestion_packet(
     )
     request = {
         "model": config.model,
-        "instructions": PROMPT_TEXT,
+        "instructions": compose_prompt(PROMPT_TEXT, config.custom_instructions),
         "input": [
             {
                 "role": "user",
