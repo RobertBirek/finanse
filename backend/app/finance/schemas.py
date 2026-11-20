@@ -336,11 +336,20 @@ class TransactionSearch(BaseModel):
         return self
 
 
+class TransactionSearchItem(TransactionResponse):
+    matched_category_amount_pln: int | None = None
+
+
 class TransactionSearchResponse(BaseModel):
-    items: list[TransactionResponse]
+    items: list[TransactionSearchItem]
     total: int
     limit: int
     offset: int
+
+
+class ScheduledFinanceConfirmationRequest(BaseModel):
+    due_date: dt.date
+    expected_amount_pln: int = Field(gt=0, strict=True)
 
 
 class ScheduledFinanceConfirmationResponse(BaseModel):
@@ -462,7 +471,9 @@ class CashflowSuggestion(BaseModel):
     amount_minor: int | None = None
     currency: str = "PLN"
     amount_pln: int | None
-    status: Literal["due", "overdue", "overdue_uncertain", "matched_actual", "amount_unknown"]
+    status: Literal[
+        "due", "overdue", "overdue_uncertain", "matched_actual", "amount_unknown", "match_uncertain"
+    ]
     included_in_forecast: bool
     actual_transaction_id: uuid.UUID | None = None
     exclusion_reasons: list[str] = Field(default_factory=list)

@@ -30,6 +30,13 @@ import { ImportGroupEditor } from "../components/finance/imports/ImportGroupEdit
 import { ImportPreview } from "../components/finance/imports/ImportPreview";
 import { ImportReceipt } from "../components/finance/imports/ImportReceipt";
 import { ScheduleImportWorkspace } from "../components/finance/imports/ScheduleImportWorkspace";
+import {
+  importConfirmationKey,
+  readImportConfirmation,
+  writeImportConfirmation,
+  type ImportConfirmationIntent,
+} from "../components/finance/imports/importConfirmationIntent";
+import { listPage, setListPage } from "../lib/listPage";
 import { invalidateFinanceLedger } from "../api/finance";
 import { isProcessingActorCurrent } from "../stores/documentProcessingStore";
 
@@ -73,37 +80,46 @@ function Workspace({ batch }: { batch: ImportBatch }) {
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [receipt, setReceipt] = useState<CommitResult | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const [uncertain, setUncertain] = useState(false);
   const [requiredAcks, setRequiredAcks] = useState<string[]>([]);
   const [acks, setAcks] = useState<string[]>([]);
-  const intent = useRef<{ previewId: string; key: string } | null>(null);
   const { ownerId, generation } = useImportActor();
-  const client = useQueryClient();
-  const recovered = useImportCommandResult(
-    batch.id,
-    uncertain ? (intent.current?.key ?? null) : null,
+  const storageKey = importConfirmationKey(ownerId, batch.id);
+  const [pending, setPending] = useState(() =>
+    readImportConfirmation(storageKey),
   );
+  const uncertain = pending !== null;
+  const client = useQueryClient();
+  const recovered = useImportCommandResult(batch.id, pending?.key ?? null);
   const recoveryApplied = useRef<string | null>(null);
   useEffect(() => {
     const actor = { ownerId, generation };
     const result = recovered.data;
     if (
       !result ||
-      !preview ||
+      !pending ||
       !isProcessingActorCurrent(actor) ||
       result.batch_id !== batch.id ||
-      result.request_hash !== preview.request_hash ||
+      result.request_hash !== pending.requestHash ||
       !result.receipt_id ||
       recoveryApplied.current === result.receipt_id
     )
       return;
     recoveryApplied.current = result.receipt_id;
     setReceipt(result);
-    setUncertain(false);
+    writeImportConfirmation(storageKey, null);
+    setPending(null);
     setProblem(null);
     invalidateFinanceLedger(client);
     client.invalidateQueries({ queryKey: importQueryKey(actor) });
-  }, [recovered.data, preview, ownerId, generation, batch.id, client]);
+  }, [
+    recovered.data,
+    pending,
+    ownerId,
+    generation,
+    batch.id,
+    client,
+    storageKey,
+  ]);
   const save = useSaveImportDecisions();
   const prepare = usePreviewImport();
   const parseSource = usePrepareImportSource();
@@ -157,7 +173,6 @@ function Workspace({ batch }: { batch: ImportBatch }) {
     if (uncertain || comparisonRevision) return;
     setProblem(null);
     setPreview(null);
-    intent.current = null;
     try {
       await save.mutateAsync({
         batchId: batch.id,
@@ -185,7 +200,6 @@ function Workspace({ batch }: { batch: ImportBatch }) {
   async function preparePreview() {
     if (uncertain || comparisonRevision) return;
     setProblem(null);
-    intent.current = null;
     try {
       const result = await prepare.mutateAsync({
         batchId: batch.id,
@@ -201,24 +215,40 @@ function Workspace({ batch }: { batch: ImportBatch }) {
       report(error);
     }
   }
-  async function commitPreview() {
-    if (!preview || !currentPreview || busy) return;
+  async function commitIntent(intent: ImportConfirmationIntent) {
+    if (busy) return;
     setProblem(null);
-    if (intent.current?.previewId !== preview.id)
-      intent.current = { previewId: preview.id, key: crypto.randomUUID() };
+    writeImportConfirmation(storageKey, intent);
     try {
       const result = await commit.mutateAsync({
         batchId: batch.id,
-        idempotencyKey: intent.current.key,
-        data: { preview_id: preview.id, request_hash: preview.request_hash },
+        idempotencyKey: intent.key,
+        data: {
+          preview_id: intent.previewId,
+          request_hash: intent.requestHash,
+        },
       });
+      if (!isProcessingActorCurrent({ ownerId, generation })) return;
+      writeImportConfirmation(storageKey, null);
+      setPending(null);
       setReceipt(result);
-      setUncertain(false);
     } catch (error) {
+      if (!isProcessingActorCurrent({ ownerId, generation })) return;
       const status = (error as AxiosError).response?.status;
-      setUncertain(!status || status >= 500 || status === 408);
+      const unresolved = !status || status >= 500 || status === 408;
+      if (!unresolved) writeImportConfirmation(storageKey, null);
+      setPending(unresolved ? intent : null);
       report(error);
     }
+  }
+
+  async function commitPreview() {
+    if (!preview || !currentPreview || uncertain) return;
+    await commitIntent({
+      previewId: preview.id,
+      requestHash: preview.request_hash,
+      key: crypto.randomUUID(),
+    });
   }
   return (
     <div className="space-y-5">
@@ -227,17 +257,13 @@ function Workspace({ batch }: { batch: ImportBatch }) {
           Źródła: {batch.sources.length} · Otwarte wiersze:{" "}
           {batch.unresolved_count} · Wersja decyzji: {batch.version}
         </p>
-        <Link className="underline" to="/finances/imports">
-          Wszystkie importy
-        </Link>
       </div>
       {receipt ? <ImportReceipt receipt={receipt} /> : null}
       {uncertain ? (
         <section className="card space-y-3">
           <p role="status" className="card">
-            Nie potwierdzono jeszcze wyniku zapisu. Nie twórz nowej decyzji.
-            Ponów zatwierdzenie poniżej — użyjemy tego samego klucza i
-            sprawdzimy trwały wynik.
+            Wynik zapisu jest nieznany. Sprawdź potwierdzenie lub ponów tę samą
+            decyzję.
           </p>
           <button
             type="button"
@@ -246,6 +272,14 @@ function Workspace({ batch }: { batch: ImportBatch }) {
             onClick={() => recovered.refetch()}
           >
             Sprawdź zapisany wynik
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={busy}
+            onClick={() => void commitIntent(pending)}
+          >
+            Ponów tę samą decyzję
           </button>
           {recovered.isError ? (
             <p className="text-sm">
@@ -400,7 +434,6 @@ function Workspace({ batch }: { batch: ImportBatch }) {
                         : groupIds.filter((id) => id !== group.id),
                     });
                     setPreview(null);
-                    intent.current = null;
                   }}
                 />
                 {group.state === "committed"
@@ -460,7 +493,7 @@ function Workspace({ batch }: { batch: ImportBatch }) {
             <ImportPreview
               key={preview.id}
               preview={preview}
-              current={currentPreview}
+              current={currentPreview && !uncertain}
               pending={commit.isPending}
               onCommit={commitPreview}
             />
@@ -475,6 +508,14 @@ export function FinanceImportReview() {
   const { batchId } = useParams();
   const actor = useImportActor();
   const batch = useImport(batchId ?? null);
+  const [params] = useSearchParams();
+  const historySearch = new URLSearchParams();
+  if (
+    batch.data?.kind === "loan_schedule" ||
+    params.get("kind") === "loan_schedule"
+  )
+    historySearch.set("kind", "loan_schedule");
+  setListPage(historySearch, "page", listPage(params.get("page")));
   return (
     <div className="max-w-6xl">
       <header className="finance-page-heading">
@@ -491,6 +532,12 @@ export function FinanceImportReview() {
         </div>
       </header>
       <FinanceTabs />
+      <Link
+        className="mb-4 inline-block underline"
+        to={{ pathname: "/finances/imports", search: historySearch.toString() }}
+      >
+        Wszystkie importy
+      </Link>
       {batch.isLoading ? (
         <p role="status">Ładowanie importu…</p>
       ) : batch.isError || !batch.data ? (

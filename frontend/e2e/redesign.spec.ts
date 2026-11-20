@@ -67,7 +67,7 @@ test("approved finance surfaces remain responsive and real configuration stays i
       path,
     ).toBe(true);
     if (path === "/finances") {
-      await expect(page.getByLabel("Łączne saldo kont")).toContainText(
+      await expect(page.getByLabel("Saldo aktywnych kont")).toContainText(
         "543,21",
       );
       await expect(page.getByText("123,45 EUR", { exact: true })).toBeVisible();

@@ -197,7 +197,7 @@ test("mobile finance navigation works with the keyboard and keeps long balances 
     }),
   );
   await page.goto("/finances?month=9&year=2026");
-  const balance = page.getByLabel("Łączne saldo kont");
+  const balance = page.getByLabel("Saldo aktywnych kont");
   await expect(balance).toBeVisible();
   expect(
     await balance.evaluate(

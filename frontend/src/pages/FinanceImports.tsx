@@ -1,14 +1,25 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { useImportActor, useImports } from "../api/bankImports";
+import { useImportActor, useImportHistory } from "../api/bankImports";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
+import { listPage, setListPage } from "../lib/listPage";
 import { ImportUpload } from "../components/finance/imports/ImportUpload";
 
 export function FinanceImports() {
   const actor = useImportActor();
-  const imports = useImports();
   const [params, setParams] = useSearchParams();
   const kind =
     params.get("kind") === "loan_schedule" ? "loan_schedule" : "statement";
+  const page = listPage(params.get("page"));
+  const offset = (page - 1) * 25;
+  const imports = useImportHistory(kind, offset);
+  const batches = imports.data?.items ?? [];
+  function changePage(page: number) {
+    setParams((current) => {
+      const next = new URLSearchParams(current);
+      setListPage(next, "page", page);
+      return next;
+    });
+  }
   return (
     <div className="max-w-6xl">
       <header className="finance-page-heading">
@@ -30,6 +41,7 @@ export function FinanceImports() {
           onChange={(e) => {
             const next = new URLSearchParams(params);
             next.set("kind", e.target.value);
+            next.delete("page");
             setParams(next);
           }}
         >
@@ -61,38 +73,69 @@ export function FinanceImports() {
             </button>
           </p>
         ) : (
-          <ul className="space-y-3">
-            {(imports.data ?? [])
-              .filter((batch) => batch.kind === kind)
-              .map((batch) => (
-                <li
-                  key={batch.id}
-                  className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 py-3 dark:border-gray-800"
+          <>
+            {batches.length ? (
+              <ul className="space-y-3">
+                {batches.map((batch) => {
+                  const detailSearch = new URLSearchParams();
+                  if (kind === "loan_schedule") detailSearch.set("kind", kind);
+                  setListPage(detailSearch, "page", page);
+                  return (
+                    <li
+                      key={batch.id}
+                      className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 py-3 dark:border-gray-800"
+                    >
+                      <Link
+                        className="min-w-0 break-words underline"
+                        to={{
+                          pathname: `/finances/imports/${encodeURIComponent(batch.id)}`,
+                          search: detailSearch.toString(),
+                        }}
+                      >
+                        {batch.source_names.join(", ") || "Import bez źródeł"}
+                      </Link>
+                      <span className="text-sm">
+                        {batch.archived_at
+                          ? "Archiwalny"
+                          : batch.commit_state === "committed"
+                            ? "Zatwierdzony"
+                            : `Do sprawdzenia: ${batch.unresolved_count}`}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p>
+                {offset
+                  ? "Brak importów na tej stronie."
+                  : kind === "loan_schedule"
+                    ? "Brak zapisanych importów harmonogramów."
+                    : "Brak zapisanych importów wyciągów."}
+              </p>
+            )}
+            {offset || (imports.data?.total ?? 0) > 25 ? (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={!offset}
+                  onClick={() => changePage(page - 1)}
                 >
-                  <Link
-                    className="min-w-0 break-words underline"
-                    to={`/finances/imports/${encodeURIComponent(batch.id)}`}
-                  >
-                    {batch.sources
-                      .map((source) => source.original_name)
-                      .join(", ") || "Import bez źródeł"}
-                  </Link>
-                  <span className="text-sm">
-                    {batch.archived_at
-                      ? "Archiwalny"
-                      : batch.commit_state === "committed"
-                        ? "Zatwierdzony"
-                        : `Do sprawdzenia: ${batch.unresolved_count}`}
-                  </span>
-                </li>
-              ))}
-          </ul>
+                  Poprzednia strona
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={offset + 25 >= (imports.data?.total ?? 0)}
+                  onClick={() => changePage(page + 1)}
+                >
+                  Następna strona
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
-        {!imports.isLoading && imports.data?.length === 0 ? (
-          <p>
-            Nie masz jeszcze importów. Dodaj tekstowy wyciąg lub CSV powyżej.
-          </p>
-        ) : null}
       </section>
     </div>
   );

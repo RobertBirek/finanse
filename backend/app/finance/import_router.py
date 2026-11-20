@@ -27,12 +27,13 @@ from app.finance.imports.jobs import request_prepare
 from app.finance.imports.matching import get_candidates
 from app.finance.imports.models import ImportBatch, ImportRow, ImportSource
 from app.finance.imports.preview import prepare_preview
-from app.finance.imports.queries import get_batch, list_rows
+from app.finance.imports.queries import get_batch, list_import_history, list_rows
 from app.finance.imports.schemas import (
     BatchDTO,
     CommitRequest,
     CommitResult,
     DecisionUpdate,
+    ImportHistoryPage,
     PreviewRequest,
     SourceUploadResult,
 )
@@ -137,6 +138,17 @@ async def listing(
         )
     ).all()
     return [await _batch(db, current_user.id, value) for value in ids]
+
+
+@router.get("/history", response_model=ImportHistoryPage)
+async def history(
+    current_user: Owner,
+    db: Database,
+    kind: ImportKind = "statement",
+    offset: Annotated[int, Query(ge=0, le=10_000_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+) -> ImportHistoryPage:
+    return await list_import_history(db, current_user.id, kind, offset=offset, limit=limit)
 
 
 @router.get("/{batch_id}", response_model=BatchDTO)

@@ -161,6 +161,8 @@ export async function fixtures(
       };
     else if (url.pathname === "/api/finance/categorization/proposals")
       body = { items: [], next_cursor: null, page_size: 20 };
+    else if (url.pathname === "/api/finance/imports/history")
+      body = { items: [], total: 0, offset: 0, limit: 25 };
     else if (url.pathname === "/api/finance/accounts") body = [account];
     else if (url.pathname === "/api/finance/credit-cards") body = [];
     else if (url.pathname === "/api/finance/categories") body = [];

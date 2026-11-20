@@ -296,15 +296,35 @@ export function useImportMutation<Input, Output>(
   };
 }
 
-export function useImports() {
+export interface ImportHistoryPage {
+  items: {
+    id: string;
+    created_at: string;
+    archived_at: string | null;
+    commit_state: ImportBatch["commit_state"];
+    source_names: string[];
+    unresolved_count: number;
+  }[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export function useImportHistory(kind: ImportKind, offset: number) {
   const actor = useImportActor();
   return useQuery({
-    queryKey: importQueryKey(actor, "list"),
+    queryKey: importQueryKey(actor, "history", kind, offset),
     enabled: !!actor.ownerId,
     queryFn: ({ signal }) =>
       guarded(
         actor,
-        async () => (await api.get<ImportBatch[]>(root, { signal })).data,
+        async () =>
+          (
+            await api.get<ImportHistoryPage>(`${root}/history`, {
+              params: { kind, offset, limit: 25 },
+              signal,
+            })
+          ).data,
       ),
   });
 }

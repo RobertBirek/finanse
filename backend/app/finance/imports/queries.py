@@ -1,12 +1,13 @@
 """Read only owner-scoped import state; never infer a ledger mutation."""
 
 import uuid
+from collections import defaultdict
 
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.documents.models import Document
-from app.finance.imports.contracts import ScheduleRow, StatementRow
+from app.finance.imports.contracts import ImportKind, ScheduleRow, StatementRow
 from app.finance.imports.errors import ImportError
 from app.finance.imports.models import (
     ImportBatch,
@@ -18,9 +19,98 @@ from app.finance.imports.models import (
     ImportRow,
     ImportSource,
 )
-from app.finance.imports.schemas import BatchDTO, ReviewGroupDTO, RowDTO, RowPage, SourceDTO
+from app.finance.imports.schemas import (
+    BatchDTO,
+    ImportHistoryItem,
+    ImportHistoryPage,
+    ReviewGroupDTO,
+    RowDTO,
+    RowPage,
+    SourceDTO,
+)
 from app.finance.loan_schedule_models import LoanScheduleMembership, LoanScheduleRevision
 from app.finance.loan_schedule_sources import source_activations
+
+
+def _unresolved_rows(owner: uuid.UUID) -> Select[tuple[int]]:
+    return (
+        select(func.count())
+        .select_from(ImportRow)
+        .join(ImportSource, ImportSource.current_revision_id == ImportRow.revision_id)
+        .where(
+            ImportRow.user_id == owner,
+            ~select(ImportEvidence.id).where(ImportEvidence.row_id == ImportRow.id).exists(),
+            ~select(LoanScheduleMembership.id)
+            .where(
+                LoanScheduleMembership.source_row_id == ImportRow.id,
+                LoanScheduleMembership.user_id == owner,
+            )
+            .exists(),
+            ~select(LoanScheduleRevision.id)
+            .join(ImportRevision, ImportRevision.id == LoanScheduleRevision.source_revision_id)
+            .where(
+                ImportRevision.source_id == ImportRow.source_id,
+                ImportRevision.user_id == owner,
+                LoanScheduleRevision.user_id == owner,
+            )
+            .exists(),
+        )
+    )
+
+
+async def list_import_history(
+    db: AsyncSession, owner: uuid.UUID, kind: ImportKind, *, offset: int, limit: int
+) -> ImportHistoryPage:
+    scope = (ImportBatch.user_id == owner, ImportBatch.kind == kind)
+    total = await db.scalar(select(func.count()).select_from(ImportBatch).where(*scope))
+    batches = (
+        await db.scalars(
+            select(ImportBatch)
+            .where(*scope)
+            .order_by(ImportBatch.created_at.desc(), ImportBatch.id)
+            .offset(offset)
+            .limit(limit)
+        )
+    ).all()
+    if not batches:
+        return ImportHistoryPage(items=[], total=total or 0, offset=offset, limit=limit)
+
+    batch_ids = [batch.id for batch in batches]
+    source_names: dict[uuid.UUID, list[str]] = defaultdict(list)
+    for batch_id, name in await db.execute(
+        select(ImportSource.batch_id, Document.original_name)
+        .join(Document, (Document.id == ImportSource.document_id) & (Document.user_id == owner))
+        .where(ImportSource.user_id == owner, ImportSource.batch_id.in_(batch_ids))
+        .order_by(ImportSource.created_at, ImportSource.id)
+    ):
+        source_names[batch_id].append(name)
+    unresolved = {
+        batch_id: count
+        for batch_id, count in await db.execute(
+            _unresolved_rows(owner)
+            .with_only_columns(ImportRow.batch_id, func.count())
+            .where(ImportRow.batch_id.in_(batch_ids))
+            .group_by(ImportRow.batch_id)
+        )
+    }
+    return ImportHistoryPage(
+        items=[
+            ImportHistoryItem.model_validate(
+                {
+                    "id": batch.id,
+                    "created_at": batch.created_at,
+                    "archived_at": batch.archived_at,
+                    "commit_state": batch.commit_state,
+                    "source_names": source_names[batch.id],
+                    "unresolved_count": unresolved.get(batch.id, 0),
+                }
+            )
+            for batch in batches
+        ],
+        total=total or 0,
+        offset=offset,
+        limit=limit,
+    )
 
 
 async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> BatchDTO | None:
@@ -86,30 +176,7 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
                 }
             )
         )
-    unresolved = await db.scalar(
-        select(func.count())
-        .select_from(ImportRow)
-        .join(ImportSource, ImportSource.current_revision_id == ImportRow.revision_id)
-        .where(
-            ImportRow.user_id == owner,
-            ImportRow.batch_id == batch_id,
-            ~select(ImportEvidence.id).where(ImportEvidence.row_id == ImportRow.id).exists(),
-            ~select(LoanScheduleMembership.id)
-            .where(
-                LoanScheduleMembership.source_row_id == ImportRow.id,
-                LoanScheduleMembership.user_id == owner,
-            )
-            .exists(),
-            ~select(LoanScheduleRevision.id)
-            .join(ImportRevision, ImportRevision.id == LoanScheduleRevision.source_revision_id)
-            .where(
-                ImportRevision.source_id == ImportRow.source_id,
-                ImportRevision.user_id == owner,
-                LoanScheduleRevision.user_id == owner,
-            )
-            .exists(),
-        )
-    )
+    unresolved = await db.scalar(_unresolved_rows(owner).where(ImportRow.batch_id == batch_id))
     groups = (
         await db.execute(
             select(ImportGroup, ImportDecision)

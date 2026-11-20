@@ -14,6 +14,7 @@ import { retainFinancePeriod } from "../components/finance/useFinancePeriod";
 import { PersonGiftDialog } from "../components/finance/PersonGiftDialog";
 import { TransactionDateLabel } from "../components/finance/TransactionDateLabel";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { listPage, setListPage } from "../lib/listPage";
 import { formatPLN } from "../lib/format";
 
 export function FinancePersonDetails() {
@@ -21,8 +22,19 @@ export function FinancePersonDetails() {
   return <PersonDetails key={personId} personId={personId} />;
 }
 function PersonDetails({ personId }: { personId: string }) {
-  const [search] = useSearchParams();
-  const [offset, setOffset] = useState(0);
+  const [search, setSearch] = useSearchParams();
+  const page = listPage(search.get("gift_page"));
+  const offset = (page - 1) * 50;
+  const peopleSearch = retainFinancePeriod(search);
+  if (search.get("archived") === "1") peopleSearch.set("archived", "1");
+  setListPage(peopleSearch, "page", listPage(search.get("page")));
+  function changePage(page: number) {
+    setSearch((current) => {
+      const next = new URLSearchParams(current);
+      setListPage(next, "gift_page", page);
+      return next;
+    });
+  }
   const [editing, setEditing] = useState(false);
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const person = usePerson(personId);
@@ -34,10 +46,10 @@ function PersonDetails({ personId }: { personId: string }) {
     <div className="space-y-6">
       <FinanceTabs />
       <Link
-        className="text-advisor-400 underline"
+        className="text-advisor-700 dark:text-advisor-400 underline"
         to={{
           pathname: "/finances/people",
-          search: retainFinancePeriod(search).toString(),
+          search: peopleSearch.toString(),
         }}
       >
         Wszystkie osoby
@@ -152,9 +164,12 @@ function PersonDetails({ personId }: { personId: string }) {
                         className="py-3 flex flex-wrap justify-between gap-3"
                       >
                         <div>
-                          <p className="font-medium break-words">
+                          <Link
+                            className="font-medium break-words underline"
+                            to={`/finances/transactions?detail=${encodeURIComponent(txn.id)}`}
+                          >
                             {txn.effective_description || txn.description}
-                          </p>
+                          </Link>
                           <p className="text-sm text-gray-400">
                             <TransactionDateLabel transaction={txn} /> ·{" "}
                             {accounts.data?.find(
@@ -173,8 +188,14 @@ function PersonDetails({ personId }: { personId: string }) {
                               ? `${formatPLN(leg.base_amount_pln)} PLN`
                               : "Kwota niedostępna"}
                           </p>
+                          {leg && leg.source_currency !== "PLN" ? (
+                            <p className="text-sm tabular-nums text-gray-400">
+                              {formatPLN(leg.source_amount)}{" "}
+                              {leg.source_currency}
+                            </p>
+                          ) : null}
                           <button
-                            className="text-advisor-400 underline text-sm"
+                            className="text-advisor-700 dark:text-advisor-400 underline text-sm"
                             onClick={() => setTransactionId(txn.id)}
                           >
                             Darczyńca i powiązanie
@@ -188,14 +209,14 @@ function PersonDetails({ personId }: { personId: string }) {
                   <button
                     className="btn-secondary"
                     disabled={!offset}
-                    onClick={() => setOffset((v) => Math.max(0, v - 50))}
+                    onClick={() => changePage(page - 1)}
                   >
                     Poprzednia strona
                   </button>
                   <button
                     className="btn-secondary"
                     disabled={!gifts.data || offset + 50 >= gifts.data.total}
-                    onClick={() => setOffset((v) => v + 50)}
+                    onClick={() => changePage(page + 1)}
                   >
                     Następna strona
                   </button>

@@ -274,13 +274,15 @@ export function useBill(billId: string | null, enabled = true) {
   });
 }
 
-export function useBills(filters: BillFilters = {}) {
+export function useBills(filters: BillFilters = {}, enabled = true) {
   const ownerId = useAuthStore((state) => state.user?.id);
   const sessionVersion = useAuthStore((state) => state.sessionVersion);
   return useQuery({
     queryKey: ["finance", "bills", filters, ownerId, sessionVersion],
-    queryFn: async () =>
-      (await api.get<BillPage>("/finance/bills", { params: filters })).data,
+    enabled,
+    queryFn: async ({ signal }) =>
+      (await api.get<BillPage>("/finance/bills", { params: filters, signal }))
+        .data,
   });
 }
 export function useBillCandidates(

@@ -10,11 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.finance.budgets import get_budget_status
+from app.finance.categorization_context import digest
 from app.finance.dates import _add_month, _local_today, _payday_bounds
 from app.finance.models import (
     Account,
     Category,
     DocumentPaymentAllocation,
+    FinanceCommandReceipt,
     FinanceSettings,
     FinancialTransaction,
     Posting,
@@ -29,11 +31,22 @@ from app.finance.schemas import (
     CashflowSuggestion,
     FinanceSettingsUpdate,
     PostingCreate,
+    ScheduledFinanceConfirmationRequest,
     ScheduledFinanceItemCreate,
     ScheduledFinanceItemUpdate,
     TransactionCreate,
 )
 from app.finance.transactions import create_transaction
+
+SCHEDULE_CONFIRM_ACTION = "confirm_scheduled_occurrence"
+
+
+class ScheduleConfirmationConflict(ValueError):
+    pass
+
+
+def _occurrence_key(item_id: uuid.UUID, due_date: date) -> str:
+    return f"recurring:{item_id}:{due_date.isoformat()}"
 
 
 async def get_or_create_finance_settings(db: AsyncSession, user_id: uuid.UUID) -> FinanceSettings:
@@ -232,6 +245,10 @@ def _actuals_query(
             tuple_(*key_fields).in_(keys),
             account_posting.category_id.is_(None),
             category_posting.account_id.is_(None),
+            category_posting.direction
+            == case((FinancialTransaction.type == "expense", "credit"), else_="debit"),
+            account_posting.direction
+            == case((FinancialTransaction.type == "expense", "debit"), else_="credit"),
             ~allocated,
         )
     )
@@ -282,6 +299,7 @@ async def _forecast_actuals(
     today: date,
     horizon_end: date,
     grace: timedelta,
+    earliest_due: date,
 ) -> tuple[dict[ActualKey, list[tuple[FinancialTransaction, int]]], dict[ActualKey, int]]:
     recent: dict[ActualKey, list[tuple[FinancialTransaction, int]]] = defaultdict(list)
     if items:
@@ -289,7 +307,7 @@ async def _forecast_actuals(
             _actuals_query(
                 user_id,
                 {_actual_key(item) for item in items},
-                start=today.replace(day=1) - grace,
+                start=earliest_due - grace,
                 end=horizon_end + grace,
             )
         )
@@ -378,88 +396,129 @@ async def get_cashflow_forecast(
     bill_projection = await project_bill_cashflows(
         db, user_id, today=today, horizon_end=horizon_end
     )
+    current_month = today.replace(day=1)
+    grace_start = today - grace
+    month = grace_start.replace(day=1)
+    occurrences: list[tuple[ScheduledFinanceItem, date]] = []
+    while month <= horizon_end:
+        for item in items:
+            due_date = month.replace(day=item.due_day)
+            if due_date <= horizon_end and (month >= current_month or due_date >= grace_start):
+                occurrences.append((item, due_date))
+        month = _add_month(month)
+
+    confirmed: dict[str, uuid.UUID] = {}
+    if occurrences:
+        confirmed = {
+            key: transaction_id
+            for key, transaction_id in await db.execute(
+                select(FinanceCommandReceipt.key, FinancialTransaction.id)
+                .join(
+                    FinancialTransaction, FinancialTransaction.id == FinanceCommandReceipt.entity_id
+                )
+                .where(
+                    FinanceCommandReceipt.user_id == user_id,
+                    FinanceCommandReceipt.action == SCHEDULE_CONFIRM_ACTION,
+                    FinancialTransaction.user_id == user_id,
+                    FinanceCommandReceipt.key.in_(
+                        [_occurrence_key(item.id, due) for item, due in occurrences]
+                    ),
+                )
+            )
+        }
     actuals, estimates = await _forecast_actuals(
-        db, user_id, items, today=today, horizon_end=horizon_end, grace=grace
+        db,
+        user_id,
+        items,
+        today=today,
+        horizon_end=horizon_end,
+        grace=grace,
+        earliest_due=min((due for _, due in occurrences), default=current_month),
     )
     day_changes = {
         today + timedelta(days=offset): 0 for offset in range(settings.forecast_horizon_days)
     }
     suggestions: list[CashflowSuggestion] = []
+    consumed_actuals = set(confirmed.values())
+    candidates: dict[str, set[uuid.UUID]] = {}
+    candidate_counts: dict[uuid.UUID, int] = defaultdict(int)
+    for item, due_date in occurrences:
+        occurrence_key = _occurrence_key(item.id, due_date)
+        lookup_key = _actual_key(item)
+        if (
+            occurrence_key in confirmed
+            or (item.id, due_date) in bill_projection.covered_occurrences
+        ):
+            continue
+        amount = (
+            item.fixed_amount_pln if item.amount_method == "fixed" else estimates.get(lookup_key)
+        )
+        matching = {
+            txn.id
+            for txn, actual_amount in actuals.get(lookup_key, ())
+            if txn.id not in consumed_actuals
+            and actual_amount == amount
+            and due_date - grace <= txn.date <= due_date + grace
+        }
+        candidates[occurrence_key] = matching
+        for transaction_id in matching:
+            candidate_counts[transaction_id] += 1
 
-    month = date(today.year, today.month, 1)
-    while month <= horizon_end:
-        for item in items:
-            due_date = date(month.year, month.month, item.due_day)
-            if due_date > horizon_end:
-                continue
-            key = _actual_key(item)
-            amount = item.fixed_amount_pln if item.amount_method == "fixed" else estimates.get(key)
-            if (item.id, due_date) in bill_projection.covered_occurrences:
-                suggestions.append(
-                    CashflowSuggestion(
-                        source="recurring",
-                        source_key=f"recurring:{item.id}:{due_date.isoformat()}",
-                        scheduled_item_id=item.id,
-                        name=item.name,
-                        type=cast(Literal["income", "expense"], item.type),
-                        due_date=due_date,
-                        amount_minor=amount,
-                        currency=item.currency,
-                        amount_pln=amount,
-                        status="matched_actual",
-                        included_in_forecast=False,
-                        exclusion_reasons=["covered_by_financial_document"],
-                    )
-                )
-                continue
-            actual_id = next(
-                (
-                    txn.id
-                    for txn, actual_amount in actuals.get(key, ())
-                    if actual_amount == amount and due_date - grace <= txn.date <= due_date + grace
-                ),
-                None,
+    for item, due_date in occurrences:
+        occurrence_key = _occurrence_key(item.id, due_date)
+        key = _actual_key(item)
+        amount = item.fixed_amount_pln if item.amount_method == "fixed" else estimates.get(key)
+        actual_id = confirmed.get(occurrence_key)
+        matching = candidates.get(occurrence_key, set())
+        exclusion_reasons: list[str] = []
+        included = False
+        status: Literal[
+            "due",
+            "overdue",
+            "overdue_uncertain",
+            "matched_actual",
+            "amount_unknown",
+            "match_uncertain",
+        ]
+        if actual_id is not None:
+            status = "matched_actual"
+        elif (item.id, due_date) in bill_projection.covered_occurrences:
+            status = "matched_actual"
+            exclusion_reasons = ["covered_by_financial_document"]
+        elif len(matching) == 1 and candidate_counts[next(iter(matching))] == 1:
+            status = "matched_actual"
+            actual_id = next(iter(matching))
+        elif matching:
+            status = "match_uncertain"
+            exclusion_reasons = ["recurring_match_uncertain"]
+        elif due_date < grace_start:
+            status = "overdue_uncertain"
+            exclusion_reasons = ["recurring_overdue_uncertain"]
+        elif amount is None:
+            status = "amount_unknown"
+            exclusion_reasons = ["recurring_amount_unknown"]
+        else:
+            status = "due" if due_date >= today else "overdue"
+            included = True
+            direction = 1 if item.type == "income" else -1
+            day_changes[max(today, due_date)] += direction * amount
+        suggestions.append(
+            CashflowSuggestion(
+                source="recurring",
+                source_key=occurrence_key,
+                scheduled_item_id=item.id,
+                name=item.name,
+                type=cast(Literal["income", "expense"], item.type),
+                due_date=due_date,
+                amount_minor=amount,
+                currency=item.currency,
+                amount_pln=amount,
+                status=status,
+                included_in_forecast=included,
+                actual_transaction_id=actual_id,
+                exclusion_reasons=exclusion_reasons,
             )
-            exclusion_reasons = []
-            status: Literal[
-                "due", "overdue", "overdue_uncertain", "matched_actual", "amount_unknown"
-            ]
-            if actual_id is not None:
-                status = "matched_actual"
-                included = False
-            elif due_date < today - grace:
-                status = "overdue_uncertain"
-                included = False
-                exclusion_reasons = ["recurring_overdue_uncertain"]
-            elif amount is None:
-                status = "amount_unknown"
-                included = False
-                exclusion_reasons = ["recurring_amount_unknown"]
-            else:
-                status = "due" if due_date >= today else "overdue"
-                included = True
-                effective_date = max(today, due_date)
-                if effective_date <= horizon_end:
-                    direction = 1 if item.type == "income" else -1
-                    day_changes[effective_date] += direction * amount
-            suggestions.append(
-                CashflowSuggestion(
-                    source="recurring",
-                    source_key=f"recurring:{item.id}:{due_date.isoformat()}",
-                    scheduled_item_id=item.id,
-                    name=item.name,
-                    type=cast(Literal["income", "expense"], item.type),
-                    due_date=due_date,
-                    amount_minor=amount,
-                    currency=item.currency,
-                    amount_pln=amount,
-                    status=status,
-                    included_in_forecast=included,
-                    actual_transaction_id=actual_id,
-                    exclusion_reasons=exclusion_reasons,
-                )
-            )
-        month = _add_month(month)
+        )
 
     for projected_day, change in bill_projection.day_changes_pln.items():
         if projected_day in day_changes:
@@ -529,6 +588,7 @@ async def confirm_scheduled_item(
     user_id: uuid.UUID,
     item_id: uuid.UUID,
     *,
+    expected: ScheduledFinanceConfirmationRequest | None = None,
     today: date | None = None,
 ) -> FinancialTransaction | None:
     from app.finance.document_guards import lock_document_mutations
@@ -585,9 +645,18 @@ async def confirm_scheduled_item(
             if candidate.scheduled_item_id == item.id
             and candidate.due_date is not None
             and candidate.due_date <= effective_today
+            and (expected is None or candidate.due_date == expected.due_date)
         ),
         None,
     )
+    if expected is not None and (
+        suggestion is None
+        or suggestion.status not in {"due", "overdue"}
+        or suggestion.amount_pln != expected.expected_amount_pln
+    ):
+        raise ScheduleConfirmationConflict(
+            "Pozycja się zmieniła. Odśwież prognozę i sprawdź termin oraz kwotę."
+        )
     if suggestion is None:
         raise ValueError("Scheduled item has no confirmable occurrence")
     if suggestion.status not in {"due", "overdue"} or suggestion.amount_pln is None:
@@ -609,7 +678,7 @@ async def confirm_scheduled_item(
     amount = suggestion.amount_pln
     account_direction = "credit" if item.type == "income" else "debit"
     category_direction = "debit" if item.type == "income" else "credit"
-    return await create_transaction(
+    transaction = await create_transaction(
         db,
         user_id,
         TransactionCreate(
@@ -639,3 +708,23 @@ async def confirm_scheduled_item(
             ],
         ),
     )
+    key = _occurrence_key(item.id, suggestion.due_date)
+    receipt = await db.scalar(
+        select(FinanceCommandReceipt).where(
+            FinanceCommandReceipt.user_id == user_id,
+            FinanceCommandReceipt.action == SCHEDULE_CONFIRM_ACTION,
+            FinanceCommandReceipt.key == key,
+        )
+    )
+    confirmation = {
+        "due_date": suggestion.due_date.isoformat(),
+        "expected_amount_pln": amount,
+    }
+    if receipt is None:
+        receipt = FinanceCommandReceipt(user_id=user_id, action=SCHEDULE_CONFIRM_ACTION, key=key)
+        db.add(receipt)
+    receipt.request_hash = digest(confirmation)
+    receipt.response_json = confirmation
+    receipt.entity_id = transaction.id
+    await db.flush()
+    return transaction

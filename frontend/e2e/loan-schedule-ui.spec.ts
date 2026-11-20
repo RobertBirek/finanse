@@ -111,6 +111,10 @@ for (const theme of ["light", "dark"]) {
               offset: 0,
             },
           });
+        if (path.endsWith("/imports/history"))
+          return route.fulfill({
+            json: { items: [], total: 0, offset: 0, limit: 25 },
+          });
         if (path.endsWith("/imports"))
           return route.fulfill({ json: [scheduleBatch()] });
         if (path.endsWith("/batch-a"))

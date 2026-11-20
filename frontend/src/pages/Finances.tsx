@@ -16,7 +16,10 @@ import {
 import { formatPLN, formatPostingAmount } from "../lib/format";
 import { categoryColorMap, colorInk, entityColor } from "../lib/financeColors";
 import { formatCalendarDate } from "../lib/date";
-import { hasPaydayExclusions } from "../lib/cashflowForecast";
+import {
+  forecastExclusionLabel,
+  hasPaydayExclusions,
+} from "../lib/cashflowForecast";
 import { TRANSACTION_TYPES } from "../lib/transactionSearch";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { MonthPicker } from "../components/finance/MonthPicker";
@@ -52,7 +55,7 @@ export function Finances() {
       ? summary.data?.balance_all_pln
       : summary.data?.balance_budget_pln;
   const balanceLabel =
-    scope === "all" ? "Łączne saldo kont" : "Saldo kont budżetowych";
+    scope === "all" ? "Saldo aktywnych kont" : "Saldo kont budżetowych";
   const budgetPreview = (budgets.data?.items ?? [])
     .slice()
     .sort(compareBudgetPriority)
@@ -474,7 +477,16 @@ function ForecastPreview({
               : `${formatPLN(forecast.safe_daily_limit_pln)} PLN`}
           </strong>
           {omissions ? (
-            <small>Prognoza nie obejmuje wszystkich zobowiązań.</small>
+            <>
+              <small>Prognoza nie obejmuje wszystkich zobowiązań.</small>
+              {forecast.excluded_obligation_reasons?.length ? (
+                <small>
+                  {forecast.excluded_obligation_reasons
+                    .map(forecastExclusionLabel)
+                    .join(", ")}
+                </small>
+              ) : null}
+            </>
           ) : null}
         </div>
         <Link to={`/finances/cashflow${periodSearch}`}>

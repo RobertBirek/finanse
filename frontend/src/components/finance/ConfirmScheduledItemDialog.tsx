@@ -30,6 +30,7 @@ export function ConfirmScheduledItemDialog({
   onClose,
 }: ConfirmScheduledItemDialogProps) {
   const confirmMutation = useConfirmScheduledFinanceItem();
+  const { due_date, amount_pln } = suggestion;
   const canConfirm = canConfirmSuggestion(suggestion, localTodayIso());
   const errorMessage = apiErrorDetail(confirmMutation.error);
 
@@ -91,9 +92,13 @@ export function ConfirmScheduledItemDialog({
             type="button"
             className="btn-primary"
             disabled={confirmMutation.isPending}
-            onClick={() =>
-              confirmMutation.mutate(item.id, { onSuccess: onClose })
-            }
+            onClick={() => {
+              if (due_date === null || amount_pln === null) return;
+              confirmMutation.mutate(
+                { id: item.id, due_date, expected_amount_pln: amount_pln },
+                { onSuccess: onClose },
+              );
+            }}
           >
             Potwierdź i zapisz transakcję
           </button>

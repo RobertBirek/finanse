@@ -194,7 +194,16 @@ export function FinanceAccounts({
             {accountsQuery.isLoading ? (
               <LoadingSpinner />
             ) : accountsQuery.isError ? (
-              <p className="text-sm text-red-400">Nie udało się pobrać kont.</p>
+              <p role="alert" className="text-sm text-red-400">
+                Nie udało się pobrać kont.{" "}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => void accountsQuery.refetch()}
+                >
+                  Spróbuj ponownie
+                </button>
+              </p>
             ) : accounts.length === 0 ? (
               <p className="py-4 text-sm text-gray-500">Brak kont.</p>
             ) : (
@@ -217,13 +226,15 @@ export function FinanceAccounts({
                       }}
                       onCancelEdit={cancelEdit}
                     />
-                    <Link
-                      className="inline-block px-3 pb-2 text-sm underline"
-                      aria-label={`Importuj wyciąg: ${account.name}`}
-                      to={`/finances/imports?account=${encodeURIComponent(account.id)}`}
-                    >
-                      Importuj wyciąg
-                    </Link>
+                    {account.is_active ? (
+                      <Link
+                        className="inline-block px-3 pb-2 text-sm underline"
+                        aria-label={`Importuj wyciąg: ${account.name}`}
+                        to={`/finances/imports?account=${encodeURIComponent(account.id)}`}
+                      >
+                        Importuj wyciąg
+                      </Link>
+                    ) : null}
                   </div>
                 ))}
               </div>

@@ -25,13 +25,20 @@ export function FinanceReports() {
       <FinanceTabs />
       <ExpenseDateBasis />
 
-      {summary.isLoading ? (
+      {summary.isLoading || summary.isPlaceholderData ? (
         <div className="flex justify-center py-8">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-advisor-500 border-t-transparent" />
         </div>
       ) : summary.isError ? (
-        <p className="card text-sm text-red-400">
-          Nie udało się pobrać podsumowania finansowego.
+        <p role="alert" className="card text-sm text-red-400">
+          Nie udało się pobrać podsumowania finansowego.{" "}
+          <button
+            type="button"
+            className="underline"
+            onClick={() => void summary.refetch()}
+          >
+            Spróbuj ponownie
+          </button>
         </p>
       ) : summary.data ? (
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -62,6 +69,7 @@ export function FinanceReports() {
         summary={categorySummary.data}
         loading={categorySummary.isLoading}
         error={categorySummary.isError}
+        onRetry={categorySummary.refetch}
         categories={categories.data}
       />
     </div>

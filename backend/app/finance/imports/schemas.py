@@ -62,6 +62,22 @@ class BatchDTO(ImportDTO):
     groups: list[ReviewGroupDTO] = Field(default_factory=list)
 
 
+class ImportHistoryItem(ImportDTO):
+    id: uuid.UUID
+    created_at: dt.datetime
+    archived_at: dt.datetime | None
+    commit_state: Literal["not_committed", "partial", "committed"]
+    source_names: list[str]
+    unresolved_count: int
+
+
+class ImportHistoryPage(ImportDTO):
+    items: list[ImportHistoryItem]
+    total: int
+    offset: int
+    limit: int
+
+
 class RowDTO(ImportDTO):
     id: uuid.UUID
     source_id: uuid.UUID

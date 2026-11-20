@@ -10,6 +10,7 @@ export function hasPaydayExclusions(forecast: CashflowForecast): boolean {
 
 export function forecastExclusionLabel(reason: string): string {
   const labels: Record<string, string> = {
+    recurring_match_uncertain: "niejednoznaczne dopasowanie płatności",
     recurring_amount_unknown: "brak kwoty płatności cyklicznej",
     recurring_overdue_uncertain: "zaległa płatność cykliczna do sprawdzenia",
     missing_due_date: "brak terminu płatności",

@@ -43,7 +43,7 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
   const [editAmount, setEditAmount] = useState("");
   const [editValidationError, setEditValidationError] = useState(false);
 
-  const budgetsQuery = useBudgets();
+  const budgetsQuery = useBudgets(configure);
   const statusQuery = useBudgetStatus(period);
   const categoriesQuery = useCategories();
   const colors = categoryColorMap(categoriesQuery.data ?? []);
@@ -127,8 +127,8 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
       <section className="card mb-4">
         <h2 className="mb-2 text-lg font-semibold text-white">Budżety</h2>
         <p className="mb-4 text-xs text-gray-500">
-          Limity podkategorii są podlimitami rodzica. W podsumowaniu całego
-          budżetu każdą gałąź liczymy tylko raz.
+          Bieżące limity porównujemy z wydatkami z wybranego miesiąca. Limity
+          podkategorii mieszczą się w limicie kategorii nadrzędnej.
         </p>
         {statusQuery.data?.total_budget_pln !== undefined &&
         statusQuery.data.total_spent_pln !== undefined &&
@@ -154,7 +154,7 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
             </p>
           </div>
         ) : null}
-        {budgetsQuery.isError ? (
+        {configure && budgetsQuery.isError ? (
           <p className="mb-4 text-sm text-red-400">
             Nie udało się pobrać budżetów — edycja i usuwanie są niedostępne.
           </p>

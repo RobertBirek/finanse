@@ -9,13 +9,16 @@ import {
 } from "../src/test/loanScheduleFixtures";
 import { rowFixture } from "../src/test/bankImportFixtures";
 
-for (const lostReply of [false, true]) {
-  test(`schedule upload remains a plan, duplicate stays in original batch, receipt survives reload${lostReply ? " after lost response" : ""}`, async ({
+for (const mode of ["direct", "lost reply", "lost reply and reload"] as const) {
+  const lostReply = mode !== "direct";
+  const reload = mode === "lost reply and reload";
+  test(`schedule upload remains a plan, duplicate stays in original batch, receipt survives reload${` (${mode})`}`, async ({
     page,
   }) => {
     const base = await fixtures(page);
     let uploaded = false;
     let committed = false;
+    let canReadReceipt = !reload;
     let sends = 0;
     const unexpected: string[] = [];
     const keys: string[] = [];
@@ -76,6 +79,22 @@ for (const lostReply of [false, true]) {
           expect(request.postDataJSON()).toEqual({ kind: "loan_schedule" });
           return route.fulfill({ status: 201, json: batch });
         }
+        if (path.endsWith("/imports/history"))
+          return route.fulfill({
+            json: {
+              items: [
+                {
+                  ...batch,
+                  source_names: batch.sources.map(
+                    (source) => source.original_name,
+                  ),
+                },
+              ],
+              total: 1,
+              offset: 0,
+              limit: 25,
+            },
+          });
         if (path.endsWith("/imports")) return route.fulfill({ json: [batch] });
         if (path.endsWith("/sources")) {
           const duplicate = uploaded;
@@ -131,7 +150,7 @@ for (const lostReply of [false, true]) {
           return route.fulfill({ json: scheduleReceipt });
         }
         if (path.includes("/commands/"))
-          return committed
+          return committed && canReadReceipt
             ? route.fulfill({ json: scheduleReceipt })
             : route.fulfill({ status: 404, json: { detail: "No result" } });
         unexpected.push(path);
@@ -172,6 +191,11 @@ for (const lostReply of [false, true]) {
     ).toBeDisabled();
     await page.getByLabel(/Potwierdzam aktualizację planu/).check();
     await page.getByRole("button", { name: "Aktywuj harmonogram" }).click();
+    if (reload) {
+      await expect(page.getByText(/Wynik zapisu jest nieznany/)).toBeVisible();
+      canReadReceipt = true;
+      await page.reload();
+    }
     await expect(
       page.getByRole("heading", { name: "Harmonogram aktywowany" }),
     ).toBeVisible();

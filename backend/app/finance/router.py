@@ -1,9 +1,11 @@
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import date
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,13 +15,16 @@ from app.database import get_db
 from app.finance.annotation_reads import attach_annotations
 from app.finance.annotation_router import router as annotation_router
 from app.finance.bills_router import router as bills_router
+from app.finance.cashflow import ScheduleConfirmationConflict
+from app.finance.categorization_context import digest
 from app.finance.categorization_router import router as categorization_router
 from app.finance.credit_card_router import router as credit_card_router
 from app.finance.credit_cards import CardConflict
+from app.finance.document_guards import lock_document_mutations
 from app.finance.import_router import router as import_router
 from app.finance.loan_router import router as loan_router
 from app.finance.manual_refunds import create_manual_expense_refund
-from app.finance.models import FinancialTransaction, Posting
+from app.finance.models import FinanceCommandReceipt, FinancialTransaction, Posting
 from app.finance.opening_balance_schemas import OpeningBalanceUpdate, OpeningBalanceView
 from app.finance.opening_balances import update_opening_balance
 from app.finance.person_router import router as person_router
@@ -46,6 +51,7 @@ from app.finance.schemas import (
     FinanceSettingsResponse,
     FinanceSettingsUpdate,
     FinancialSummary,
+    ScheduledFinanceConfirmationRequest,
     ScheduledFinanceConfirmationResponse,
     ScheduledFinanceItemCreate,
     ScheduledFinanceItemResponse,
@@ -282,6 +288,53 @@ async def delete_category_endpoint(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+ManualTransactionKey = Annotated[str | None, Header(min_length=1, max_length=255)]
+
+
+async def _post_manual_transaction(
+    db: AsyncSession,
+    owner: uuid.UUID,
+    action: str,
+    key: str | None,
+    data: BaseModel,
+    operation: Callable[[], Awaitable[FinancialTransaction]],
+) -> TransactionResponse:
+    request_hash = digest(data.model_dump(mode="json"))
+    if key is not None:
+        if not key.strip():
+            raise ValueError("Nieprawidłowy klucz zapisu transakcji.")
+        await lock_document_mutations(db, owner)
+        receipt = await db.scalar(
+            select(FinanceCommandReceipt).where(
+                FinanceCommandReceipt.user_id == owner,
+                FinanceCommandReceipt.action == action,
+                FinanceCommandReceipt.key == key,
+            )
+        )
+        if receipt is not None:
+            if receipt.request_hash != request_hash:
+                raise HTTPException(
+                    status_code=409, detail="Klucz zapisu dotyczy innej transakcji."
+                )
+            return TransactionResponse.model_validate(receipt.response_json, by_name=True)
+
+    transaction = (await attach_annotations(db, owner, [await operation()]))[0]
+    response = TransactionResponse.model_validate(transaction)
+    if key is not None:
+        db.add(
+            FinanceCommandReceipt(
+                user_id=owner,
+                action=action,
+                key=key,
+                request_hash=request_hash,
+                entity_id=response.id,
+                response_json=response.model_dump(mode="json"),
+            )
+        )
+        await db.flush()
+    return response
+
+
 @router.post(
     "/transactions", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED
 )
@@ -289,13 +342,17 @@ async def create_transaction_endpoint(
     data: TransactionCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-):
+    idempotency_key: ManualTransactionKey = None,
+) -> TransactionResponse:
     try:
-        return (
-            await attach_annotations(
-                db, current_user.id, [await create_transaction(db, current_user.id, data)]
-            )
-        )[0]
+        return await _post_manual_transaction(
+            db,
+            current_user.id,
+            "create_manual_transaction",
+            idempotency_key,
+            data,
+            lambda: create_transaction(db, current_user.id, data),
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
@@ -369,13 +426,17 @@ async def create_exchange_endpoint(
     data: ExchangeCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-):
+    idempotency_key: ManualTransactionKey = None,
+) -> TransactionResponse:
     try:
-        return (
-            await attach_annotations(
-                db, current_user.id, [await create_exchange_transaction(db, current_user.id, data)]
-            )
-        )[0]
+        return await _post_manual_transaction(
+            db,
+            current_user.id,
+            "create_manual_exchange",
+            idempotency_key,
+            data,
+            lambda: create_exchange_transaction(db, current_user.id, data),
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
@@ -389,13 +450,17 @@ async def create_expense_refund_endpoint(
     data: ExpenseRefundCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> FinancialTransaction:
+    idempotency_key: ManualTransactionKey = None,
+) -> TransactionResponse:
     try:
-        return (
-            await attach_annotations(
-                db, current_user.id, [await create_manual_expense_refund(db, current_user.id, data)]
-            )
-        )[0]
+        return await _post_manual_transaction(
+            db,
+            current_user.id,
+            "create_manual_refund",
+            idempotency_key,
+            data,
+            lambda: create_manual_expense_refund(db, current_user.id, data),
+        )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
@@ -568,9 +633,12 @@ async def confirm_scheduled_finance_item(
     item_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-):
+    data: ScheduledFinanceConfirmationRequest | None = None,
+) -> ScheduledFinanceConfirmationResponse:
     try:
-        transaction = await confirm_scheduled_item(db, current_user.id, item_id)
+        transaction = await confirm_scheduled_item(db, current_user.id, item_id, expected=data)
+    except ScheduleConfirmationConflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     if transaction is None:

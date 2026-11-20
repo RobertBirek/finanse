@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AxiosError } from "axios";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -16,17 +16,84 @@ import { BillPaymentDialog } from "../components/finance/bills/BillPaymentDialog
 import { BillCoverageDialog } from "../components/finance/bills/BillCoverageDialog";
 import { BillDeclarationDialog } from "../components/finance/bills/BillDeclarationDialog";
 import { ReceiptItemsPanel } from "../components/finance/receipts/ReceiptItemsPanel";
+import { listPage, setListPage } from "../lib/listPage";
 import { useAuthStore } from "../stores/authStore";
+
+function calendarFilter(value: string | null): string | undefined {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+  const date = new Date(value + "T00:00:00Z");
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString().slice(0, 10) === value ? value : undefined;
+}
 
 export function FinanceDocuments() {
   const [params, setParams] = useSearchParams();
-  const [filters, setFilters] = useState<BillFilters>({ limit: 25, offset: 0 });
+  const page = listPage(params.get("page"));
+  const query = params.get("query")?.slice(0, 200) ?? "";
+  const [draft, setDraft] = useState<{ base: string; text: string } | null>(
+    null,
+  );
+  const searchText = draft?.base === query ? draft.text : query;
+  useEffect(() => {
+    if (!draft || draft.base !== query || draft.text === query) return;
+    const timer = window.setTimeout(() => {
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (draft.text.trim()) next.set("query", draft.text.trim());
+          else next.delete("query");
+          next.delete("page");
+          return next;
+        },
+        { replace: true },
+      );
+      setDraft(null);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [draft, query, setParams]);
+
+  const kind = params.get("kind");
+  const review = params.get("review");
+  const declaration = params.get("declaration");
+  const lifecycleParam = params.get("lifecycle");
+  const dueFrom = calendarFilter(params.get("due_from"));
+  const dueTo = calendarFilter(params.get("due_to"));
+  const filters: BillFilters = {
+    limit: 25,
+    offset: (page - 1) * 25,
+    kind: kind === "invoice" || kind === "receipt" ? kind : undefined,
+    review:
+      review === "draft" || review === "approved" || review === "rejected"
+        ? review
+        : undefined,
+    declaration:
+      declaration === "unknown" ||
+      declaration === "payable" ||
+      declaration === "declared_paid"
+        ? declaration
+        : undefined,
+    lifecycle:
+      lifecycleParam === "archived" || lifecycleParam === "cancelled"
+        ? lifecycleParam
+        : "active",
+    due_from: dueFrom,
+    due_to: dueTo,
+    query: query || undefined,
+  };
+  const validRange = !dueFrom || !dueTo || dueFrom <= dueTo;
+  function changePage(page: number) {
+    setParams((current) => {
+      const next = new URLSearchParams(current);
+      setListPage(next, "page", page);
+      return next;
+    });
+  }
   const [dialog, setDialog] = useState<
     "payment" | "coverage" | "items" | "declared_paid" | "payable" | null
   >(null);
   const session = useAuthStore((s) => s.sessionVersion);
   const selectedId = params.get("bill");
-  const bills = useBills(filters);
+  const bills = useBills(filters, validRange);
   const selected = useBill(selectedId);
   const lifecycle = useUpdateBillLifecycle();
   const unlinkPayment = useUnlinkBillPayment();
@@ -39,17 +106,25 @@ export function FinanceDocuments() {
     if ((error as AxiosError).response?.status === 409 && selected.data)
       setStale({ before: selected.data.version });
   };
-  const updateFilter = <K extends keyof BillFilters>(
-    key: K,
-    value: BillFilters[K],
-  ) => setFilters((current) => ({ ...current, [key]: value, offset: 0 }));
-  const select = (id: string | null) =>
+  function updateFilter(key: keyof BillFilters, value: string) {
+    setParams((current) => {
+      const next = new URLSearchParams(current);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      next.delete("page");
+      return next;
+    });
+  }
+  function select(id: string | null) {
+    setDialog(null);
+    setStale(null);
     setParams((current) => {
       const next = new URLSearchParams(current);
       if (id) next.set("bill", id);
       else next.delete("bill");
       return next;
     });
+  }
   return (
     <div className="max-w-5xl">
       <h1 className="mb-2 text-2xl font-bold text-white">Faktury i paragony</h1>
@@ -61,13 +136,7 @@ export function FinanceDocuments() {
             aria-label="Typ dokumentu"
             className="input ml-2"
             value={filters.kind ?? ""}
-            onChange={(e) =>
-              setFilters((value) => ({
-                ...value,
-                kind: (e.target.value || undefined) as BillFilters["kind"],
-                offset: 0,
-              }))
-            }
+            onChange={(event) => updateFilter("kind", event.target.value)}
           >
             <option value="">Wszystkie</option>
             <option value="invoice">Faktury</option>
@@ -80,12 +149,7 @@ export function FinanceDocuments() {
             aria-label="Przegląd"
             className="input ml-2"
             value={filters.review ?? ""}
-            onChange={(event) =>
-              updateFilter(
-                "review",
-                (event.target.value || undefined) as BillFilters["review"],
-              )
-            }
+            onChange={(event) => updateFilter("review", event.target.value)}
           >
             <option value="">Wszystkie</option>
             <option value="draft">Szkice</option>
@@ -100,10 +164,7 @@ export function FinanceDocuments() {
             className="input ml-2"
             value={filters.declaration ?? ""}
             onChange={(event) =>
-              updateFilter(
-                "declaration",
-                (event.target.value || undefined) as BillFilters["declaration"],
-              )
+              updateFilter("declaration", event.target.value)
             }
           >
             <option value="">Wszystkie</option>
@@ -119,9 +180,7 @@ export function FinanceDocuments() {
             type="date"
             className="input ml-2"
             value={filters.due_from ?? ""}
-            onChange={(event) =>
-              updateFilter("due_from", event.target.value || undefined)
-            }
+            onChange={(event) => updateFilter("due_from", event.target.value)}
           />
         </label>
         <label className="text-sm text-gray-300">
@@ -131,18 +190,17 @@ export function FinanceDocuments() {
             type="date"
             className="input ml-2"
             value={filters.due_to ?? ""}
-            onChange={(event) =>
-              updateFilter("due_to", event.target.value || undefined)
-            }
+            onChange={(event) => updateFilter("due_to", event.target.value)}
           />
         </label>
         <input
           aria-label="Szukaj dokumentu"
           className="input"
           placeholder="Sprzedawca, numer lub opis"
-          value={filters.query ?? ""}
+          maxLength={200}
+          value={searchText}
           onChange={(event) =>
-            updateFilter("query", event.target.value || undefined)
+            setDraft({ base: query, text: event.target.value })
           }
         />
         <label className="text-sm text-gray-300">
@@ -151,14 +209,7 @@ export function FinanceDocuments() {
             aria-label="Stan dokumentu"
             className="input ml-2"
             value={filters.lifecycle ?? "active"}
-            onChange={(e) =>
-              setFilters((value) => ({
-                ...value,
-                lifecycle: (e.target.value ||
-                  undefined) as BillFilters["lifecycle"],
-                offset: 0,
-              }))
-            }
+            onChange={(event) => updateFilter("lifecycle", event.target.value)}
           >
             <option value="active">Aktywne</option>
             <option value="archived">Archiwalne</option>
@@ -166,9 +217,20 @@ export function FinanceDocuments() {
           </select>
         </label>
       </div>
-      {bills.isError ? (
+      {!validRange ? (
         <p role="alert" className="card text-sm text-red-300">
-          Nie udało się pobrać rejestru dokumentów.
+          Termin „od” musi przypadać przed terminem „do” lub tego samego dnia.
+        </p>
+      ) : bills.isError ? (
+        <p role="alert" className="card text-sm text-red-300">
+          Nie udało się pobrać rejestru dokumentów.{" "}
+          <button
+            type="button"
+            className="underline"
+            onClick={() => void bills.refetch()}
+          >
+            Spróbuj ponownie
+          </button>
         </p>
       ) : bills.isLoading ? (
         <p className="text-sm text-gray-400">Ładowanie rejestru…</p>
@@ -182,15 +244,7 @@ export function FinanceDocuments() {
                 className="btn-secondary"
                 type="button"
                 disabled={!filters.offset}
-                onClick={() =>
-                  setFilters((value) => ({
-                    ...value,
-                    offset: Math.max(
-                      0,
-                      (value.offset ?? 0) - (value.limit ?? 25),
-                    ),
-                  }))
-                }
+                onClick={() => changePage(page - 1)}
               >
                 Poprzednie
               </button>
@@ -201,12 +255,7 @@ export function FinanceDocuments() {
                   (filters.offset ?? 0) + (filters.limit ?? 25) >=
                   (bills.data?.total ?? 0)
                 }
-                onClick={() =>
-                  setFilters((value) => ({
-                    ...value,
-                    offset: (value.offset ?? 0) + (value.limit ?? 25),
-                  }))
-                }
+                onClick={() => changePage(page + 1)}
               >
                 Następne
               </button>
@@ -307,7 +356,14 @@ export function FinanceDocuments() {
         </>
       ) : selected.isError ? (
         <p role="alert" className="mt-4 text-sm text-red-300">
-          Nie udało się pobrać dokumentu. Wróć do rejestru i odśwież dane.
+          Nie udało się pobrać dokumentu.{" "}
+          <button
+            type="button"
+            className="underline"
+            onClick={() => void selected.refetch()}
+          >
+            Spróbuj ponownie
+          </button>
         </p>
       ) : null}
       {(dialog === "declared_paid" || dialog === "payable") && selected.data ? (

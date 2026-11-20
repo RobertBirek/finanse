@@ -38,19 +38,12 @@ export function ContextualSidebar({
     <aside
       className={`unified-sidebar ${showAllContexts ? "w-full min-h-0 flex-1" : "w-56 shrink-0 h-full"}`}
     >
-      <NavLink
-        to="/today"
-        className="advisor-brand"
-        onClick={onNavigate}
-        aria-label="Personal Advisor — strona główna"
-      >
+      <NavLink to="/today" className="advisor-brand" onClick={onNavigate}>
         <span className="advisor-monogram" aria-hidden="true">
           pa
         </span>
         <span>
-          Personal
-          <br />
-          <strong>Advisor</strong>
+          Personal <strong className="block">Advisor</strong>
         </span>
       </NavLink>
       <p className="sidebar-eyebrow">TWOJA PRZESTRZEŃ</p>

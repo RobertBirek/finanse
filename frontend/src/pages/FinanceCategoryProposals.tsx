@@ -42,7 +42,10 @@ function Queue() {
           </button>
         </div>
       ) : null}
-      {proposals.isSuccess && !proposals.data.items.length ? (
+      {proposals.isSuccess &&
+      !proposals.data.items.length &&
+      activity.isSuccess &&
+      !activity.data.active_jobs.length ? (
         <p className="card mb-4">Brak propozycji do przejrzenia.</p>
       ) : null}
       {activity.data?.active_jobs.length ? (

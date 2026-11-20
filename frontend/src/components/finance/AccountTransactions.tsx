@@ -433,6 +433,12 @@ export function TransactionList({
               className={`shrink-0 font-mono text-sm font-medium ${isIncome ? "text-green-400" : "text-red-400"}`}
             >
               {formattedAmount}
+              {transaction.matched_category_amount_pln != null ? (
+                <span className="block text-xs font-normal text-gray-400">
+                  W tej kategorii{" "}
+                  {formatPLN(transaction.matched_category_amount_pln)} PLN
+                </span>
+              ) : null}
               {baseAmount && (
                 <span className="block text-xs font-normal text-gray-400">
                   {baseAmount}

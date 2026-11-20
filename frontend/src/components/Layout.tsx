@@ -39,7 +39,7 @@ export function Layout() {
     <div className="app-shell h-dvh flex overflow-hidden bg-gray-950">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-gray-800 focus:p-3"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-[var(--ui-surface)] focus:p-3 focus:text-[var(--ui-ink)] focus:ring-2 focus:ring-[var(--ui-blue)]"
       >
         Przejdź do treści
       </a>

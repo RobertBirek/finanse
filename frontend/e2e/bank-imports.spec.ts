@@ -15,7 +15,11 @@ import type {
 
 async function importFixtures(
   page: Page,
-  options: { lostReply?: boolean; sourceBlocked?: boolean } = {},
+  options: {
+    lostReply?: boolean;
+    sourceBlocked?: boolean;
+    delayedReceipt?: boolean;
+  } = {},
 ) {
   const base = await fixtures(page);
   let batch: ImportBatch = batchFixture({
@@ -24,6 +28,7 @@ async function importFixtures(
     unresolved_count: 0,
   });
   let receipt: CommitResult | null = null;
+  let canReadReceipt = !options.delayedReceipt;
   const mutations: { path: string; body: unknown; key: string | undefined }[] =
     [];
   const unexpected: string[] = [];
@@ -66,6 +71,10 @@ async function importFixtures(
           key: request.headers()["idempotency-key"],
         });
       }
+      if (path.endsWith("/imports/history"))
+        return route.fulfill({
+          json: { items: [], total: 0, offset: 0, limit: 25 },
+        });
       if (path === "/api/finance/imports")
         return route.fulfill({ json: method === "GET" ? [batch] : batch });
       if (method === "GET" && path.endsWith("/batch-a"))
@@ -177,7 +186,7 @@ async function importFixtures(
         return route.fulfill({ json: receipt });
       }
       if (method === "GET" && path.includes("/commands/"))
-        return receipt
+        return receipt && canReadReceipt
           ? route.fulfill({ json: receipt })
           : route.fulfill({ status: 404, json: { code: "command_not_found" } });
       unexpected.push(method + " " + path);
@@ -189,6 +198,9 @@ async function importFixtures(
   );
   return {
     mutations,
+    releaseReceipt: () => {
+      canReadReceipt = true;
+    },
     assertClean: () => {
       base.assertClean();
       expect(unexpected).toEqual([]);
@@ -211,11 +223,16 @@ async function upload(page: Page) {
   ).toBeVisible();
 }
 
-for (const lostReply of [false, true]) {
-  test(`upload, deliberate decision, frozen confirmation and durable receipt${lostReply ? " after a lost reply" : ""}`, async ({
+for (const mode of ["direct", "lost reply", "lost reply and reload"] as const) {
+  const lostReply = mode !== "direct";
+  const reload = mode === "lost reply and reload";
+  test(`upload, deliberate decision, frozen confirmation and durable receipt${` (${mode})`}`, async ({
     page,
   }) => {
-    const observed = await importFixtures(page, { lostReply });
+    const observed = await importFixtures(page, {
+      lostReply,
+      delayedReceipt: reload,
+    });
     await page.goto("/finances/imports?account=account-pln");
     await upload(page);
     expect(
@@ -248,6 +265,11 @@ for (const lostReply of [false, true]) {
     ).toBe(false);
     await preview.getByRole("checkbox", { name: /Potwierdzam/ }).check();
     await commit.click();
+    if (reload) {
+      await expect(page.getByText(/Wynik zapisu jest nieznany/)).toBeVisible();
+      observed.releaseReceipt();
+      await page.reload();
+    }
     await expect(
       page.getByRole("heading", { name: "Zapisano wynik importu" }),
     ).toBeVisible();
