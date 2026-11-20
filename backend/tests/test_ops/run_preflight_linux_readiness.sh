@@ -32,8 +32,8 @@ from pathlib import Path
 report = Path(sys.argv[1])
 suite = ET.parse(report).getroot().find("testsuite")
 if suite is None or tuple(suite.get(k) for k in ("tests", "failures", "errors", "skipped")) != (
-    "2", "0", "0", "0"
+    "7", "0", "0", "0"
 ):
-    raise SystemExit("Both synthetic readiness checks must pass without skips")
-print(f"Synthetic qualification: 2 passed; SHA-256 {hashlib.sha256(report.read_bytes()).hexdigest()}")
+    raise SystemExit("All seven synthetic readiness tests must pass without skips")
+print(f"Synthetic qualification: 7 passed; SHA-256 {hashlib.sha256(report.read_bytes()).hexdigest()}")
 PY

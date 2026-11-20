@@ -16,6 +16,11 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 - Po przeglądzie launcher sprawdza prywatny raport gotowości względem SHA-256
   z receipt v2; brak lub zmiana raportu powoduje odmowę. Zestaw launchera:
   30 testów. Osobna komenda kwalifikacji zapisała JUnit: 2 testy, 0 pominięć.
+- Pierwsze CI PR #14 ujawniło zależność przenośnej atrapy od UID 0. Test
+  kolejności używa teraz syntetycznego snapshotu, a rzeczywiste testy
+  własności i sprzątania snapshotu są wykonywane w osobnej kwalifikacji Linux.
+  Produkcyjny warunek UID 0 pozostał bez zmian. Sprawdzono 309 testów bez
+  roota i 7 testów kwalifikacji z przypiętym Pythonem i Compose, bez pominięć.
 - Nowe wydanie wymaga własnego zakresu i inventory oraz osobnej zgody
   na odczyt i migracje; poprzedni receipt nie przechodzi na nowy pakiet.
 

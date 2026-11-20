@@ -436,7 +436,7 @@ FINANSE_TEST_PINNED_COMPOSE="$PINNED_COMPOSE" \
   bash backend/tests/test_ops/run_preflight_linux_readiness.sh
 ```
 
-Retain the generated synthetic JUnit evidence (two passing tests, no skips),
+Retain the generated synthetic JUnit evidence (seven passing tests, no skips),
 and have the readiness report bind it to the exact candidate, bundle,
 inventory, host, and Compose pin. Synthetic qualification alone does not
 authorize access to production.

@@ -6,6 +6,8 @@ import os
 import shutil
 import subprocess
 import sys
+from contextlib import nullcontext
+from dataclasses import replace
 from itertools import pairwise
 from pathlib import Path
 
@@ -13,6 +15,7 @@ import pytest
 
 from tests.test_ops.preflight_fixtures import module
 from tests.test_ops.test_release_preflight_isolation import renderer
+from tests.test_ops.test_release_preflight_snapshot import Inputs
 
 COMPOSE_SHA = "9c0f3f21b463fbdd42afed3be203c1a65f0cd440c9b59c68785f35e78d2ebf6a"
 
@@ -233,3 +236,77 @@ def test_isolated_render_matches_reference(tmp_path: Path) -> None:
         assert service["environment"] == {"VALUE": "synthetic", "PRIORITY": priority}
         assert service["build"]["context"] == str(fixture / "build")
         assert service["volumes"][0]["source"] == str(fixture / "data")
+
+
+@pytest.mark.parametrize("drift", [None, "original", "copy", "extra-dir", "unlink"])
+def test_isolated_tree_has_only_approved_files(tmp_path, monkeypatch, drift):
+    inputs = Inputs(tmp_path)
+    snapshot = module("release_preflight_snapshot")
+    trust = module("release_preflight_trust")
+    binary = inputs.root / "synthetic-compose"
+    binary.write_bytes(b"synthetic executable fixture")
+    binary.chmod(0o555)
+    inputs.inventory.update(version=2, compose_dependencies=[])
+    inputs.path.write_text(json.dumps(inputs.inventory))
+    inventory_pin = replace(
+        inputs.inventory_pin, sha256=hashlib.sha256(inputs.path.read_bytes()).hexdigest()
+    )
+    binary_pin = trust.FilePin(
+        binary, hashlib.sha256(binary.read_bytes()).hexdigest(), 0o555, os.geteuid()
+    )
+    assert hasattr(snapshot, "capture_isolated_inputs")
+    frozen = snapshot.capture_isolated_inputs(
+        inputs.inventory,
+        inventory_pin=inventory_pin,
+        active_pin=inputs.active_pin,
+        compose_pin=binary_pin,
+        scratch=inputs.scratch,
+        limits=inputs.limits,
+    )
+    copy = frozen.root / inputs.base.relative_to("/")
+    with (
+        (
+            pytest.raises(
+                snapshot.PreflightInputError, match="snapshot_.*_failed|snapshot_input_changed"
+            )
+            if drift
+            else nullcontext()
+        ),
+        frozen,
+    ):
+        assert frozen.compose_files == (inputs.base, inputs.override)
+        assert frozen.env_file == inputs.env
+        assert {
+            file.relative_to(frozen.root) for file in frozen.root.rglob("*") if file.is_file()
+        } == {
+            Path("bin/compose"),
+            *(path.relative_to("/") for path in (inputs.base, inputs.override, inputs.env)),
+        }
+        assert copy.read_bytes() == inputs.base.read_bytes()
+        assert copy.stat().st_mode & 0o777 == 0o444
+        frozen.verify_originals()
+        if drift in {"original", "copy"}:
+            path = inputs.base if drift == "original" else copy
+            replacement = path.with_suffix(".replacement")
+            replacement.write_bytes(path.read_bytes())
+            replacement.chmod(path.stat().st_mode & 0o777)
+            replacement.replace(path)
+            with pytest.raises(snapshot.PreflightInputError, match="snapshot_input_changed"):
+                frozen.verify_originals()
+        elif drift == "extra-dir":
+            (frozen.root / "unexpected").mkdir()
+        elif drift == "unlink":
+            unlink = Path.unlink
+
+            def refuse(path, *args, **kwargs):
+                if path == copy:
+                    raise PermissionError("synthetic cleanup failure")
+                return unlink(path, *args, **kwargs)
+
+            monkeypatch.setattr(Path, "unlink", refuse)
+    if drift == "extra-dir":
+        assert (frozen.root / "unexpected").is_dir()
+    elif drift in {"copy", "unlink"}:
+        assert copy.is_file()
+    else:
+        assert not list(inputs.scratch.iterdir())

@@ -4,7 +4,6 @@ import hashlib
 import json
 import os
 import sys
-from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
 
@@ -89,79 +88,6 @@ def test_pinned_graph_captures_shared_dependency_once(inputs):
     )
     assert [item.path for item, _ in captured] == [inputs.base, inputs.override, dependency]
     assert captured[-1][1] == dependency.read_bytes()
-
-
-@pytest.mark.parametrize("drift", [None, "original", "copy", "extra-dir", "unlink"])
-def test_isolated_tree_has_only_approved_files(inputs, monkeypatch, drift):
-    snapshot = module("release_preflight_snapshot")
-    trust = module("release_preflight_trust")
-    binary = inputs.root / "synthetic-compose"
-    binary.write_bytes(b"synthetic executable fixture")
-    binary.chmod(0o555)
-    inputs.inventory.update(version=2, compose_dependencies=[])
-    inputs.path.write_text(json.dumps(inputs.inventory))
-    inventory_pin = replace(
-        inputs.inventory_pin, sha256=hashlib.sha256(inputs.path.read_bytes()).hexdigest()
-    )
-    binary_pin = trust.FilePin(
-        binary, hashlib.sha256(binary.read_bytes()).hexdigest(), 0o555, os.geteuid()
-    )
-    assert hasattr(snapshot, "capture_isolated_inputs")
-    frozen = snapshot.capture_isolated_inputs(
-        inputs.inventory,
-        inventory_pin=inventory_pin,
-        active_pin=inputs.active_pin,
-        compose_pin=binary_pin,
-        scratch=inputs.scratch,
-        limits=inputs.limits,
-    )
-    copy = frozen.root / inputs.base.relative_to("/")
-    with (
-        (
-            pytest.raises(
-                snapshot.PreflightInputError, match="snapshot_.*_failed|snapshot_input_changed"
-            )
-            if drift
-            else nullcontext()
-        ),
-        frozen,
-    ):
-        assert frozen.compose_files == (inputs.base, inputs.override)
-        assert frozen.env_file == inputs.env
-        assert {
-            file.relative_to(frozen.root) for file in frozen.root.rglob("*") if file.is_file()
-        } == {
-            Path("bin/compose"),
-            *(path.relative_to("/") for path in (inputs.base, inputs.override, inputs.env)),
-        }
-        assert copy.read_bytes() == inputs.base.read_bytes()
-        assert copy.stat().st_mode & 0o777 == 0o444
-        frozen.verify_originals()
-        if drift in {"original", "copy"}:
-            path = inputs.base if drift == "original" else copy
-            replacement = path.with_suffix(".replacement")
-            replacement.write_bytes(path.read_bytes())
-            replacement.chmod(path.stat().st_mode & 0o777)
-            replacement.replace(path)
-            with pytest.raises(snapshot.PreflightInputError, match="snapshot_input_changed"):
-                frozen.verify_originals()
-        elif drift == "extra-dir":
-            (frozen.root / "unexpected").mkdir()
-        elif drift == "unlink":
-            unlink = Path.unlink
-
-            def refuse(path, *args, **kwargs):
-                if path == copy:
-                    raise PermissionError("synthetic cleanup failure")
-                return unlink(path, *args, **kwargs)
-
-            monkeypatch.setattr(Path, "unlink", refuse)
-    if drift == "extra-dir":
-        assert (frozen.root / "unexpected").is_dir()
-    elif drift in {"copy", "unlink"}:
-        assert copy.is_file()
-    else:
-        assert not list(inputs.scratch.iterdir())
 
 
 def test_pinned_graph_rejects_symlink_ancestor(inputs):
