@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Main, bez wdrożenia] — 2026-11-20 — Ustawienia OpenAI
+
+### Changed
+
+- PR #12 scalono jako `e7404e2` po CI 11/11. Produkcja pozostaje na
+  wcześniejszym wydaniu; migracje i klucz szyfrowania nie zostały zastosowane.
+
+### Fixed
+
+- Wąska poprawka preflightu dopuszcza do jawnej weryfikacji wyłącznie
+  zmianę wersji Node z PR #11 o przypiętych blobach i SHA-256.
+
 ## [Draft PR] — 2026-11-20 — Ustawienia wszystkich funkcji OpenAI
 
 ### Added

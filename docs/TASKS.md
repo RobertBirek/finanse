@@ -7,10 +7,15 @@ Backlog zadań ze statusami.
 - [x] Audyt `/advisor`, ekstrakcji tekstu, vision, pozycji paragonu i kategoryzacji.
 - [x] Pierwszy przyrost: konfiguracja Doradcy, klucz write-only, prompt, test,
   pomiary oraz poprawki czatu i egzekwowania potwierdzeń.
-- [ ] Potwierdzić migrację i regresje integracyjne z użyciem izolowanego
-  PostgreSQL przed publikacją. Bez konfiguracji i wdrożenia produkcyjnego.
+- [x] Potwierdzić migrację i regresje integracyjne na izolowanym PostgreSQL
+  w CI 44779688414 (11/11); PR #12 scalony jako `e7404e2`.
 - [x] Rozszerzyć konfigurację, instrukcje i statystyki na pozostałe wywołania
   aplikacji, zachowując reguły domen, rezerwacje i epoki zadań.
+- [x] Przygotować wąską poprawkę klasyfikatora dla przejścia Node z PR #11.
+- [ ] Zweryfikować zgodność z faktycznie użytym wariantem launchera, uzyskać
+  akceptację dokładnego pakietu, dowodu zakresu i inventory dla nowej rewizji.
+- [ ] Po akceptacji i preflight: zweryfikowany odbudowany runtime, kopia i
+  odtworzenie, akceptacja dwóch migracji, spójny rollout z rollbackiem.
 
 ## Uzgodnienie `main` i kolejny etap AI — 2026-11-20
 

@@ -309,7 +309,11 @@ diffs to obtain success. Direct `release_preflight.py` denies unbootstrapped use
   `accepted_no_open_critical_or_important`, and exact `changes`. Each change has
   `service`, `path`, `before_mode/blob`, `after_mode/blob`, `after_sha256` (individual
   fields are named `before_mode`, `before_blob`, etc.; null for missing sides).
-  Only the nine explicit checker files and `.opencode/command/deploy.md` qualify.
+   Only the nine explicit checker files, `.opencode/command/deploy.md`, and
+   the exact PR #11 transition of `.github/workflows/ci.yml` qualify.
+   The workflow witness pins the old/new Git blobs, regular file modes and the
+   SHA-256 of the new bytes. It remains blocked without the full approved proof;
+   no other workflow change is allowed by it.
   Every pair/path/mode/blob/hash must match actual Git; no glob or omitted path.
   New candidate (even docs-only), any baseline or checker change invalidates proof.
 - After actual administrator acceptance in authenticated conversation, an
