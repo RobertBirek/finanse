@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Today } from "./Today";
 import { Settings } from "./Settings";
@@ -344,9 +345,17 @@ describe("calendar and live local date", () => {
   });
 });
 
+function AdvisorTestProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
 describe("Advisor mobile and explicit actions", () => {
   it("opens a named history dialog and lets the user start a new conversation", () => {
-    render(<Advisor />);
+    render(<Advisor />, { wrapper: AdvisorTestProviders });
     fireEvent.click(screen.getByRole("button", { name: "Rozmowy" }));
     const dialog = screen.getByRole("dialog", { name: "Rozmowy Doradcy" });
     expect(dialog).toBeInTheDocument();
@@ -359,7 +368,7 @@ describe("Advisor mobile and explicit actions", () => {
   });
   it("keeps a failed message draft visible and does not resend automatically", () => {
     mocks.send.mockReturnValue({ mutate: mocks.mutate, isError: true });
-    render(<Advisor />);
+    render(<Advisor />, { wrapper: AdvisorTestProviders });
     fireEvent.change(screen.getByLabelText("Wiadomość do Doradcy"), {
       target: { value: "Moje pytanie" },
     });
@@ -389,7 +398,7 @@ describe("Advisor mobile and explicit actions", () => {
         },
       ]),
     );
-    render(<Advisor />);
+    render(<Advisor />, { wrapper: AdvisorTestProviders });
     expect(screen.getByText("Wymaga potwierdzenia")).toBeInTheDocument();
     expect(document.querySelector("details")).not.toHaveAttribute("open");
     expect(mocks.confirm).not.toHaveBeenCalled();

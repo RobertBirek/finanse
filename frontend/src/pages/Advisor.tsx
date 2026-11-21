@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Dialog } from "../components/Dialog";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { AdvisorDecisions } from "../components/advisor/AdvisorDecisions";
 import { isAxiosError } from "axios";
 import { useAISettings } from "../api/aiSettings";
 import {
@@ -253,6 +254,7 @@ export function Advisor() {
 
         {/* Messages */}
         <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
+          <AdvisorDecisions />
           <QueryFeedback
             loading={activeId !== null && messagesQuery.isLoading}
             error={messagesQuery.isError}

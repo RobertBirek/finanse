@@ -2,6 +2,25 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-21 — Priorytety, symulacje i benchmark Doradcy
+
+- Doradca czyta istniejącą prognozę, listę dokumentów do przeglądu i
+  otwarte zadania. Symulator odejmuje jeden wydatek od dziennych sald;
+  porównanie liczy wpływ podpisanych postings bez mnożenia przez liczbę
+  nóg kont budżetowych. Żadna z funkcji nie zapisuje zmian w domenach.
+- Na jawne żądanie OpenAI dostaje ograniczone fakty i aktywne instrukcje
+  Doradcy; bez nazw dokumentów i transakcji. Benchmark `advisor-v1`
+  używa maksymalnie sześciu wywołań bez ponowień; domyślny limit to dwa
+  uruchomienia na właściciela w pięć minut w produkcji.
+- Niezależny przegląd wskazał brak zapisanego promptu w objaśnieniach
+  oraz nierealistyczną próbę zwrotu; dodano regresję promptu i użyto
+  prawdziwego serwisu korekty w teście integracyjnym.
+- Zweryfikowano 83 wybrane testy pytest bez bazy, 737 testów Vitest,
+  lint, typy, build i Playwright 4/4 (desktop i mobile, atrapy API).
+  Testy PostgreSQL czekają na zatwierdzone CI; lokalne `/test` tylko
+  kolekcjonuje testy backendu. Bez rzeczywistych wywołań OpenAI, zmian
+  zależności lub wdrożenia.
+
 ## 2026-11-20 — Odzyskany launcher preflight Compose
 
 - PR #13 przeszedł 11/11 jobów po ponowieniu CI 44785183448 i został

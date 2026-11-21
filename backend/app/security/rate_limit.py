@@ -184,6 +184,18 @@ def limit_advisor(current_user_dependency: Callable[..., Any]) -> Callable[..., 
     )
 
 
+def limit_advisor_benchmark(
+    current_user_dependency: Callable[..., Any],
+) -> Callable[..., Awaitable[None]]:
+    return _authenticated_limit(
+        "advisor-benchmark",
+        lambda: settings.ADVISOR_BENCHMARK_RATE_LIMIT,
+        lambda: settings.ADVISOR_BENCHMARK_RATE_LIMIT_WINDOW_SECONDS,
+        lambda user, _request: str(user.id),
+        current_user_dependency,
+    )
+
+
 def limit_upload(current_user_dependency: Callable[..., Any]) -> Callable[..., Awaitable[None]]:
     return _authenticated_limit(
         "upload",

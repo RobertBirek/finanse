@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Nie wydano] — 2026-11-21 — Wsparcie decyzji w Doradcy
+
+### Added
+
+- Priorytety z płatności, dokumentów i zadań; symulacja jednorazowego
+  wydatku oraz porównanie wydatków netto w dwóch zamkniętych okresach.
+- Opcjonalne objaśnienia OpenAI bez blokowania wyników backendu.
+- W ustawieniach Doradcy porównanie dwóch modeli lub zestawów instrukcji
+  na trzech syntetycznych przypadkach, bez zapisu ustawień. Wynik pokazuje
+  zgodność, czas i tokeny, jeśli dostawca je zwrócił.
+
 ## [Lokalny preflight, bez wdrożenia] — 2026-11-20
 
 ### Changed

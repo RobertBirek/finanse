@@ -1,10 +1,12 @@
 """Owned monthly finance/category reports; no ledger mutations."""
 
 import uuid
+from datetime import date
 
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql import Select
 
 from app.finance.dates import _month_bounds
 from app.finance.models import (
@@ -22,6 +24,56 @@ from app.finance.schemas import (
     FinancialSummary,
 )
 from app.finance.transaction_dates import purchase_date_expression
+
+
+def spending_postings(
+    user_id: uuid.UUID, start: date, end: date
+) -> Select[tuple[uuid.UUID, date, str, uuid.UUID, str, int]]:
+    """One row per owned expense posting, even for split budget account legs."""
+    account_leg = aliased(Posting)
+    budget_leg = (
+        select(account_leg.id)
+        .join(Account, Account.id == account_leg.account_id)
+        .where(
+            account_leg.transaction_id == FinancialTransaction.id,
+            account_leg.category_id.is_(None),
+            Account.user_id == user_id,
+            Account.is_budget_account.is_(True),
+        )
+        .exists()
+    )
+    spent_on = purchase_date_expression()
+    return (
+        select(
+            FinancialTransaction.id,
+            spent_on,
+            FinancialTransaction.description,
+            Category.id,
+            Category.name,
+            case(
+                (Posting.direction == "credit", Posting.base_amount_pln),
+                else_=-Posting.base_amount_pln,
+            ),
+        )
+        .select_from(Posting)
+        .join(FinancialTransaction, FinancialTransaction.id == Posting.transaction_id)
+        .join(Category, Category.id == Posting.category_id)
+        .outerjoin(
+            TransactionDateMetadata,
+            (TransactionDateMetadata.transaction_id == FinancialTransaction.id)
+            & (TransactionDateMetadata.user_id == FinancialTransaction.user_id),
+        )
+        .where(
+            FinancialTransaction.user_id == user_id,
+            FinancialTransaction.type.in_(("income", "expense")),
+            Category.user_id == user_id,
+            Category.type == "expense",
+            Posting.account_id.is_(None),
+            spent_on >= start,
+            spent_on < end,
+            budget_leg,
+        )
+    )
 
 
 async def get_financial_summary(

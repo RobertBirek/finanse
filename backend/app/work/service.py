@@ -146,6 +146,22 @@ async def get_tasks(
     return list(result.scalars().all())
 
 
+async def get_overdue_tasks(
+    db: AsyncSession, user_id: uuid.UUID, *, before: date, limit: int
+) -> list[Task]:
+    result = await db.scalars(
+        select(Task)
+        .where(
+            Task.user_id == user_id,
+            Task.status.in_(("todo", "in_progress")),
+            Task.due_date < before,
+        )
+        .order_by(Task.due_date, Task.id)
+        .limit(limit)
+    )
+    return list(result)
+
+
 async def get_task(db: AsyncSession, user_id: uuid.UUID, task_id: uuid.UUID) -> Task | None:
     result = await db.execute(select(Task).where(Task.id == task_id, Task.user_id == user_id))
     return result.scalar_one_or_none()
