@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { PageHeader } from "../components/PageHeader";
 import {
   useCategoryProposals,
   useSuggestionActivity,
@@ -17,8 +18,8 @@ function Queue() {
   const proposals = useCategoryProposals(cursor);
   const activity = useSuggestionActivity();
   return (
-    <div className="max-w-5xl">
-      <h1 className="mb-6 text-2xl font-bold">Propozycje kategorii</h1>
+    <div className="page-workspace">
+      <PageHeader title="Propozycje kategorii" />
       <FinanceTabs />
       <p className="mb-5 text-sm text-gray-400">
         Nie filtrujemy tej kolejki według miesiąca. AI tylko proponuje — decyzja

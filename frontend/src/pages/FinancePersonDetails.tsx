@@ -14,6 +14,8 @@ import { retainFinancePeriod } from "../components/finance/useFinancePeriod";
 import { PersonGiftDialog } from "../components/finance/PersonGiftDialog";
 import { TransactionDateLabel } from "../components/finance/TransactionDateLabel";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
+import { IconButton } from "../components/IconButton";
 import { listPage, setListPage } from "../lib/listPage";
 import { formatPLN } from "../lib/format";
 
@@ -43,7 +45,7 @@ function PersonDetails({ personId }: { personId: string }) {
   const accounts = useAccounts();
   const update = useUpdatePerson();
   return (
-    <div className="space-y-6">
+    <div className="page-workspace space-y-6">
       <FinanceTabs />
       <Link
         className="text-advisor-700 dark:text-advisor-400 underline"
@@ -62,37 +64,38 @@ function PersonDetails({ personId }: { personId: string }) {
       >
         {person.data ? (
           <>
-            <header className="flex flex-wrap justify-between gap-3">
-              <div>
-                <h1 className="text-2xl font-bold">{person.data.name}</h1>
-                {!person.data.is_active ? (
-                  <p>Osoba archiwalna — historia pozostaje dostępna.</p>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className="btn-secondary"
-                  onClick={() => setEditing(true)}
-                >
-                  Edytuj osobę
-                </button>
-                <button
-                  className="btn-secondary"
-                  disabled={update.isPending}
-                  onClick={() =>
-                    update.mutate({
-                      id: personId,
-                      expected_version: person.data!.version,
-                      is_active: !person.data!.is_active,
-                    })
-                  }
-                >
-                  {person.data.is_active
-                    ? "Archiwizuj osobę"
-                    : "Przywróć osobę"}
-                </button>
-              </div>
-            </header>
+            <PageHeader
+              title={person.data.name}
+              description={
+                !person.data.is_active
+                  ? "Osoba archiwalna — historia pozostaje dostępna."
+                  : undefined
+              }
+              actions={
+                <>
+                  <IconButton
+                    icon="edit"
+                    label="Edytuj osobę"
+                    onClick={() => setEditing(true)}
+                  />
+                  <button
+                    className="btn-secondary"
+                    disabled={update.isPending}
+                    onClick={() =>
+                      update.mutate({
+                        id: personId,
+                        expected_version: person.data!.version,
+                        is_active: !person.data!.is_active,
+                      })
+                    }
+                  >
+                    {person.data.is_active
+                      ? "Archiwizuj osobę"
+                      : "Przywróć osobę"}
+                  </button>
+                </>
+              }
+            />
             {update.isError ? (
               <p role="alert" className="text-red-400">
                 {personError(update.error)}{" "}

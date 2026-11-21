@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { Category, CategoryUpdateInput } from "../../api/finance";
+import { IconButton } from "../IconButton";
 import { apiErrorDetail, isConflict } from "./accountSettings";
 import { categoryOptions } from "../../lib/categories";
 
@@ -168,15 +169,13 @@ export function CategoryRow({
             </>
           ) : (
             <>
-              <button
-                type="button"
-                aria-label={`Edytuj kategorię ${category.name}`}
-                className="btn-secondary px-3 py-1.5 text-sm"
+              <IconButton
+                icon="edit"
+                label={`Edytuj kategorię ${category.name}`}
+                tooltip="Edytuj kategorię"
                 disabled={rowPending}
                 onClick={startEdit}
-              >
-                Edytuj
-              </button>
+              />
               <button
                 type="button"
                 aria-label={`${

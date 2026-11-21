@@ -1,10 +1,11 @@
 import { DocumentUpload } from "../components/DocumentUpload";
 import { DocumentList } from "../components/DocumentList";
+import { PageHeader } from "../components/PageHeader";
 
 export function Documents() {
   return (
-    <div className="max-w-6xl mx-auto min-w-0">
-      <h1 className="text-2xl font-bold text-white mb-4">Dokumenty</h1>
+    <div className="page-workspace">
+      <PageHeader title="Dokumenty" />
       <DocumentUpload />
       <DocumentList />
     </div>

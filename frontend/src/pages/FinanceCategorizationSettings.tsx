@@ -11,6 +11,7 @@ import { CategoryPicker } from "../components/finance/CategoryPicker";
 import { RuleEditor } from "../components/finance/RuleEditor";
 import { ruleError } from "../api/ruleErrors";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
 import { useAuthStore } from "../stores/authStore";
 import api from "../lib/api";
 import { categoryPath } from "../lib/categories";
@@ -220,16 +221,11 @@ export function FinanceCategorizationSettings() {
     retired: "Wycofana",
   };
   return (
-    <div className="max-w-3xl space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold">Kategoryzacja</h1>
-        <p className="mt-2 text-sm text-gray-400">
-          Zatwierdzone reguły dla przyszłych ręcznych wydatków PLN. Importy
-          Actual, dokumenty i historia nie są automatycznie zmieniane. Reguły
-          nie wywołują AI; propozycje mają osobną zgodę i wymagają Twojego
-          przeglądu.
-        </p>
-      </header>
+    <div className="page-workspace space-y-6">
+      <PageHeader
+        title="Kategoryzacja"
+        description="Zatwierdzone reguły dla przyszłych ręcznych wydatków PLN. Importy Actual, dokumenty i historia nie są automatycznie zmieniane. Reguły nie wywołują AI; propozycje mają osobną zgodę i wymagają Twojego przeglądu."
+      />
       <QueryFeedback
         loading={settings.isLoading || categories.isLoading}
         error={settings.isError || categories.isError}

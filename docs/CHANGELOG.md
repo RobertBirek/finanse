@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Nie wydano] — 2026-11-21 — Spójny układ aplikacji
+
+### Changed
+
+- Widoki robocze wypełniają dostępną szerokość desktopu. Nagłówki mają
+  wspólny układ, a formularze, okna dialogowe i rozmowy zachowują
+  czytelną długość wiersza.
+- Wybrane akcje pomocnicze mają ikony z dostępnymi nazwami i podpowiedziami.
+  Usuwanie transakcji i archiwizacja dokumentów wymagają potwierdzenia,
+  które pokazuje postęp i ewentualny błąd. Główne akcje nadal mają etykiety.
+
+### Fixed
+
+- Nawigacja mobilna wskazuje sekcję i bieżący widok. Dokumenty są dostępne
+  w dolnym pasku, a ich statusy widać na telefonie bez podpowiedzi.
+- Poprawiono kontrast bieżącego dnia w Kalendarzu, rozróżnienie pustej
+  skrzynki i pustego filtra Inboxu oraz obsługę błędów szczegółów projektu.
+
 ## [Metadane produkcji, bez wdrożenia] — 2026-11-21
 
 ### Fixed

@@ -15,6 +15,9 @@ import { TransactionDatesDialog } from "./TransactionDatesDialog";
 import { TransactionCategorizationDialog } from "./TransactionCategorizationDialog";
 import { CardAccountSummary } from "./CardAccountSummary";
 import { AccountPersonLink } from "./AccountPersonLink";
+import { ActionDisclosure } from "../ActionDisclosure";
+import { ConfirmDialog } from "../ConfirmDialog";
+import { IconButton } from "../IconButton";
 
 function apiErrorDetail(error: unknown): string | null {
   if (!error) return null;
@@ -209,6 +212,7 @@ export function TransactionList({
   const [dateTarget, setDateTarget] = useState<Transaction | null>(null);
   const [categoryTarget, setCategoryTarget] = useState<string | null>(null);
   const [annotationTarget, setAnnotationTarget] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
 
   const updateError = apiErrorDetail(updateMutation.error);
   const deleteError = apiErrorDetail(deleteMutation.error);
@@ -240,13 +244,6 @@ export function TransactionList({
     });
   }
 
-  function removeTransaction(transaction: Transaction) {
-    if (transaction.type === "opening_balance") return;
-    if (window.confirm(`Usunąć transakcję "${transaction.description}"?`)) {
-      deleteMutation.mutate(transaction.id);
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -273,6 +270,28 @@ export function TransactionList({
 
   return (
     <div className="space-y-1">
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Usuń transakcję"
+          onCancel={() => setDeleteTarget(null)}
+          pendingMessage={
+            deleteMutation.isPending ? "Usuwanie transakcji…" : undefined
+          }
+          error={
+            deleteMutation.isError
+              ? (deleteError ?? "Nie udało się usunąć transakcji.")
+              : null
+          }
+          onConfirm={() => {
+            if (!deleteMutation.isPending)
+              deleteMutation.mutate(deleteTarget.id, {
+                onSuccess: () => setDeleteTarget(null),
+              });
+          }}
+        >
+          Czy chcesz usunąć transakcję „{deleteTarget.description}”?
+        </ConfirmDialog>
+      )}
       {annotationTarget ? (
         <TransactionAnnotationsDialog
           transactionId={annotationTarget}
@@ -316,7 +335,9 @@ export function TransactionList({
         const rowUpdateError =
           updateMutation.variables?.id === transaction.id ? updateError : null;
         const rowDeleteError =
-          deleteMutation.variables === transaction.id ? deleteError : null;
+          !deleteTarget && deleteMutation.variables === transaction.id
+            ? deleteError
+            : null;
 
         if (isEditing) {
           return (
@@ -487,35 +508,46 @@ export function TransactionList({
                 </button>
               ) : null}
               {onDetails && (
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-1.5 text-sm"
-                  aria-label={`Szczegóły: ${transaction.description}`}
+                <IconButton
+                  icon="details"
+                  label={`Szczegóły: ${transaction.description}`}
+                  tooltip="Szczegóły transakcji"
                   onClick={() => onDetails(transaction.id)}
-                >
-                  Szczegóły
-                </button>
+                />
               )}
-              {!isOpening ? (
-                <button
-                  type="button"
-                  onClick={() => startEdit(transaction)}
+              {!isOpening && (
+                <ActionDisclosure
+                  label={`Więcej: ${transaction.description}`}
                   disabled={isDeleting}
-                  className="btn-secondary px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Edytuj datę
-                </button>
-              ) : null}
-              {!isOpening ? (
-                <button
-                  type="button"
-                  onClick={() => removeTransaction(transaction)}
-                  disabled={isDeleting}
-                  className="btn-danger px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Usuń
-                </button>
-              ) : null}
+                  {(close) => (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-secondary px-3 py-1.5 text-sm"
+                        onClick={() => {
+                          close();
+                          startEdit(transaction);
+                        }}
+                      >
+                        Edytuj datę
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-danger px-3 py-1.5 text-sm"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => {
+                          close();
+                          if (deleteMutation.isError) deleteMutation.reset();
+                          setDeleteTarget(transaction);
+                        }}
+                      >
+                        Usuń transakcję
+                      </button>
+                    </>
+                  )}
+                </ActionDisclosure>
+              )}
             </div>
             {rowDeleteError ? (
               <p className="w-full text-xs text-red-400">{rowDeleteError}</p>

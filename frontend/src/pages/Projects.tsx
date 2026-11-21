@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Dialog } from "../components/Dialog";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
 import { useProjects, useCreateProject } from "../api/work";
 
 const statusLabels: Record<string, string> = {
@@ -48,13 +49,15 @@ export function Projects() {
   };
 
   return (
-    <div className="max-w-5xl">
-      <div className="flex flex-wrap gap-3 items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Projekty</h1>
-        <button onClick={() => setShowCreate(true)} className="btn-primary">
-          + Nowy projekt
-        </button>
-      </div>
+    <div className="page-workspace">
+      <PageHeader
+        title="Projekty"
+        actions={
+          <button onClick={() => setShowCreate(true)} className="btn-primary">
+            + Nowy projekt
+          </button>
+        }
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-6">
@@ -63,7 +66,7 @@ export function Projects() {
             key={s}
             aria-pressed={statusFilter === s}
             onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+            className={`min-h-11 px-3 py-1.5 text-sm rounded-lg transition-colors ${
               statusFilter === s
                 ? "bg-gray-800 text-white"
                 : "text-gray-400 hover:text-gray-200"

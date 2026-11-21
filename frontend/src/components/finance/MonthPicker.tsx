@@ -1,4 +1,5 @@
 import type { FinancialPeriod } from "../../api/finance";
+import { IconButton } from "../IconButton";
 import { MAX_FINANCIAL_YEAR, MIN_FINANCIAL_YEAR } from "./useFinancePeriod";
 
 type MonthPickerProps = {
@@ -34,28 +35,22 @@ export function MonthPicker({ period, onChange }: MonthPickerProps) {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
+    <div className="flex min-w-0 items-center gap-1.5">
+      <IconButton
+        icon="previous"
+        label="Poprzedni miesiąc"
         onClick={previousMonth}
         disabled={isAtEarliestMonth}
-        className="btn-secondary px-3"
-        aria-label="Poprzedni miesiąc"
-      >
-        &larr;
-      </button>
-      <p className="min-w-32 text-center text-sm font-medium capitalize text-gray-200">
+      />
+      <p className="min-w-0 text-center text-sm font-medium capitalize text-gray-200 sm:min-w-32">
         {label}
       </p>
-      <button
-        type="button"
+      <IconButton
+        icon="next"
+        label="Następny miesiąc"
         onClick={nextMonth}
         disabled={isAtOrAfterCurrentMonth || isAtLatestMonth}
-        className="btn-secondary px-3 disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label="Następny miesiąc"
-      >
-        &rarr;
-      </button>
+      />
     </div>
   );
 }

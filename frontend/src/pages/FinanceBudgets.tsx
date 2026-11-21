@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { AxiosError } from "axios";
+import { PageHeader } from "../components/PageHeader";
 import {
   budgetProgress,
   parsePlnToGrosze,
@@ -106,11 +107,11 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
   }
 
   return (
-    <div className="max-w-5xl">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-white">Budżet</h1>
-        <MonthPicker period={period} onChange={setPeriod} />
-      </div>
+    <div className="page-workspace">
+      <PageHeader
+        title="Budżet"
+        actions={<MonthPicker period={period} onChange={setPeriod} />}
+      />
       {!configure ? (
         <>
           <FinanceTabs />

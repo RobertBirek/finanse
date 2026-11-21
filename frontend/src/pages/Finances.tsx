@@ -24,6 +24,7 @@ import { TRANSACTION_TYPES } from "../lib/transactionSearch";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
 import {
   ExpenseDateBasis,
   TransactionDateLabel,
@@ -62,10 +63,8 @@ export function Finances() {
     .slice(0, 3);
 
   return (
-    <div className="finance-overview max-w-6xl">
-      <header className="finance-page-heading">
-        <h1>Twoje finanse</h1>
-      </header>
+    <div className="finance-overview page-workspace">
+      <PageHeader title="Twoje finanse" />
       <FinanceTabs />
       <div className="finance-primary-grid">
         <section className="card balance-surface" aria-label="Saldo bieżące">

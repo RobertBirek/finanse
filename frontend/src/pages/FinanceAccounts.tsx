@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { PageHeader } from "../components/PageHeader";
 import {
   useAccounts,
   useCategories,
@@ -178,14 +179,16 @@ export function FinanceAccounts({
   }
 
   return (
-    <div className="max-w-5xl">
-      <h1 className="mb-6 text-2xl font-bold text-white">
-        {section === "accounts"
-          ? "Konta i rachunki"
-          : section === "categories"
-            ? "Kategorie"
-            : "Konta i kategorie"}
-      </h1>
+    <div className="page-workspace">
+      <PageHeader
+        title={
+          section === "accounts"
+            ? "Konta i rachunki"
+            : section === "categories"
+              ? "Kategorie"
+              : "Konta i kategorie"
+        }
+      />
 
       {section !== "categories" ? (
         <>

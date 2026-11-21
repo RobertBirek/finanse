@@ -3,6 +3,7 @@ import { useImportActor, useImportHistory } from "../api/bankImports";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { listPage, setListPage } from "../lib/listPage";
 import { ImportUpload } from "../components/finance/imports/ImportUpload";
+import { PageHeader } from "../components/PageHeader";
 
 export function FinanceImports() {
   const actor = useImportActor();
@@ -21,17 +22,13 @@ export function FinanceImports() {
     });
   }
   return (
-    <div className="max-w-6xl">
-      <header className="finance-page-heading">
-        <div>
-          <h1>
-            {kind === "loan_schedule"
-              ? "Import harmonogramów"
-              : "Import wyciągów"}
-          </h1>
-          <p>Źródło → Decyzja → Księga. Ty wybierasz, co zostanie zapisane.</p>
-        </div>
-      </header>
+    <div className="page-workspace">
+      <PageHeader
+        title={
+          kind === "loan_schedule" ? "Import harmonogramów" : "Import wyciągów"
+        }
+        description="Źródło → Decyzja → Księga. Ty wybierasz, co zostanie zapisane."
+      />
       <FinanceTabs />
       <label className="mb-4 block">
         Rodzaj importu

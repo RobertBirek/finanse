@@ -2,6 +2,27 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-21 — Audyt i ujednolicenie UI
+
+- W Chromium przy 1920 px treść miała 1632 px do dyspozycji. Przed zmianą
+  Transakcje wykorzystywały 1152 px, a Ustawienia 672 px. Osobny worktree
+  `feat/ui-consistency` bazuje na `e8a5744`; bez zmian backendu i produkcji.
+- Wspólny nagłówek i pełna szerokość widoków; układy kolumnowe zależą od
+  szerokości obszaru roboczego. Logowanie, dialogi i treść rozmów pozostają
+  zwarte. Ustawienia finansów mają jeden `h1`.
+- Dolna nawigacja zachowuje sekcję Dzisiaj, a pasek tej sekcji pokazuje
+  bezpośrednie linki do Inboxu i Kalendarza oraz bieżącą stronę. Dokumenty
+  są w dolnej nawigacji i pokazują na dotyku status odczytu i finansów.
+- Wspólne ikony i podpowiedzi używają nazw dostępnych niezależnie od
+  podpowiedzi. Rzadkie akcje transakcji są pod „Więcej”. Potwierdzenia
+  archiwizacji i usuwania pozostają otwarte do wyniku tej samej mutacji.
+- Szkice dokumentacji restore sprzed PR #16 zachowano w osobnym stashu.
+  GitHub `main` już zawierał ich nowszą wersję; lokalny `main` uzgodniono
+  metodą fast-forward. Push nie wymagał nowego commita.
+- Odbiór: build, lint, kontrola typów, kolekcja offline backendu,
+  737 Vitest i 70 wybranych prób Playwright (8 pominięć zależnych od
+  viewportu). Nie uruchamiano testów backendu z bazą ani pełnego E2E.
+
 ## 2026-11-21 — Lokalna kontrola zgodności restore
 
 - W osobnym worktree dodano odczytowy CLI. Porównuje przypięte bajty

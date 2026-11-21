@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Spójny układ aplikacji — 2026-11-21
+
+- [x] Zmierzyć szerokości widoków na desktopie, sprawdzić nawigację mobilną,
+  obsługę podpowiedzi i kontrast Kalendarza.
+- [x] Ujednolicić obszar roboczy i nagłówki, wybrane akcje ikonowe,
+  nawigację mobilną oraz stany błędów i pustych danych w Inboxie i Projektach.
+- [x] Ujednolicić potwierdzenia usunięcia transakcji i archiwizacji dokumentu;
+  zachować pozostałe potwierdzenia i przepływy domenowe.
+- [ ] Zintegrować gałąź UI osobną decyzją. Bez migracji lub wdrożenia w tej sesji.
+
 ## Wsparcie decyzji w Doradcy — 2026-11-21
 
 - [x] Priorytety, symulator wydatku i wyjaśnienie zmian wydatków z danymi

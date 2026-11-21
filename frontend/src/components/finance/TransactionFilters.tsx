@@ -35,7 +35,7 @@ export function TransactionFilters({
       }}
     >
       <h2 className="text-lg font-semibold text-white">Znajdź transakcję</h2>
-      <label className="block text-sm text-gray-300">
+      <label className="workspace-fields block text-sm text-gray-300">
         Szukaj po opisie, koncie lub kategorii
         <input
           name="q"
@@ -50,7 +50,7 @@ export function TransactionFilters({
           Filtry szczegółowe
           {activeFilters ? ` (aktywne: ${activeFilters})` : ""}
         </summary>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-4">
+        <div className="mt-4 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="text-sm text-gray-300">
             Konto
             <SearchSelect
@@ -209,7 +209,10 @@ export function TransactionFilters({
             </SearchSelect>
           </label>
         </div>
-        <p id="amount-filter-help" className="text-xs text-gray-400">
+        <p
+          id="amount-filter-help"
+          className="mt-3 max-w-[65ch] text-xs text-gray-400"
+        >
           Kwoty to równowartości PLN bez znaku, dla pojedynczego zapisu na
           koncie — nie suma obu stron księgi. Daty obejmują oba wskazane dni.
           Wyszukiwanie obejmuje całą historię, także konta archiwalne.

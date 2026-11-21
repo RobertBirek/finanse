@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+export { Tooltip as DocumentTooltip } from "../Tooltip";
 
 const iconPaths = {
   upload: "M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5",
@@ -34,31 +34,5 @@ export function DocumentIcon({ name }: { name: keyof typeof iconPaths }) {
     >
       <path d={iconPaths[name]} />
     </svg>
-  );
-}
-
-export function DocumentTooltip({
-  label,
-  children,
-  alignWithGroup = false,
-}: {
-  label?: string;
-  children: ReactNode;
-  alignWithGroup?: boolean;
-}) {
-  return (
-    <span
-      className={`group/document-tip inline-flex shrink-0 ${alignWithGroup ? "" : "relative"}`}
-    >
-      {children}
-      {label && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute right-0 top-full z-20 hidden w-max max-w-48 rounded-md border border-gray-700 bg-gray-950 px-2 py-1 text-xs font-medium text-gray-100 shadow-lg group-hover/document-tip:block group-focus-within/document-tip:block"
-        >
-          {label}
-        </span>
-      )}
-    </span>
   );
 }

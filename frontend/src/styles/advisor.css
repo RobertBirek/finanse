@@ -186,18 +186,138 @@ body {
   font-size: 13px;
   flex-shrink: 0;
 }
-.finance-page-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-bottom: 26px;
+.page-workspace {
+  width: 100%;
+  min-width: 0;
+  container: workspace / inline-size;
 }
-.finance-page-heading p {
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  margin-block-end: 22px;
+}
+.page-heading-copy {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.page-heading-context,
+.page-heading p {
   color: var(--ui-muted);
   font-size: 14px;
-  margin-top: 7px;
+  max-inline-size: 65ch;
+}
+.page-heading-context {
+  margin-block-end: 4px;
+}
+.page-heading p {
+  margin-block-start: 4px;
+}
+.page-heading-actions {
+  display: flex;
+  min-inline-size: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.advisor-chat-heading {
+  padding: 0 16px;
+}
+.advisor-chat-heading .page-heading {
+  margin-block-end: 12px;
+}
+.ui-tooltip-anchor {
+  display: inline-flex;
+  flex: none;
+}
+.ui-tooltip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  max-inline-size: min(16rem, calc(100vw - 16px));
+  padding: 5px 9px;
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  box-shadow: 0 3px 12px #101c2c26;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+  z-index: 40;
+  pointer-events: auto;
+}
+.ui-tooltip[data-open="false"] {
+  display: none;
+}
+.ui-tooltip[data-open="true"] {
+  display: block;
+}
+.ui-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 9px;
+  color: var(--ui-muted);
+  background: transparent;
+}
+.ui-icon-button:enabled:hover {
+  background: var(--ui-hover);
+  color: var(--ui-ink);
+}
+.ui-icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ui-icon-button:focus-visible {
+  outline: 2px solid var(--ui-blue);
+  outline-offset: 2px;
+}
+.document-touch-status {
+  display: none;
+}
+@media (pointer: coarse) {
+  .document-touch-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+  }
+}
+.workspace-fields {
+  max-inline-size: 46rem;
+  width: 100%;
+}
+.workspace-panels {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+}
+.calendar-current-jump {
+  background: var(--ui-blue-soft);
+  color: var(--ui-blue);
+  font-weight: 650;
+}
+.app-shell .calendar-day[aria-current="date"] {
+  box-shadow: inset 0 0 0 2px var(--ui-blue);
+}
+.calendar-current-label {
+  color: var(--ui-blue);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+@container workspace (min-width: 55rem) {
+  .workspace-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .workspace-panels > .workspace-span {
+    grid-column: 1 / -1;
+  }
 }
 .finance-tabs,
 .finance-tabs-more {
