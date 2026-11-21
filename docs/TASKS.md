@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Wsparcie decyzji w Doradcy — 2026-11-21
+
+- [x] Priorytety, symulator wydatku i wyjaśnienie zmian wydatków z danymi
+  liczonymi niezależnie od OpenAI.
+- [x] Porównanie dwóch konfiguracji Doradcy na syntetycznych przypadkach;
+  osobny limit uruchomień, bez zmiany profilu lub instrukcji.
+- [x] Przegląd lokalny i testy przeglądarkowe desktop/mobile z atrapą API.
+- [ ] Uruchomić testy integracyjne w zatwierdzonym GitHub Actions, w tym
+  izolację właściciela i zwroty w PostgreSQL. Publikacja i wdrożenie osobno.
+
 ## Ustawienia OpenAI — 2026-11-20
 
 - [x] Audyt `/advisor`, ekstrakcji tekstu, vision, pozycji paragonu i kategoryzacji.
