@@ -6,6 +6,9 @@ from openai import OpenAIError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.advisor.decision_explanation import explain_facts
+from app.advisor.decision_schemas import AttentionResult, DecisionExplanation
+from app.advisor.decision_support import get_attention
 from app.advisor.models import Conversation, Message, ToolExecution
 from app.advisor.policies import get_policy_engine
 from app.advisor.schemas import (
@@ -23,6 +26,17 @@ from app.advisor.service import (
     send_message,
 )
 from app.database import get_db
+from app.finance.cashflow import get_cashflow_forecast
+from app.finance.cashflow_scenario import (
+    CashflowScenarioInput,
+    CashflowScenarioResult,
+    simulate_expense,
+)
+from app.finance.spending_comparison import (
+    PeriodDays,
+    SpendingComparisonResult,
+    get_spending_comparison,
+)
 from app.identity.models import User
 from app.identity.router import get_current_user
 from app.security.rate_limit import limit_advisor
@@ -33,6 +47,120 @@ advisor_rate_limit = limit_advisor(get_current_user)
 
 class _MutationResultError(Exception):
     pass
+
+
+@router.get("/decisions/attention")
+async def attention_endpoint(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> AttentionResult:
+    return await get_attention(db, current_user.id)
+
+
+@router.post("/decisions/attention/explain")
+async def explain_attention_endpoint(
+    current_user: Annotated[User, Depends(get_current_user)],
+    _limit: Annotated[None, Depends(advisor_rate_limit)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> DecisionExplanation:
+    result = await get_attention(db, current_user.id)
+    if not result.items:
+        return DecisionExplanation(status="no_facts")
+    return await explain_facts(
+        db,
+        current_user.id,
+        {
+            "topic": "priorytety",
+            "items": [{"kind": item.kind, "reason": item.reason} for item in result.items],
+        },
+    )
+
+
+async def _scenario(
+    db: AsyncSession, user_id: uuid.UUID, data: CashflowScenarioInput
+) -> CashflowScenarioResult:
+    forecast = await get_cashflow_forecast(db, user_id)
+    try:
+        return simulate_expense(
+            forecast, expense_date=data.expense_date, amount_pln_minor=data.amount_pln_minor
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
+
+
+@router.post("/decisions/cashflow-scenario")
+async def scenario_endpoint(
+    data: CashflowScenarioInput,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CashflowScenarioResult:
+    return await _scenario(db, current_user.id, data)
+
+
+@router.post("/decisions/cashflow-scenario/explain")
+async def explain_scenario_endpoint(
+    data: CashflowScenarioInput,
+    current_user: Annotated[User, Depends(get_current_user)],
+    _limit: Annotated[None, Depends(advisor_rate_limit)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> DecisionExplanation:
+    scenario = await _scenario(db, current_user.id, data)
+    return await explain_facts(
+        db,
+        current_user.id,
+        {
+            "topic": "hipotetyczny wydatek; zakres i ograniczenia prognozy płynności",
+            "opening_balance_negative": scenario.opening_balance_negative,
+            "scenario_negative": scenario.first_negative_date is not None,
+            "has_excluded_obligations": bool(scenario.excluded_obligation_reasons),
+            "covers_day_before_payday": scenario.covers_day_before_payday,
+        },
+    )
+
+
+@router.get("/decisions/spending-comparison")
+async def spending_endpoint(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    days: int = 30,
+) -> SpendingComparisonResult:
+    period = _spending_period(days)
+    return await get_spending_comparison(db, current_user.id, days=period)
+
+
+def _spending_period(days: int) -> PeriodDays:
+    match days:
+        case 14:
+            return 14
+        case 30:
+            return 30
+        case 90:
+            return 90
+        case _:
+            raise HTTPException(status_code=422, detail="Wybierz 14, 30 lub 90 dni.")
+
+
+@router.post("/decisions/spending-comparison/explain")
+async def explain_spending_endpoint(
+    current_user: Annotated[User, Depends(get_current_user)],
+    _limit: Annotated[None, Depends(advisor_rate_limit)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    days: int = 30,
+) -> DecisionExplanation:
+    result = await get_spending_comparison(db, current_user.id, days=_spending_period(days))
+    if not result.categories and not result.transactions:
+        return DecisionExplanation(status="no_facts")
+    return await explain_facts(
+        db,
+        current_user.id,
+        {
+            "topic": "porównanie zamkniętych okresów wydatków; kwoty w groszach PLN",
+            "period_days": days,
+            "net_difference_pln_minor": result.delta_pln,
+            "category_deltas_pln_minor": [category.delta_pln for category in result.categories],
+            "details_truncated": result.truncated,
+        },
+    )
 
 
 @router.get("/conversations", response_model=list[ConversationResponse])
