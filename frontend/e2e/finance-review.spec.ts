@@ -29,14 +29,14 @@ test("selected month survives reload, drilldown Back and finance tabs", async ({
     });
   });
   await page.goto("/finances/reports?month=9&year=2026");
-  const picker = page
-    .getByRole("button", { name: "Poprzedni miesiąc" })
-    .locator("..");
-  await expect(picker).toContainText(/wrzesień 2026/i);
-  await page.getByRole("button", { name: "Poprzedni miesiąc" }).click();
-  await expect(picker).toContainText(/sierpień 2026/i);
+  const picker = page.getByRole("group", { name: "Miesiąc raportowania" });
+  const visibleMonth = (month: string) =>
+    picker.getByText(month, { exact: true });
+  await expect(visibleMonth("wrzesień 2026")).toBeVisible();
+  await picker.getByRole("button", { name: "Poprzedni miesiąc" }).click();
+  await expect(visibleMonth("sierpień 2026")).toBeVisible();
   await page.reload();
-  await expect(picker).toContainText(/sierpień 2026/i);
+  await expect(visibleMonth("sierpień 2026")).toBeVisible();
   await page.getByRole("link", { name: "Dom", exact: true }).click();
   await expect(page).toHaveURL(/date_from=2026-08-01/);
   await expect
@@ -44,7 +44,7 @@ test("selected month survives reload, drilldown Back and finance tabs", async ({
     .toBe("purchase");
   await expect(page.getByText(/według daty zakupu/i)).toBeVisible();
   await page.goBack();
-  await expect(picker).toContainText(/sierpień 2026/i);
+  await expect(visibleMonth("sierpień 2026")).toBeVisible();
   for (const label of ["Budżet", "Przegląd", "Raporty"]) {
     const tabs = page.getByRole("navigation", { name: "Widoki finansów" });
     const link = tabs.getByRole("link", { name: label, exact: true });
@@ -53,7 +53,7 @@ test("selected month survives reload, drilldown Back and finance tabs", async ({
       await more.click();
     }
     await link.click();
-    await expect(picker).toContainText(/sierpień 2026/i);
+    await expect(visibleMonth("sierpień 2026")).toBeVisible();
   }
   expect(api.mutations).toEqual([]);
   api.assertClean();
