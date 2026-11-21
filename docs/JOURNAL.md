@@ -2,6 +2,42 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-21 — Lokalna kontrola zgodności restore
+
+- W osobnym worktree dodano odczytowy CLI. Porównuje przypięte bajty
+  runtime'u i manifestu kopii oraz analizuje liniowy graf AST, nie
+  importując migracji ani nie uruchamiając Alembic. Wynik nie stanowi
+  zgody na użycie produkcyjne ani dowodu pomyślnego odtworzenia.
+- Odczytowy przegląd wykazał możliwość zmiany etykiet raportu bez zmiany
+  zatwierdzonego manifestu. Pięć regresji RED → GREEN wymusza zgodność
+  fazy, kandydata, headu oraz ID i hasha manifestu kopii. 95 ukierunkowanych
+  testów offline oraz Ruff i ścisły mypy modułu przeszły.
+- Nie zmieniano checkera V2, systemd, Make ani produkcji. Następne kroki:
+  osobna decyzja o integracji i odbiorze na rzeczywistych wejściach;
+  walidacja dowodów `verified-live` pozostaje osobnym zadaniem.
+
+## 2026-11-21 — Korekta opisu rollbacku i projekt kontroli restore
+
+- Potwierdzono cel `ebc7b69` dla trzech obrazów, override i izolowanej
+  próby na `e5a46dc32772`; 25/25 przypiętych wejść Compose/env zgodnych.
+  `86c6870` odnosiło się do wcześniejszego wydania OpenAI; publikator
+  `db062d2` odziedziczył opis poprzedniego rollbacku.
+- Pierwsza próba korekty zatrzymała się przed zapisem ze względu na zapisywalne
+  katalogi nadrzędne. Audyt nie wykazał działającej usługi wymagającej
+  zapisu w katalogu wydań. Po osobnej zgodzie ustawiono tylko `webapp`
+  i `releases` na `root:robert`, `0750`, bez zmian rekurencyjnych. Konto
+  `robert` zachowało odczyt i przechodzenie, bez bezpośredniego zapisu.
+- Pod blokadą wdrożenia zachowano prywatny oryginał metadanych `0600`.
+  Odrębny odczyt potwierdził zmianę dokładnie `rollback_schema_policy`,
+  bez nowego statusu odbioru. Sześć kontenerów zachowało obrazy, ID,
+  czasy startu i liczniki restartów; HTTPS health zwrócił `200`. Bez
+  migracji, rollbacku, restartu lub ponownego wydania.
+- Zmiana bajtów metadanych jest wejściem do następnego zatwierdzonego
+  inventory; nie wystawiono nowego inventory ani zgody. Historyczne luki
+  dowodów pozostają jawne. [Plan kontroli restore](superpowers/plans/2026-11-21-restore-runtime-preflight.md)
+  obejmuje tylko odczytowy test zgodności grafu przed wydaniem. Automatyzacja
+  publikacji metadanych i wdrożenie narzędzia są poza tym zakresem.
+
 ## 2026-11-21 — Audyt wdrożenia Doradcy i zabezpieczenia następnych wydań
 
 - Odczyt Dockera potwierdził `db062d2`, zgodność obrazów, aktywnego override
@@ -20,7 +56,7 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   Zainstalowany restore drill początkowo nie znał `e5a46dc32772`, podobnie jak
   przy `8121512` starszy checkout nie znał ówczesnego schematu. Po korekcie pinu
   systemd zakończył próbę kodem 0; przypięcie wciąż trzeba sprawdzać przy wydaniach.
-- Opis polityki rollbacku w produkcyjnych metadanych nadal wskazuje `86c6870`,
+- W chwili audytu opis polityki rollbacku wskazywał `86c6870`,
   choć obrazy i override wskazują `ebc7b69`. Wykonawca odziedziczył flagę
   retencji; nie znaleziono odrębnego dowodu tej bramki i pełnego okna obserwacji
   dla tego przebiegu. Bieżący smoke nie odtwarza tego dowodu. Nie wybierać

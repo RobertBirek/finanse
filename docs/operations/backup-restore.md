@@ -128,6 +128,41 @@ izolowanej nie jest wynikiem automatycznego restore drill: jeśli jest ona
 potrzebna, zapisz osobno jej zakres, zgodę i wynik; nie zamykaj usterki
 harmonogramu, dopóki zainstalowana ścieżka nie przejdzie własnej kontroli.
 
+Repozytorium zawiera lokalne narzędzie `ops/restore_runtime_preflight.py`.
+Nie jest ono zainstalowane ani włączone do systemd, Make lub checkera V2.
+Przed użyciem operacyjnym uzyskaj osobny odbiór narzędzia i przypnij zarówno
+launcher, jak i moduły z zaufanego checkoutu narzędziowego, nie kandydata.
+Operator dostarcza zatwierdzone SHA-256 manifestu plików runtime'u i manifestu
+tej konkretnej kopii. Źródło manifestu kopii oraz rzeczywistą ścieżkę
+systemd → Make → restore trzeba ustalić niezależnie. Po aktywacji runtime'u
+potwierdź osobno, że zainstalowana ścieżka używa tego, który sprawdzono.
+
+Przykład po zatwierdzeniu pinów i ścieżek (Python 3.12+, czyste środowisko):
+
+```bash
+env -i PATH=/usr/bin:/bin HOME=/nonexistent \
+  "$APPROVED_PYTHON" -I -S -B -c \
+  'import sys; sys.path.insert(0, sys.argv.pop(1)); from restore_runtime_preflight import main; raise SystemExit(main())' \
+  "$APPROVED_TOOLING_OPS" \
+  --phase "$PHASE" --candidate "$CANDIDATE_SHA" \
+  --runtime-root "$PINNED_RESTORE_ROOT" \
+  --runtime-manifest "$RUNTIME_MANIFEST" --runtime-manifest-sha256 "$RUNTIME_MANIFEST_SHA256" \
+  --snapshot-id "$FULL_RESTIC_ID" \
+  --snapshot-manifest "$SNAPSHOT_MANIFEST" --snapshot-manifest-sha256 "$SNAPSHOT_MANIFEST_SHA256" \
+  --expected-head "$EXPECTED_SCHEMA_HEAD"
+```
+
+Uruchom oddzielnie z `PHASE=rehearsal` dla runtime'u używanego w izolowanej
+próbie oraz `PHASE=after_rollout` dla runtime'u cyklicznego restore i schematu
+po wydaniu. Każdy manifest runtime'u wiąże fazę, kandydata, kopię i head;
+dla drugiej fazy potrzebny jest odrębny pin. Format v1 opisuje
+[plan kontroli restore](../superpowers/plans/2026-11-21-restore-runtime-preflight.md).
+`compatible=true` sprawdza wyłącznie zgodność przypiętych plików i liniowego
+grafu; `authorized` zawsze jest `false`. Nie oznacza to, że adres instalacji
+jest właściwy, kopia się odtwarza lub rzeczywiste migracje przejdą. Nie jest
+to blokada ani gwarancja niezmienności ścieżek po odczycie. Zachowaj wyniki
+obu faz i ponów kontrolę przy zmianie wejść; nie zastępuj nimi odtworzenia.
+
 ## Automatyzacja systemd
 
 Install the root-only systemd automation and inspect or operate it with:
