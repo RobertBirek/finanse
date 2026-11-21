@@ -15,6 +15,7 @@ import {
   type UsageDays,
 } from "../api/aiSettings";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { AIBenchmark } from "../components/advisor/AIBenchmark";
 import api from "../lib/api";
 
 const statusLabels: Record<string, string> = {
@@ -550,6 +551,7 @@ export function AISettings() {
             />
             <CredentialForm settings={data} purpose={purpose} />
             <Instructions active={data.instructions} purpose={purpose} />
+            {purpose === "advisor" && <AIBenchmark settings={data} />}
             <Usage purpose={purpose} />
           </div>
         )}

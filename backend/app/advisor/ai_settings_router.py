@@ -1,4 +1,5 @@
 from collections.abc import Callable, Coroutine
+from dataclasses import dataclass
 from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
@@ -8,6 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.advisor.ai_benchmark import BenchmarkInput, BenchmarkResult, compare_configs
 from app.advisor.ai_provider import ProbeResult, probe
 from app.advisor.ai_purpose import purpose_baseline, purpose_view, read_purpose
 from app.advisor.ai_settings import (
@@ -35,7 +37,7 @@ from app.config import settings
 from app.database import get_db
 from app.identity.models import User
 from app.identity.router import get_current_user
-from app.security.rate_limit import limit_advisor
+from app.security.rate_limit import limit_advisor, limit_advisor_benchmark
 
 
 class PrivateInputRoute(APIRoute):
@@ -57,6 +59,7 @@ router = APIRouter(prefix="/settings", route_class=PrivateInputRoute)
 Owner = Annotated[User, Depends(get_current_user)]
 DB = Annotated[AsyncSession, Depends(get_db)]
 ProbeRate = Annotated[None, Depends(limit_advisor(get_current_user))]
+BenchmarkRate = Annotated[None, Depends(limit_advisor_benchmark(get_current_user))]
 
 
 async def _view(user_id: UUID, db: AsyncSession, purpose: Purpose) -> SettingsView:
@@ -159,6 +162,34 @@ async def test_connection(
     except ModelUnavailable:
         raise HTTPException(422, "Wybierz model dostępny z kluczem serwera.") from None
     return await probe(user.id, credentials, purpose=purpose)
+
+
+@dataclass(frozen=True, repr=False)
+class _BenchmarkProfile:
+    model: str
+    encrypted_key: bytes | None
+
+
+@router.post("/benchmark")
+async def benchmark(
+    body: BenchmarkInput, user: Owner, db: DB, _limit: BenchmarkRate
+) -> BenchmarkResult:
+    owner_id = user.id
+    profile = await get_profile(db, owner_id)
+    encrypted_key = profile.encrypted_key if profile is not None else None
+    first, second = body.variants
+    try:
+        credentials = (
+            resolve_credentials(settings, owner_id, _BenchmarkProfile(first.model, encrypted_key)),
+            resolve_credentials(settings, owner_id, _BenchmarkProfile(second.model, encrypted_key)),
+        )
+    except CredentialUnavailable:
+        raise HTTPException(503, "Nie można odczytać własnego klucza OpenAI.") from None
+    except ModelUnavailable:
+        raise HTTPException(422, "Wybierz model dostępny z kluczem serwera.") from None
+    # Persist the normal session heartbeat and release the connection before I/O.
+    await db.commit()
+    return await compare_configs(owner_id, body.variants, credentials=credentials)
 
 
 @router.get("/usage")

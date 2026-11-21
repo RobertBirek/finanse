@@ -47,6 +47,41 @@ export interface ProbeResult {
   duration_ms: number;
 }
 
+export type BenchmarkVariant = { model: string; instructions: string | null };
+export type BenchmarkResult = {
+  suite_version: string;
+  variants: {
+    model: string;
+    status: "ok" | "partial" | "failed";
+    cases: {
+      case_id: string;
+      status: string;
+      matches_expected: boolean | null;
+      duration_ms: number;
+      input_tokens: number | null;
+      output_tokens: number | null;
+    }[];
+  }[];
+};
+
+export function useAIBenchmark() {
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: async (variants: [BenchmarkVariant, BenchmarkVariant]) =>
+      (
+        await api.post<BenchmarkResult>(`${aiSettingsPath}/benchmark`, {
+          variants,
+        })
+      ).data,
+    onSuccess: () => {
+      void client.invalidateQueries({
+        queryKey: [...aiSettingsKey, "advisor", "usage"],
+      });
+    },
+  });
+}
+
 export function useAISettings(purpose: AIPurpose = "advisor") {
   return useQuery({
     queryKey: [...aiSettingsKey, purpose],
