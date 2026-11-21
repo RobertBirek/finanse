@@ -15,14 +15,18 @@ Backlog zadań ze statusami.
   obrazy backendu, workera i frontendu oraz odczytowe smoke HTTP i ARQ.
 - [x] Udokumentowano przekazanie stanu odniesienia, zgodność runtime'u restore
   i publikację świeżych dowodów wydania w runbooku i `/deploy`.
-- [ ] Osobno zatwierdzić uzgodnienie sprzecznego opisu rollbacku z próbą
-  `ebc7b69` na `e5a46dc32772`. Do tego czasu nie opierać decyzji o rollbacku
-  na metadanych wydania. Nie potwierdzono pełnego odbioru historycznego:
-  brakuje odrębnych dowodów retencji i pełnego okna obserwacji. Bez ponownego
-  rollout lub dorabiania wyników wstecz.
-- [ ] Zaprojektować automatyczną kontrolę zgodności przypiętego runtime'u
-  restore oraz walidację dowodów przy publikacji metadanych. Reguły są już
-  w procedurze; instalacja i aktywacja wymagają osobnego odbioru.
+- [x] Po osobnej zgodzie uzgodnić opis rollbacku z próbą `ebc7b69` na
+  `e5a46dc32772`, zachować poprzedni zapis i potwierdzić zmianę tylko jednego
+  pola. Brak odrębnych historycznych dowodów retencji i całego okna obserwacji
+  jest odnotowany; korekta nie zamyka tych bramek.
+- [ ] Przed następnym wydaniem uwzględnić nowy hash aktywnych metadanych
+  w aktualnym inventory. Nie przenosić historycznej zgody na zmieniony stan.
+- [x] Przygotować [projekt i plan kontroli restore](superpowers/plans/2026-11-21-restore-runtime-preflight.md).
+- [x] Zatwierdzić i wykonać lokalną implementację/testy offline kontroli
+  restore, z osobnym hashem zakresu dla każdej fazy.
+- [ ] Osobno odebrać rzeczywiste ścieżki, przypiąć launcher i aktywować
+  sprawdzenie przed wydaniem. Nie instalowano narzędzia na produkcji.
+- [ ] Osobno zaprojektować i wdrożyć walidację dowodów dla `verified-live`.
 
 ## Ustawienia OpenAI — 2026-11-20
 

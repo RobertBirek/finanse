@@ -2,6 +2,24 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Metadane produkcji, bez wdrożenia] — 2026-11-21
+
+### Fixed
+
+- Opis rollbacku `db062d2` wskazuje `ebc7b69` z pozostawieniem schematu
+  `e5a46dc32772`, zgodnie z zachowanymi obrazami i próbą. Zachowano prywatną
+  kopię poprzednich metadanych. Zabezpieczono zapis w katalogach `webapp`
+  i `releases` bez zmian rekurencyjnych; bez restartu, migracji lub rollbacku.
+
+## [Nie wydano] — 2026-11-21 — Kontrola zgodności restore
+
+### Added
+
+- [Odczytowy CLI](superpowers/plans/2026-11-21-restore-runtime-preflight.md)
+  sprawdza przypięte pliki i liniowy graf migracji dla zatwierdzonego
+  kandydata, fazy, snapshotu i headu. Wynik nie zastępuje próby odtworzenia
+  ani zgody na wdrożenie. Bez instalacji na produkcji.
+
 ## [Procedura operacyjna] — 2026-11-21
 
 ### Changed
