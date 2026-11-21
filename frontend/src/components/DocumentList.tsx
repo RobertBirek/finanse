@@ -11,6 +11,7 @@ import {
   type DocumentWorklist,
 } from "../api/documents";
 import { DocumentViewer } from "./DocumentViewer";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { DocumentReview } from "./documents/DocumentReview";
 import { QueryFeedback } from "./QueryFeedback";
 import {
@@ -49,7 +50,7 @@ function DocumentStatusIcon({
   icon?: "clock" | "finance";
 }) {
   return (
-    <DocumentTooltip label={label} alignWithGroup>
+    <DocumentTooltip label={label}>
       <span
         role="img"
         aria-label={label}
@@ -113,9 +114,33 @@ export function DocumentList() {
   const archiveDoc = useArchiveDocument();
   const restoreDoc = useRestoreDocument();
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const documents = query.data?.pages.flatMap((page) => page.items) ?? [];
   // Resolve from current query data so a polling result also updates an open viewer.
   const viewingDoc = documents.find((doc) => doc.id === viewingId);
+  function setDocumentArchived(documentId: string, nextArchived: boolean) {
+    const mutation = nextArchived ? archiveDoc : restoreDoc;
+    if (archiveDoc.isPending || restoreDoc.isPending) return;
+    mutation.mutate(
+      { documentId },
+      {
+        onSuccess: (_result, _variables, actor) => {
+          if (!isProcessingActorCurrent(actor)) return;
+          if (nextArchived) setArchiveTarget(null);
+          setViewingId(null);
+          closeReview();
+          setFeedback(
+            nextArchived
+              ? "Dokument przeniesiony do archiwum."
+              : "Dokument przywrócony.",
+          );
+        },
+      },
+    );
+  }
   const selectWorklist = (value: DocumentWorklist | undefined) => {
     const next = new URLSearchParams(searchParams);
     next.delete("review");
@@ -129,6 +154,24 @@ export function DocumentList() {
 
   return (
     <div>
+      {archiveTarget && !archived && (
+        <ConfirmDialog
+          title="Archiwizuj dokument"
+          onCancel={() => setArchiveTarget(null)}
+          onConfirm={() => setDocumentArchived(archiveTarget.id, true)}
+          pendingMessage={
+            archiveDoc.isPending ? "Przenoszenie do archiwum…" : undefined
+          }
+          error={
+            archiveDoc.isError ? documentArchiveError(archiveDoc.error) : null
+          }
+        >
+          <p>Przenieść „{archiveTarget.name}” do archiwum?</p>
+          <p className="mt-2">
+            Plik, historia odczytu i powiązania finansowe pozostaną zachowane.
+          </p>
+        </ConfirmDialog>
+      )}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div
           role="group"
@@ -323,6 +366,13 @@ export function DocumentList() {
                         {formatFileSize(doc.size_bytes)} ·{" "}
                         {new Date(doc.created_at).toLocaleDateString("pl-PL")}
                       </span>
+                      <div
+                        className="document-touch-status mt-2 text-xs text-gray-300"
+                        aria-hidden="true"
+                      >
+                        <span>Odczyt: {reading.label}</span>
+                        <span>Finanse: {finance.label}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="relative flex min-w-0 flex-wrap items-center justify-end gap-1 justify-self-end">
@@ -374,29 +424,14 @@ export function DocumentList() {
                         aria-label={`${archiveLabel}: ${doc.original_name}`}
                         disabled={archiveDoc.isPending || restoreDoc.isPending}
                         onClick={() => {
-                          if (
-                            !archived &&
-                            !window.confirm(
-                              "Przenieść dokument do archiwum? Plik, historia odczytu i powiązania finansowe pozostaną zachowane.",
-                            )
-                          )
-                            return;
-                          const mutation = archived ? restoreDoc : archiveDoc;
-                          mutation.mutate(
-                            { documentId: doc.id },
-                            {
-                              onSuccess: (_result, _variables, actor) => {
-                                if (!isProcessingActorCurrent(actor)) return;
-                                setViewingId(null);
-                                closeReview();
-                                setFeedback(
-                                  archived
-                                    ? "Dokument przywrócony."
-                                    : "Dokument przeniesiony do archiwum.",
-                                );
-                              },
-                            },
-                          );
+                          if (archived) setDocumentArchived(doc.id, false);
+                          else {
+                            if (archiveDoc.isError) archiveDoc.reset();
+                            setArchiveTarget({
+                              id: doc.id,
+                              name: doc.original_name,
+                            });
+                          }
                         }}
                         className="document-icon-control"
                       >
@@ -438,7 +473,7 @@ export function DocumentList() {
           </button>
         </div>
       )}
-      {(archiveDoc.isError || restoreDoc.isError) && (
+      {!archiveTarget && (archiveDoc.isError || restoreDoc.isError) && (
         <p role="alert" className="mt-3 text-sm text-red-300">
           {documentArchiveError(archiveDoc.error ?? restoreDoc.error)}
         </p>

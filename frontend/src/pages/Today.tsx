@@ -10,6 +10,7 @@ import {
 import { useFinancialSummary } from "../api/finance";
 import { useDocumentWorklistCounts } from "../api/documents";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
 import { DocumentUpload } from "../components/DocumentUpload";
 import { DocumentIcon } from "../components/documents/documentControls";
 import { formatPLN } from "../lib/format";
@@ -60,20 +61,20 @@ export function Today() {
   }
 
   return (
-    <div className="max-w-5xl flex flex-col">
-      <p className="text-sm text-gray-400 mb-2">
-        {now.toLocaleDateString("pl-PL", {
+    <div className="page-workspace flex flex-col">
+      <PageHeader
+        context={now.toLocaleDateString("pl-PL", {
           weekday: "long",
           day: "numeric",
           month: "long",
         })}
-      </p>
-      <h1 className="text-3xl text-white mb-6">
-        {greet}
-        {user?.display_name ? `, ${user.display_name}` : ""}
-      </h1>
+        title={`${greet}${user?.display_name ? `, ${user.display_name}` : ""}`}
+      />
       <div className="card mb-6">
-        <form onSubmit={handleQuickAdd} className="flex flex-wrap gap-3">
+        <form
+          onSubmit={handleQuickAdd}
+          className="workspace-fields flex flex-wrap gap-3"
+        >
           <label htmlFor="quick-task-title" className="sr-only">
             Tytuł szybkiego zadania
           </label>
@@ -124,7 +125,7 @@ export function Today() {
           ))}
         </nav>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="workspace-panels">
         <section className="card">
           <h2 className="text-lg font-semibold text-white mb-4">Zadania</h2>
           <QueryFeedback

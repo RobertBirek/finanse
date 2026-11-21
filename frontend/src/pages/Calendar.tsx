@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
+import { IconButton } from "../components/IconButton";
 import {
   formatLocalTime,
   localDateIso,
@@ -164,61 +166,57 @@ export function Calendar() {
       : `${monthNames[monthDate.getMonth()]} ${monthDate.getFullYear()}`;
 
   return (
-    <div className="max-w-6xl">
-      {/* Header */}
-      <div className="flex flex-wrap gap-3 items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Kalendarz</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* View toggle */}
-          <div className="flex bg-gray-800 rounded-lg p-0.5 mr-2">
-            {(["week", "month"] as ViewMode[]).map((m) => (
-              <button
-                key={m}
-                aria-pressed={viewMode === m}
-                onClick={() => setViewMode(m)}
-                className={`min-h-11 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === m
-                    ? "bg-advisor-700 text-white"
-                    : "text-gray-400 hover:text-gray-200"
-                }`}
-              >
-                {m === "week" ? "Tydzień" : "Miesiąc"}
-              </button>
-            ))}
-          </div>
-          <button
-            aria-label={
-              viewMode === "week" ? "Poprzedni tydzień" : "Poprzedni miesiąc"
-            }
-            onClick={prev}
-            className="btn-secondary text-sm px-3"
-          >
-            ←
-          </button>
-          <button
-            onClick={today}
-            className={`min-h-11 text-sm px-3 py-1.5 rounded-lg ${
-              (viewMode === "week" && isCurrentWeek) ||
-              (viewMode === "month" && isCurrentMonth)
-                ? "bg-advisor-500/20 text-advisor-400"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            Dzisiaj
-          </button>
-          <button
-            aria-label={
-              viewMode === "week" ? "Następny tydzień" : "Następny miesiąc"
-            }
-            onClick={next}
-            className="btn-secondary text-sm px-3"
-          >
-            →
-          </button>
-        </div>
-      </div>
-
-      <p className="text-gray-400 mb-4">{headerLabel}</p>
+    <div className="page-workspace">
+      <PageHeader
+        title="Kalendarz"
+        description={headerLabel}
+        actions={
+          <>
+            {/* View toggle */}
+            <div className="flex bg-gray-800 rounded-lg p-0.5 mr-2">
+              {(["week", "month"] as ViewMode[]).map((m) => (
+                <button
+                  key={m}
+                  aria-pressed={viewMode === m}
+                  onClick={() => setViewMode(m)}
+                  className={`min-h-11 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    viewMode === m
+                      ? "bg-advisor-700 text-white"
+                      : "text-gray-400 hover:text-gray-200"
+                  }`}
+                >
+                  {m === "week" ? "Tydzień" : "Miesiąc"}
+                </button>
+              ))}
+            </div>
+            <IconButton
+              icon="previous"
+              label={
+                viewMode === "week" ? "Poprzedni tydzień" : "Poprzedni miesiąc"
+              }
+              onClick={prev}
+            />
+            <button
+              onClick={today}
+              className={`min-h-11 text-sm px-3 py-1.5 rounded-lg ${
+                (viewMode === "week" && isCurrentWeek) ||
+                (viewMode === "month" && isCurrentMonth)
+                  ? "calendar-current-jump"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              Dzisiaj
+            </button>
+            <IconButton
+              icon="next"
+              label={
+                viewMode === "week" ? "Następny tydzień" : "Następny miesiąc"
+              }
+              onClick={next}
+            />
+          </>
+        }
+      />
 
       <QueryFeedback
         loading={blocksQuery.isLoading || tasksQuery.isLoading}
@@ -346,11 +344,7 @@ function DayCell({
   return (
     <div
       aria-current={isToday ? "date" : undefined}
-      className={`${compact ? "bg-gray-900 min-h-[90px] p-1.5" : agenda ? "rounded-lg border border-gray-800 bg-gray-900 px-4 py-3" : "card min-h-[200px]"} ${
-        isToday && !compact ? "border-advisor-500" : ""
-      } ${isToday && compact ? "ring-1 ring-inset ring-advisor-500" : ""} ${
-        dimmed ? "" : ""
-      }`}
+      className={`calendar-day min-w-0 ${compact ? "bg-gray-900 min-h-[90px] p-1.5" : agenda ? "rounded-lg border border-gray-800 bg-gray-900 px-4 py-3" : "card min-h-[200px]"}`}
     >
       <div
         className={`${compact ? "text-center" : agenda ? "mb-1 text-left" : "text-center mb-3"}`}
@@ -359,7 +353,7 @@ function DayCell({
         <p
           className={`${compact ? "text-xs font-medium mt-0.5" : agenda ? "text-base font-semibold" : "text-lg font-bold"} ${
             isToday
-              ? "text-advisor-400"
+              ? "calendar-current-label"
               : dimmed
                 ? "text-gray-600"
                 : "text-white"

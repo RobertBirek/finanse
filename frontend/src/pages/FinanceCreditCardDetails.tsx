@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { PageHeader } from "../components/PageHeader";
 import { useAccounts, useCategories } from "../api/finance";
 import { useCreditCard, type CreditCard } from "../api/creditCards";
 import { CardForm, type CardField } from "../components/finance/CardForm";
@@ -292,34 +293,34 @@ export function FinanceCreditCardDetails() {
   const query = useCreditCard(accountId);
   const account = accounts.data?.find((item) => item.id === accountId);
   return (
-    <div className="max-w-5xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+    <div className="page-workspace space-y-6">
+      <PageHeader
+        title={`Wyciągi i raty${account ? ` — ${account.name}` : ""}`}
+        context={
           <Link
             to="/settings/finances/cards"
             className="text-sm text-advisor-700 underline"
           >
             Wszystkie karty
           </Link>
-          <h1 className="mt-2 text-2xl font-bold text-white">
-            Wyciągi i raty{account ? ` — ${account.name}` : ""}
-          </h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            className="btn-secondary"
-            to={`/finances/imports?account=${encodeURIComponent(accountId)}`}
-          >
-            Importuj wyciąg karty
-          </Link>
-          <Link
-            className="btn-secondary"
-            to={`/settings/finances/accounts?edit=${encodeURIComponent(accountId)}`}
-          >
-            Edytuj konto
-          </Link>
-        </div>
-      </div>
+        }
+        actions={
+          <>
+            <Link
+              className="btn-secondary"
+              to={`/finances/imports?account=${encodeURIComponent(accountId)}`}
+            >
+              Importuj wyciąg karty
+            </Link>
+            <Link
+              className="btn-secondary"
+              to={`/settings/finances/accounts?edit=${encodeURIComponent(accountId)}`}
+            >
+              Edytuj konto
+            </Link>
+          </>
+        }
+      />
       {query.isLoading || accounts.isLoading ? (
         <p role="status">Ładowanie karty…</p>
       ) : query.isError || accounts.isError ? (

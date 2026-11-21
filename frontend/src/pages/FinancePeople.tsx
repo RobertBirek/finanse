@@ -6,6 +6,7 @@ import { PersonEditor } from "../components/finance/PersonEditor";
 import { retainFinancePeriod } from "../components/finance/useFinancePeriod";
 import { listPage, setListPage } from "../lib/listPage";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
 
 export function FinancePeople() {
   const [search, setSearch] = useSearchParams();
@@ -25,19 +26,16 @@ export function FinancePeople() {
   const [creating, setCreating] = useState(false);
   const people = usePeople({ include_archived: archived, offset });
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Osoby</h1>
-          <p className="text-gray-400 mt-1">
-            Darowizny od osób, bez dodatkowych kont i podwójnego liczenia
-            pieniędzy.
-          </p>
-        </div>
-        <button className="btn-primary" onClick={() => setCreating(true)}>
-          Dodaj osobę
-        </button>
-      </header>
+    <div className="page-workspace space-y-6">
+      <PageHeader
+        title="Osoby"
+        description="Darowizny od osób, bez dodatkowych kont i podwójnego liczenia pieniędzy."
+        actions={
+          <button className="btn-primary" onClick={() => setCreating(true)}>
+            Dodaj osobę
+          </button>
+        }
+      />
       <FinanceTabs />
       <label className="flex items-center gap-2">
         <input

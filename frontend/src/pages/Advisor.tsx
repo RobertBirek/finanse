@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Dialog } from "../components/Dialog";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
+import { IconButton } from "../components/IconButton";
 import { AdvisorDecisions } from "../components/advisor/AdvisorDecisions";
 import { isAxiosError } from "axios";
 import { useAISettings } from "../api/aiSettings";
@@ -200,56 +202,61 @@ export function Advisor() {
     </>
   );
   return (
-    <div className="flex h-full min-h-0">
+    <div className="page-workspace flex h-full min-h-0">
       <div className="hidden lg:flex shrink-0 flex-col w-56 bg-gray-900 border-r border-gray-800">
         {history}
       </div>
       {historyOpen && (
         <Dialog label="Rozmowy Doradcy" onClose={() => setHistoryOpen(false)}>
-          <button
-            type="button"
-            className="btn-secondary mb-3"
-            onClick={() => setHistoryOpen(false)}
-          >
-            Zamknij historię
-          </button>
+          <div className="flex items-center justify-between gap-3">
+            <h2>Rozmowy Doradcy</h2>
+            <IconButton
+              icon="close"
+              label="Zamknij historię"
+              onClick={() => setHistoryOpen(false)}
+            />
+          </div>
           {history}
         </Dialog>
       )}
 
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        {/* Header */}
-        <div className="flex flex-wrap gap-3 items-center justify-between px-4 py-3 border-b border-gray-800">
-          <div>
-            <h1 className="text-sm font-medium text-gray-300">
-              {activeId
+        <div className="advisor-chat-heading border-b border-gray-800">
+          <PageHeader
+            context="Doradca"
+            title={
+              activeId
                 ? conversations?.find((c) => c.id === activeId)?.title ||
                   "Rozmowa"
-                : "Nowa rozmowa"}
-            </h1>
-            <p className="text-xs text-gray-400">
-              {ai?.active_model
-                ? `OpenAI · ${ai.active_model}`
-                : "Osobisty asystent AI"}
-              {ai && (
-                <>
-                  {" "}
-                  ·{" "}
-                  <Link className="underline" to="/settings/ai">
-                    Ustawienia AI
-                  </Link>
-                </>
-              )}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="btn-secondary lg:hidden"
-            onClick={() => setHistoryOpen(true)}
-          >
-            Rozmowy
-          </button>
+                : "Nowa rozmowa"
+            }
+            description={
+              <>
+                {ai?.active_model
+                  ? `OpenAI · ${ai.active_model}`
+                  : "Osobisty asystent AI"}
+                {ai && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <Link className="underline" to="/settings/ai">
+                      Ustawienia AI
+                    </Link>
+                  </>
+                )}
+              </>
+            }
+            actions={
+              <button
+                type="button"
+                className="btn-secondary lg:hidden"
+                onClick={() => setHistoryOpen(true)}
+              >
+                Rozmowy
+              </button>
+            }
+          />
         </div>
 
         {/* Messages */}
@@ -311,7 +318,7 @@ export function Advisor() {
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
+                    className={`max-w-[min(86%,72ch)] rounded-xl px-4 py-3 text-sm ${
                       msg.role === "user"
                         ? "bg-advisor-700 text-white"
                         : "bg-gray-800 text-gray-200"
@@ -356,7 +363,13 @@ export function Advisor() {
 
         {/* Input */}
         <div className="shrink-0 px-4 py-3 border-t border-gray-800">
-          <div className="flex gap-3">
+          <form
+            className="workspace-fields flex gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSend();
+            }}
+          >
             <label htmlFor="advisor-message" className="sr-only">
               Wiadomość do Doradcy
             </label>
@@ -366,40 +379,23 @@ export function Advisor() {
               value={input}
               maxLength={4000}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Zadaj pytanie Doradcy..."
               className="input min-w-0 flex-1"
               disabled={sendMessage.isPending}
             />
-            <button
-              aria-label={
+            <IconButton
+              type="submit"
+              icon="send"
+              label={
                 sendMessage.isPending
                   ? "Wysyłanie wiadomości"
                   : "Wyślij wiadomość"
               }
-              onClick={handleSend}
+              busy={sendMessage.isPending}
               disabled={!input.trim() || sendMessage.isPending}
               className="btn-primary"
-            >
-              {sendMessage.isPending ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-              )}
-            </button>
-          </div>
+            />
+          </form>
         </div>
       </div>
     </div>

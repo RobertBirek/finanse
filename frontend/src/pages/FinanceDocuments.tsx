@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AxiosError } from "axios";
 import { useSearchParams } from "react-router-dom";
+import { PageHeader } from "../components/PageHeader";
 import {
   useSerializedIntentKey,
   useBill,
@@ -126,8 +127,8 @@ export function FinanceDocuments() {
     });
   }
   return (
-    <div className="max-w-5xl">
-      <h1 className="mb-2 text-2xl font-bold text-white">Faktury i paragony</h1>
+    <div className="page-workspace">
+      <PageHeader title="Faktury i paragony" />
       <FinanceTabs />
       <div className="card mb-5 flex flex-wrap gap-3 p-3">
         <label className="text-sm text-gray-300">

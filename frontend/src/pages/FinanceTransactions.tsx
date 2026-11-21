@@ -3,6 +3,8 @@ import { TransactionSearch } from "../components/finance/TransactionSearch";
 import { TransactionForm } from "../components/finance/TransactionForm";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { Dialog } from "../components/Dialog";
+import { PageHeader } from "../components/PageHeader";
+import { IconButton } from "../components/IconButton";
 
 export function FinanceTransactions() {
   const [search, setSearch] = useSearchParams();
@@ -18,23 +20,23 @@ export function FinanceTransactions() {
     setSearch(next, { replace: true, preventScrollReset: true });
   }
   return (
-    <div className="max-w-6xl">
-      <header className="finance-page-heading">
-        <div>
-          <h1>Transakcje</h1>
-          <p>Historia, szczegóły i szybkie wyszukiwanie.</p>
-        </div>
-        <button
-          className="btn-primary"
-          onClick={() => {
-            const next = new URLSearchParams(search);
-            next.set("create", "expense");
-            setSearch(next);
-          }}
-        >
-          + Dodaj transakcję
-        </button>
-      </header>
+    <div className="page-workspace">
+      <PageHeader
+        title="Transakcje"
+        description="Historia, szczegóły i szybkie wyszukiwanie."
+        actions={
+          <button
+            className="btn-primary"
+            onClick={() => {
+              const next = new URLSearchParams(search);
+              next.set("create", "expense");
+              setSearch(next);
+            }}
+          >
+            + Dodaj transakcję
+          </button>
+        }
+      />
       <FinanceTabs />
       <TransactionSearch />
       {open ? (
@@ -45,9 +47,11 @@ export function FinanceTransactions() {
         >
           <div className="mb-5 flex justify-between gap-4">
             <h2>Dodaj transakcję</h2>
-            <button className="btn-secondary" onClick={close}>
-              Zamknij formularz
-            </button>
+            <IconButton
+              icon="close"
+              label="Zamknij formularz"
+              onClick={close}
+            />
           </div>
           <TransactionForm initialType={create} onSuccess={close} />
         </Dialog>

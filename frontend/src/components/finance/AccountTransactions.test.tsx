@@ -2,6 +2,7 @@ import {
   fireEvent,
   render as renderView,
   screen,
+  within,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -179,7 +180,7 @@ describe("AccountTransactions", () => {
     expect(screen.getByText("−123,00 PLN")).toHaveClass("text-red-400");
   });
 
-  it("renders edit and delete buttons for each transaction row", () => {
+  it("puts date editing and deletion behind the transaction's disclosure", () => {
     useAccountTransactions.mockReturnValue({
       data: [incomeTransaction],
       isLoading: false,
@@ -193,9 +194,17 @@ describe("AccountTransactions", () => {
       screen.getByRole("button", { name: "Opis i oznaczenia" }),
     ).toBeInTheDocument();
     expect(
+      screen.queryByRole("button", { name: "Usuń transakcję" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Więcej: Wynagrodzenie" }),
+    );
+    expect(
       screen.getByRole("button", { name: "Edytuj datę" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Usuń" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Usuń transakcję" }),
+    ).toBeInTheDocument();
   });
 
   it("labels BO explicitly and links to the account instead of ordinary ledger mutations", () => {
@@ -218,7 +227,11 @@ describe("AccountTransactions", () => {
       "href",
       "/settings/finances/accounts?edit=budget-account",
     );
-    for (const name of ["Opis i oznaczenia", "Edytuj datę", "Usuń"])
+    for (const name of [
+      "Opis i oznaczenia",
+      "Więcej: Start",
+      "Usuń transakcję",
+    ])
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
   });
 
@@ -232,6 +245,9 @@ describe("AccountTransactions", () => {
     render(<AccountTransactions accounts={accounts} />);
     fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "Więcej: Wynagrodzenie" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Edytuj datę" }));
 
     expect(screen.queryByLabelText("Opis")).not.toBeInTheDocument();
@@ -248,7 +264,6 @@ describe("AccountTransactions", () => {
   });
 
   it("deletes a transaction after confirmation and skips it without", () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     useAccountTransactions.mockReturnValue({
       data: [incomeTransaction],
       isLoading: false,
@@ -258,12 +273,25 @@ describe("AccountTransactions", () => {
     render(<AccountTransactions accounts={accounts} />);
     fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Usuń" }));
-    expect(confirm).toHaveBeenCalledWith('Usunąć transakcję "Wynagrodzenie"?');
-    expect(deleteMutate).toHaveBeenCalledWith("tx-income");
+    const openConfirm = () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Więcej: Wynagrodzenie" }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Usuń transakcję" }));
+      return within(screen.getByRole("dialog", { name: "Usuń transakcję" }));
+    };
+    const confirmation = openConfirm();
+    expect(deleteMutate).not.toHaveBeenCalled();
+    fireEvent.click(
+      confirmation.getByRole("button", { name: "Usuń transakcję" }),
+    );
+    expect(deleteMutate).toHaveBeenCalledWith(
+      "tx-income",
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+    fireEvent.click(confirmation.getByRole("button", { name: "Anuluj" }));
 
-    confirm.mockReturnValue(false);
-    fireEvent.click(screen.getByRole("button", { name: "Usuń" }));
+    fireEvent.click(openConfirm().getByRole("button", { name: "Anuluj" }));
     expect(deleteMutate).toHaveBeenCalledTimes(1);
   });
 });
@@ -296,6 +324,7 @@ describe("foreign currency presentation", () => {
       expect(screen.getByText(`−123,45 ${currency}`)).toBeInTheDocument();
       expect(screen.getByText("Równowartość: 543,21 PLN")).toBeInTheDocument();
       expect(screen.queryByText("−123,45 PLN")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /^Więcej:/ }));
       fireEvent.click(screen.getByRole("button", { name: "Edytuj datę" }));
       expect(screen.getByText(`−123,45 ${currency}`)).toBeInTheDocument();
     },

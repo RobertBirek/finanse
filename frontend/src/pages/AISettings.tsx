@@ -15,6 +15,7 @@ import {
   type UsageDays,
 } from "../api/aiSettings";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
 import { AIBenchmark } from "../components/advisor/AIBenchmark";
 import api from "../lib/api";
 
@@ -485,20 +486,20 @@ export function AISettings() {
   const query = useAISettings(purpose);
   const data = query.data;
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <header>
-        <Link className="text-sm text-gray-400 underline" to="/settings">
-          Ustawienia
-        </Link>
-        <h1 className="my-2 text-2xl font-bold">Ustawienia AI</h1>
-        <p className="text-sm text-gray-400">
-          Każda funkcja ma osobny model, klucz, instrukcje i statystyki.
-        </p>
-      </header>
+    <div className="page-workspace">
+      <PageHeader
+        title="Ustawienia AI"
+        description="Każda funkcja ma osobny model, klucz, instrukcje i statystyki."
+        context={
+          <Link className="underline" to="/settings">
+            Ustawienia
+          </Link>
+        }
+      />
       <div
         role="group"
         aria-label="Funkcja AI"
-        className="flex flex-wrap gap-2"
+        className="mb-4 flex flex-wrap gap-2"
       >
         {purposes.map((item) => (
           <button
@@ -519,15 +520,15 @@ export function AISettings() {
         onRetry={query.refetch}
       >
         {data && (
-          <div key={purpose} className="space-y-4">
+          <div key={purpose} className="workspace-panels">
             {data.operational === false && (
-              <p className="text-sm text-gray-400">
+              <p className="workspace-span text-sm text-gray-400">
                 Ta funkcja nie ma aktywnej konfiguracji na serwerze. Zapis
                 ustawień nie uruchamia przetwarzania.
               </p>
             )}
             {purpose === "categorization" && (
-              <p className="text-sm text-gray-400">
+              <p className="workspace-span text-sm text-gray-400">
                 Po zmianie ustawień potwierdź ponownie wysyłanie danych w{" "}
                 <Link
                   className="underline"
@@ -539,7 +540,7 @@ export function AISettings() {
               </p>
             )}
             {purpose === "receipt" && (
-              <p className="text-sm text-gray-400">
+              <p className="workspace-span text-sm text-gray-400">
                 Zdjęcie paragonu trafi do wybranego modelu dopiero po osobnym
                 potwierdzeniu odczytu.
               </p>
@@ -552,7 +553,9 @@ export function AISettings() {
             <CredentialForm settings={data} purpose={purpose} />
             <Instructions active={data.instructions} purpose={purpose} />
             {purpose === "advisor" && <AIBenchmark settings={data} />}
-            <Usage purpose={purpose} />
+            <div className="workspace-span min-w-0">
+              <Usage purpose={purpose} />
+            </div>
           </div>
         )}
       </QueryFeedback>

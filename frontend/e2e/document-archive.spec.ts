@@ -83,8 +83,19 @@ async function archiveFixture(
     }
     await route.fallback();
   });
-  page.on("dialog", (dialog) => dialog.accept());
   return { base, writes, doc };
+}
+
+async function confirmArchive(page: Page, originalName: string) {
+  await page
+    .getByRole("button", { name: `Archiwizuj dokument: ${originalName}` })
+    .click();
+  const confirmation = page.getByRole("dialog", {
+    name: "Archiwizuj dokument",
+  });
+  await confirmation
+    .getByRole("button", { name: "Archiwizuj dokument", exact: true })
+    .click();
 }
 
 test("archive and restore retain approved financial source and original", async ({
@@ -96,9 +107,7 @@ test("archive and restore retain approved financial source and original", async 
     async (id) => (await fetch(`/api/finance/bills/${id}`)).json(),
     ids.bill,
   );
-  await page
-    .getByRole("button", { name: `Archiwizuj dokument: ${doc.original_name}` })
-    .click();
+  await confirmArchive(page, doc.original_name);
   await expect(
     page.getByText("Dokument przeniesiony do archiwum."),
   ).toBeVisible();
@@ -153,12 +162,14 @@ test("active work explains archive rejection without changing the document", asy
 }) => {
   const { base, writes, doc } = await archiveFixture(page, { busy: true });
   await page.goto("/documents");
-  await page
-    .getByRole("button", { name: `Archiwizuj dokument: ${doc.original_name}` })
-    .click();
+  await confirmArchive(page, doc.original_name);
   await expect(page.getByRole("alert")).toContainText(
     "Dokument jest przetwarzany. Poczekaj na zakończenie odczytu AI/OCR.",
   );
+  await page
+    .getByRole("dialog", { name: "Archiwizuj dokument" })
+    .getByRole("button", { name: "Anuluj" })
+    .click();
   await expect(
     page.getByRole("button", { name: `Otwórz dokument: ${doc.original_name}` }),
   ).toBeVisible();

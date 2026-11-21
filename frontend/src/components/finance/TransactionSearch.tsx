@@ -12,6 +12,7 @@ import {
   transactionSearchParams,
 } from "../../lib/transactionSearch";
 import { QueryFeedback } from "../QueryFeedback";
+import { IconButton } from "../IconButton";
 import { TransactionList } from "./AccountTransactions";
 import { retainFinancePeriod } from "./useFinancePeriod";
 
@@ -132,29 +133,27 @@ export function TransactionSearch() {
                 aria-label="Strony transakcji"
                 className="flex flex-wrap gap-3 items-center"
               >
-                <button
-                  type="button"
-                  className="btn-secondary"
+                <IconButton
+                  icon="previous"
+                  label="Poprzednia"
+                  tooltip="Poprzednia strona"
                   disabled={pageNumber <= 1 || results.isFetching}
                   onClick={() => changePage(pageNumber - 1)}
-                >
-                  Poprzednia
-                </button>
+                />
                 <span className="text-sm text-gray-400">
                   Strona {pageNumber} z{" "}
                   {Math.max(1, Math.ceil(page.total / page.limit))}
                 </span>
-                <button
-                  type="button"
-                  className="btn-secondary"
+                <IconButton
+                  icon="next"
+                  label="Następna"
+                  tooltip="Następna strona"
                   disabled={
                     params.offset + page.items.length >= page.total ||
                     results.isFetching
                   }
                   onClick={() => changePage(pageNumber + 1)}
-                >
-                  Następna
-                </button>
+                />
                 {pageNumber > 1 && (
                   <button
                     type="button"

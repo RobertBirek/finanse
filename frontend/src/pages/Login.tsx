@@ -54,12 +54,12 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
+    <main className="app-shell min-h-dvh flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-xl bg-advisor-500 flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl font-bold text-white">A</span>
-          </div>
+          <span className="advisor-monogram mx-auto mb-4" aria-hidden="true">
+            pa
+          </span>
           <h1 className="text-2xl font-bold text-white">Personal Advisor</h1>
           <p className="text-gray-400 mt-2">Zaloguj się, aby kontynuować</p>
         </div>
@@ -81,7 +81,7 @@ export function Login() {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-300 mb-1.5"
               >
-                Email
+                E-mail
               </label>
               <input
                 type="email"
@@ -132,6 +132,6 @@ export function Login() {
           </form>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

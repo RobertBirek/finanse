@@ -51,6 +51,8 @@ export function CogIcon({ className }: IconProps) {
   return (
     <svg
       className={className}
+      aria-hidden="true"
+      focusable="false"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -75,6 +77,8 @@ function Icon({ className, d }: IconProps & { d: string }) {
   return (
     <svg
       className={className}
+      aria-hidden="true"
+      focusable="false"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"

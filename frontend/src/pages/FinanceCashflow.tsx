@@ -18,6 +18,7 @@ import { ConfirmScheduledItemDialog } from "../components/finance/ConfirmSchedul
 import { ScheduledItemForm } from "../components/finance/ScheduledItemForm";
 import { ScheduledItemsList } from "../components/finance/ScheduledItemsList";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 
 export function FinanceCashflow({
@@ -79,16 +80,18 @@ export function FinanceCashflow({
       : null;
 
   return (
-    <div className="max-w-5xl">
-      <h1 className="mb-2 text-2xl font-bold text-white">
-        {configure
-          ? settingsSection === "forecast"
-            ? "Parametry prognozy"
-            : settingsSection === "schedules"
-              ? "Harmonogramy"
-              : "Płynność"
-          : "Płynność"}
-      </h1>
+    <div className="page-workspace">
+      <PageHeader
+        title={
+          configure
+            ? settingsSection === "forecast"
+              ? "Parametry prognozy"
+              : settingsSection === "schedules"
+                ? "Harmonogramy"
+                : "Płynność"
+            : "Płynność"
+        }
+      />
       {!configure ? <FinanceTabs /> : null}
 
       {!configure || settingsSection === "all" ? (

@@ -1,4 +1,5 @@
 import { Link, Navigate, useLocation } from "react-router-dom";
+import { PageHeader } from "../components/PageHeader";
 import { useCreditCards } from "../api/creditCards";
 import { formatPLN } from "../lib/format";
 import { entityColor } from "../lib/financeColors";
@@ -99,8 +100,8 @@ export function FinanceCreditCards() {
       />
     );
   return (
-    <div className="max-w-5xl space-y-6">
-      <h1 className="text-2xl font-bold text-white">Karty kredytowe</h1>
+    <div className="page-workspace space-y-6">
+      <PageHeader title="Karty kredytowe" />
       <p className="text-sm text-gray-400">
         Bieżące wykorzystanie każdej karty. Dostępny limit uwzględnia
         rezerwacje; warunki zmienisz w edycji konta.

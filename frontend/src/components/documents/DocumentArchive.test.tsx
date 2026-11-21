@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import api from "../../lib/api";
@@ -30,7 +36,6 @@ beforeEach(() => {
     isAuthenticated: true,
     isLoading: false,
   });
-  vi.spyOn(window, "confirm").mockReturnValue(true);
   vi.spyOn(api, "get").mockImplementation(async (url, config) => {
     if (url === "/documents")
       return {
@@ -83,9 +88,14 @@ it("archives, lists the archive and restores without DELETE or new AI/OCR", asyn
       name: `Archiwizuj dokument: ${doc.original_name}`,
     }),
   );
-  expect(window.confirm).toHaveBeenCalledWith(
-    "Przenieść dokument do archiwum? Plik, historia odczytu i powiązania finansowe pozostaną zachowane.",
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Archiwizuj dokument" }),
   );
+  expect(
+    dialog.getByText(/historia odczytu i powiązania finansowe/),
+  ).toBeVisible();
+  expect(api.post).not.toHaveBeenCalled();
+  fireEvent.click(dialog.getByRole("button", { name: "Archiwizuj dokument" }));
   expect(
     await screen.findByText("Dokument przeniesiony do archiwum."),
   ).toBeVisible();
@@ -118,9 +128,14 @@ it("explains active processing instead of offering a blind retry", async () => {
       name: `Archiwizuj dokument: ${doc.original_name}`,
     }),
   );
-  expect(await screen.findByRole("alert")).toHaveTextContent(
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Archiwizuj dokument" }),
+  );
+  fireEvent.click(dialog.getByRole("button", { name: "Archiwizuj dokument" }));
+  expect(await dialog.findByRole("alert")).toHaveTextContent(
     "Dokument jest przetwarzany. Poczekaj na zakończenie odczytu AI/OCR.",
   );
+  fireEvent.click(dialog.getByRole("button", { name: "Anuluj" }));
   expect(
     screen.getByRole("button", {
       name: `Otwórz dokument: ${doc.original_name}`,
@@ -129,12 +144,16 @@ it("explains active processing instead of offering a blind retry", async () => {
 });
 
 it("does not archive after confirmation is declined", async () => {
-  vi.mocked(window.confirm).mockReturnValue(false);
   mount();
   fireEvent.click(
     await screen.findByRole("button", {
       name: `Archiwizuj dokument: ${doc.original_name}`,
     }),
+  );
+  fireEvent.click(
+    within(
+      screen.getByRole("dialog", { name: "Archiwizuj dokument" }),
+    ).getByRole("button", { name: "Anuluj" }),
   );
   expect(api.post).not.toHaveBeenCalled();
 });

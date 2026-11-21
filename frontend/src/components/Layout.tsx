@@ -1,9 +1,10 @@
 import { Suspense, useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useLogout } from "../api/auth";
 import { useAuthStore } from "../stores/authStore";
 import { ContextualSidebar } from "./ContextualSidebar";
 import { Dialog } from "./Dialog";
+import { IconButton } from "./IconButton";
 import { DocumentProcessingMonitor } from "./documents/DocumentProcessingMonitor";
 import { getContextForPathname, navigationContexts } from "./navigation";
 import {
@@ -102,19 +103,33 @@ export function Layout() {
             Moja przestrzeń <span className="mx-2 text-gray-500">/</span>
             <strong>{activeContext.label}</strong>
           </p>
-          <button
-            type="button"
-            className="ml-auto min-h-9 min-w-9 rounded-full border border-gray-700 text-sm text-gray-300 hover:bg-gray-800"
-            onClick={() =>
-              setTheme((current) => (current === "light" ? "dark" : "light"))
-            }
-            aria-label={
-              theme === "light" ? "Włącz ciemny motyw" : "Włącz jasny motyw"
-            }
-          >
-            {theme === "light" ? "◐" : "☀"}
-          </button>
+          <div className="ml-auto">
+            <IconButton
+              icon="theme"
+              onClick={() =>
+                setTheme((current) => (current === "light" ? "dark" : "light"))
+              }
+              label={
+                theme === "light" ? "Włącz ciemny motyw" : "Włącz jasny motyw"
+              }
+            />
+          </div>
         </header>
+        {activeContext.id === "today" && (
+          <nav
+            className="mobile-section-nav lg:hidden"
+            aria-label="Widoki sekcji Dzisiaj"
+          >
+            {activeContext.items.map(
+              ({ label, to }) =>
+                to && (
+                  <NavLink key={to} to={to} end>
+                    {label}
+                  </NavLink>
+                ),
+            )}
+          </nav>
+        )}
         <DocumentProcessingMonitor />
         <div
           id="main-content"
@@ -138,25 +153,35 @@ export function Layout() {
                   "finance",
                   "organization",
                   "advisor",
+                  "knowledge",
                   "system",
                 ].includes(context.id),
             )
             .map((context) => {
               const Icon = context.icon;
-              const active =
-                location.pathname === context.to ||
-                location.pathname.startsWith(`${context.to}/`);
+              const active = activeContext.id === context.id;
+              const label =
+                context.id === "knowledge"
+                  ? "Dokumenty"
+                  : context.id === "organization"
+                    ? "Projekty"
+                    : context.label;
               return (
-                <NavLink
+                <Link
                   key={context.id}
                   to={context.to!}
                   className={`mobile-bottom-link ${active ? "active" : ""}`}
+                  aria-current={
+                    active
+                      ? location.pathname === context.to
+                        ? "page"
+                        : "location"
+                      : undefined
+                  }
                 >
                   <Icon className="h-5 w-5" />
-                  <span>
-                    {context.id === "finance" ? "Finanse" : context.label}
-                  </span>
-                </NavLink>
+                  <span>{label}</span>
+                </Link>
               );
             })}
         </nav>

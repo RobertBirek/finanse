@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { Account, AccountUpdateInput } from "../../api/finance";
+import { IconButton } from "../IconButton";
 import { ACCOUNT_TYPES, apiErrorDetail, isConflict } from "./accountSettings";
 import { entityColor, isValidFinanceColor } from "../../lib/financeColors";
 import { FinanceColorPicker } from "./FinanceColorPicker";
@@ -294,15 +295,13 @@ export function AccountRow({
             </>
           ) : (
             <>
-              <button
-                type="button"
-                aria-label={`Edytuj konto ${account.name}`}
-                className="btn-secondary px-3 py-1.5 text-sm"
+              <IconButton
+                icon="edit"
+                label={`Edytuj konto ${account.name}`}
+                tooltip="Edytuj konto"
                 disabled={rowPending}
                 onClick={startEdit}
-              >
-                Edytuj
-              </button>
+              />
               <button
                 type="button"
                 aria-label={`${

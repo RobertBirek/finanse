@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
+import { PageHeader } from "../components/PageHeader";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   importError,
@@ -517,20 +518,15 @@ export function FinanceImportReview() {
     historySearch.set("kind", "loan_schedule");
   setListPage(historySearch, "page", listPage(params.get("page")));
   return (
-    <div className="max-w-6xl">
-      <header className="finance-page-heading">
-        <div>
-          <h1>
-            {batch.data?.kind === "loan_schedule"
-              ? "Weryfikacja harmonogramu"
-              : "Weryfikacja wyciągu"}
-          </h1>
-          <p>
-            Oryginał pozostaje bez zmian. Decyzje i podgląd nie księgują
-            operacji.
-          </p>
-        </div>
-      </header>
+    <div className="page-workspace">
+      <PageHeader
+        title={
+          batch.data?.kind === "loan_schedule"
+            ? "Weryfikacja harmonogramu"
+            : "Weryfikacja wyciągu"
+        }
+        description="Oryginał pozostaje bez zmian. Decyzje i podgląd nie księgują operacji."
+      />
       <FinanceTabs />
       <Link
         className="mb-4 inline-block underline"

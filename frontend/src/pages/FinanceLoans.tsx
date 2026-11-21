@@ -14,6 +14,7 @@ import {
   type LoanPaymentStatus,
 } from "../api/loans";
 import { QueryFeedback } from "../components/QueryFeedback";
+import { PageHeader } from "../components/PageHeader";
 import { LoanAgreementForm } from "../components/finance/loans/LoanAgreementForm";
 import { LoanInstallmentForm } from "../components/finance/loans/LoanInstallmentForm";
 import { ScheduleHistory } from "../components/finance/loans/ScheduleHistory";
@@ -307,16 +308,11 @@ export function FinanceLoans() {
   const detail = useLoan(activeLoanId);
   const updateLoan = useUpdateLoan();
   return (
-    <div className="max-w-6xl">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-white">
-          Kredyty i pożyczki
-        </h1>
-        <p className="mt-1 text-sm text-gray-400">
-          Harmonogram jest planem. Powiązania wskazują istniejące przelewy i nie
-          zmieniają księgi.
-        </p>
-      </header>
+    <div className="page-workspace">
+      <PageHeader
+        title="Kredyty i pożyczki"
+        description="Harmonogram jest planem. Powiązania wskazują istniejące przelewy i nie zmieniają księgi."
+      />
       <QueryFeedback
         loading={accounts.isLoading || loans.isLoading}
         error={accounts.isError || loans.isError}

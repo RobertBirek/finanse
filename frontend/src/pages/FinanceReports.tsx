@@ -7,6 +7,7 @@ import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { SummaryCard } from "../components/finance/SummaryCard";
 import { FinanceTabs } from "../components/finance/FinanceTabs";
+import { PageHeader } from "../components/PageHeader";
 import { useFinancePeriod } from "../components/finance/useFinancePeriod";
 import { ExpenseDateBasis } from "../components/finance/TransactionDateLabel";
 
@@ -17,11 +18,11 @@ export function FinanceReports() {
   const categories = useCategories();
 
   return (
-    <div className="max-w-5xl">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-white">Raporty</h1>
-        <MonthPicker period={period} onChange={setPeriod} />
-      </div>
+    <div className="page-workspace">
+      <PageHeader
+        title="Raporty"
+        actions={<MonthPicker period={period} onChange={setPeriod} />}
+      />
       <FinanceTabs />
       <ExpenseDateBasis />
 
