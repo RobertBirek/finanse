@@ -9,8 +9,9 @@ Backlog zadań ze statusami.
 - [x] Porównanie dwóch konfiguracji Doradcy na syntetycznych przypadkach;
   osobny limit uruchomień, bez zmiany profilu lub instrukcji.
 - [x] Przegląd lokalny i testy przeglądarkowe desktop/mobile z atrapą API.
-- [ ] Uruchomić testy integracyjne w zatwierdzonym GitHub Actions, w tym
-  izolację właściciela i zwroty w PostgreSQL. Publikacja i wdrożenie osobno.
+- [x] Testy integracyjne w GitHub Actions po scaleniu PR #15, w tym
+  izolacja właściciela i zwroty w PostgreSQL. CI 44888146581: 11/11.
+- [ ] Wdrożyć nowe funkcje Doradcy na produkcję.
 
 ## Ustawienia OpenAI — 2026-11-20
 
@@ -23,12 +24,23 @@ Backlog zadań ze statusami.
   aplikacji, zachowując reguły domen, rezerwacje i epoki zadań.
 - [x] Scalić wąską poprawkę klasyfikatora przejścia Node: PR #13 `07ec160`, CI 11/11.
 - [x] Odzyskać i porównać z poprzednim dowodem pakiet preflight zgodny z `extends`.
-- [~] Uzgodnić wersję repozytorium z odzyskanym launcherem oraz odebrać ją
+- [x] Uzgodnić wersję repozytorium z odzyskanym launcherem oraz odebrać ją
   na syntetycznych danych i w CI.
-- [ ] Uzyskać osobną akceptację dokładnego pakietu, dowodu zakresu,
+- [x] Uzyskać osobną akceptację dokładnego pakietu, dowodu zakresu,
   inventory i odczytu produkcyjnego dla nowej rewizji.
-- [ ] Po akceptacji i preflight: zweryfikowany odbudowany runtime, kopia i
+- [x] Po akceptacji i preflight: zweryfikowany odbudowany runtime, kopia i
   odtworzenie, akceptacja dwóch migracji, spójny rollout z rollbackiem.
+- [x] Skonfigurować ten sam `ADVISOR_CREDENTIAL_ENCRYPTION_KEY` w backendzie
+  i workerze po osobnej zgodzie; potwierdzić szyfrowanie i odszyfrowanie
+  syntetycznej wartości dla 5/5 funkcji, bez zapisu do bazy.
+- [ ] Potwierdzić w zalogowanym panelu zapis własnego klucza i test połączenia
+  z rzeczywistym OpenAI na zatwierdzonym koncie testowym.
+- [x] Sprawdzić zapis write-only po zalogowaniu do izolowanej aplikacji oraz
+  odtworzenie syntetycznej bazy i osobno zaszyfrowanego sekretu z atrapą OpenAI.
+- [x] Przygotować czyszczenie pozostałości DeepSeek i porównać render Compose
+  dla wydania aktywnego oraz rollbacku.
+- [x] Po osobnej zgodzie zapisać zmianę trzech wpisów w `.env`, bez restartu.
+- [x] Unieważnienie klucza DeepSeek u dostawcy potwierdzone przez operatora.
 
 ## Uzgodnienie `main` i kolejny etap AI — 2026-11-20
 

@@ -74,10 +74,11 @@
 
 Etapy 1–3 sprawdzono łącznie, ponieważ wspólnie zmieniają router i widok
 Doradcy; trafiają do jednego commitu. Benchmark pozostaje osobnym przyrostem.
-Scenariusze RED → GREEN oraz próby UI ukończono lokalnie. W zadaniach 1 i 3
-przypadki zależne od bazy pozostają dodatkową bramką CI.
+Scenariusze RED → GREEN oraz próby UI ukończono lokalnie. Przypadki
+zależne od bazy przeszły w zatwierdzonym CI na tymczasowym PostgreSQL.
 
 - [x] Niezależny przegląd granicy kont, operacji tylko do odczytu, pieniądza w groszach, kosztów wywołań i informacji wysyłanych do OpenAI.
 - [x] Dwa przebiegi UI na desktop/mobile; przetestuj działanie faktów bez OpenAI, błędy, klawiaturę i linki źródłowe.
 - [x] Zaktualizuj `CHANGELOG.md`, `TASKS.md`, `JOURNAL.md`. Bez deployu; nie dołączaj prywatnych zmian hosta.
-- [ ] Potwierdź testy integracyjne z PostgreSQL w zatwierdzonym CI. Lokalna kolekcja nie jest wykonaniem testów.
+- [x] Potwierdzono testy PostgreSQL w [CI #44886741957](https://github.com/RobertBirek/finanse/actions/runs/44886741957)
+  na `8b75579`: 11/11 zadań i 3136 testów backendu bez pominięć w JUnit.

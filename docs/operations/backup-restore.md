@@ -139,6 +139,23 @@ investigated through the failure journal before a manual rerun. No command,
 unit, or journal entry contains secrets.
 
 
+## Odzyskiwanie sekretu szyfrującego ustawienia OpenAI
+
+Kopia PostgreSQL zawiera szyfrogramy własnych kluczy OpenAI, nie zawiera
+`ADVISOR_CREDENTIAL_ENCRYPTION_KEY`. Przy przenoszeniu lub odtwarzaniu
+produkcji pobierz **tę samą wartość** z zatwierdzonego menedżera sekretów
+utrzymywanego niezależnie od serwera i kopii bazy. Nie generuj nowego sekretu
+dla odtworzonej bazy. Nie kopiuj go do Git, logów, dowodów ani repozytorium
+Restic z bazą. Zapisuj wyłącznie identyfikator wpisu, wersję, właściciela
+i wynik próby odzyskania, bez wartości ani jej hasha.
+
+Próba: odtwórz bazę w środowisku bez dostępu do usług produkcyjnych i OpenAI.
+Skonfiguruj sekret tylko w backendzie i workerze. Sprawdź zapis klucza,
+odczyt bez wartości i odszyfrowanie na danych testowych, z atrapą OpenAI.
+Brak lub nieprawidłowy sekret ma blokować użycie zapisanego klucza, bez
+cichego przejścia na klucz serwera. Do pracy na rzeczywistej kopii produkcji
+i użycia rzeczywistego sekretu potrzebna jest osobna akceptacja.
+
 ## Versioned Application Releases And Rollback
 
 Production previously mounted `/opt/finanse/backend` over `/app`. Changing only
@@ -265,6 +282,31 @@ queues and record data-service container IDs. After applying: check all three
 revision labels, absence of `/app` host mounts, unchanged data-service IDs,
 HTTPS frontend/health, unauthenticated API rejection, and worker status/errors.
 Do not rewrite historic transactions or run imports as a deployment step.
+
+### Przekazanie wydania między agentami
+
+Prowadź jeden prywatny zapis wydania poza Git. Zapisuj pełny SHA kandydata
+i aktywnego wydania, identyfikatory obrazów do wdrożenia i rollbacku, hashe
+zatwierdzonych wejść, ostatnią zakończoną bramkę i ścieżkę do dowodu. Przy
+backupie zapisuj identyfikator **tego samego** snapshotu w dowodzie odtworzenia
+i próbnej migracji. Zapis kończ konkretnym następnym krokiem, jego warunkiem
+STOP oraz zakresem i liczbą dozwolonych uruchomień. Nie zapisuj sekretów.
+
+Przejmujący zaczyna od porównania aktywnych metadanych, identyfikatorów
+obrazów i hashy. Nie powtarza zielonych kontroli, jeśli ich dowód nadal
+dotyczy dokładnie tych samych wejść i procedura nie wymaga świeżego wyniku.
+Nie rozszerza zakresu cudzej zgody; ponawia preflight po zmianie stanu
+zgodnie z procedurą i pod blokadą wdrożenia przed mutacją. Przed pierwszym
+odczytem produkcji sprawdza fazę Git w tym samym czystym środowisku, pod
+docelowym UID i na dokładnym checkoutcie; nie zmienia `safe.directory`
+ani właściciela, by wymusić przejście bramki.
+
+Sprawdź gotowość konfiguracji dla każdej zmienionej funkcji niezależnie
+od health API. Przykład: ustawienia OpenAI mogą działać z kluczem serwera,
+ale własne klucze wymagają tego samego `ADVISOR_CREDENTIAL_ENCRYPTION_KEY`
+w backendzie i workerze. Dowód ma zawierać jedynie wynik kontroli obecności,
+formatu i zgodności, nie wartość sekretu.
+
 ### Read-only release preflight
 
 V2 classifies **source and schema changes**, not

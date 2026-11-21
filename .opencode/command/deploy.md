@@ -7,7 +7,21 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
 1. Przed wdrożeniem przeczytaj `docs/operations/backup-restore.md`, sekcję
    „Versioned Application Releases And Rollback”, oraz prywatne metadane
    `/opt/finanse/webapp/releases/active-release.json`. Ustal aktywny override,
-   rewizje poszczególnych usług i istniejący rollback. Nie wypisuj sekretów.
+   rewizje poszczególnych usług i istniejący rollback. Wznów od ostatniej
+   ważnej bramki opisanej w „Przekazanie wydania między agentami”.
+   Prowadź jeden prywatny zapis poza Git:
+
+   ```text
+   Kandydat / aktywna rewizja:
+   Przypięte obrazy i wejścia / rollback:
+   Ostatnia zaliczona bramka / ścieżka do dowodu:
+   Następny krok / warunek STOP:
+   Brakująca zgoda / zakres / liczba uruchomień:
+   ```
+
+   Nie wypisuj sekretów. Przed pierwszym odczytem produkcji sprawdź fazę Git
+   na docelowym checkoutcie, pod docelowym UID i w czystym środowisku launchera.
+   Nie zmieniaj właściciela ani `safe.directory`, żeby wymusić przejście.
 2. Wymagaj zatwierdzenia dokładnej rewizji i zakresu wdrożenia. Przejście testów
    lub scalenie PR samo w sobie nie upoważnia do wdrożenia.
    Po osobnej zgodzie na odczyt rzeczywistego środowiska uruchom readonly
@@ -21,6 +35,9 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
    z bieżących obserwacji ani nie zmieniaj aktywnych metadanych, aby kontrola przeszła.
    `blocked`/exit2 oznacza STOP; exit0 to klasyfikacja źródeł/schematu, nie zgoda
    lub production-ready. Oceń zewnętrzny env/mounty/ingress osobno.
+   Sprawdź również gotowość każdej zmienionej funkcji, nie tylko health API.
+   Dla sekretu zapisz wyłącznie obecność, poprawność formatu i zgodność między
+   wymaganymi usługami; brak odnotuj jawnie, nie zgłaszaj funkcji jako gotowej.
    Domyślne unknown scope nadal blokuje; jedynie exact review proof dla plików
    checkera/deploy może uznać konkretną zmianę tooling. Nie pozwala to instalować
    narzędzi, zmieniać etykiet aplikacji lub pomijać wcześniejszego blocked V1.

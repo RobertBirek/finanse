@@ -17,9 +17,79 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
   prawdziwego serwisu korekty w teście integracyjnym.
 - Zweryfikowano 83 wybrane testy pytest bez bazy, 737 testów Vitest,
   lint, typy, build i Playwright 4/4 (desktop i mobile, atrapy API).
-  Testy PostgreSQL czekają na zatwierdzone CI; lokalne `/test` tylko
-  kolekcjonuje testy backendu. Bez rzeczywistych wywołań OpenAI, zmian
-  zależności lub wdrożenia.
+- CI gałęzi `8b75579` wykonało 3136 testów backendu bez pominięć. Przeszły
+  próby izolacji zadań i dokumentów między właścicielami oraz rozliczenia
+  zwrotu w PostgreSQL. Po scaleniu PR #15 drzewo Git pozostało identyczne,
+  a CI dla `db062d2` zakończyło się wynikiem 11/11.
+  [CI gałęzi](https://github.com/RobertBirek/finanse/actions/runs/44886741957),
+  [CI main](https://github.com/RobertBirek/finanse/actions/runs/44888146581).
+
+## 2026-11-21 — Usunięcie pozostałości DeepSeek z `.env`
+
+- Aktywny Compose nadpisuje starsze wpisy `LLM_*`: backend i worker
+  korzystają z endpointów OpenAI, a `LLM_API_KEY` jest pusty.
+- W pamięci zasymulowano usunięcie `LLM_API_KEY`, ustawienie endpointu
+  OpenAI oraz skopiowanie nazwy aktywnego modelu Doradcy do `LLM_MODEL`.
+  Pełne modele Compose dla `ebc7b69` i rollbacku `86c6870` były identyczne
+  przed i po symulacji.
+- Po odrębnej zgodzie zapisano zmianę atomowo i potwierdzono te same
+  pełne modele Compose. Pozostałe wiersze `.env` bez zmian, tryb `0600`,
+  identyfikatory i czasy startu wszystkich sześciu kontenerów bez zmian.
+  Operator osobno potwierdził unieważnienie klucza DeepSeek u dostawcy.
+
+## 2026-11-21 — Izolowana próba odzyskania kluczy OpenAI
+
+- Backend `ebc7b69`, nowa baza PostgreSQL bez sieci i bez danych produkcyjnych:
+  rzeczywiste logowanie i zapis syntetycznego klucza, odpowiedź bez wartości,
+  szyfrogram w bazie i test połączenia z atrapą OpenAI.
+- Po odtworzeniu dumpa na osobnej bazie, na schemacie `e5a46dc32772`,
+  błędny sekret dał 503 bez wywołania dostawcy. Sekret odzyskany z osobnego
+  szyfrowanego artefaktu przywrócił działanie testu z atrapą. Usunięto
+  tymczasowe zasoby próby. Nie kopiowano sekretu produkcyjnego.
+- Playwright 2/2 (desktop i mobile), Vitest 2/2, w tym czyszczenie pola
+  klucza po zapisie. Build testowany w Playwright zgodny z aktywnym
+  zestawem 103/103 plików. Do domknięcia: wskazanie niezależnego menedżera
+  sekretów i rzeczywisty test połączenia na zatwierdzonym koncie testowym.
+
+## 2026-11-20 — Aktywacja szyfrowania własnych kluczy OpenAI
+
+- Po osobnej zgodzie dodano jeden wspólny sekret do backendu i workera.
+  Odtworzono tylko te dwa kontenery na tych samych obrazach `ebc7b69`;
+  frontend i usługi danych bez zmian, bez reloadu nginx i bez migracji.
+- Worker przeszedł kontrolę gotowości, health API zwróciło 200,
+  a anonimowe API ustawień 401. Backend zaszyfrował dane syntetyczne,
+  worker je odszyfrował dla 5/5 funkcji; bez zapisu do bazy i bez wywołania
+  OpenAI. Zalogowany test połączenia jest osobnym krokiem.
+- `/deploy` zawiera teraz szablon prywatnego przekazania wydania, kontrolę
+  fazy Git na docelowym checkoutcie oraz kontrolę gotowości funkcji
+  niezależną od health API.
+
+## 2026-11-20 — Wydanie OpenAI: odbiór po przekazaniu do Codexa
+
+- `main` i trzy uruchomione usługi aplikacyjne: `ebc7b69`, CI 11/11
+  (44804364004). Aktywne metadane wskazują obie wykonane migracje,
+  `a6e52f41c9d0` → `c435e5526e23` → `e5a46dc32772`. Po wdrożeniu
+  potwierdzono etykiety rewizji i identyfikatory obrazów, health API 200,
+  strony `/advisor` i `/settings/ai` 200 oraz anonimowe API ustawień 401.
+  Gotowość workera pochodzi z zapisanego dowodu rollout.
+- Co zatrzymało pierwszy przebieg: różnica CI z pinem Node była poza
+  zakresem checkera, aktywny Compose używał `extends`, a repozytorium
+  pomocnicze nie przeszło kontroli własności czystego Git. Rozwiązania:
+  przypięty dowód zakresu (PR #13), izolowany renderer (PR #14) oraz
+  diagnostyka właściciela repozytorium **przed** uruchomieniem preflightu.
+  Lokalnie zielone testy jako root nie ujawniły problemu z uprawnieniami
+  w CI; oddzielono przenośne testy od kwalifikacji izolacji Linux.
+- Przy przekazaniu były gotowe obrazy oraz przypięte artefakty, ale brakowało
+  ukończonej próby odtworzenia i decyzji o migracjach. Codex dokończył
+  rollout: aktywny zapis i dowód próby wskazują ten sam szyfrowany snapshot
+  Restic; potwierdzono gotowość `86c6870` na nowym schemacie bez downgrade.
+  Nie odtwarzać ponownie na podstawie samej zmiany agenta.
+- Stan funkcjonalny: dowód rollout ma `custom_key_encryption_configured=false`.
+  Własne klucze są zablokowane do konfiguracji tego samego sekretu w backendzie
+  i workerze. Nie potwierdzano zalogowanego zapisu klucza ani połączenia z OpenAI.
+- Na przyszłość: zob. [przekazanie wydania między agentami](operations/backup-restore.md#przekazanie-wydania-między-agentami).
+  Istniejący skill `pre-release-review` służy do przeglądu; nie zastępuje
+  procedury `/deploy`, dokładnych akceptacji lub zapisanych dowodów.
 
 ## 2026-11-20 — Odzyskany launcher preflight Compose
 

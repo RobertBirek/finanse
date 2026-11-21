@@ -13,6 +13,39 @@ Wszystkie istotne zmiany w projekcie.
   na trzech syntetycznych przypadkach, bez zapisu ustawień. Wynik pokazuje
   zgodność, czas i tokeny, jeśli dostawca je zwrócił.
 
+Testy, w tym integracja z PostgreSQL, przeszły po scaleniu PR #15.
+[CI 44888146581](https://github.com/RobertBirek/finanse/actions/runs/44888146581).
+
+## [Konfiguracja produkcji, bez restartu] — 2026-11-21
+
+### Changed
+
+- Usunięto pozostałości DeepSeek z pliku środowiskowego. Pełne konfiguracje
+  Compose aktywnego wydania i rollbacku oraz czasy startu kontenerów
+  pozostały niezmienione.
+- Operator potwierdził unieważnienie klucza DeepSeek u dostawcy.
+
+## [Weryfikacja izolowana] — 2026-11-21 — Odzyskiwanie kluczy OpenAI
+
+- Udokumentowano odzyskiwanie sekretu niezależnie od kopii bazy. Próba
+  syntetyczna potwierdziła odtworzenie, odmowę przy złym sekrecie i poprawny
+  test z atrapą OpenAI po odzyskaniu właściwego sekretu.
+
+## [Produkcja `ebc7b69`] — 2026-11-20 — Ustawienia OpenAI
+
+### Changed
+
+- Wdrożono ustawienia OpenAI i migracje `c435e5526e23` oraz `e5a46dc32772`.
+  Próba odtworzenia potwierdziła rollback aplikacji do `86c6870` bez cofania
+  schematu.
+- Udokumentowano przekazanie wydania między agentami: zweryfikowany pakiet,
+  ostatnia zakończona bramka i zakres kolejnej wymaganej zgody.
+
+### Fixed
+
+- Skonfigurowano wspólny sekret szyfrowania własnych kluczy w backendzie
+  i workerze. Test kryptograficzny objął 5/5 funkcji bez wywoływania OpenAI.
+
 ## [Lokalny preflight, bez wdrożenia] — 2026-11-20
 
 ### Changed

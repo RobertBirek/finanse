@@ -39,15 +39,29 @@ informacyjny, nie służą do egzekwowania limitów ani rozliczeń.
   Rollback aplikacyjny na tym schemacie powinien wrócić do wersji sprzed obu
   przyrostów (nie do pośredniego commita `b590040`). Cofanie migracji nie
   usuwa zapisanych konfiguracji i danych pomiarowych bez oddzielnego planu.
-- `ADVISOR_CREDENTIAL_ENCRYPTION_KEY`: 32 losowe bajty zakodowane Base64URL.
-  Sekret należy przekazać wyłącznie backendowi poza repozytorium i backupami
-  bazy. Utrata lub podmiana sekretu bez migracji szyfrogramów powoduje
-  niedostępność istniejących własnych kluczy; odzyskać poprzedni sekret
-  albo ręcznie zastąpić klucze. Automatyczna rotacja sekretu nie jest dostępna.
+- `ADVISOR_CREDENTIAL_ENCRYPTION_KEY` zawiera 32 losowe bajty zakodowane jako
+  Base64URL. Przekaż ten sam sekret do usług `backend` i `worker` poza
+  repozytorium i kopiami bazy. Przed włączeniem zapisu własnych kluczy potwierdź
+  obecność, format i zgodność sekretu w obu usługach bez ujawniania wartości.
+  Utrata lub podmiana sekretu bez migracji szyfrogramów blokuje odczyt zapisanych
+  kluczy. Przywróć wtedy poprzedni sekret albo ponownie wprowadź własne klucze.
 - `ADVISOR_ALLOWED_SERVER_MODELS`: opcjonalna lista JSON identyfikatorów
   dopuszczonych przy użyciu klucza serwera. Model z `LLM_MODEL` jest domyślny.
 - Po wdrożeniu tester może zweryfikować połączenie z własnym kluczem przez UI;
   w tej pracy wszystkie odpowiedzi OpenAI są atrapami.
+
+## Wynik wdrożenia z 20 listopada 2026
+
+`ebc7b69` wdrożono na backendzie, workerze i frontendzie. Migracje
+`c435e5526e23` i `e5a46dc32772` zakończyły się poprawnie. Health API zwróciło
+`200`, a worker przeszedł kontrolę gotowości.
+
+Kontrola konfiguracji w dniu wdrożenia wykazała brak
+`ADVISOR_CREDENTIAL_ENCRYPTION_KEY` w backendzie i workerze; API odrzucało
+zapis własnego klucza kodem `503`. Po osobnej akceptacji skonfigurowano
+ten sam sekret w obu usługach, bez migracji. Backend zaszyfrował wartość
+syntetyczną, a worker odszyfrował ją dla wszystkich pięciu funkcji.
+Nie wykonywano zalogowanego zapisu ani połączenia z OpenAI.
 
 ## Reguły funkcji
 
