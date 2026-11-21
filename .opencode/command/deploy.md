@@ -12,9 +12,10 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
    Prowadź jeden prywatny zapis poza Git:
 
    ```text
-   Kandydat / aktywna rewizja:
-   Przypięte obrazy i wejścia / rollback:
-   Ostatnia zaliczona bramka / ścieżka do dowodu:
+    Kandydat / aktywna rewizja:
+    Przypięte obrazy i wejścia / rollback:
+    Zmiany od ostatniego zatwierdzonego stanu / źródła / braki:
+    Ostatnia zaliczona bramka / ścieżka do dowodu:
    Następny krok / warunek STOP:
    Brakująca zgoda / zakres / liczba uruchomień:
    ```
@@ -30,9 +31,14 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
    Najpierw wymagane są dokładne zewnętrzne piny pakietu/runtime, toolchainu,
    opcjonalnego scope proof i prywatny receipt rzeczywistej zgody administratora.
    Lokalny odbiór kodu nie jest zgodą na pakowanie/instalację ani odczyty produkcji.
-   Podaj pełne SHA, pełną listę Compose/env/projekt/PG, prywatny scratch0700
-   oraz niezależnie zatwierdzony inventory i jego SHA256. Nie wydawaj inventory
-   z bieżących obserwacji ani nie zmieniaj aktywnych metadanych, aby kontrola przeszła.
+    Podaj pełne SHA, pełną listę Compose/env/projekt/PG, prywatny scratch0700
+    oraz niezależnie zatwierdzony inventory i jego SHA256. Nie wydawaj inventory
+    z bieżących obserwacji ani nie zmieniaj aktywnych metadanych, aby kontrola przeszła.
+    Sam wskaż operatorowi pakiet do przeglądu, dokładny SHA-256 i różnice;
+    brak niezależnego potwierdzenia oznacza STOP. Po autoryzowanej zmianie
+    konfiguracji lub odtworzeniu usług utrwal nowy stan i pełną listę
+    zachowanych migratorów, nawet jeśli się nie zmieniła. Nie przenoś zgody
+    V2 na inne wejścia lub kandydata.
    `blocked`/exit2 oznacza STOP; exit0 to klasyfikacja źródeł/schematu, nie zgoda
    lub production-ready. Oceń zewnętrzny env/mounty/ingress osobno.
    Sprawdź również gotowość każdej zmienionej funkcji, nie tylko health API.
@@ -58,20 +64,28 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
    `compose up`; nie obchodź go przez root lub podłączenie produkcyjnego env/DB.
    Jeśli obrazy przebudowano/przetagowano lub zmieniono docelowego użytkownika,
    bramkę uruchom ponownie i porównaj IDs dowodu z obrazami wdrożenia.
-4. Wykonaj i zweryfikuj kopię bezpieczeństwa według procedury. Zachowaj obrazy
-   rollbacku oraz identyfikatory usług danych. Nie uruchamiaj importów, migracji
-   ani napraw historycznych transakcji jako niejawnego kroku deployu.
+4. Przed przełączeniem sprawdź pin rzeczywiście używanego narzędzia restore
+   i zgodność drzewa migracji ze schematem snapshotu oraz docelowym headem.
+   Wykonaj i zweryfikuj kopię, wiążąc odtworzenie z pełnym ID snapshotu;
+   sam udany cykliczny restore z selektorem `latest` tej bramki nie zamyka.
+   Zachowaj obrazy rollbacku oraz identyfikatory usług danych. Uzgodnij
+   obrazy, override i schemat rollbacku z próbą; rozbieżność oznacza STOP.
+   Nie uruchamiaj importów, migracji ani napraw historycznych transakcji jako
+   niejawnego kroku deployu.
 5. Stosuj pełną listę Compose: bazowy `/docker/finanse/compose.yaml`,
    `/docker/finanse/compose.prod.yaml` oraz zatwierdzony `compose.release.yaml`,
    z istniejącym plikiem środowiska. Używaj `up -d --no-deps --no-build` tylko
    dla zatwierdzonych usług. Sam frontend można wymienić wyłącznie wtedy, gdy
    nie wymaga nowego API; nowe endpointy wymagają spójnego backendu i frontendu.
 6. Sprawdź rewizje/obrazy, brak host mountu `/app`, niezmienione usługi danych,
-   HTTPS, pliki statyczne, API health, odrzucenie anonimowych odczytów oraz logi.
+    HTTPS, pliki statyczne, API health, odrzucenie anonimowych odczytów oraz logi.
+   Zapisz świeże dowody retencji, gotowości workera i wymaganego okna obserwacji.
    Nie wykonuj mutacji danych użytkownika w ramach smoke testu.
-7. Przy awarii przywróć zapisany, zgodny pakiet rollbacku, używając tej samej
-   pełnej listy bazowych plików Compose. Dopiero po udanej weryfikacji zaktualizuj
-   prywatne metadane aktywnego release'u i zapisz wynik w PR.
+7. Przy awarii użyj zapisanego, zgodnego pakietu rollbacku w granicach zgody.
+   Nie wybieraj celu z niespójnych metadanych. Publikuj `verified-live` atomowo
+   pod blokadą, zgodnie z „Odbiorem i publikacją metadanych” w runbooku.
+   Nie dziedzicz flag sukcesu i nie zastępuj brakującego dowodu statusem.
+   Zapisz w PR wynik bez prywatnych artefaktów.
 
 Nie używaj samodzielnego bazowego Compose, `make up` ani `make restart`:
 może to odtworzyć stare mounty kodu i ominąć wersjonowany release. Nie usuwaj

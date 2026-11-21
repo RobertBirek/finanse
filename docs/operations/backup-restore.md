@@ -99,6 +99,35 @@ ledger checks pass is that staging `uploads` directory moved into
 `RESTORE_DIR/uploads`. On failure, cleanup removes only the exact staging
 directory and never a pre-existing or concurrently created user path.
 
+### Zgodność narzędzia odtwarzania przed wydaniem
+
+Przed przełączeniem aplikacji lub migracją sprawdź, z jakiego runtime'u
+i drzewa migracji rzeczywiście korzysta zainstalowana ścieżka systemd → Make →
+skrypt restore. Porównaj ją z zatwierdzonymi źródłami wydania; sam SHA checkoutu
+ani etykieta obrazu aplikacji nie potwierdzają wersji narzędzia odtwarzania.
+Zapisz w prywatnym dowodzie pin runtime'u i drzewa migracji, ID snapshotu,
+rewizję Alembic z jego manifestu oraz docelowy head. Przed odtwarzaniem
+potwierdź, że przypięte drzewo zna obie rewizje i obsługuje ścieżkę między
+nimi. Sprawdź także zgodność ścieżki zaplanowanej po wydaniu z nowym schematem.
+
+Do próby wydania użyj pełnego ID wybranej kopii, a nie selektora `latest`.
+Zainstalowany wrapper cykliczny przekazuje `latest`; sam kod wyjścia tego
+wrappera nie wiąże wyniku z kopią wydania. Nie zaliczaj wyniku `latest`,
+chyba że pod wspólną blokadą backup/restore, bez jej zwalniania między
+wyborem a odtworzeniem, ustalono pełny identyfikator snapshotu, dowód
+potwierdza użycie dokładnie tej kopii i oba ID zgadzają się z wybraną kopią.
+Jeżeli zainstalowana ścieżka nie daje takiego dowodu, użyj osobno
+zatwierdzonej, izolowanej próby przekazującej pełny ID. Nie obchodź
+wrappera przez bezpośrednie uruchomienie produkcyjnego `make restore-verify`.
+
+Nieznana rewizja, niezgodny pin lub nieudana próba to STOP przed przełączeniem.
+Nie zmieniaj pinu na ruchome `main`/`latest` i nie modyfikuj snapshotu ani
+`alembic_version`, żeby wymusić przejście. Po osobnym zatwierdzeniu popraw
+pin i zweryfikuj właściwą ścieżkę na izolowanym celu. Dowód zastępczej próby
+izolowanej nie jest wynikiem automatycznego restore drill: jeśli jest ona
+potrzebna, zapisz osobno jej zakres, zgodę i wynik; nie zamykaj usterki
+harmonogramu, dopóki zainstalowana ścieżka nie przejdzie własnej kontroli.
+
 ## Automatyzacja systemd
 
 Install the root-only systemd automation and inspect or operate it with:
@@ -292,6 +321,28 @@ backupie zapisuj identyfikator **tego samego** snapshotu w dowodzie odtworzenia
 i próbnej migracji. Zapis kończ konkretnym następnym krokiem, jego warunkiem
 STOP oraz zakresem i liczbą dozwolonych uruchomień. Nie zapisuj sekretów.
 
+Po każdym wydaniu lub zatwierdzonej zmianie operacyjnej wpływającej na
+preflight (także zmianie `.env` bez restartu, odtworzeniu kontenera lub zmianie
+Compose) prowadzący zapisuje różnicę względem ostatniego zatwierdzonego stanu.
+Utrwala źródło i zakres zgody na zmianę, nowe identyfikatory usług, zmienione
+hashe wejść oraz pełną listę zachowanych migratorów, również gdy jest bez zmian
+(odnotuj to jawnie; pusta lista także wymaga potwierdzenia). Digest
+całego pliku `.env`, jeśli wymagany przez inventory, pozostaje prywatny; nie
+zapisuj wartości ani hashy poszczególnych sekretów. Sama zgoda na zmianę
+konfiguracji nie jest zgodą na następny odczyt ani na wydanie.
+
+Przy następnym wydaniu prowadzący przygotowuje pakiet do przeglądu, nie prosi
+administratora o szukanie technicznego pliku. Rozdziela wartości wynikające
+z zatwierdzonych zmian i zachowanych dowodów od bieżących obserwacji i pól bez
+niezależnego potwierdzenia. `NOT-APPROVED` to materiał pomocniczy: bieżąca
+obserwacja nie wystarcza do zatwierdzenia inventory ani do wystawienia receipt.
+W razie luki operator musi niezależnie potwierdzić stan oczekiwany albo
+dalsze wykonanie pozostaje zablokowane. Prowadzący przedstawia jedną prywatną
+ścieżkę, dokładne SHA-256 i różnice do decyzji.
+Przed preflightem wymaga jawnej zgody na dokładne bajty i właściwego receipt
+V2 z readiness dla tego kandydata. Zmiana wejścia unieważnia powiązane dowody
+i zgodę; nie kopiuj pokwitowania poprzedniego kandydata.
+
 Przejmujący zaczyna od porównania aktywnych metadanych, identyfikatorów
 obrazów i hashy. Nie powtarza zielonych kontroli, jeśli ich dowód nadal
 dotyczy dokładnie tych samych wejść i procedura nie wymaga świeżego wyniku.
@@ -307,6 +358,32 @@ ale własne klucze wymagają tego samego `ADVISOR_CREDENTIAL_ENCRYPTION_KEY`
 w backendzie i workerze. Dowód ma zawierać jedynie wynik kontroli obecności,
 formatu i zgodności, nie wartość sekretu.
 
+### Odbiór i publikacja metadanych
+
+Przed przełączeniem przygotuj pod blokadą wdrożenia spójny plan powrotu:
+rewizje per usługa, dokładne ID obrazów, pełny zestaw Compose z override,
+schemat pozostający po wycofaniu oraz dowód zgodności z tym schematem.
+Opis polityki, pola maszynowe i próba rollbacku muszą wskazywać ten sam cel.
+Rozbieżność oznacza STOP; przy aktywnej awarii zabezpiecz ruch zgodnie
+z planem i uzyskaj decyzję operatora zamiast zgadywać cel, cofać schemat
+lub odtwarzać bazę produkcyjną.
+
+Publikuj `verified-live` atomowo pod tą samą blokadą dopiero po zebraniu
+dowodów dla danego przebiegu. Nie kopiuj statusów sukcesu z poprzedniego
+wydania. Powiąż aktywne metadane co najmniej z:
+
+- aktualnym preflightem, zakresem zgody, CI i dowodem dokładnych obrazów;
+- ID kopii i dowodem odtworzenia tego samego snapshotu, wynikiem kontroli
+  retencji danych dla tego wydania i dowodem zgodności planu rollbacku;
+- faktycznymi rewizjami/ID obrazów i kontenerów, aktywnym Compose i schematem,
+  stanem usług danych, wynikami smoke i gotowości workera oraz początkiem,
+  końcem i wynikiem wymaganego okna obserwacji (błędy i restarty).
+
+Jeżeli odczyt potwierdza aktywny runtime, ale nie ma pełnego dowodu odbioru,
+rozróżnij te dwa statusy w zapisie wydania. Nie uzupełniaj wstecz niezmierzonych
+wyników i nie ponawiaj rollout tylko po to, by poprawić historię. Korekta
+produkcyjnych metadanych wymaga osobnej decyzji i zachowania poprzedniego zapisu.
+
 ### Read-only release preflight
 
 V2 classifies **source and schema changes**, not
@@ -314,11 +391,12 @@ external configuration-only changes. It never builds, creates, starts, stops,
 removes, migrates, restores, rolls back, or publishes metadata. Reading a real
 environment still needs separate approval. Local fake-tool tests do not grant it.
 
-**Local implementation only, not certified for production.** First publish only
-after approval and run CI for the exact SHA. Separately review and accept the
-exact checker/runtime bundle, toolchain and optional tooling-scope proof.
-Packaging, installation and real-environment readonly acceptance need explicit
-permission; neither this procedure nor a test result grants it.
+Archived production checks (including `db062d2`) are evidence for their exact
+inputs, not blanket certification. Publish only after approval and run CI for
+the exact SHA. Separately review and accept the exact checker/runtime bundle,
+toolchain and optional tooling-scope proof. Packaging, installation and
+real-environment readonly acceptance need explicit permission; neither this
+procedure nor a test result grants it.
 
 V1's historical `blocked/unknown_change_scope` remains valid evidence; V1 cannot
 approve its replacement. Never rewrite metadata, adopt observations or filter

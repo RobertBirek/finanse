@@ -2,6 +2,52 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-21 — Audyt wdrożenia Doradcy i zabezpieczenia następnych wydań
+
+- Odczyt Dockera potwierdził `db062d2`, zgodność obrazów, aktywnego override
+  i ID kontenerów. HTTPS i health `200`, chronione odczyty anonimowe `401`,
+  ARQ check zakończony sukcesem. Zachowany `preflight-locked.json` klasyfikuje
+  wydanie jako `app_only` na `e5a46dc32772` bez migracji. Stałe `authorized=false`
+  i `production_ready=false` w raporcie nie są decyzją o odmowie.
+- Po zmianie `.env` i odtworzeniu backendu/workera zabrakło przypiętego stanu
+  odniesienia. Pierwsza próba V2 zatrzymała się z `compose_container_mismatch`:
+  pominięto trzy zachowane migratory. Dopiero ponowna akceptacja dokładnych
+  bajtów i zgodne readiness/receipt V2 pozwoliły uzyskać klasyfikację kandydata.
+  Podobną blokadę inventory odnotowano przy `39aceec`; `ebc7b69` wymagał również
+  osobnego odbioru checkera dla Compose `extends`.
+- Izolowana próba z `rehearsal.json` potwierdza ten sam snapshot co zapis
+  wydania oraz zgodność powrotu aplikacji do `ebc7b69` bez downgrade.
+  Zainstalowany restore drill początkowo nie znał `e5a46dc32772`, podobnie jak
+  przy `8121512` starszy checkout nie znał ówczesnego schematu. Po korekcie pinu
+  systemd zakończył próbę kodem 0; przypięcie wciąż trzeba sprawdzać przy wydaniach.
+- Opis polityki rollbacku w produkcyjnych metadanych nadal wskazuje `86c6870`,
+  choć obrazy i override wskazują `ebc7b69`. Wykonawca odziedziczył flagę
+  retencji; nie znaleziono odrębnego dowodu tej bramki i pełnego okna obserwacji
+  dla tego przebiegu. Bieżący smoke nie odtwarza tego dowodu. Nie wybierać
+  rollbacku z niespójnego opisu i nie ponawiać rollout dla samego audytu.
+- Uzupełniono [procedurę backupu i wydania](operations/backup-restore.md)
+  oraz `/deploy`. Wyłącznie zmiana dokumentacji i instrukcji: bez modyfikacji
+  narzędzi, produkcyjnych metadanych, usług lub danych. Osobny odbiór
+  metadanych i automatyzacji zapisano w `TASKS.md`.
+- Po przeglądzie doprecyzowano dowód dokładnego snapshotu (samo `latest` nie
+  wystarcza), pełną listę migratorów także bez zmian i rozróżnienie aktywnego
+  runtime'u od pełnego odbioru. Brak `ADVISOR_DEV_PYTHON` zatrzymał kanoniczne
+  `/test`, `/lint` i `/typecheck` przed uruchomieniem kontroli aplikacji.
+- Przy uzgadnianiu z `main` porównano wszystkie worktree. Nie przeniesiono
+  starszych prototypów narzędzi frontendowych, A2, pilota baz testowych ani
+  alternatywnej wersji izolacji Compose: `main` zawiera nowsze rozwiązania
+  używane w CI i we wdrożeniach. Lokalne szkice i runtime'y odtwarzania zachowano.
+- Przygotowano osobny deweloperski venv `/opt/finanse/.venv` według wymagań
+  backendu i pinów narzędzi z CI. `source /opt/finanse/.venv/advisor-dev.env`
+  ustawia `ADVISOR_DEV_PYTHON` w bieżącej powłoce. `pip check` przeszedł.
+  `npm ci` na Node 24.22.3 odtworzyło zależności z lockfile; zachowano stary
+  `node_modules` i nie zmieniano `backend/.venv` ani konfiguracji produkcji.
+- Na lokalnym `main` przeszły `/lint` i `/typecheck`. Pierwszy `/test`
+  został przerwany przez łączny limit polecenia po kolekcji backendu.
+  Oddzielny przebieg `/test` z większym limitem zewnętrznym przeszedł:
+  kolekcja offline backendu i 737/737 testów Vitest w 118 plikach.
+  Nie uruchamiano testów backendu wymagających bazy ani wdrożenia.
+
 ## 2026-11-21 — Priorytety, symulacje i benchmark Doradcy
 
 - Doradca czyta istniejącą prognozę, listę dokumentów do przeglądu i

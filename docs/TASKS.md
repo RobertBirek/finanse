@@ -11,7 +11,18 @@ Backlog zadań ze statusami.
 - [x] Przegląd lokalny i testy przeglądarkowe desktop/mobile z atrapą API.
 - [x] Testy integracyjne w GitHub Actions po scaleniu PR #15, w tym
   izolacja właściciela i zwroty w PostgreSQL. CI 44888146581: 11/11.
-- [ ] Wdrożyć nowe funkcje Doradcy na produkcję.
+- [x] Wdrożono `db062d2` jako app-only, bez migracji; potwierdzono działające
+  obrazy backendu, workera i frontendu oraz odczytowe smoke HTTP i ARQ.
+- [x] Udokumentowano przekazanie stanu odniesienia, zgodność runtime'u restore
+  i publikację świeżych dowodów wydania w runbooku i `/deploy`.
+- [ ] Osobno zatwierdzić uzgodnienie sprzecznego opisu rollbacku z próbą
+  `ebc7b69` na `e5a46dc32772`. Do tego czasu nie opierać decyzji o rollbacku
+  na metadanych wydania. Nie potwierdzono pełnego odbioru historycznego:
+  brakuje odrębnych dowodów retencji i pełnego okna obserwacji. Bez ponownego
+  rollout lub dorabiania wyników wstecz.
+- [ ] Zaprojektować automatyczną kontrolę zgodności przypiętego runtime'u
+  restore oraz walidację dowodów przy publikacji metadanych. Reguły są już
+  w procedurze; instalacja i aktywacja wymagają osobnego odbioru.
 
 ## Ustawienia OpenAI — 2026-11-20
 

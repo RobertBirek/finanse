@@ -2,7 +2,15 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Nie wydano] — 2026-11-21 — Wsparcie decyzji w Doradcy
+## [Procedura operacyjna] — 2026-11-21
+
+### Changed
+
+- `/deploy` wymaga udokumentowania zmian stanu odniesienia, sprawdzenia
+  narzędzia odtwarzania przed przełączeniem i świeżych dowodów przed
+  publikacją `verified-live`. Bez zmian narzędzi wykonawczych ani produkcji.
+
+## [Produkcja `db062d2`] — 2026-11-21 — Wsparcie decyzji w Doradcy
 
 ### Added
 
@@ -15,6 +23,9 @@ Wszystkie istotne zmiany w projekcie.
 
 Testy, w tym integracja z PostgreSQL, przeszły po scaleniu PR #15.
 [CI 44888146581](https://github.com/RobertBirek/finanse/actions/runs/44888146581).
+
+Audyt potwierdził działający runtime, nie pełny odbiór historyczny.
+Brakujące dowody retencji i pełnego okna obserwacji: [TASKS](TASKS.md#wsparcie-decyzji-w-doradcy--2026-11-21).
 
 ## [Konfiguracja produkcji, bez restartu] — 2026-11-21
 
