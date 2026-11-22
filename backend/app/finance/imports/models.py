@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from sqlalchemy import (
     BigInteger,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -105,6 +107,7 @@ class ImportSource(ImportOwned):
     validation_state: Mapped[str] = mapped_column(
         String(20), default="needs_review", server_default="needs_review"
     )
+    auto_post_epoch: Mapped[int | None] = mapped_column(Integer)
 
 
 class ImportRevision(ImportOwned):
@@ -217,6 +220,55 @@ class ImportJob(ImportOwned):
     lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_code: Mapped[str | None] = mapped_column(String(100))
+
+
+class ImportAutoPostSettings(ImportOwned):
+    __tablename__ = "bank_import_auto_post_settings"
+    __table_args__ = (
+        UniqueConstraint("user_id", name="uq_bank_import_auto_post_settings_owner"),
+        CheckConstraint("epoch > 0", name="ck_bank_import_auto_post_epoch"),
+    )
+
+    enabled: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
+    epoch: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    expense_category_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL")
+    )
+    income_category_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL")
+    )
+
+
+class ImportAutoPostJob(ImportOwned):
+    __tablename__ = "bank_import_auto_post_jobs"
+    __table_args__ = (
+        UniqueConstraint("revision_id", name="uq_bank_import_auto_post_revision"),
+        ForeignKeyConstraint(
+            ["revision_id", "user_id", "source_id"],
+            [
+                "bank_import_revisions.id",
+                "bank_import_revisions.user_id",
+                "bank_import_revisions.source_id",
+            ],
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("state IN ('queued','done')", name="ck_bank_import_auto_post_state"),
+        Index("ix_bank_import_auto_post_due", "state", "next_attempt_at"),
+    )
+
+    source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    revision_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    manual: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
+    policy_epoch: Mapped[int | None] = mapped_column(Integer)
+    account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    state: Mapped[Literal["queued", "done"]] = mapped_column(
+        String(10), default="queued", server_default="queued"
+    )
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reason: Mapped[str | None] = mapped_column(String(60))
+    posted_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    row_reasons: Mapped[dict[str, str]] = mapped_column(JSONB, default=dict, server_default="{}")
 
 
 class ImportGroup(ImportOwned):

@@ -247,6 +247,12 @@ export function installImportServer(
           is_active: true,
         })),
       );
+    if (path === "/finance/imports/auto-post-settings")
+      return respond({
+        enabled: false,
+        expense_category_id: null,
+        income_category_id: null,
+      });
     if (path === "/finance/categories")
       return respond([
         {

@@ -4,6 +4,7 @@ import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { listPage, setListPage } from "../lib/listPage";
 import { ImportUpload } from "../components/finance/imports/ImportUpload";
 import { PageHeader } from "../components/PageHeader";
+import { StatementAutoPostSettings } from "../components/finance/imports/StatementAutoPostSettings";
 
 export function FinanceImports() {
   const actor = useImportActor();
@@ -27,7 +28,11 @@ export function FinanceImports() {
         title={
           kind === "loan_schedule" ? "Import harmonogramów" : "Import wyciągów"
         }
-        description="Źródło → Decyzja → Księga. Ty wybierasz, co zostanie zapisane."
+        description={
+          kind === "statement"
+            ? "Ustaw automatyczne księgowanie lub zatwierdzaj operacje ręcznie."
+            : "Źródło → Decyzja → Księga. Ty wybierasz, co zostanie zapisane."
+        }
       />
       <FinanceTabs />
       <label className="mb-4 block">
@@ -48,7 +53,11 @@ export function FinanceImports() {
       </label>
       {kind === "loan_schedule" ? (
         <p className="card mb-4">Harmonogram nie księguje spłat</p>
-      ) : null}
+      ) : (
+        <StatementAutoPostSettings
+          key={`${actor.ownerId}:${actor.generation}`}
+        />
+      )}
       <ImportUpload
         key={`${actor.ownerId}:${actor.generation}:${kind}`}
         kind={kind}

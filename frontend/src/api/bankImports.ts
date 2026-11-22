@@ -54,6 +54,21 @@ export interface ImportSource {
   }[];
   checks: ImportCheck[];
   warnings: string[];
+  has_account_reference?: boolean;
+  auto_post?: AutoPostSummary | null;
+}
+export interface AutoPostSummary {
+  id: string;
+  state: "queued" | "done";
+  reason: string | null;
+  posted_count: number;
+  review_count: number;
+  manual?: boolean;
+}
+export interface StatementAutoPostSettings {
+  enabled: boolean;
+  expense_category_id: string | null;
+  income_category_id: string | null;
 }
 export interface BankStatementRow {
   key: string;
@@ -122,6 +137,7 @@ export interface ImportRow {
   schedule_fields: Record<string, unknown> | null;
   candidate_ids: string[];
   decision: ImportDecision | null;
+  auto_post_reason?: string | null;
 }
 export interface ImportRowPage {
   items: ImportRow[];
@@ -355,6 +371,52 @@ export function useImportCategories() {
       ),
   });
 }
+export function useStatementAutoPostSettings() {
+  const actor = useImportActor();
+  return useQuery({
+    queryKey: importQueryKey(actor, "auto-post-settings"),
+    enabled: !!actor.ownerId,
+    retry: false,
+    queryFn: ({ signal }) =>
+      guarded(
+        actor,
+        async () =>
+          (
+            await api.get<StatementAutoPostSettings>(
+              `${root}/auto-post-settings`,
+              { signal },
+            )
+          ).data,
+      ),
+  });
+}
+export function useSaveStatementAutoPostSettings() {
+  return useImportMutation(
+    async (input: StatementAutoPostSettings) =>
+      (
+        await api.put<StatementAutoPostSettings>(
+          `${root}/auto-post-settings`,
+          input,
+        )
+      ).data,
+  );
+}
+export function useQueueStatementAutoPost() {
+  return useImportMutation(
+    async (input: {
+      batchId: string;
+      sourceId: string;
+      revisionId: string;
+      accountId: string | null;
+    }) =>
+      (
+        await api.post<AutoPostSummary>(
+          `${path(input.batchId)}/sources/${encodeURIComponent(input.sourceId)}/auto-post`,
+          { revision_id: input.revisionId, account_id: input.accountId },
+        )
+      ).data,
+  );
+}
 export function useImport(batchId: string | null) {
   const actor = useImportActor();
   return useQuery({
@@ -368,8 +430,10 @@ export function useImport(batchId: string | null) {
           (await api.get<ImportBatch>(path(batchId!), { signal })).data,
       ),
     refetchInterval: (query) =>
-      query.state.data?.sources.some((source) =>
-        ["queued", "processing"].includes(source.processing_state),
+      query.state.data?.sources.some(
+        (source) =>
+          source.auto_post?.state === "queued" ||
+          ["queued", "processing"].includes(source.processing_state),
       )
         ? 3000
         : false,

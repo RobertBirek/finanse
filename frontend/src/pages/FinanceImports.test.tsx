@@ -36,6 +36,38 @@ function userUpload(...files: File[]) {
 }
 
 describe("bank statement upload", () => {
+  it("persists opt-in without starting an existing statement", async () => {
+    const config = {
+      enabled: false,
+      expense_category_id: null,
+      income_category_id: null,
+    };
+    server = installImportServer({
+      onRequest: (request) =>
+        request.url.endsWith("/auto-post-settings")
+          ? request.method === "put"
+            ? request.body
+            : config
+          : undefined,
+    });
+    renderImportPage();
+    fireEvent.click(
+      await screen.findByLabelText("Księguj nowe wyciągi automatycznie"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zapisz ustawienia księgowania" }),
+    );
+    await waitFor(() =>
+      expect(server.requests.find((r) => r.method === "put")?.body).toEqual({
+        ...config,
+        enabled: true,
+      }),
+    );
+    expect(server.requests.some((r) => r.url.endsWith("/auto-post"))).toBe(
+      false,
+    );
+  });
+
   it("keeps each file outcome and never commits on upload", async () => {
     server = installImportServer({
       onRequest: (request) => {
