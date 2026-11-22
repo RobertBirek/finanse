@@ -71,6 +71,14 @@ async function importFixtures(
           key: request.headers()["idempotency-key"],
         });
       }
+      if (method === "GET" && path.endsWith("/imports/auto-post-settings"))
+        return route.fulfill({
+          json: {
+            enabled: false,
+            expense_category_id: null,
+            income_category_id: null,
+          },
+        });
       if (path.endsWith("/imports/history"))
         return route.fulfill({
           json: { items: [], total: 0, offset: 0, limit: 25 },

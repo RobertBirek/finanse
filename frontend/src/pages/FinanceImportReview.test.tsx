@@ -41,6 +41,66 @@ function renderReview() {
 }
 
 describe("bank review and frozen confirmation", () => {
+  it("explains bank rows which cannot be posted", async () => {
+    const row = rowFixture();
+    server = installImportServer({
+      rows: [
+        {
+          ...row,
+          bank_fields: { ...row.bank_fields!, state: "pending" },
+          auto_post_reason: "not_postable",
+        },
+      ],
+    });
+    renderReview();
+    expect(
+      await screen.findByText(/Bank nie zaksięgował tej pozycji/),
+    ).toBeVisible();
+    expect(
+      screen.getByLabelText("Wybierz wiersz Syntetyczny zakup"),
+    ).toBeDisabled();
+  });
+
+  it("requests one source revision explicitly without uploading or manual confirmation", async () => {
+    const queued = {
+      id: "job-a",
+      state: "queued" as const,
+      reason: null,
+      posted_count: 0,
+      review_count: 0,
+    };
+    server = installImportServer({
+      onRequest: (request) => {
+        if (request.url.endsWith("/auto-post")) {
+          const batch = batchFixture();
+          server.setBatch({
+            ...batch,
+            sources: [{ ...batch.sources[0], auto_post: queued }],
+          });
+          return queued;
+        }
+      },
+    });
+    renderReview();
+    const button = await screen.findByRole("button", {
+      name: "Zaksięguj jednoznaczne operacje",
+    });
+    expect(server.requests.some((r) => r.url.endsWith("/auto-post"))).toBe(
+      false,
+    );
+    fireEvent.click(button);
+    expect(
+      await screen.findByText("Księgowanie automatyczne w kolejce."),
+    ).toBeVisible();
+    expect(
+      server.requests.find((r) => r.url.endsWith("/sources/source-a/auto-post"))
+        ?.body,
+    ).toMatchObject({
+      revision_id: batchFixture().sources[0].current_revision_id,
+    });
+    expect(server.requests.some((r) => r.url.endsWith("/commit"))).toBe(false);
+  });
+
   it("refreshes source rows when worker publication changes the batch, without window focus or a reload", async () => {
     let published = false;
     const queued = batchFixture({

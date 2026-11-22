@@ -18,6 +18,11 @@ from app.documents.import_storage import ImportStorageError, store_import_docume
 from app.documents.upload_limits import DocumentStorageFullError, StorageQuotaExceededError
 from app.finance.credit_cards import CardConflict
 from app.finance.document_guards import lock_document_mutations
+from app.finance.imports.auto_post import (
+    get_auto_post_settings,
+    queue_manual_auto_post,
+    set_auto_post_settings,
+)
 from app.finance.imports.commands import get_command_result, run_preparation_command
 from app.finance.imports.commit import commit_import
 from app.finance.imports.contracts import ImportKind
@@ -29,6 +34,9 @@ from app.finance.imports.models import ImportBatch, ImportRow, ImportSource
 from app.finance.imports.preview import prepare_preview
 from app.finance.imports.queries import get_batch, list_import_history, list_rows
 from app.finance.imports.schemas import (
+    AutoPostRequest,
+    AutoPostSettings,
+    AutoPostSummary,
     BatchDTO,
     CommitRequest,
     CommitResult,
@@ -151,9 +159,45 @@ async def history(
     return await list_import_history(db, current_user.id, kind, offset=offset, limit=limit)
 
 
+@router.get("/auto-post-settings", response_model=AutoPostSettings)
+async def get_statement_auto_post_settings(current_user: Owner, db: Database) -> Any:
+    return await _handle(get_auto_post_settings(db, current_user.id))
+
+
+@router.put("/auto-post-settings", response_model=AutoPostSettings)
+async def set_statement_auto_post_settings(
+    data: AutoPostSettings, current_user: Owner, db: Database
+) -> Any:
+    return await _handle(set_auto_post_settings(db, current_user.id, data))
+
+
 @router.get("/{batch_id}", response_model=BatchDTO)
 async def detail(batch_id: uuid.UUID, current_user: Owner, db: Database) -> Any:
     return await _handle(_batch(db, current_user.id, batch_id))
+
+
+@router.post(
+    "/{batch_id}/sources/{source_id}/auto-post", response_model=AutoPostSummary, status_code=202
+)
+async def auto_post(
+    batch_id: uuid.UUID,
+    source_id: uuid.UUID,
+    data: AutoPostRequest,
+    current_user: Owner,
+    db: Database,
+) -> Any:
+    async def process() -> AutoPostSummary:
+        job = await queue_manual_auto_post(db, current_user.id, batch_id, source_id, data)
+        return AutoPostSummary(
+            id=job.id,
+            state=job.state,
+            reason=job.reason,
+            posted_count=job.posted_count,
+            review_count=len(job.row_reasons),
+            manual=job.manual,
+        )
+
+    return await _handle(process())
 
 
 @router.post("/{batch_id}/sources", response_model=SourceUploadResult, status_code=201)

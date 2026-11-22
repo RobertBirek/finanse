@@ -1,6 +1,7 @@
 import type { ImportRow } from "../../../api/bankImports";
 
 import { sourceMoney } from "./importPresentation";
+import { importAutoPostReason } from "./importAutoPostReason";
 export function ImportRows({
   rows,
   selectedIds,
@@ -62,6 +63,11 @@ export function ImportRows({
                   : row.decision.action === "defer"
                     ? "Pozostaw otwarte"
                     : "Nowa operacja"}
+              </p>
+            ) : null}
+            {row.auto_post_reason ? (
+              <p className="text-sm">
+                Do sprawdzenia: {importAutoPostReason(row.auto_post_reason)}
               </p>
             ) : null}
             <details>

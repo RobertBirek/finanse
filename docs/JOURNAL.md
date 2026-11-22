@@ -2,6 +2,23 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-22 — Automatyczne księgowanie wyciągów
+
+- Zgoda obowiązuje tylko nowo dołączone źródła i jest zapamiętywana jako
+  wersja ustawień. Zapis pierwszego odczytu i zlecenia workera jest atomowy.
+- Worker przetwarza jeden odczyt w transakcji; zaksięgowane pozycje, dowody
+  i wynik są zapisywane razem. Wyjątki nie dostają automatycznych potwierdzeń.
+- Pierwsza wersja: zakupy kartą i odsetki w PLN z kategorią wskazaną w
+  ustawieniach. Przelewy, opłaty, waluty i wyciągi kart kredytowych wymagają
+  ręcznej decyzji. Dla pliku bez numeru konta jednorazowy tryb wymaga
+  wskazania rachunku. Żadnych zmian na produkcji ani księgowania wyciągu
+  użytkownika w ramach testów.
+- Pierwszy CI PR #17: wszystkie 25 testów nowej funkcji przeszło, w tym
+  próba migracji i współbieżne zapisy na PostgreSQL. Cała bramka pozostała
+  czerwona: ujawniła brak rejestracji FK kategorii w strażniku drzewa i brak
+  nowego endpointu ustawień w dwóch atrapach przeglądarkowych. Poprawki
+  zachowują blokowanie nieznanych referencji i aktywnych zapisów.
+
 ## 2026-11-22 — Uzgodnienie historii wydania UI
 
 - Scalenie `0e79c7e` z `main` zachowuje identyczne drzewo plików; osobny
