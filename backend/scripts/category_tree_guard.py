@@ -35,12 +35,16 @@ _CATEGORY_REFS = frozenset(
         ("transaction_categorization_rules", "approved_for_uncategorized_category_id"),
         ("categorization_proposal_items", "target_category_id"),
         ("document_extraction_revisions", "suggested_category_id"),
+        ("bank_import_auto_post_settings", "expense_category_id"),
+        ("bank_import_auto_post_settings", "income_category_id"),
     }
 )
 _OWNER_TABLES = frozenset(
     {
         "accounts",
         "finance_settings",
+        "bank_import_auto_post_settings",
+        "bank_import_auto_post_jobs",
         "financial_transactions",
         "postings",
         "transaction_date_metadata",
@@ -271,7 +275,20 @@ async def _work_blockers(db: AsyncSession, owner: UUID, counts: Mapping[str, int
         )
     ):
         blockers.add("marker_configured")
+    auto_post = Base.metadata.tables["bank_import_auto_post_settings"]
+    if await db.scalar(
+        select(func.count())
+        .select_from(auto_post)
+        .where(
+            auto_post.c.user_id == owner,
+            auto_post.c.enabled.is_(True)
+            | auto_post.c.expense_category_id.is_not(None)
+            | auto_post.c.income_category_id.is_not(None),
+        )
+    ):
+        blockers.add("statement_auto_post_configured")
     active = {
+        "bank_import_auto_post_jobs": ("state", ["queued"]),
         "document_processing_jobs": ("state", ["pending", "processing"]),
         "document_finance_draft_intents": ("state", ["pending"]),
         "documents": ("status", ["pending", "processing"]),

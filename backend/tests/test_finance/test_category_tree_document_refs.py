@@ -81,3 +81,29 @@ async def test_pending_finance_draft_registration_is_active_work():
     counts = {name: 0 for name in guard._OWNER_TABLES | guard._GLOBAL_TABLES}
     result = await guard._work_blockers(db, uuid.uuid4(), counts)
     assert "active_work" in result
+
+
+@pytest.mark.asyncio
+async def test_queued_statement_auto_post_is_active_work():
+    async def scalar(statement):
+        return int("bank_import_auto_post_jobs" in str(statement))
+
+    db = SimpleNamespace(
+        scalar=scalar,
+        execute=AsyncMock(return_value=SimpleNamespace(first=lambda: None)),
+    )
+    counts = {name: 0 for name in guard._OWNER_TABLES | guard._GLOBAL_TABLES}
+    assert "active_work" in await guard._work_blockers(db, uuid.uuid4(), counts)
+
+
+@pytest.mark.asyncio
+async def test_configured_statement_categories_block_category_tree_apply():
+    async def scalar(statement):
+        return int("bank_import_auto_post_settings" in str(statement))
+
+    db = SimpleNamespace(
+        scalar=scalar,
+        execute=AsyncMock(return_value=SimpleNamespace(first=lambda: None)),
+    )
+    counts = {name: 0 for name in guard._OWNER_TABLES | guard._GLOBAL_TABLES}
+    assert "statement_auto_post_configured" in await guard._work_blockers(db, uuid.uuid4(), counts)
