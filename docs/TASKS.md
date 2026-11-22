@@ -10,7 +10,9 @@ Backlog zadań ze statusami.
   nawigację mobilną oraz stany błędów i pustych danych w Inboxie i Projektach.
 - [x] Ujednolicić potwierdzenia usunięcia transakcji i archiwizacji dokumentu;
   zachować pozostałe potwierdzenia i przepływy domenowe.
-- [ ] Zintegrować gałąź UI osobną decyzją. Bez migracji lub wdrożenia w tej sesji.
+- [x] Scalić UI do `main` i wdrożyć wyłącznie frontend `0e79c7e`, bez migracji.
+- [x] Włączyć aktywny commit frontend-only do historii `main` bez zmian aplikacji.
+- [ ] Zatwierdzić dokładny zapisany spis po wydaniu przed kolejnym preflightem.
 
 ## Wsparcie decyzji w Doradcy — 2026-11-21
 

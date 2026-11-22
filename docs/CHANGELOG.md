@@ -2,7 +2,10 @@
 
 Wszystkie istotne zmiany w projekcie.
 
-## [Nie wydano] — 2026-11-21 — Spójny układ aplikacji
+## [Frontend `0e79c7e`] — 2026-11-21 — Spójny układ aplikacji
+
+Wdrożono wyłącznie frontend. Backend i worker pozostały na `db062d2`;
+bez migracji. Potwierdzono zgodność 107 plików serwowanych przez HTTPS.
 
 ### Changed
 

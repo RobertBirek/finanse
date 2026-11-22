@@ -2,6 +2,35 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-22 — Uzgodnienie historii wydania UI
+
+- Scalenie `0e79c7e` z `main` zachowuje identyczne drzewo plików; osobny
+  commit zapisuje wyłącznie dokumentację odbioru. Nie przełączano usług.
+- Niezależny przegląd potwierdził oczekiwane różnice w spisie po wydaniu:
+  tożsamość frontendu, aktywny override i hash metadanych. Oryginalny
+  dowód przywrócenia ma hash z planu; kopia wydania zawiera identyczny
+  obiekt JSON, zapisany w innej kolejności kluczy.
+- Spis wymaga jeszcze jawnej akceptacji dokładnej zawartości. Sam przegląd
+  dowodów nie zatwierdza kolejnego wydania ani odczytu produkcji.
+
+## 2026-11-21 — Wdrożenie wyłącznie frontendu `0e79c7e`
+
+- `main` (`45c7b0a`) i osobny kandydat mają identyczne drzewo frontendu.
+  [CI kandydata](https://github.com/RobertBirek/finanse/actions/runs/44941461522):
+  11/11. Osobna gałąź pomija zmianę tooling nierozpoznawaną przez preflight.
+- Po odtworzeniu i zatwierdzeniu stanu oczekiwanego preflight V2 pod blokadą
+  potwierdził `app_only`, `e5a46dc32772`, zero migracji. Pełny render Compose
+  zmienił tylko obraz i kontekst budowy frontendu.
+- Zweryfikowano szyfrowany snapshot i odtworzenie tego samego ID w izolacji:
+  86 tabel, 21 plików, zero naruszeń księgi. Poprzednie kopie i obraz
+  rollbacku zachowano.
+- Atomowo zapisano `verified-live` po 307 sekundach: 107 plików zgodnych
+  bajtowo przez HTTPS, health 200, anonimowy odczyt 401, ARQ gotowy, brak
+  błędów i zmian w pozostałych pięciu usługach.
+- Pod tą samą blokadą zapisano prywatny spis stanu po wydaniu do niezależnej
+  akceptacji. Przed następnym wydaniem uzgodnić ten spis i uwzględnić w
+  historii `main` aktywny commit frontendu; nie zmieniać etykiety obrazu.
+
 ## 2026-11-21 — Audyt i ujednolicenie UI
 
 - W Chromium przy 1920 px treść miała 1632 px do dyspozycji. Przed zmianą
