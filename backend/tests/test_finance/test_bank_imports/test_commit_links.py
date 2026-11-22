@@ -8,6 +8,7 @@ from app.finance.imports.commit import commit_import
 from app.finance.imports.decisions import save_decisions
 from app.finance.imports.models import ImportEvidence
 from app.finance.imports.preview import prepare_preview
+from app.finance.imports.queries import get_batch
 from app.finance.imports.schemas import (
     CommitRequest,
     DecisionUpdate,
@@ -74,6 +75,11 @@ async def test_link_unsplit_actual_preserves_ledger_and_existing_actual_mapping(
         case.batch_id,
         DecisionUpdate(expected_version=1, decisions=[decision]),
     )
+    [pending_group] = batch.groups
+    assert pending_group.state == "ready"
+    assert pending_group.decision is not None and pending_group.decision["action"] == "link"
+    assert pending_group.row_ids == [case.rows[0].id]
+    assert await db_session.scalar(select(ImportEvidence.id)) is None
     preview = await prepare_preview(
         db_session,
         owner.id,
@@ -101,6 +107,14 @@ async def test_link_unsplit_actual_preserves_ledger_and_existing_actual_mapping(
     assert await ledger_snapshot(db_session) == before
     evidence = (await db_session.scalars(select(ImportEvidence))).one()
     assert evidence.component == "whole" and evidence.attributed_source_amount == -120
+    confirmed = await get_batch(db_session, owner.id, batch.id)
+    assert confirmed is not None
+    [confirmed_group] = confirmed.groups
+    assert confirmed_group.id == pending_group.id and confirmed_group.state == "committed"
+    assert confirmed_group.decision is not None and confirmed_group.decision["action"] == "link"
+    assert confirmed_group.row_ids == [evidence.row_id]
+    assert evidence.transaction_id == old.id
+    assert confirmed_group.decision["existing_transaction_id"] == str(old.id)
 
 
 async def test_second_statement_can_evidence_the_other_leg_of_same_transfer(

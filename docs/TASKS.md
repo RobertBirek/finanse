@@ -2,6 +2,12 @@
 
 Backlog zadań ze statusami.
 
+## Status rozliczenia wiersza wyciągu
+
+- [x] Pokazać różnicę między potwierdzonym powiązaniem, nowym zapisem i
+  decyzją oczekującą w widoku weryfikacji wyciągu.
+- [ ] Odebrać zmianę i wdrożyć oddzielnie frontend, bez migracji i zmian danych.
+
 ## Wsparcie decyzji w Doradcy — 2026-11-21
 
 - [x] Priorytety, symulator wydatku i wyjaśnienie zmian wydatków z danymi
