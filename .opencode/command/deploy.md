@@ -53,7 +53,12 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
    `migration_then_app` wymaga osobnej zgody na dokładną migrację.
    Po zmianie stanu raport jest nieaktualny; przed mutacją ponów sprawdzenie
    pod istniejącym deploylock. Bramka nie zastępuje żadnego z dalszych dowodów.
-3. Uruchom testy, lint, typy i build. Przygotuj wersjonowany pakiet przez
+3. Przy ustaleniu docelowego headu, przed budową, sprawdź fizyczny
+   runtime odtwarzania i porównaj jego graf z bieżącym oraz docelowym
+   schematem. Gdy potrzebna jest zmiana, dołącz przełączenie i osobne
+   dowody `rehearsal` oraz `after_rollout` do jednego arkusza wydania.
+   Zobacz „Stałe wskazanie narzędzia odtwarzania”.
+   Uruchom testy, lint, typy i build. Przygotuj wersjonowany pakiet przez
    `ops/prepare_release.py` i skontroluj wynikowy Compose. Zmiana
    `backend/requirements.txt` wymaga nowego, zweryfikowanego runtime; nie obchodź
    zabezpieczenia przez podanie fałszywej rewizji starego obrazu.
@@ -71,7 +76,7 @@ Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Clo
    Zachowaj obrazy rollbacku oraz identyfikatory usług danych. Uzgodnij
    obrazy, override i schemat rollbacku z próbą; rozbieżność oznacza STOP.
    Nie uruchamiaj importów, migracji ani napraw historycznych transakcji jako
-   niejawnego kroku deployu.
+    niejawnego kroku deployu.
 5. Stosuj pełną listę Compose: bazowy `/docker/finanse/compose.yaml`,
    `/docker/finanse/compose.prod.yaml` oraz zatwierdzony `compose.release.yaml`,
    z istniejącym plikiem środowiska. Używaj `up -d --no-deps --no-build` tylko

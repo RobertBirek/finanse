@@ -2,6 +2,14 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Nie wydano] — 2026-11-22 — Stała ścieżka odtwarzania
+
+### Added
+
+- Sprawdzanie i atomowa zamiana wskaźnika zweryfikowanej wersji narzędzia
+  restore. Procedura wydania sprawdza zgodność z docelowym schematem przed
+  budową i zachowuje zgodny wskaźnik przy wycofaniu samej aplikacji.
+
 ## [Nie wydano] — 2026-11-22 — Automatyczne księgowanie wyciągów
 
 ### Added

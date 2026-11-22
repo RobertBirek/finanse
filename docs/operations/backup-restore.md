@@ -163,6 +163,35 @@ jest właściwy, kopia się odtwarza lub rzeczywiste migracje przejdą. Nie jest
 to blokada ani gwarancja niezmienności ścieżek po odczycie. Zachowaj wyniki
 obu faz i ponów kontrolę przy zmianie wejść; nie zastępuj nimi odtworzenia.
 
+#### Stałe wskazanie narzędzia odtwarzania
+
+Docelowo tylko `restore-verify` w zewnętrznym Makefile korzysta ze stałego
+wskazania `/usr/local/lib/finanse/restore-runtime-current`. Backup, wybór
+snapshotu w harmonogramie i jednostki systemd pozostają bez zmian.
+
+- Jednorazowa instalacja: obok wskaźnika umieść przypięty, root-only helper
+  `restore_runtime_pointer.py`. Makefile wywołuje odczyt przez
+  `/usr/bin/python3 -I -S -B`, przerywa przy błędzie i uruchamia skrypt z
+  otrzymanego fizycznego katalogu. Przed instalacją odbierz pierwszy cel i
+  dokładne bajty zmiany Makefile. Dopóki jej nie wdrożono, punktem odniesienia
+  jest konkretna ścieżka ze starego Makefile.
+- Przed budową porównaj graf aktywnego runtime'u z bieżącym i docelowym
+  schematem. Brak zgodnego runtime'u oznacza STOP przed migracją. Przygotuj
+  fizyczny katalog konkretnego SHA, sprawdź `rehearsal` i przygotuj osobny pin
+  `after_rollout`. Oba dowody powiąż z tym samym pełnym ID kopii i dołącz do
+  jednego arkusza wraz z migracją.
+- Przełączenie wykonaj pod blokadą wdrożenia i pod istniejącą
+  `/run/lock/finanse-backup-restore.lock`. Przed zamianą wskaźnika potwierdź
+  rzeczywisty schemat po migracji i przypięte bajty fizycznego katalogu.
+  `activate_pointer` atomowo zmienia link, ale nie zakłada blokady ani nie
+  zastępuje walidacji manifestu lub decyzji operatora. Jeszcze przed migracją
+  zapisz `restore-runtime-inhibited` (`inhibit_restore`), żeby nawet awaria
+  procesu i zwolnienie blokady nie uruchomiły automatycznego restore.
+  Usuń znacznik (`clear_restore_inhibition`) dopiero po potwierdzeniu
+  rzeczywistego schematu i wskazania; przy nieznanym wyniku zostaw go.
+- Przy wydaniu bez migracji pozostaw zgodne wskazanie. Przy rollbacku samej
+  aplikacji zachowaj runtime odpowiedni do schematu pozostałego po migracji.
+
 ## Automatyzacja systemd
 
 Install the root-only systemd automation and inspect or operate it with:

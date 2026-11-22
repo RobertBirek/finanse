@@ -2,6 +2,25 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-22 — Stała ścieżka odtwarzania
+
+- Lokalny helper rozwiązuje stałe wskazanie do fizycznego katalogu
+  konkretnej wersji. Warstwa operacyjna osobno sprawdza zgodę, blokadę
+  i zgodność manifestu z rzeczywistym schematem.
+- Próby offline obejmują brak lub nieprawidłowy link, niezgodność starego
+  wskazania, przerwaną zamianę i decyzję po migracji oraz rollbacku.
+  52 testy ukierunkowane offline, lint, typy, kolekcja backendu i 740
+  testów frontendu przeszły.
+- Trwały znacznik blokuje cykliczne odtwarzanie także po awarii procesu
+  i zwolnieniu blokady. Próbny docelowy wpis Makefile najpierw rozwiązuje
+  wskaźnik, a przy błędzie nie uruchamia skryptu.
+- Po oddzielnej zgodzie uruchomiono pod dwiema blokadami jednorazową
+  instalację helpera i zmianę wyłącznie celu `restore-verify` w Makefile.
+  Wskaźnik rozwiązuje się do `db062d2`, head `e5a46dc32772`. Zachowano
+  oryginał Makefile. Bez migracji, odtwarzania, restartu i zmiany backupu
+  ani harmonogramu. Dostosowanie pinu po migracji pozostaje w planie
+  wydania `d284e80`.
+
 ## 2026-11-22 — Automatyczne księgowanie wyciągów
 
 - Zgoda obowiązuje tylko nowo dołączone źródła i jest zapamiętywana jako
