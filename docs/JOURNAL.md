@@ -2,6 +2,18 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-22 — Status rozliczenia wiersza wyciągu
+
+- Frontend pokazuje stan grupy dla dokładnego ID wiersza z istniejącej
+  odpowiedzi API. `ready` jest decyzją oczekującą, `committed` rozróżnia
+  powiązanie i utworzenie transakcji. Stan banku pozostaje osobny.
+- Testy widoku potwierdziły brak oznaczenia innego wiersza o tej samej
+  kwocie, zachowanie opcji pozostawienia otwartego wiersza i zmianę
+  etykiety po zatwierdzeniu. Bez zmian API, księgi lub produkcji.
+- Rozszerzono istniejące testy integracyjne o spójność publicznego
+  stanu grupy z dowodem księgowym, także po nieudanym zatwierdzeniu.
+  Lokalny tryb `/test` zbiera te przypadki bez uruchamiania bazy.
+
 ## 2026-11-22 — Stała ścieżka odtwarzania
 
 - Lokalny helper rozwiązuje stałe wskazanie do fizycznego katalogu

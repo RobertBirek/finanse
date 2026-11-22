@@ -41,6 +41,113 @@ function renderReview() {
 }
 
 describe("bank review and frozen confirmation", () => {
+  it("distinguishes confirmed links, new bookings and pending decisions using exact source rows", async () => {
+    const group = batchFixture().groups[0];
+    const cases = [
+      { id: "linked", state: "committed", action: "link" },
+      { id: "created", state: "committed", action: "create" },
+      { id: "pending", state: "ready", action: "link" },
+      { id: "deferred", state: "deferred", action: "defer" },
+    ] as const;
+    const groups = cases.map(({ id, state, action }) => ({
+      ...group,
+      id: `group-${id}`,
+      state,
+      row_ids: [id],
+      decision: {
+        ...group.decision!,
+        group_id: `group-${id}`,
+        row_ids: [id],
+        action,
+        existing_transaction_id:
+          action === "link" ? "existing-transaction" : null,
+      },
+    }));
+    const rows = [...cases.map(({ id }) => id), "same-amount-unlinked"].map(
+      (id) =>
+        rowFixture({
+          id,
+          bank_fields: { ...rowFixture().bank_fields!, description: id },
+          decision:
+            groups.find((item) => item.row_ids.some((rowId) => rowId === id))
+              ?.decision ?? null,
+        }),
+    );
+    server = installImportServer({
+      batch: batchFixture({ groups, commit_state: "partial" }),
+      rows,
+    });
+    renderReview();
+
+    async function card(id: string) {
+      const checkbox = await screen.findByRole("checkbox", {
+        name: `Wybierz wiersz ${id}`,
+      });
+      return within(checkbox.closest("article")!);
+    }
+
+    expect(
+      (await card("linked")).getByText("Powiązano z istniejącą transakcją"),
+    ).toBeVisible();
+    expect((await card("linked")).queryByText(/Zapisana decyzja:/)).toBeNull();
+    expect(
+      (await card("created")).getByText("Zaksięgowano jako nową transakcję"),
+    ).toBeVisible();
+    const pending = await card("pending");
+    expect(pending.getByText("Decyzja czeka na zatwierdzenie")).toBeVisible();
+    expect(pending.queryByText("Powiązano z istniejącą transakcją")).toBeNull();
+    expect(
+      (await card("deferred")).getByText(/Pozostaw otwarte/),
+    ).toBeVisible();
+    expect(
+      (await card("deferred")).queryByText(/Status rozliczenia:/),
+    ).toBeNull();
+    expect(
+      (await card("same-amount-unlinked")).queryByText(/Status rozliczenia:/),
+    ).toBeNull();
+  });
+
+  it("replaces the pending row status after confirmation is reflected in the batch", async () => {
+    const batch = batchFixture();
+    server = installImportServer({
+      batch,
+      onRequest: (request) => {
+        if (!request.url.endsWith("/commit")) return undefined;
+        server.setBatch({
+          ...batch,
+          version: 3,
+          commit_state: "committed",
+          unresolved_count: 0,
+          groups: batch.groups.map((group) => ({
+            ...group,
+            state: "committed",
+          })),
+        });
+        return receiptFixture;
+      },
+    });
+    renderReview();
+    expect(
+      await screen.findByText("Decyzja czeka na zatwierdzenie"),
+    ).toBeVisible();
+    fireEvent.click(await prepareButton());
+    const panel = within(
+      await screen.findByRole("region", { name: "Podgląd zatwierdzenia" }),
+    );
+    fireEvent.click(
+      panel.getByRole("checkbox", { name: /Potwierdzam wybrane grupy/ }),
+    );
+    const button = panel.getByRole("button", {
+      name: "Zatwierdź wybrane grupy",
+    });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(
+      await screen.findByText("Zaksięgowano jako nową transakcję"),
+    ).toBeVisible();
+    expect(screen.queryByText("Decyzja czeka na zatwierdzenie")).toBeNull();
+  });
+
   it("explains bank rows which cannot be posted", async () => {
     const row = rowFixture();
     server = installImportServer({

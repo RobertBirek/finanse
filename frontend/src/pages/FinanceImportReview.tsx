@@ -395,6 +395,7 @@ function Workspace({ batch }: { batch: ImportBatch }) {
             <p role="status">Ładowanie wierszy…</p>
           ) : (
             <ImportRows
+              groups={batch.groups}
               readOnly={
                 !!comparisonRevision || uncertain || busy || !!batch.archived_at
               }

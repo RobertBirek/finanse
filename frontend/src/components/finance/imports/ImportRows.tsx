@@ -1,18 +1,48 @@
-import type { ImportRow } from "../../../api/bankImports";
+import { useMemo } from "react";
+import type { ImportGroup, ImportRow } from "../../../api/bankImports";
 
 import { sourceMoney } from "./importPresentation";
 import { importAutoPostReason } from "./importAutoPostReason";
+
+const reconciliationLabels = {
+  linked: "Powiązano z istniejącą transakcją",
+  created: "Zaksięgowano jako nową transakcję",
+  pending: "Decyzja czeka na zatwierdzenie",
+} as const;
+
 export function ImportRows({
   rows,
+  groups,
   selectedIds,
   onSelect,
   readOnly = false,
 }: {
   rows: ImportRow[];
+  groups: ImportGroup[];
   selectedIds: Set<string>;
   onSelect: (row: ImportRow, checked: boolean) => void;
   readOnly?: boolean;
 }) {
+  const statusByRow = useMemo(() => {
+    const statuses = new Map<string, keyof typeof reconciliationLabels>();
+    for (const group of groups) {
+      const action = group.decision?.action;
+      if (action !== "link" && action !== "create") continue;
+      if (group.state === "committed" || group.state === "ready") {
+        // Commit records and reconciles the row's ledger evidence before
+        // marking its group committed. A saved decision alone is not evidence.
+        const status =
+          group.state === "ready"
+            ? "pending"
+            : action === "link"
+              ? "linked"
+              : "created";
+        for (const rowId of group.row_ids) statuses.set(rowId, status);
+      }
+    }
+    return statuses;
+  }, [groups]);
+
   return (
     <section className="space-y-3" aria-label="Wiersze źródłowe">
       <h2 className="text-xl">Wiersze źródłowe</h2>
@@ -23,6 +53,7 @@ export function ImportRows({
       {rows.map((row) => {
         const value = row.bank_fields;
         if (!value) return null;
+        const status = statusByRow.get(row.id);
         return (
           <article className="card space-y-2" key={row.id}>
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -55,7 +86,13 @@ export function ImportRows({
               wiersz {row.position.line}
               {row.position.section ? ` · ${row.position.section}` : ""}
             </p>
-            {row.decision ? (
+            {status ? (
+              <p className="text-sm">
+                Status rozliczenia:{" "}
+                <strong>{reconciliationLabels[status]}</strong>
+              </p>
+            ) : null}
+            {row.decision && (!status || status === "pending") ? (
               <p className="text-sm">
                 Zapisana decyzja:{" "}
                 {row.decision.action === "link"
