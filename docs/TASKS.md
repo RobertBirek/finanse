@@ -2,6 +2,12 @@
 
 Backlog zadań ze statusami.
 
+## Status rozliczenia wiersza wyciągu
+
+- [x] Pokazać różnicę między potwierdzonym powiązaniem, nowym zapisem i
+  decyzją oczekującą w widoku weryfikacji wyciągu.
+- [ ] Odebrać zmianę i wdrożyć oddzielnie frontend, bez migracji i zmian danych.
+
 ## Stała ścieżka odtwarzania — 2026-11-22
 
 - [x] Dodać odczyt i atomowe przełączenie stałego wskaźnika oraz testy odmowy.

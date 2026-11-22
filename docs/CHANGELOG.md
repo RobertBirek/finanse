@@ -2,6 +2,14 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Nie wydano] — Status rozliczenia wiersza wyciągu
+
+### Added
+
+- Wiersze źródłowe rozróżniają zatwierdzone powiązanie z istniejącą
+  transakcją, zapis nowej transakcji i decyzję czekającą na zatwierdzenie.
+  Status nie wynika z podobieństwa kwot i nie zmienia danych.
+
 ## [Nie wydano] — 2026-11-22 — Stała ścieżka odtwarzania
 
 ### Added

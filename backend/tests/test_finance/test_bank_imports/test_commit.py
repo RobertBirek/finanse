@@ -7,6 +7,7 @@ from app.finance.imports.commands import get_command_result
 from app.finance.imports.commit import commit_import
 from app.finance.imports.errors import ImportError
 from app.finance.imports.models import ImportBatch, ImportEvidence
+from app.finance.imports.queries import get_batch
 from app.finance.models import FinanceCommandReceipt, FinancialTransaction, Posting
 from tests.test_finance.test_bank_imports.commit_fixtures import confirmed_import
 from tests.test_finance.test_bank_imports.factories import ledger_snapshot
@@ -76,6 +77,10 @@ async def test_fee_and_main_are_atomic_and_account_net_is_not_double_charged(
         case.batch_id,
         DecisionUpdate(expected_version=1, decisions=[decision]),
     )
+    [pending_group] = batch.groups
+    assert pending_group.state == "ready"
+    assert pending_group.decision is not None and pending_group.decision["action"] == "create"
+    assert await db_session.scalar(select(ImportEvidence.id)) is None
     preview = await prepare_preview(
         db_session,
         owner.id,
@@ -107,8 +112,18 @@ async def test_fee_and_main_are_atomic_and_account_net_is_not_double_charged(
     assert await ledger_snapshot(db_session) == before
     assert await db_session.scalar(select(func.count()).select_from(FinanceCommandReceipt)) == 0
     assert await db_session.scalar(select(func.count()).select_from(ImportEvidence)) == 0
+    failed = await get_batch(db_session, owner.id, batch.id)
+    assert failed is not None and failed.groups == [pending_group]
     result = await commit_import(db_session, owner.id, batch.id, request, "atomic-fee")
     assert result.commit_state == "committed" and len(result.transaction_ids) == 2
+    confirmed = await get_batch(db_session, owner.id, batch.id)
+    assert confirmed is not None
+    [confirmed_group] = confirmed.groups
+    assert confirmed_group.id == pending_group.id and confirmed_group.state == "committed"
+    assert confirmed_group.decision is not None and confirmed_group.decision["action"] == "create"
+    evidence = (await db_session.scalars(select(ImportEvidence))).all()
+    assert set(confirmed_group.row_ids) == {item.row_id for item in evidence}
+    assert {item.transaction_id for item in evidence} == set(result.transaction_ids)
     postings = (
         await db_session.scalars(select(Posting).where(Posting.account_id == case.account.id))
     ).all()
