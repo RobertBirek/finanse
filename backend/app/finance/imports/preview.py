@@ -65,6 +65,32 @@ def revision_record(revision: ImportRevision) -> dict[str, Any]:
     return values
 
 
+async def statement_opening_gap(
+    db: AsyncSession, owner: uuid.UUID, account_id: uuid.UUID, start: date, opening: int
+) -> bool:
+    ledger_opening = await db.scalar(
+        select(
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Posting.direction == "credit", Posting.source_amount),
+                        else_=-Posting.source_amount,
+                    )
+                ),
+                0,
+            )
+        )
+        .join(FinancialTransaction, FinancialTransaction.id == Posting.transaction_id)
+        .where(
+            Posting.account_id == account_id,
+            FinancialTransaction.user_id == owner,
+            FinancialTransaction.date < start,
+            FinancialTransaction.is_pending.is_(False),
+        )
+    )
+    return (ledger_opening or 0) != opening
+
+
 async def _snapshot(
     db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID, group_ids: list[uuid.UUID]
 ):
@@ -164,8 +190,11 @@ async def _snapshot(
                     .limit(1)
                     .execution_options(populate_existing=True)
                 )
+                source_snapshot = record(row.source)
+                # Enrollment is not a manual-review input. Keep old previews valid.
+                source_snapshot.pop("auto_post_epoch", None)
                 source_records[row.source.id] = {
-                    "source": record(row.source),
+                    "source": source_snapshot,
                     "revision": revision_record(row.revision),
                     "candidate_revision": revision_record(candidate)
                     if candidate and candidate.id != row.revision.id
@@ -176,34 +205,14 @@ async def _snapshot(
             source_result = row.revision.result or {}
             opening = source_result.get("opening")
             start = source_result.get("period_start")
-            if type(opening) is int and isinstance(start, str):
-                ledger_opening = int(
-                    await db.scalar(
-                        select(
-                            func.coalesce(
-                                func.sum(
-                                    case(
-                                        (Posting.direction == "credit", Posting.source_amount),
-                                        else_=-Posting.source_amount,
-                                    )
-                                ),
-                                0,
-                            )
-                        )
-                        .join(
-                            FinancialTransaction, FinancialTransaction.id == Posting.transaction_id
-                        )
-                        .where(
-                            Posting.account_id == row.account.id,
-                            FinancialTransaction.user_id == owner,
-                            FinancialTransaction.date < date.fromisoformat(start),
-                            FinancialTransaction.is_pending.is_(False),
-                        )
-                    )
-                    or 0
+            if (
+                type(opening) is int
+                and isinstance(start, str)
+                and await statement_opening_gap(
+                    db, owner, row.account.id, date.fromisoformat(start), opening
                 )
-                if ledger_opening != opening:
-                    required.add(f"opening_gap:{row.source.id}")
+            ):
+                required.add(f"opening_gap:{row.source.id}")
             for warning in row.revision.warnings:
                 warnings.add(f"source_warning:{row.source.id}:{warning}")
             candidates = await candidate_postings(db, owner, row.row.id, row.account.id)

@@ -10,6 +10,7 @@ from app.documents.models import Document
 from app.finance.imports.contracts import ImportKind, ScheduleRow, StatementRow
 from app.finance.imports.errors import ImportError
 from app.finance.imports.models import (
+    ImportAutoPostJob,
     ImportBatch,
     ImportDecision,
     ImportEvidence,
@@ -142,8 +143,30 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
         await source_activations(db, owner, batch_id) if batch.kind == "loan_schedule" else {}
     )
     sources = []
+    auto_posts = (
+        {
+            job.revision_id: job
+            for job in (
+                await db.scalars(
+                    select(ImportAutoPostJob)
+                    .where(
+                        ImportAutoPostJob.user_id == owner,
+                        ImportAutoPostJob.revision_id.in_(
+                            [revision.id for _, _, revision in records if revision is not None]
+                        ),
+                    )
+                    .execution_options(populate_existing=True)
+                )
+            ).all()
+        }
+        if batch.kind == "statement"
+        else {}
+    )
     for source, document, revision in records:
         candidate = latest.get(source.id)
+        auto_post = (
+            auto_posts.get(source.current_revision_id) if source.current_revision_id else None
+        )
         if candidate is not None and candidate.id == source.current_revision_id:
             candidate = None
         sources.append(
@@ -165,6 +188,17 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
                     "candidate_checks": candidate.checks if candidate else [],
                     "schedule_activations": activations.get(source.id, []),
                     "checks": revision.checks if revision else [],
+                    "has_account_reference": bool(source.account_reference),
+                    "auto_post": {
+                        "id": auto_post.id,
+                        "state": auto_post.state,
+                        "reason": auto_post.reason,
+                        "posted_count": auto_post.posted_count,
+                        "review_count": len(auto_post.row_reasons),
+                        "manual": auto_post.manual,
+                    }
+                    if auto_post
+                    else None,
                     "warnings": list(
                         dict.fromkeys(
                             [
@@ -312,6 +346,26 @@ async def list_rows(
         )
     ).all()
     row_decisions = {row_id: data for row_id, data in decisions}
+    reasons = {}
+    if revision_id is None and any(row.kind == "statement" for row in rows):
+        posted_rows = select(ImportEvidence.row_id).where(
+            ImportEvidence.user_id == owner, ImportEvidence.row_id.in_([row.id for row in rows])
+        )
+        posted_ids = set((await db.scalars(posted_rows)).all())
+        jobs = (
+            await db.scalars(
+                select(ImportAutoPostJob).where(
+                    ImportAutoPostJob.user_id == owner,
+                    ImportAutoPostJob.revision_id.in_({row.revision_id for row in rows}),
+                )
+            )
+        ).all()
+        by_revision = {job.revision_id: job for job in jobs}
+        reasons = {
+            row.id: by_revision[row.revision_id].row_reasons.get(str(row.id))
+            for row in rows
+            if row.id not in posted_ids and row.revision_id in by_revision
+        }
     for row in rows:
         value = (
             StatementRow.model_validate(row.fields)
@@ -330,6 +384,7 @@ async def list_rows(
                     "bank_fields": value if isinstance(value, StatementRow) else None,
                     "schedule_fields": value if isinstance(value, ScheduleRow) else None,
                     "decision": row_decisions.get(row.id),
+                    "auto_post_reason": reasons.get(row.id),
                 }
             )
         )

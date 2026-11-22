@@ -5,7 +5,7 @@ import uuid
 from decimal import Decimal
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from app.finance.imports.card_statements import CardHeaderDecision
 from app.finance.imports.contracts import (
@@ -21,6 +21,26 @@ from app.finance.loan_schedule_schemas import ScheduleSourceActivation
 
 class ImportDTO(BaseModel):
     model_config = ConfigDict(extra="forbid", from_attributes=True)
+
+
+class AutoPostSettings(ImportDTO):
+    enabled: StrictBool = False
+    expense_category_id: uuid.UUID | None = None
+    income_category_id: uuid.UUID | None = None
+
+
+class AutoPostRequest(ImportDTO):
+    revision_id: uuid.UUID
+    account_id: uuid.UUID | None = None
+
+
+class AutoPostSummary(ImportDTO):
+    id: uuid.UUID
+    state: Literal["queued", "done"]
+    reason: str | None
+    posted_count: int
+    review_count: int
+    manual: bool = False
 
 
 class SourceDTO(ImportDTO):
@@ -41,6 +61,8 @@ class SourceDTO(ImportDTO):
     schedule_activations: list[ScheduleSourceActivation] = Field(default_factory=list)
     checks: list[Check] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    auto_post: AutoPostSummary | None = None
+    has_account_reference: bool = False
 
 
 class ReviewGroupDTO(ImportDTO):
@@ -89,6 +111,7 @@ class RowDTO(ImportDTO):
     schedule_fields: ScheduleRow | None = None
     candidate_ids: list[uuid.UUID] = Field(default_factory=list)
     decision: dict[str, object] | None = None
+    auto_post_reason: str | None = None
 
 
 class RowPage(ImportDTO):

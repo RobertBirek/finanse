@@ -14,6 +14,7 @@ from app.audit.service import log_event
 from app.config import settings
 from app.documents.models import Document
 from app.finance.document_guards import lock_document_mutations
+from app.finance.imports.auto_post import enroll_auto_post
 from app.finance.imports.contracts import ImportFailure, ParsedImport, ParsedStatement
 from app.finance.imports.errors import ImportError
 from app.finance.imports.models import (
@@ -381,6 +382,8 @@ async def finish_import_job(
         source.processing_state = "ready"
         job.state = "ready"
         job.error_code = "reparse_requires_comparison" if is_reparse else None
+        if not is_reparse:
+            await enroll_auto_post(db, claim.owner_id, source)
     job.lease_token = None
     job.lease_expires_at = None
     batch.version += 1

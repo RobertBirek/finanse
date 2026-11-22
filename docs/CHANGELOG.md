@@ -2,6 +2,17 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Nie wydano] — 2026-11-22 — Automatyczne księgowanie wyciągów
+
+### Added
+
+- Jawna zgoda na automatyczne księgowanie nowych wyciągów i jednorazowe
+  zlecenie dla zapisanego odczytu. Każde źródło pokazuje wynik i powody
+  pozostawienia operacji do sprawdzenia.
+- Automat zapisuje jednoznaczne zakupy kartą i odsetki w PLN, jeśli
+  użytkownik wybrał odpowiednią kategorię. Nie zatwierdza ostrzeżeń
+  importera, nie nadpisuje decyzji ręcznych ani nie uruchamia starych importów.
+
 ## [Frontend `0e79c7e`] — 2026-11-21 — Spójny układ aplikacji
 
 Wdrożono wyłącznie frontend. Backend i worker pozostały na `db062d2`;

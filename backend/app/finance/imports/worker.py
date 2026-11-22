@@ -1,6 +1,7 @@
 """ARQ is delivery only; durable preparation and lease recovery live in PostgreSQL."""
 
 import asyncio
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Protocol, cast
@@ -10,6 +11,11 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import async_session_factory
 from app.documents.import_storage import ImportStorageError
+from app.finance.imports.auto_post import (
+    list_due_auto_posts,
+    process_auto_post,
+    record_auto_post_failure,
+)
 from app.finance.imports.contracts import ImportFailure, ParsedImport
 from app.finance.imports.errors import ImportError
 from app.finance.imports.jobs import (
@@ -24,6 +30,39 @@ from app.finance.imports.storage import _parser_input
 
 class ImportQueue(Protocol):
     async def enqueue_job(self, function: str, *args: str, _job_id: str) -> object: ...
+
+
+logger = logging.getLogger(__name__)
+
+
+async def dispatch_statement_auto_posts(ctx: dict[str, object]) -> None:
+    async with async_session_factory() as db:
+        ids = await list_due_auto_posts(db)
+    queue = cast(ImportQueue, ctx["redis"])
+    for job_id in ids:
+        try:
+            await queue.enqueue_job(
+                "process_statement_auto_post", str(job_id), _job_id=f"statement-auto-post:{job_id}"
+            )
+        except (RedisError, OSError, RuntimeError):
+            continue
+
+
+async def process_statement_auto_post(ctx: dict[str, object], job_id: str) -> None:
+    try:
+        identifier = uuid.UUID(job_id)
+    except ValueError:
+        return
+    try:
+        async with async_session_factory() as db:
+            await process_auto_post(db, identifier)
+            await db.commit()
+    except (SQLAlchemyError, OSError, RuntimeError, ValueError) as error:
+        # Closing the failed transaction rolls back both the ledger and the result.
+        logger.warning("Statement auto-post job %s failed (%s)", identifier, type(error).__name__)
+        async with async_session_factory() as db:
+            await record_auto_post_failure(db, identifier)
+            await db.commit()
 
 
 async def dispatch_import_jobs(ctx: dict[str, object]) -> None:

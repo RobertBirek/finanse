@@ -16,6 +16,7 @@ from app.documents.job_models import DocumentProcessingJob
 from app.documents.lifecycle import _has_active_work
 from app.documents.models import Document
 from app.finance.document_guards import lock_document_mutations
+from app.finance.imports.auto_post import capture_auto_post_epoch
 from app.finance.imports.contracts import ParserInput
 from app.finance.imports.errors import ImportError
 from app.finance.imports.models import ImportBatch, ImportSource
@@ -147,6 +148,7 @@ async def attach_source(
     source_model = ImportSource(
         user_id=owner, batch_id=batch_id, document_id=document_id, kind=batch.kind
     )
+    await capture_auto_post_epoch(db, owner, source_model)
     db.add(source_model)
     batch.version += 1
     await db.flush()

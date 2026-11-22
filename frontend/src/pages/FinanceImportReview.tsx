@@ -15,10 +15,12 @@ import {
   usePrepareImportSource,
   useCommitImport,
   useImportCommandResult,
+  useQueueStatementAutoPost,
   importQueryKey,
   type ImportBatch,
   type ImportDecision,
   type ImportRow,
+  type ImportSource,
   type ImportPreview as PreviewData,
   type CommitResult,
 } from "../api/bankImports";
@@ -53,7 +55,7 @@ function Workspace({ batch }: { batch: ImportBatch }) {
   const publication = `${batch.version}:${batch.sources
     .map(
       (source) =>
-        `${source.id}:${source.current_revision_id}:${source.candidate_revision_id}:${source.processing_state}`,
+        `${source.id}:${source.current_revision_id}:${source.candidate_revision_id}:${source.processing_state}:${source.auto_post?.id}:${source.auto_post?.state}`,
     )
     .sort()
     .join("|")}`;
@@ -90,6 +92,19 @@ function Workspace({ batch }: { batch: ImportBatch }) {
   );
   const uncertain = pending !== null;
   const client = useQueryClient();
+  const postedRevision = batch.sources.reduce(
+    (total, source) => total + (source.auto_post?.posted_count ?? 0),
+    0,
+  );
+  const previousPosted = useRef(postedRevision);
+  useEffect(() => {
+    if (
+      postedRevision > previousPosted.current &&
+      isProcessingActorCurrent({ ownerId, generation })
+    )
+      invalidateFinanceLedger(client);
+    previousPosted.current = postedRevision;
+  }, [client, ownerId, generation, postedRevision]);
   const recovered = useImportCommandResult(batch.id, pending?.key ?? null);
   const recoveryApplied = useRef<string | null>(null);
   useEffect(() => {
@@ -125,11 +140,13 @@ function Workspace({ batch }: { batch: ImportBatch }) {
   const prepare = usePreviewImport();
   const parseSource = usePrepareImportSource();
   const commit = useCommitImport();
+  const autoPost = useQueueStatementAutoPost();
   const busy =
     save.isPending ||
     prepare.isPending ||
     commit.isPending ||
-    parseSource.isPending;
+    parseSource.isPending ||
+    autoPost.isPending;
   const knownRows = new Map([
     ...(rows.data?.items ?? []).map((row) => [row.id, row] as const),
     ...selectedRows,
@@ -198,6 +215,25 @@ function Workspace({ batch }: { batch: ImportBatch }) {
       report(error);
     }
   }
+  async function requestAutoPost(
+    source: ImportSource,
+    accountId: string | null,
+  ) {
+    if (busy || uncertain || batch.archived_at || !source.current_revision_id)
+      return;
+    setProblem(null);
+    setPreview(null);
+    try {
+      await autoPost.mutateAsync({
+        batchId: batch.id,
+        sourceId: source.id,
+        revisionId: source.current_revision_id,
+        accountId,
+      });
+    } catch (error) {
+      report(error);
+    }
+  }
   async function preparePreview() {
     if (uncertain || comparisonRevision) return;
     setProblem(null);
@@ -258,6 +294,9 @@ function Workspace({ batch }: { batch: ImportBatch }) {
           Źródła: {batch.sources.length} · Otwarte wiersze:{" "}
           {batch.unresolved_count} · Wersja decyzji: {batch.version}
         </p>
+        <Link className="text-sm underline" to="/finances/imports">
+          Ustawienia automatycznego księgowania
+        </Link>
       </div>
       {receipt ? <ImportReceipt receipt={receipt} /> : null}
       {uncertain ? (
@@ -307,6 +346,8 @@ function Workspace({ batch }: { batch: ImportBatch }) {
           sources={batch.sources}
           disabled={uncertain || busy || !!batch.archived_at}
           onPrepare={requestParse}
+          onAutoPost={requestAutoPost}
+          accounts={accounts.data ?? []}
           selected={sourceId}
           onSelect={(id) => {
             setSource(id);

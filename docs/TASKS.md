@@ -2,6 +2,17 @@
 
 Backlog zadań ze statusami.
 
+## Automatyczne księgowanie wyciągów — 2026-11-22
+
+- [x] Uzgodnić opt-in dla nowych źródeł, jednorazowe zlecenie dla istniejącego
+  odczytu i ręczne sprawdzanie wyjątków.
+- [x] Dodać zapis zgody, kolejkę workera, zachowawcze reguły i wynik w widoku
+  wyciągu. Zachować istniejący ręczny przepływ.
+- [ ] Odbiór integracji w CI na świeżym PostgreSQL: częściowy zapis,
+  idempotencja, równoległe zatwierdzenie, przerwany worker i zakres zgody.
+- [ ] Po code review i CI: merge, osobny odbiór pakietu i migracji
+  `5f1d54d40a2e`, uzgodnienie inventory i wdrożenie.
+
 ## Spójny układ aplikacji — 2026-11-21
 
 - [x] Zmierzyć szerokości widoków na desktopie, sprawdzić nawigację mobilną,
