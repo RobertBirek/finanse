@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Stała ścieżka odtwarzania — 2026-11-22
+
+- [x] Dodać odczyt i atomowe przełączenie stałego wskaźnika oraz testy odmowy.
+- [x] Włączyć wczesne sprawdzenie restore i horyzont rollbacku do procedury wydania.
+- [x] Odbiór przeglądu i dokładnych bajtów jednorazowego włączenia.
+  Na produkcji wskaźnik kieruje do dotychczasowego `db062d2`; backup i
+  harmonogram bez zmian.
+- [ ] W ramach wydania migracyjnego uzgodnić i przełączyć wskaźnik wraz z
+  migracją i zweryfikować zgodność z rzeczywistym schematem po niej.
+
 ## Automatyczne księgowanie wyciągów — 2026-11-22
 
 - [x] Uzgodnić opt-in dla nowych źródeł, jednorazowe zlecenie dla istniejącego
