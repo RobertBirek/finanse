@@ -1,5 +1,6 @@
 import datetime as dt
 import uuid
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -214,6 +215,32 @@ class TransactionCreate(BaseModel):
                 raise ValueError("Explicit dates currently require a manual expense")
             if self.source == "document_payment" and self.purchase_date is not None:
                 raise ValueError("Document payment cannot infer the purchase date")
+        return self
+
+
+class ManualFxTransactionCreate(BaseModel):
+    """Accept a foreign amount and explicit rate, not client-built postings."""
+
+    model_config = {"extra": "forbid"}
+    type: Literal["expense", "income"]
+    currency: Literal["EUR", "USD"]
+    account_id: uuid.UUID
+    category_id: uuid.UUID
+    amount_minor: int = Field(strict=True, gt=0, le=9007199254740991)
+    fx_rate: Decimal = Field(gt=0, lt=1000000, decimal_places=6)
+    fx_rate_source: Literal["manual", "nbp"] = "manual"
+    description: str = Field(min_length=1)
+    transaction_date: dt.date | None = None
+    purchase_date: dt.date | None = None
+    booking_date: dt.date | None = None
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "ManualFxTransactionCreate":
+        if self.type == "expense":
+            if self.booking_date is None or self.transaction_date is not None:
+                raise ValueError("Podaj datę księgowania wydatku.")
+        elif self.transaction_date is None or self.purchase_date or self.booking_date:
+            raise ValueError("Podaj datę operacji dla przychodu.")
         return self
 
 

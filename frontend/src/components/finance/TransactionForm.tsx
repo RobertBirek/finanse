@@ -8,6 +8,7 @@ import {
   useCreateExchange,
   useCreateExpenseRefund,
   useCreateTransaction,
+  useTransactionFxQuote,
 } from "../../api/finance";
 import { localTodayIso } from "../../lib/date";
 import { QueryFeedback } from "../QueryFeedback";
@@ -46,6 +47,7 @@ export function TransactionForm({
   const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
   const [fxRate, setFxRate] = useState("");
+  const [manualRate, setManualRate] = useState<string | null>(null);
   const [date, setDate] = useState(localTodayIso());
   const [purchaseDate, setPurchaseDate] = useState(localTodayIso());
   const [sameDate, setSameDate] = useState(true);
@@ -73,8 +75,24 @@ export function TransactionForm({
     apiErrorDetail(refund.error);
 
   const sourceAccount = accounts.find((account) => account.id === accountId);
+  const allowsManualFx = type === "expense" || type === "income";
+  const manualFxCurrency =
+    allowsManualFx &&
+    (sourceAccount?.currency === "EUR" || sourceAccount?.currency === "USD")
+      ? sourceAccount.currency
+      : null;
+  const manualAccounts = allowsManualFx
+    ? activeAccounts.filter(({ currency }) =>
+        ["PLN", "EUR", "USD"].includes(currency),
+      )
+    : activePlnAccounts;
+  const rateDay = type === "expense" && sameDate ? purchaseDate : date;
+  const fxQuote = useTransactionFxQuote(manualFxCurrency, rateDay);
+  const displayedRate = manualRate ?? fxQuote.data?.rate ?? "";
   const amountCurrency =
-    type === "exchange" ? (sourceAccount?.currency ?? "PLN") : "PLN";
+    type === "exchange"
+      ? (sourceAccount?.currency ?? "PLN")
+      : (manualFxCurrency ?? "PLN");
 
   function resetForm() {
     setType(DEFAULT_TYPE);
@@ -82,6 +100,7 @@ export function TransactionForm({
     setToAccountId("");
     setCategoryId("");
     setFxRate("");
+    setManualRate(null);
     setAmount("");
     setDate(localTodayIso());
     setPurchaseDate(localTodayIso());
@@ -95,7 +114,15 @@ export function TransactionForm({
     setCategoryId("");
     setToAccountId("");
     setFxRate("");
+    setManualRate(null);
     setValidationError(null);
+    if (
+      (nextType === "transfer" || nextType === "expense_refund") &&
+      sourceAccount?.currency !== "PLN"
+    ) {
+      setAccountId("");
+      setAmount("");
+    }
   }
 
   function handleSubmit(event: FormEvent) {
@@ -166,7 +193,7 @@ export function TransactionForm({
         return;
       }
     } else {
-      if (!accountId) {
+      if (!manualAccounts.some((account) => account.id === accountId)) {
         setValidationError("Wybierz konto.");
         return;
       }
@@ -190,6 +217,46 @@ export function TransactionForm({
           amount_minor: amountGrosze,
           transaction_date: date,
           description: description.trim(),
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+            onSuccess?.();
+          },
+        },
+      );
+      return;
+    }
+
+    if ((type === "expense" || type === "income") && manualFxCurrency) {
+      const rate = displayedRate.trim().replace(",", ".");
+      if (
+        !/^\d+(?:\.\d{1,6})?$/.test(rate) ||
+        !(Number(rate) > 0 && Number(rate) < 1_000_000)
+      ) {
+        setValidationError(
+          "Podaj kurs do PLN większy od zera (do 6 miejsc po przecinku).",
+        );
+        return;
+      }
+      create.mutate(
+        {
+          type,
+          description: description.trim(),
+          account_id: accountId,
+          category_id: categoryId,
+          currency: manualFxCurrency,
+          amount_minor: amountGrosze,
+          fx_rate: rate,
+          ...(manualRate === null && fxQuote.data
+            ? { fx_rate_source: "nbp" as const }
+            : {}),
+          ...(type === "expense"
+            ? {
+                purchase_date: purchaseDate,
+                booking_date: sameDate ? purchaseDate : date,
+              }
+            : { transaction_date: date }),
         },
         {
           onSuccess: () => {
@@ -303,7 +370,10 @@ export function TransactionForm({
             className="input"
             value={type === "expense" && sameDate ? purchaseDate : date}
             disabled={type === "expense" && sameDate}
-            onChange={(event) => setDate(event.target.value)}
+            onChange={(event) => {
+              setDate(event.target.value);
+              setManualRate(null);
+            }}
           />
         </div>
         {type === "expense" ? (
@@ -315,7 +385,10 @@ export function TransactionForm({
                 type="date"
                 required
                 value={purchaseDate}
-                onChange={(event) => setPurchaseDate(event.target.value)}
+                onChange={(event) => {
+                  setPurchaseDate(event.target.value);
+                  if (sameDate) setManualRate(null);
+                }}
               />
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-300">
@@ -325,6 +398,7 @@ export function TransactionForm({
                 onChange={(event) => {
                   setSameDate(event.target.checked);
                   if (!event.target.checked) setDate(purchaseDate);
+                  setManualRate(null);
                 }}
               />
               Księgowanie w dniu zakupu
@@ -453,10 +527,23 @@ export function TransactionForm({
                 id="tx-account"
                 className="input"
                 value={accountId}
-                onChange={(event) => setAccountId(event.target.value)}
+                onChange={(event) => {
+                  const next = manualAccounts.find(
+                    (account) => account.id === event.target.value,
+                  );
+                  if (
+                    sourceAccount &&
+                    next?.currency !== sourceAccount.currency
+                  ) {
+                    setAmount("");
+                    setFxRate("");
+                    setManualRate(null);
+                  }
+                  setAccountId(event.target.value);
+                }}
               >
                 <option value="">Wybierz konto</option>
-                {activePlnAccounts.map((account) => (
+                {manualAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>
@@ -488,6 +575,43 @@ export function TransactionForm({
             placeholder="np. 1 234,56"
           />
         </div>
+        {manualFxCurrency ? (
+          <div>
+            <label
+              htmlFor="tx-manual-fx-rate"
+              className="mb-1 block text-sm text-gray-400"
+            >
+              Kurs do PLN
+            </label>
+            <input
+              id="tx-manual-fx-rate"
+              className="input"
+              inputMode="decimal"
+              value={displayedRate}
+              onChange={(event) => setManualRate(event.target.value)}
+              aria-describedby="tx-manual-fx-help"
+              placeholder="np. 4,25"
+            />
+            <p id="tx-manual-fx-help" className="mt-1 text-xs text-gray-400">
+              {manualRate !== null
+                ? `Kurs ręczny: ile PLN odpowiada 1 ${manualFxCurrency}?`
+                : fxQuote.data
+                  ? `Kurs NBP z ${fxQuote.data.effective_date} (PLN za 1 ${manualFxCurrency}).`
+                  : fxQuote.isPending && rateDay
+                    ? "Pobieram kurs NBP…"
+                    : "Nie ma kursu NBP dla tej daty. Możesz wpisać kurs ręcznie."}
+            </p>
+            {manualRate !== null && fxQuote.data ? (
+              <button
+                type="button"
+                className="btn-secondary mt-1"
+                onClick={() => setManualRate(null)}
+              >
+                Użyj kursu NBP
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <div className="sm:col-span-2">
           <label
             htmlFor="tx-description"

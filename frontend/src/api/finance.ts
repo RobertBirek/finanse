@@ -733,21 +733,62 @@ function useManualTransactionPost(path: string) {
   };
 }
 
+export function useTransactionFxQuote(
+  currency: "EUR" | "USD" | null,
+  day: string,
+) {
+  return useQuery({
+    queryKey: ["finance", "manual-fx-quote", currency, day],
+    enabled: currency !== null && day !== "",
+    retry: false,
+    staleTime: 60_000,
+    queryFn: async ({ signal }) =>
+      (
+        await api.get<{
+          rate: string;
+          effective_date: string;
+          source: string;
+        } | null>("/finance/fx-rates/quote", {
+          params: { currency, day },
+          signal,
+        })
+      ).data,
+  });
+}
+
+export interface ManualFxTransactionInput {
+  type: "expense" | "income";
+  description: string;
+  account_id: string;
+  category_id: string;
+  amount_minor: number;
+  currency: "EUR" | "USD";
+  fx_rate: string;
+  fx_rate_source?: "nbp";
+  transaction_date?: string;
+  purchase_date?: string;
+  booking_date?: string;
+}
+
 export function useCreateTransaction() {
   const post = useManualTransactionPost("/finance/transactions");
   const queryClient = useQueryClient();
   return useMutation({
     onMutate: () => ({ session: useAuthStore.getState().sessionVersion }),
-    mutationFn: async (tx: {
-      transaction_date?: string;
-      purchase_date?: string;
-      booking_date?: string;
-      description: string;
-      type: string;
-      is_pending?: boolean;
-      project_id?: string;
-      postings: PostingInput[];
-    }) => {
+    mutationFn: async (
+      tx:
+        | ManualFxTransactionInput
+        | {
+            transaction_date?: string;
+            purchase_date?: string;
+            booking_date?: string;
+            description: string;
+            type: string;
+            is_pending?: boolean;
+            project_id?: string;
+            postings: PostingInput[];
+          },
+    ) => {
       return post(tx);
     },
     onSuccess: (_data, _variables, context) => {

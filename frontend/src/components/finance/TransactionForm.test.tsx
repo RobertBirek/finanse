@@ -10,6 +10,7 @@ const hooks = vi.hoisted(() => ({
   useCreateTransaction: vi.fn(),
   useCreateExchange: vi.fn(),
   useCreateExpenseRefund: vi.fn(),
+  useTransactionFxQuote: vi.fn(),
 }));
 
 vi.mock("../../api/finance", async (importOriginal) => {
@@ -50,6 +51,13 @@ const accounts = [
     balance_pln: 200000,
     opened_at: "2026-01-01",
     closed_at: null,
+  },
+  {
+    id: "active-usd",
+    name: "Revolut USD",
+    type: "checking",
+    currency: "USD",
+    is_active: true,
   },
   {
     id: "usd",
@@ -125,6 +133,10 @@ describe("TransactionForm", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    hooks.useTransactionFxQuote.mockReturnValue({
+      data: undefined,
+      isPending: false,
+    });
     mutate = vi.fn();
     exchangeMutate = vi.fn();
     refundMutate = vi.fn();
@@ -153,6 +165,23 @@ describe("TransactionForm", () => {
       isPending: false,
       error: null,
     });
+  });
+
+  it("prefills an NBP rate, shows its date and allows a manual override", () => {
+    hooks.useTransactionFxQuote.mockReturnValue({
+      data: { rate: "4.25", effective_date: "2026-01-02" },
+      isPending: false,
+    });
+    render(<TransactionForm />);
+    fireEvent.change(screen.getByLabelText("Konto"), {
+      target: { value: "eur" },
+    });
+    expect(screen.getByLabelText("Kurs do PLN")).toHaveValue("4.25");
+    expect(screen.getByText(/NBP.*2026-01-02/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Kurs do PLN"), {
+      target: { value: "4,3" },
+    });
+    expect(screen.getByLabelText("Kurs do PLN")).toHaveValue("4,3");
   });
 
   it("defaults to expense and adjusts fields when switching type", () => {
@@ -289,7 +318,7 @@ describe("TransactionForm", () => {
     expect(screen.getByText("Podaj datę zwrotu.")).toBeInTheDocument();
   });
 
-  it("shows only active PLN accounts in the account selector", () => {
+  it("shows active PLN, EUR and USD accounts for expenses", () => {
     render(<TransactionForm />);
 
     const accountSelect = screen.getByLabelText("Konto");
@@ -300,14 +329,59 @@ describe("TransactionForm", () => {
       within(accountSelect).getByRole("option", { name: "Rachunek a2" }),
     ).toBeInTheDocument();
     expect(
-      within(accountSelect).queryByRole("option", { name: "Konto EUR" }),
-    ).not.toBeInTheDocument();
+      within(accountSelect).getByRole("option", { name: "Konto EUR" }),
+    ).toBeInTheDocument();
+    expect(
+      within(accountSelect).getByRole("option", { name: "Revolut USD" }),
+    ).toBeInTheDocument();
     expect(
       within(accountSelect).queryByRole("option", {
         name: "Konto USD (nieaktywne)",
       }),
     ).not.toBeInTheDocument();
   });
+
+  it.each([
+    ["expense", "eur", "EUR", "c1", "booking_date"],
+    ["income", "active-usd", "USD", "c2", "transaction_date"],
+  ] as const)(
+    "sends %s in %s as a manual FX intent, not PLN postings",
+    (type, id, currency, category, dateKey) => {
+      render(<TransactionForm initialType={type} />);
+      fireEvent.change(screen.getByLabelText("Konto"), {
+        target: { value: id },
+      });
+      fireEvent.change(screen.getByLabelText("Kategoria"), {
+        target: { value: category },
+      });
+      fireEvent.change(screen.getByLabelText(`Kwota (${currency})`), {
+        target: { value: "12,34" },
+      });
+      fireEvent.change(screen.getByLabelText("Opis"), {
+        target: { value: "Revolut" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Zapisz transakcję" }),
+      );
+      expect(mutate).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByLabelText("Kurs do PLN"), {
+        target: { value: "4,25" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Zapisz transakcję" }),
+      );
+      expect(mutate.mock.calls[0][0]).toMatchObject({
+        type,
+        account_id: id,
+        category_id: category,
+        amount_minor: 1234,
+        currency,
+        fx_rate: "4.25",
+        [dateKey]: localTodayIso(),
+      });
+      expect(mutate.mock.calls[0][0]).not.toHaveProperty("postings");
+    },
+  );
 
   it("submits an expense with correct postings", () => {
     render(<TransactionForm />);
