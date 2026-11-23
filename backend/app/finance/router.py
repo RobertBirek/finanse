@@ -23,6 +23,7 @@ from app.finance.credit_cards import CardConflict
 from app.finance.document_guards import lock_document_mutations
 from app.finance.import_router import router as import_router
 from app.finance.loan_router import router as loan_router
+from app.finance.manual_fx import valued_transaction
 from app.finance.manual_refunds import create_manual_expense_refund
 from app.finance.models import FinanceCommandReceipt, FinancialTransaction, Posting
 from app.finance.opening_balance_schemas import OpeningBalanceUpdate, OpeningBalanceView
@@ -51,6 +52,7 @@ from app.finance.schemas import (
     FinanceSettingsResponse,
     FinanceSettingsUpdate,
     FinancialSummary,
+    ManualFxTransactionCreate,
     ScheduledFinanceConfirmationRequest,
     ScheduledFinanceConfirmationResponse,
     ScheduledFinanceItemCreate,
@@ -339,11 +341,17 @@ async def _post_manual_transaction(
     "/transactions", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED
 )
 async def create_transaction_endpoint(
-    data: TransactionCreate,
+    data: ManualFxTransactionCreate | TransactionCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     idempotency_key: ManualTransactionKey = None,
 ) -> TransactionResponse:
+    async def create() -> FinancialTransaction:
+        transaction = (
+            await valued_transaction(data) if isinstance(data, ManualFxTransactionCreate) else data
+        )
+        return await create_transaction(db, current_user.id, transaction)
+
     try:
         return await _post_manual_transaction(
             db,
@@ -351,7 +359,7 @@ async def create_transaction_endpoint(
             "create_manual_transaction",
             idempotency_key,
             data,
-            lambda: create_transaction(db, current_user.id, data),
+            create,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
