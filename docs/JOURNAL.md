@@ -2,6 +2,23 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-23 — Zbiorcze rozliczanie wyciągu 1:1
+
+- Dodano podgląd w istniejącym ekranie importu i zatwierdzenie wybranych
+  pozycji w jednym poleceniu. Podgląd nie zapisuje decyzji. Zatwierdzenie
+  ponownie sprawdza dane pod blokadą i używa dotychczasowego księgowania,
+  dowodów rozliczenia oraz idempotencji. Wcześniejsze decyzje pozostają bez zmian.
+- Nie używamy ponownie transakcji mającej dowód rozliczenia, nawet przy
+  identycznej referencji bankowej w innym imporcie. Gotówka, niejasne
+  prowizje, spłaty i kapitał rat pozostają do ręcznej weryfikacji; wpisu
+  Hondy nie zmieniano. Nie zmieniano automatu, schematu ani produkcji.
+- Testy z PostgreSQL wymagają osobno zatwierdzonego CI. Obejmują m.in.
+  atomowość, ponowienie, nieaktualny podgląd i dwa importy z tą samą referencją.
+  Syntetyczna próba serwisu bez bazy odtworzyła błąd: poprzednia reguła
+  proponowała powiązanie, poprawiona pozostawia wiersz do sprawdzenia.
+- Przeszły lint, kontrola typów, kolekcja backendu offline, 6 testów
+  reguł, 744 testy frontendu i build Vite.
+
 ## 2026-11-22 — Status rozliczenia wiersza wyciągu
 
 - Frontend pokazuje stan grupy dla dokładnego ID wiersza z istniejącej

@@ -145,6 +145,36 @@ export interface ImportRowPage {
   offset: number;
   limit: number;
 }
+
+export interface SettlementRow {
+  id: string;
+  description: string;
+  date: string | null;
+  amount: number;
+  currency: string;
+  status: "settled" | "link" | "create" | "review";
+  reason: string;
+  kind?: "expense" | "income" | null;
+  category_id?: string | null;
+  target?: { id: string; description: string; date: string } | null;
+  acknowledgement?: string | null;
+}
+
+export interface SettlementPreview {
+  batch_id: string;
+  account_id: string;
+  version: number;
+  fingerprint: string;
+  rows: SettlementRow[];
+}
+
+export interface SettlementIntent {
+  account_id: string;
+  fingerprint: string;
+  selection: { row_id: string; category_id?: string }[];
+  acknowledgements: string[];
+  confirmed: true;
+}
 export interface ImportUploadResult {
   source: ImportSource;
   is_duplicate: boolean;
@@ -438,6 +468,37 @@ export function useImport(batchId: string | null) {
         ? 3000
         : false,
   });
+}
+
+export function useReadSettlement(batchId: string) {
+  const actor = useImportActor();
+  return useMutation({
+    retry: false,
+    mutationFn: (accountId: string) =>
+      guarded(
+        actor,
+        async () =>
+          (
+            await api.get<SettlementPreview>(`${path(batchId)}/settlement`, {
+              params: { account_id: accountId },
+            })
+          ).data,
+      ),
+  });
+}
+
+export function useConfirmSettlement(batchId: string) {
+  return useImportMutation(
+    async (input: Keyed & { data: SettlementIntent }) =>
+      (
+        await api.post<CommitResult>(
+          `${path(batchId)}/settlement`,
+          input.data,
+          { headers: headers(input) },
+        )
+      ).data,
+    true,
+  );
 }
 export function useImportRows(
   batchId: string | null,

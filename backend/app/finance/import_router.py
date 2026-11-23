@@ -46,6 +46,8 @@ from app.finance.imports.schemas import (
     SourceUploadResult,
 )
 from app.finance.imports.service import create_batch
+from app.finance.imports.settlement import confirm_settlement, settlement_preview
+from app.finance.imports.settlement_schemas import SettlementConfirm, SettlementPreview
 from app.finance.imports.storage import attach_source
 from app.finance.loan_schedule_router import import_routes as schedule_import_routes
 from app.identity.models import User
@@ -174,6 +176,24 @@ async def set_statement_auto_post_settings(
 @router.get("/{batch_id}", response_model=BatchDTO)
 async def detail(batch_id: uuid.UUID, current_user: Owner, db: Database) -> Any:
     return await _handle(_batch(db, current_user.id, batch_id))
+
+
+@router.get("/{batch_id}/settlement", response_model=SettlementPreview)
+async def read_settlement(
+    batch_id: uuid.UUID, account_id: uuid.UUID, current_user: Owner, db: Database
+) -> Any:
+    return await _handle(settlement_preview(db, current_user.id, batch_id, account_id))
+
+
+@router.post("/{batch_id}/settlement", response_model=CommitResult)
+async def settle(
+    batch_id: uuid.UUID,
+    data: SettlementConfirm,
+    current_user: Owner,
+    db: Database,
+    idempotency_key: Key,
+) -> Any:
+    return await _handle(confirm_settlement(db, current_user.id, batch_id, data, idempotency_key))
 
 
 @router.post(

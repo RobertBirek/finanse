@@ -2,6 +2,18 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Nie wydano] — 2026-11-23 — Zbiorcze rozliczanie wyciągu
+
+### Added
+
+- Istniejący import można przejrzeć bez ponownego wgrywania i bez zapisu.
+  Podgląd na wybranym rachunku PLN rozróżnia rozliczone wiersze,
+  proponowane powiązania, nowe transakcje i wyjątki. Nowe transakcje
+  dostają propozycję kategorii, jeśli historia daje jednoznaczną odpowiedź.
+- Jedno zatwierdzenie zapisuje wybrane pozycje atomowo. Zmiana księgi lub
+  importu wymaga ponownego podglądu. Wiersze nie są sumowane, a jedna
+  transakcja nie służy do rozliczenia kolejnego wiersza w tym przepływie.
+
 ## [Nie wydano] — Status rozliczenia wiersza wyciągu
 
 ### Added
