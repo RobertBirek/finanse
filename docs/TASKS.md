@@ -2,6 +2,16 @@
 
 Backlog zadań ze statusami.
 
+## Zbiorcze rozliczanie wyciągu — 2026-11-23
+
+- [x] Dodać odczytowy podgląd i jawne zbiorcze zatwierdzenie 1:1 dla
+  istniejącego importu i wybranego rachunku w PLN.
+- [x] Dodać testy dopasowania, wyjątków, ponowień oraz regresję ponownego
+  użycia silnej referencji bankowej w innym imporcie.
+- [ ] Uruchomić integrację na nowym syntetycznym PostgreSQL w zatwierdzonym
+  CI i odebrać przypadek wyciągu karty Velo. Bez zmian produkcji.
+- [ ] Osobno zatwierdzić plan wdrożenia frontendu i backendu bez migracji.
+
 ## Status rozliczenia wiersza wyciągu
 
 - [x] Pokazać różnicę między potwierdzonym powiązaniem, nowym zapisem i
