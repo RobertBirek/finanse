@@ -733,21 +733,38 @@ function useManualTransactionPost(path: string) {
   };
 }
 
+export interface ManualFxTransactionInput {
+  type: "expense" | "income";
+  description: string;
+  account_id: string;
+  category_id: string;
+  amount_minor: number;
+  currency: "EUR" | "USD";
+  fx_rate: string;
+  transaction_date?: string;
+  purchase_date?: string;
+  booking_date?: string;
+}
+
 export function useCreateTransaction() {
   const post = useManualTransactionPost("/finance/transactions");
   const queryClient = useQueryClient();
   return useMutation({
     onMutate: () => ({ session: useAuthStore.getState().sessionVersion }),
-    mutationFn: async (tx: {
-      transaction_date?: string;
-      purchase_date?: string;
-      booking_date?: string;
-      description: string;
-      type: string;
-      is_pending?: boolean;
-      project_id?: string;
-      postings: PostingInput[];
-    }) => {
+    mutationFn: async (
+      tx:
+        | ManualFxTransactionInput
+        | {
+            transaction_date?: string;
+            purchase_date?: string;
+            booking_date?: string;
+            description: string;
+            type: string;
+            is_pending?: boolean;
+            project_id?: string;
+            postings: PostingInput[];
+          },
+    ) => {
       return post(tx);
     },
     onSuccess: (_data, _variables, context) => {

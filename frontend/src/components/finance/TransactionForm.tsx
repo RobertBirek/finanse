@@ -73,8 +73,21 @@ export function TransactionForm({
     apiErrorDetail(refund.error);
 
   const sourceAccount = accounts.find((account) => account.id === accountId);
+  const allowsManualFx = type === "expense" || type === "income";
+  const manualFxCurrency =
+    allowsManualFx &&
+    (sourceAccount?.currency === "EUR" || sourceAccount?.currency === "USD")
+      ? sourceAccount.currency
+      : null;
+  const manualAccounts = allowsManualFx
+    ? activeAccounts.filter(({ currency }) =>
+        ["PLN", "EUR", "USD"].includes(currency),
+      )
+    : activePlnAccounts;
   const amountCurrency =
-    type === "exchange" ? (sourceAccount?.currency ?? "PLN") : "PLN";
+    type === "exchange"
+      ? (sourceAccount?.currency ?? "PLN")
+      : (manualFxCurrency ?? "PLN");
 
   function resetForm() {
     setType(DEFAULT_TYPE);
@@ -96,6 +109,13 @@ export function TransactionForm({
     setToAccountId("");
     setFxRate("");
     setValidationError(null);
+    if (
+      (nextType === "transfer" || nextType === "expense_refund") &&
+      sourceAccount?.currency !== "PLN"
+    ) {
+      setAccountId("");
+      setAmount("");
+    }
   }
 
   function handleSubmit(event: FormEvent) {
@@ -166,7 +186,7 @@ export function TransactionForm({
         return;
       }
     } else {
-      if (!accountId) {
+      if (!manualAccounts.some((account) => account.id === accountId)) {
         setValidationError("Wybierz konto.");
         return;
       }
@@ -190,6 +210,43 @@ export function TransactionForm({
           amount_minor: amountGrosze,
           transaction_date: date,
           description: description.trim(),
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+            onSuccess?.();
+          },
+        },
+      );
+      return;
+    }
+
+    if ((type === "expense" || type === "income") && manualFxCurrency) {
+      const rate = fxRate.trim().replace(",", ".");
+      if (
+        !/^\d+(?:\.\d{1,6})?$/.test(rate) ||
+        !(Number(rate) > 0 && Number(rate) < 1_000_000)
+      ) {
+        setValidationError(
+          "Podaj kurs do PLN większy od zera (do 6 miejsc po przecinku).",
+        );
+        return;
+      }
+      create.mutate(
+        {
+          type,
+          description: description.trim(),
+          account_id: accountId,
+          category_id: categoryId,
+          currency: manualFxCurrency,
+          amount_minor: amountGrosze,
+          fx_rate: rate,
+          ...(type === "expense"
+            ? {
+                purchase_date: purchaseDate,
+                booking_date: sameDate ? purchaseDate : date,
+              }
+            : { transaction_date: date }),
         },
         {
           onSuccess: () => {
@@ -453,10 +510,22 @@ export function TransactionForm({
                 id="tx-account"
                 className="input"
                 value={accountId}
-                onChange={(event) => setAccountId(event.target.value)}
+                onChange={(event) => {
+                  const next = manualAccounts.find(
+                    (account) => account.id === event.target.value,
+                  );
+                  if (
+                    sourceAccount &&
+                    next?.currency !== sourceAccount.currency
+                  ) {
+                    setAmount("");
+                    setFxRate("");
+                  }
+                  setAccountId(event.target.value);
+                }}
               >
                 <option value="">Wybierz konto</option>
-                {activePlnAccounts.map((account) => (
+                {manualAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>
@@ -488,6 +557,28 @@ export function TransactionForm({
             placeholder="np. 1 234,56"
           />
         </div>
+        {manualFxCurrency ? (
+          <div>
+            <label
+              htmlFor="tx-manual-fx-rate"
+              className="mb-1 block text-sm text-gray-400"
+            >
+              Kurs do PLN
+            </label>
+            <input
+              id="tx-manual-fx-rate"
+              className="input"
+              inputMode="decimal"
+              value={fxRate}
+              onChange={(event) => setFxRate(event.target.value)}
+              aria-describedby="tx-manual-fx-help"
+              placeholder="np. 4,25"
+            />
+            <p id="tx-manual-fx-help" className="mt-1 text-xs text-gray-400">
+              Ile PLN odpowiada 1 {manualFxCurrency}?
+            </p>
+          </div>
+        ) : null}
         <div className="sm:col-span-2">
           <label
             htmlFor="tx-description"

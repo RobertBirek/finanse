@@ -52,6 +52,13 @@ const accounts = [
     closed_at: null,
   },
   {
+    id: "active-usd",
+    name: "Revolut USD",
+    type: "checking",
+    currency: "USD",
+    is_active: true,
+  },
+  {
     id: "usd",
     name: "Konto USD (nieaktywne)",
     type: "checking",
@@ -289,7 +296,7 @@ describe("TransactionForm", () => {
     expect(screen.getByText("Podaj datę zwrotu.")).toBeInTheDocument();
   });
 
-  it("shows only active PLN accounts in the account selector", () => {
+  it("shows active PLN, EUR and USD accounts for expenses", () => {
     render(<TransactionForm />);
 
     const accountSelect = screen.getByLabelText("Konto");
@@ -300,14 +307,59 @@ describe("TransactionForm", () => {
       within(accountSelect).getByRole("option", { name: "Rachunek a2" }),
     ).toBeInTheDocument();
     expect(
-      within(accountSelect).queryByRole("option", { name: "Konto EUR" }),
-    ).not.toBeInTheDocument();
+      within(accountSelect).getByRole("option", { name: "Konto EUR" }),
+    ).toBeInTheDocument();
+    expect(
+      within(accountSelect).getByRole("option", { name: "Revolut USD" }),
+    ).toBeInTheDocument();
     expect(
       within(accountSelect).queryByRole("option", {
         name: "Konto USD (nieaktywne)",
       }),
     ).not.toBeInTheDocument();
   });
+
+  it.each([
+    ["expense", "eur", "EUR", "c1", "booking_date"],
+    ["income", "active-usd", "USD", "c2", "transaction_date"],
+  ] as const)(
+    "sends %s in %s as a manual FX intent, not PLN postings",
+    (type, id, currency, category, dateKey) => {
+      render(<TransactionForm initialType={type} />);
+      fireEvent.change(screen.getByLabelText("Konto"), {
+        target: { value: id },
+      });
+      fireEvent.change(screen.getByLabelText("Kategoria"), {
+        target: { value: category },
+      });
+      fireEvent.change(screen.getByLabelText(`Kwota (${currency})`), {
+        target: { value: "12,34" },
+      });
+      fireEvent.change(screen.getByLabelText("Opis"), {
+        target: { value: "Revolut" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Zapisz transakcję" }),
+      );
+      expect(mutate).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByLabelText("Kurs do PLN"), {
+        target: { value: "4,25" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Zapisz transakcję" }),
+      );
+      expect(mutate.mock.calls[0][0]).toMatchObject({
+        type,
+        account_id: id,
+        category_id: category,
+        amount_minor: 1234,
+        currency,
+        fx_rate: "4.25",
+        [dateKey]: localTodayIso(),
+      });
+      expect(mutate.mock.calls[0][0]).not.toHaveProperty("postings");
+    },
+  );
 
   it("submits an expense with correct postings", () => {
     render(<TransactionForm />);
