@@ -27,6 +27,7 @@ import {
 import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { ImportUpload } from "../components/finance/imports/ImportUpload";
 import { ImportSources } from "../components/finance/imports/ImportSources";
+import { StatementSettlementReview } from "../components/finance/imports/StatementSettlementReview";
 import { isSourceBlocked } from "../components/finance/imports/importPresentation";
 import { ImportRows } from "../components/finance/imports/ImportRows";
 import { ImportGroupEditor } from "../components/finance/imports/ImportGroupEditor";
@@ -341,6 +342,15 @@ function Workspace({ batch }: { batch: ImportBatch }) {
       ) : (
         <ImportUpload batchId={batch.id} disabled={uncertain || busy} />
       )}
+      {!batch.archived_at && !comparisonRevision ? (
+        <StatementSettlementReview
+          batchId={batch.id}
+          version={batch.version}
+          accounts={accounts.data ?? []}
+          categories={categories.data ?? []}
+          disabled={uncertain || busy}
+        />
+      ) : null}
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(15rem,1fr)_minmax(0,2.4fr)]">
         <ImportSources
           sources={batch.sources}

@@ -1,6 +1,7 @@
 """Commit selected frozen groups atomically. No parsing, repricing or inferred matches."""
 
 import uuid
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from sqlalchemy import select
@@ -91,7 +92,26 @@ async def _locked_payload(
 async def commit_import(
     db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID, data: CommitRequest, key: str
 ) -> CommitResult:
+    async def prepared() -> CommitRequest:
+        return data
+
+    return await commit_with_preparation(
+        db, owner, batch_id, key, data.model_dump(mode="json"), prepared
+    )
+
+
+async def commit_with_preparation(
+    db: AsyncSession,
+    owner: uuid.UUID,
+    batch_id: uuid.UUID,
+    key: str,
+    intent: dict[str, object],
+    prepare: Callable[[], Awaitable[CommitRequest]],
+) -> CommitResult:
+    """Replay the durable command before preparing anything; rollback preparation on failure."""
+
     async def operation(receipt_id: uuid.UUID) -> ImportCommandOutcome:
+        data = await prepare()
         payload = await _locked_payload(db, owner, batch_id, data)
         transactions: list[uuid.UUID] = []
         linked: list[uuid.UUID] = []
@@ -226,7 +246,7 @@ async def commit_import(
         action="bank_import.commit",
         key=key,
         batch_id=batch_id,
-        payload=data.model_dump(mode="json"),
+        payload=intent,
         operation=operation,
     )
     return CommitResult.model_validate(response)

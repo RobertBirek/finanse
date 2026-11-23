@@ -41,6 +41,162 @@ function renderReview() {
 }
 
 describe("bank review and frozen confirmation", () => {
+  it("retries an uncertain settlement with exactly the same key and rows", async () => {
+    let first = true;
+    server = installImportServer({
+      onRequest: (request) => {
+        if (!request.url.endsWith("/settlement")) return undefined;
+        if (request.method === "post") {
+          if (first) {
+            first = false;
+            throw new Error("Synthetic lost response");
+          }
+          return receiptFixture;
+        }
+        return {
+          batch_id: "batch-a",
+          account_id: "account-pln",
+          version: 2,
+          fingerprint: "c".repeat(64),
+          rows: [
+            {
+              id: "linked",
+              description: "Zakup",
+              date: "2026-01-03",
+              amount: -199,
+              currency: "PLN",
+              status: "link",
+              reason: "exact_statement_match",
+            },
+          ],
+        };
+      },
+    });
+    renderReview();
+    const pane = within(
+      await screen.findByRole("region", {
+        name: "Zbiorcze rozliczenie wyciągu",
+      }),
+    );
+    const account = pane.getByLabelText("Rachunek wyciągu");
+    await within(account).findByRole("option", { name: /Rachunek PLN/ });
+    fireEvent.change(account, { target: { value: "account-pln" } });
+    fireEvent.click(
+      pane.getByRole("button", { name: "Przygotuj rozliczenie" }),
+    );
+    fireEvent.click(
+      await pane.findByRole("button", { name: "Zatwierdź wybrane" }),
+    );
+    expect(await pane.findByText(/Wynik jest nieznany/)).toBeVisible();
+    expect(
+      pane.getByRole("button", { name: "Przygotuj rozliczenie" }),
+    ).toBeDisabled();
+    expect(
+      pane.getByRole("checkbox", { name: "Wybierz Zakup" }),
+    ).toBeDisabled();
+    fireEvent.click(
+      pane.getByRole("button", { name: "Ponów tę samą decyzję zbiorczą" }),
+    );
+    expect(await pane.findByText(/Rozliczenie zapisane/)).toBeVisible();
+    const writes = server.requests.filter(
+      (request) => request.method === "post",
+    );
+    expect(writes).toHaveLength(2);
+    expect(writes[0].key).toMatch(/^[a-f0-9-]{36}$/);
+    expect(writes[1].key).toBe(writes[0].key);
+    expect(writes[1].body).toEqual(writes[0].body);
+  });
+
+  it("prepares a whole-statement review without writes and confirms only selected rows and categories", async () => {
+    server = installImportServer({
+      onRequest: (request) => {
+        if (!request.url.endsWith("/settlement")) return undefined;
+        if (request.method === "post") return receiptFixture;
+        return {
+          batch_id: "batch-a",
+          account_id: "account-pln",
+          version: 2,
+          fingerprint: "c".repeat(64),
+          rows: [
+            {
+              id: "linked",
+              description: "Zakup z Actual",
+              date: "2026-01-03",
+              amount: -199,
+              currency: "PLN",
+              status: "link",
+              reason: "exact_statement_match",
+              target: {
+                id: "existing",
+                description: "Zakup z Actual",
+                date: "2026-01-03",
+              },
+            },
+            {
+              id: "new",
+              description: "Nowy zakup",
+              date: "2026-01-04",
+              amount: -499,
+              currency: "PLN",
+              status: "create",
+              reason: "no_existing_candidate",
+              kind: "expense",
+            },
+            {
+              id: "repayment",
+              description: "Spłata karty",
+              date: "2026-01-05",
+              amount: 698,
+              currency: "PLN",
+              status: "review",
+              reason: "movement_unclear",
+            },
+          ],
+        };
+      },
+    });
+    renderReview();
+    const pane = within(
+      await screen.findByRole("region", {
+        name: "Zbiorcze rozliczenie wyciągu",
+      }),
+    );
+    const account = pane.getByLabelText("Rachunek wyciągu");
+    await within(account).findByRole("option", { name: /Rachunek PLN/ });
+    fireEvent.change(account, { target: { value: "account-pln" } });
+    fireEvent.click(
+      pane.getByRole("button", { name: "Przygotuj rozliczenie" }),
+    );
+    expect(await pane.findByText("Proponowane powiązania")).toBeVisible();
+    expect(pane.getByText("Do sprawdzenia")).toBeVisible();
+    expect(
+      pane.queryByRole("checkbox", { name: "Wybierz Spłata karty" }),
+    ).toBeNull();
+    expect(
+      server.requests.filter((request) => request.method !== "get"),
+    ).toHaveLength(0);
+    fireEvent.change(pane.getByLabelText("Kategoria: Nowy zakup"), {
+      target: { value: "category-a" },
+    });
+    fireEvent.click(pane.getByRole("button", { name: "Zatwierdź wybrane" }));
+    expect(await pane.findByText(/Rozliczenie zapisane/)).toBeVisible();
+    expect(
+      server.requests.find((request) => request.method === "post")?.key,
+    ).toMatch(/^[a-f0-9-]{36}$/);
+    expect(
+      server.requests.find((request) => request.method === "post")?.body,
+    ).toEqual({
+      account_id: "account-pln",
+      fingerprint: "c".repeat(64),
+      selection: [
+        { row_id: "linked" },
+        { row_id: "new", category_id: "category-a" },
+      ],
+      acknowledgements: [],
+      confirmed: true,
+    });
+  });
+
   it("distinguishes confirmed links, new bookings and pending decisions using exact source rows", async () => {
     const group = batchFixture().groups[0];
     const cases = [
