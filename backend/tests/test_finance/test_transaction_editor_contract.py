@@ -238,6 +238,9 @@ async def test_editor_updates_manual_expense_dates_with_date_version(db_session)
 async def test_editor_rolls_back_annotation_when_manual_date_version_is_stale(db_session) -> None:
     owner = await create_owner(db_session)
     txn, _, _, _ = await explicit(db_session, owner)
+    # The HTTP test client shares this session. Commit the preexisting
+    # transaction so the endpoint rollback only undoes the attempted edit.
+    await db_session.commit()
     async with client_for(db_session, owner) as client:
         opened = await client.get(f"/api/finance/transactions/{txn.id}/editor")
         assert opened.status_code == 200, opened.text
@@ -248,7 +251,7 @@ async def test_editor_rolls_back_annotation_when_manual_date_version_is_stale(db
             headers={"Idempotency-Key": "editor-date-rollback"},
             json={
                 "expected_updated_at": transaction["updated_at"],
-                "expected_date_version": annotation["version"] + 99,
+                "expected_date_version": transaction["date_metadata"]["version"] + 1,
                 "annotations": {
                     "display_description": annotation["display_description"],
                     "note": "must roll back",
@@ -288,8 +291,8 @@ async def test_editor_rolls_back_annotation_when_manual_date_version_is_stale(db
         )
         after = await client.get(f"/api/finance/transactions/{txn.id}/editor")
     assert rejected.status_code == 409, rejected.text
-    assert after.status_code == 200
-    assert after.json()["transaction"]["annotations"]["note"] is None
+    assert after.status_code == 200, after.text
+    assert after.json()["transaction"] == transaction
 
 
 @pytest.mark.integration
