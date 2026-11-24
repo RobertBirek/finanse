@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.finance.annotation_reads import attach_annotations
 from app.finance.annotation_router import router as annotation_router
+from app.finance.annotations import AnnotationError
 from app.finance.bills_router import router as bills_router
 from app.finance.cashflow import ScheduleConfirmationConflict
 from app.finance.categorization_context import digest
@@ -60,6 +61,8 @@ from app.finance.schemas import (
     ScheduledFinanceItemUpdate,
     TransactionCreate,
     TransactionDatesUpdate,
+    TransactionEditorResponse,
+    TransactionEditorUpdate,
     TransactionResponse,
     TransactionSearch,
     TransactionSearchResponse,
@@ -99,6 +102,7 @@ from app.finance.service import (
     update_transaction,
 )
 from app.finance.transaction_dates import TransactionDateError, set_transaction_dates
+from app.finance.transaction_editor import TransactionEditorError, ledger_editability, update_editor
 from app.identity.models import User
 from app.identity.router import get_current_user
 
@@ -483,6 +487,68 @@ async def get_transaction_endpoint(
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
     return txn
+
+
+@router.get("/transactions/{transaction_id}/editor", response_model=TransactionEditorResponse)
+async def get_transaction_editor_endpoint(
+    transaction_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TransactionEditorResponse:
+    txn = await get_transaction(db, current_user.id, transaction_id)
+    if txn is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    editability = await ledger_editability(db, current_user.id, txn)
+    return TransactionEditorResponse(
+        transaction=TransactionResponse.model_validate(txn),
+        ledger_editable=editability.editable,
+        ledger_lock_reason=editability.reason,
+    )
+
+
+@router.put("/transactions/{transaction_id}/editor", response_model=TransactionEditorResponse)
+async def update_transaction_editor_endpoint(
+    transaction_id: uuid.UUID,
+    data: TransactionEditorUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> TransactionEditorResponse | JSONResponse:
+    try:
+        txn, editability = await update_editor(
+            db,
+            current_user.id,
+            transaction_id,
+            data,
+            annotation_idempotency_key=idempotency_key,
+        )
+        if txn is None:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found"
+            )
+        txn = await get_transaction(db, current_user.id, txn.id)
+        assert txn is not None
+        response = TransactionEditorResponse(
+            transaction=TransactionResponse.model_validate(txn),
+            ledger_editable=editability.editable,
+            ledger_lock_reason=editability.reason,
+        )
+        await db.commit()
+        return response
+    except AnnotationError as error:
+        await db.rollback()
+        return JSONResponse(
+            status_code=error.status, content={"code": error.code, "detail": str(error)}
+        )
+    except TransactionEditorError as error:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except ValueError as error:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
 
 
 @router.patch("/transactions/{transaction_id}", response_model=TransactionResponse)

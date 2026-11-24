@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.finance.account_validation import normalize_bic, normalize_iban
-from app.finance.annotation_schemas import AnnotationResponse
+from app.finance.annotation_schemas import AnnotationResponse, AnnotationUpdate
 from app.finance.credit_card_schemas import CardConfig, CardSettings
 from app.finance.opening_balance_schemas import OpeningBalanceInput, OpeningBalanceView
 from app.finance.rule_schemas import AssignmentOrigin
@@ -278,6 +278,57 @@ class TransactionUpdate(BaseModel):
     project_id: uuid.UUID | None = None
 
 
+class TransactionEditorLedger(BaseModel):
+    """Client-selected creation shape for a ledger replacement.
+
+    The service accepts only shapes that can be identified from persisted
+    evidence.  Keeping all existing command schemas in the transport contract
+    lets the client use one editor without inventing a second posting format.
+    """
+
+    model_config = {"extra": "forbid"}
+    kind: Literal["transaction", "manual_fx", "exchange", "refund"]
+    data: TransactionCreate | ManualFxTransactionCreate | ExchangeCreate | ExpenseRefundCreate
+
+    @model_validator(mode="after")
+    def match_kind_to_command(self) -> "TransactionEditorLedger":
+        expected = {
+            "transaction": TransactionCreate,
+            "manual_fx": ManualFxTransactionCreate,
+            "exchange": ExchangeCreate,
+            "refund": ExpenseRefundCreate,
+        }[self.kind]
+        if not isinstance(self.data, expected):
+            raise ValueError("Rodzaj edycji nie odpowiada danym polecenia.")  # noqa: TRY004
+        return self
+
+
+class TransactionEditorUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+    expected_updated_at: dt.datetime
+    ledger: TransactionEditorLedger | None = None
+    annotations: AnnotationUpdate | None = None
+
+    @field_validator("expected_updated_at")
+    @classmethod
+    def require_timezone(cls, value: dt.datetime) -> dt.datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("Expected timestamp requires a timezone")
+        return value
+
+    @model_validator(mode="after")
+    def require_change(self) -> "TransactionEditorUpdate":
+        if self.ledger is None and self.annotations is None:
+            raise ValueError("Podaj zmianę księgi lub oznaczeń.")
+        return self
+
+
+class TransactionEditorResponse(BaseModel):
+    transaction: "TransactionResponse"
+    ledger_editable: bool
+    ledger_lock_reason: str | None
+
+
 class TransactionDateMetadataResponse(BaseModel):
     purchase_date: dt.date | None
     booking_date: dt.date | None
@@ -327,6 +378,9 @@ class TransactionResponse(BaseModel):
         if not self.effective_description:
             self.effective_description = self.description
         return self
+
+
+TransactionEditorResponse.model_rebuild()
 
 
 TransactionDateBasis = Literal["booking", "purchase"]
