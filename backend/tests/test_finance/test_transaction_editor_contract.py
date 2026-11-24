@@ -241,13 +241,16 @@ async def test_editor_rolls_back_annotation_when_manual_date_version_is_stale(db
     # The HTTP test client shares this session. Commit the preexisting
     # transaction so the endpoint rollback only undoes the attempted edit.
     await db_session.commit()
+    # Rollback expires ORM objects; the follow-up HTTP request must not
+    # trigger an implicit async reload when interpolating the URL.
+    editor_url = f"/api/finance/transactions/{txn.id}/editor"
     async with client_for(db_session, owner) as client:
-        opened = await client.get(f"/api/finance/transactions/{txn.id}/editor")
+        opened = await client.get(editor_url)
         assert opened.status_code == 200, opened.text
         transaction = opened.json()["transaction"]
         annotation = transaction["annotations"]
         rejected = await client.put(
-            f"/api/finance/transactions/{txn.id}/editor",
+            editor_url,
             headers={"Idempotency-Key": "editor-date-rollback"},
             json={
                 "expected_updated_at": transaction["updated_at"],
@@ -289,8 +292,8 @@ async def test_editor_rolls_back_annotation_when_manual_date_version_is_stale(db
                 },
             },
         )
-        after = await client.get(f"/api/finance/transactions/{txn.id}/editor")
-    assert rejected.status_code == 409, rejected.text
+        assert rejected.status_code == 409, rejected.text
+        after = await client.get(editor_url)
     assert after.status_code == 200, after.text
     assert after.json()["transaction"] == transaction
 
