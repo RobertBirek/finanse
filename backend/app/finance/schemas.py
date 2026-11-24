@@ -417,8 +417,28 @@ class TransactionSearch(BaseModel):
         return self
 
 
-class TransactionSearchItem(TransactionResponse):
+class TransactionHistoryItem(TransactionResponse):
+    ledger_editable: bool | None = None
+    ledger_lock_reason: str | None = None
+    import_batch_id: uuid.UUID | None = None
+    financial_document_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class TransactionSearchItem(TransactionHistoryItem):
     matched_category_amount_pln: int | None = None
+
+
+class BalanceReconciliationInput(BaseModel):
+    day: dt.date
+    statement_minor: str = Field(pattern=r"^-?[0-9]{1,19}$")
+
+
+class BalanceReconciliationResponse(BaseModel):
+    day: dt.date
+    currency: str
+    ledger_minor: str
+    statement_minor: str
+    difference_minor: str
 
 
 class TransactionSearchResponse(BaseModel):

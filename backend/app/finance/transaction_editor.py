@@ -71,14 +71,10 @@ def _is_canonical_manual_fx(txn: FinancialTransaction) -> bool:
     )
 
 
-async def _exists(db: AsyncSession, statement: Select[tuple[uuid.UUID]]) -> bool:
-    return await db.scalar(statement) is not None
-
-
-async def ledger_editability(
-    db: AsyncSession, owner: uuid.UUID, txn: FinancialTransaction
-) -> LedgerEditability:
-    """Return a reason instead of guessing how linked history should be changed."""
+async def ledger_editabilities(
+    db: AsyncSession, owner: uuid.UUID, transactions: list[FinancialTransaction]
+) -> dict[uuid.UUID, LedgerEditability]:
+    """Return editor decisions for a page of history in a bounded number of queries."""
     from app.finance.credit_card_models import CardAllocation, CardCharge, CardPlan
     from app.finance.imports.models import ImportEvidence
     from app.finance.opening_balance_models import AccountOpeningBalance
@@ -87,133 +83,201 @@ async def ledger_editability(
     from app.finance.rule_models import TransactionCategorizationOrigin
     from app.finance.suggestion_models import CategorizationSuggestionJob
 
-    if await _exists(
-        db,
-        select(AccountOpeningBalance.id).where(
-            AccountOpeningBalance.user_id == owner, AccountOpeningBalance.transaction_id == txn.id
-        ),
-    ):
-        return LedgerEditability(False, "Bilans otwarcia jest chroniony.")
-    if txn.source != "manual" or txn.created_by != "human":
-        return LedgerEditability(False, "Pochodzenie transakcji jest chronione.")
-    if txn.date_metadata is not None and (
-        txn.type != "expense"
-        or txn.date_metadata.purchase_date_source not in {None, "manual"}
-        or txn.date_metadata.booking_date_source != "manual"
-    ):
-        return LedgerEditability(False, "Transakcja ma chronione znaczenie dat.")
-    if len(txn.postings) != 2:
-        return LedgerEditability(
-            False, "Podział lub niestandardowy układ zapisów wymaga osobnej korekty."
+    transaction_ids = [transaction.id for transaction in transactions]
+    if not transaction_ids:
+        return {}
+
+    async def linked_ids(
+        statement: Select[tuple[uuid.UUID]] | Select[tuple[uuid.UUID | None]],
+    ) -> set[uuid.UUID]:
+        return {
+            transaction_id
+            for transaction_id in (await db.scalars(statement)).all()
+            if transaction_id is not None
+        }
+
+    opening_ids = await linked_ids(
+        select(AccountOpeningBalance.transaction_id).where(
+            AccountOpeningBalance.user_id == owner,
+            AccountOpeningBalance.transaction_id.in_(transaction_ids),
         )
-    if any(
-        (posting.account_id is None) == (posting.category_id is None) for posting in txn.postings
-    ):
-        return LedgerEditability(False, "Niestandardowy układ zapisów jest chroniony.")
-    if txn.type not in {"income", "expense", "transfer"}:
-        return LedgerEditability(False, "Ten typ transakcji wymaga osobnej korekty.")
-    account_legs = [posting for posting in txn.postings if posting.account_id is not None]
-    if txn.type == "transfer":
-        if (
-            len(account_legs) != 2
-            or account_legs[0].account_id == account_legs[1].account_id
-            or {p.direction for p in account_legs} != {"debit", "credit"}
-        ):
-            return LedgerEditability(False, "Niestandardowy transfer jest chroniony.")
-    elif len(account_legs) != 1 or account_legs[0].direction != (
-        "debit" if txn.type == "expense" else "credit"
-    ):
-        return LedgerEditability(False, "Niestandardowy zapis lub zwrot jest chroniony.")
-    if any(
-        posting.source_currency != "PLN" for posting in txn.postings
-    ) and not _is_canonical_manual_fx(txn):
-        return LedgerEditability(False, "Ten zapis walutowy wymaga osobnej korekty.")
-    if await _exists(
-        db,
-        select(ActualImportMapping.id).where(
+    )
+    actual_import_ids = await linked_ids(
+        select(ActualImportMapping.entity_id).where(
             ActualImportMapping.user_id == owner,
             ActualImportMapping.entity_type == "transaction",
-            ActualImportMapping.entity_id == txn.id,
-        ),
-    ) or await _exists(
-        db,
-        select(ImportEvidence.id).where(
-            ImportEvidence.user_id == owner, ImportEvidence.transaction_id == txn.id
-        ),
-    ):
-        return LedgerEditability(False, "Dowód importu chroni tożsamość księgową.")
-    if await _exists(
-        db,
-        select(DocumentPaymentAllocation.id)
-        .join(Posting, Posting.id == DocumentPaymentAllocation.posting_id)
-        .where(Posting.transaction_id == txn.id, DocumentPaymentAllocation.user_id == owner),
-    ):
-        return LedgerEditability(False, "Płatność jest powiązana z dokumentem.")
-    if await _exists(
-        db,
-        select(LoanPaymentLink.id).where(
-            LoanPaymentLink.user_id == owner, LoanPaymentLink.transaction_id == txn.id
-        ),
-    ):
-        return LedgerEditability(False, "Płatność pożyczki jest powiązana z harmonogramem.")
-    if await _exists(
-        db,
-        select(PersonTransactionLink.id).where(
-            PersonTransactionLink.user_id == owner, PersonTransactionLink.transaction_id == txn.id
-        ),
-    ):
-        return LedgerEditability(False, "Darowizna jest powiązana z osobą.")
-    if (
-        await _exists(
-            db,
-            select(CardPlan.id).where(
-                CardPlan.user_id == owner, CardPlan.source_transaction_id == txn.id
-            ),
+            ActualImportMapping.entity_id.in_(transaction_ids),
         )
-        or await _exists(
-            db,
-            select(CardAllocation.id).where(
-                CardAllocation.user_id == owner, CardAllocation.transaction_id == txn.id
-            ),
+    )
+    bank_import_ids = await linked_ids(
+        select(ImportEvidence.transaction_id).where(
+            ImportEvidence.user_id == owner, ImportEvidence.transaction_id.in_(transaction_ids)
         )
-        or await _exists(
-            db,
-            select(CardCharge.id).where(
-                CardCharge.user_id == owner, CardCharge.transaction_id == txn.id
-            ),
+    )
+    document_ids = await linked_ids(
+        select(Posting.transaction_id)
+        .join(DocumentPaymentAllocation, DocumentPaymentAllocation.posting_id == Posting.id)
+        .where(
+            Posting.transaction_id.in_(transaction_ids),
+            DocumentPaymentAllocation.user_id == owner,
         )
-    ):
-        return LedgerEditability(False, "Transakcja jest powiązana z kartą.")
-    if await _exists(
-        db,
-        select(TransactionCategorizationOrigin.id).where(
+    )
+    loan_ids = await linked_ids(
+        select(LoanPaymentLink.transaction_id).where(
+            LoanPaymentLink.user_id == owner, LoanPaymentLink.transaction_id.in_(transaction_ids)
+        )
+    )
+    person_ids = await linked_ids(
+        select(PersonTransactionLink.transaction_id).where(
+            PersonTransactionLink.user_id == owner,
+            PersonTransactionLink.transaction_id.in_(transaction_ids),
+        )
+    )
+    card_ids = await linked_ids(
+        select(CardPlan.source_transaction_id).where(
+            CardPlan.user_id == owner, CardPlan.source_transaction_id.in_(transaction_ids)
+        )
+    )
+    card_ids.update(
+        await linked_ids(
+            select(CardAllocation.transaction_id).where(
+                CardAllocation.user_id == owner, CardAllocation.transaction_id.in_(transaction_ids)
+            )
+        )
+    )
+    card_ids.update(
+        await linked_ids(
+            select(CardCharge.transaction_id).where(
+                CardCharge.user_id == owner, CardCharge.transaction_id.in_(transaction_ids)
+            )
+        )
+    )
+    categorization_ids = await linked_ids(
+        select(TransactionCategorizationOrigin.transaction_id).where(
             TransactionCategorizationOrigin.user_id == owner,
-            TransactionCategorizationOrigin.transaction_id == txn.id,
-        ),
-    ) or await _exists(
-        db,
-        select(TransactionCategorizationState.id).where(
-            TransactionCategorizationState.user_id == owner,
-            TransactionCategorizationState.transaction_id == txn.id,
-        ),
-    ):
-        return LedgerEditability(
-            False, "Zachowano historię kategoryzacji; użyj jej dedykowanej korekty."
+            TransactionCategorizationOrigin.transaction_id.in_(transaction_ids),
         )
-    if await _exists(
-        db,
-        select(TransactionRuleEvent.id).where(
-            TransactionRuleEvent.user_id == owner, TransactionRuleEvent.transaction_id == txn.id
-        ),
-    ) or await _exists(
-        db,
-        select(CategorizationSuggestionJob.id).where(
-            CategorizationSuggestionJob.user_id == owner,
-            CategorizationSuggestionJob.transaction_id == txn.id,
-        ),
-    ):
-        return LedgerEditability(False, "Transakcja ma historię reguły lub sugestii.")
-    return LedgerEditability(True)
+    )
+    categorization_ids.update(
+        await linked_ids(
+            select(TransactionCategorizationState.transaction_id).where(
+                TransactionCategorizationState.user_id == owner,
+                TransactionCategorizationState.transaction_id.in_(transaction_ids),
+            )
+        )
+    )
+    rule_or_suggestion_ids = await linked_ids(
+        select(TransactionRuleEvent.transaction_id).where(
+            TransactionRuleEvent.user_id == owner,
+            TransactionRuleEvent.transaction_id.in_(transaction_ids),
+        )
+    )
+    rule_or_suggestion_ids.update(
+        await linked_ids(
+            select(CategorizationSuggestionJob.transaction_id).where(
+                CategorizationSuggestionJob.user_id == owner,
+                CategorizationSuggestionJob.transaction_id.in_(transaction_ids),
+            )
+        )
+    )
+
+    decisions: dict[uuid.UUID, LedgerEditability] = {}
+    for txn in transactions:
+        if txn.id in opening_ids:
+            decisions[txn.id] = LedgerEditability(False, "Bilans otwarcia jest chroniony.")
+            continue
+        if txn.source == "bank_import":
+            decisions[txn.id] = LedgerEditability(False, "Import bankowy")
+            continue
+        if txn.source != "manual" or txn.created_by != "human":
+            decisions[txn.id] = LedgerEditability(False, "Pochodzenie transakcji jest chronione.")
+            continue
+        if txn.date_metadata is not None and (
+            txn.type != "expense"
+            or txn.date_metadata.purchase_date_source not in {None, "manual"}
+            or txn.date_metadata.booking_date_source != "manual"
+        ):
+            decisions[txn.id] = LedgerEditability(False, "Transakcja ma chronione znaczenie dat.")
+            continue
+        if len(txn.postings) != 2:
+            decisions[txn.id] = LedgerEditability(
+                False, "Podział lub niestandardowy układ zapisów wymaga osobnej korekty."
+            )
+            continue
+        if any(
+            (posting.account_id is None) == (posting.category_id is None)
+            for posting in txn.postings
+        ):
+            decisions[txn.id] = LedgerEditability(
+                False, "Niestandardowy układ zapisów jest chroniony."
+            )
+            continue
+        if txn.type not in {"income", "expense", "transfer"}:
+            decisions[txn.id] = LedgerEditability(
+                False, "Ten typ transakcji wymaga osobnej korekty."
+            )
+            continue
+        account_legs = [posting for posting in txn.postings if posting.account_id is not None]
+        if txn.type == "transfer":
+            if (
+                len(account_legs) != 2
+                or account_legs[0].account_id == account_legs[1].account_id
+                or {posting.direction for posting in account_legs} != {"debit", "credit"}
+            ):
+                decisions[txn.id] = LedgerEditability(
+                    False, "Niestandardowy transfer jest chroniony."
+                )
+                continue
+        elif len(account_legs) != 1 or account_legs[0].direction != (
+            "debit" if txn.type == "expense" else "credit"
+        ):
+            decisions[txn.id] = LedgerEditability(
+                False, "Niestandardowy zapis lub zwrot jest chroniony."
+            )
+            continue
+        if any(
+            posting.source_currency != "PLN" for posting in txn.postings
+        ) and not _is_canonical_manual_fx(txn):
+            decisions[txn.id] = LedgerEditability(
+                False, "Ten zapis walutowy wymaga osobnej korekty."
+            )
+            continue
+        if txn.id in actual_import_ids or txn.id in bank_import_ids:
+            decisions[txn.id] = LedgerEditability(False, "Dowód importu chroni tożsamość księgową.")
+            continue
+        if txn.id in document_ids:
+            decisions[txn.id] = LedgerEditability(False, "Płatność jest powiązana z dokumentem.")
+            continue
+        if txn.id in loan_ids:
+            decisions[txn.id] = LedgerEditability(
+                False, "Płatność pożyczki jest powiązana z harmonogramem."
+            )
+            continue
+        if txn.id in person_ids:
+            decisions[txn.id] = LedgerEditability(False, "Darowizna jest powiązana z osobą.")
+            continue
+        if txn.id in card_ids:
+            decisions[txn.id] = LedgerEditability(False, "Transakcja jest powiązana z kartą.")
+            continue
+        if txn.id in categorization_ids:
+            decisions[txn.id] = LedgerEditability(
+                False, "Zachowano historię kategoryzacji; użyj jej dedykowanej korekty."
+            )
+            continue
+        if txn.id in rule_or_suggestion_ids:
+            decisions[txn.id] = LedgerEditability(
+                False, "Transakcja ma historię reguły lub sugestii."
+            )
+            continue
+        decisions[txn.id] = LedgerEditability(True)
+    return decisions
+
+
+async def ledger_editability(
+    db: AsyncSession, owner: uuid.UUID, txn: FinancialTransaction
+) -> LedgerEditability:
+    """Return the same decision used by the batched history read."""
+    return (await ledger_editabilities(db, owner, [txn]))[txn.id]
 
 
 async def _locked_transaction(
