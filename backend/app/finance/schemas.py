@@ -306,6 +306,7 @@ class TransactionEditorLedger(BaseModel):
 class TransactionEditorUpdate(BaseModel):
     model_config = {"extra": "forbid"}
     expected_updated_at: dt.datetime
+    expected_date_version: int | None = Field(default=None, ge=0, strict=True)
     ledger: TransactionEditorLedger | None = None
     annotations: AnnotationUpdate | None = None
 

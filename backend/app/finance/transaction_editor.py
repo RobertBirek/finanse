@@ -8,6 +8,7 @@ ledger layout and leaves every protected/historical layout intact.
 
 import uuid
 from dataclasses import dataclass
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +26,12 @@ from app.finance.models import (
     Posting,
     TransactionCategorizationState,
 )
-from app.finance.schemas import TransactionCreate, TransactionEditorUpdate
+from app.finance.schemas import (
+    ManualFxTransactionCreate,
+    TransactionCreate,
+    TransactionEditorUpdate,
+)
+from app.finance.transaction_dates import TransactionDateError, set_editor_manual_dates
 
 
 class TransactionEditorError(ValueError):
@@ -36,6 +42,33 @@ class TransactionEditorError(ValueError):
 class LedgerEditability:
     editable: bool
     reason: str | None = None
+
+
+def _is_canonical_manual_fx(txn: FinancialTransaction) -> bool:
+    """Recognise only the exact persisted shape produced by the manual-rate builder."""
+    if txn.source != "manual" or txn.type not in {"expense", "income"} or len(txn.postings) != 2:
+        return False
+    accounts = [
+        posting for posting in txn.postings if posting.account_id and not posting.category_id
+    ]
+    categories = [
+        posting for posting in txn.postings if posting.category_id and not posting.account_id
+    ]
+    if len(accounts) != 1 or len(categories) != 1:
+        return False
+    account, category = accounts[0], categories[0]
+    currency = str(account.source_currency).upper()
+    expected_direction = "debit" if txn.type == "expense" else "credit"
+    return bool(
+        currency in {"EUR", "USD"}
+        and str(category.source_currency).upper() == currency
+        and account.source_amount == category.source_amount
+        and account.base_amount_pln == category.base_amount_pln
+        and Decimal(str(account.fx_rate)) == Decimal(str(category.fx_rate))
+        and account.fx_rate_source == category.fx_rate_source == "manual"
+        and account.direction == expected_direction
+        and category.direction != expected_direction
+    )
 
 
 async def _exists(db: AsyncSession, statement: Select[tuple[uuid.UUID]]) -> bool:
@@ -63,7 +96,11 @@ async def ledger_editability(
         return LedgerEditability(False, "Bilans otwarcia jest chroniony.")
     if txn.source != "manual" or txn.created_by != "human":
         return LedgerEditability(False, "Pochodzenie transakcji jest chronione.")
-    if txn.date_metadata is not None:
+    if txn.date_metadata is not None and (
+        txn.type != "expense"
+        or txn.date_metadata.purchase_date_source not in {None, "manual"}
+        or txn.date_metadata.booking_date_source != "manual"
+    ):
         return LedgerEditability(False, "Transakcja ma chronione znaczenie dat.")
     if len(txn.postings) != 2:
         return LedgerEditability(
@@ -73,6 +110,24 @@ async def ledger_editability(
         (posting.account_id is None) == (posting.category_id is None) for posting in txn.postings
     ):
         return LedgerEditability(False, "Niestandardowy układ zapisów jest chroniony.")
+    if txn.type not in {"income", "expense", "transfer"}:
+        return LedgerEditability(False, "Ten typ transakcji wymaga osobnej korekty.")
+    account_legs = [posting for posting in txn.postings if posting.account_id is not None]
+    if txn.type == "transfer":
+        if (
+            len(account_legs) != 2
+            or account_legs[0].account_id == account_legs[1].account_id
+            or {p.direction for p in account_legs} != {"debit", "credit"}
+        ):
+            return LedgerEditability(False, "Niestandardowy transfer jest chroniony.")
+    elif len(account_legs) != 1 or account_legs[0].direction != (
+        "debit" if txn.type == "expense" else "credit"
+    ):
+        return LedgerEditability(False, "Niestandardowy zapis lub zwrot jest chroniony.")
+    if any(
+        posting.source_currency != "PLN" for posting in txn.postings
+    ) and not _is_canonical_manual_fx(txn):
+        return LedgerEditability(False, "Ten zapis walutowy wymaga osobnej korekty.")
     if await _exists(
         db,
         select(ActualImportMapping.id).where(
@@ -177,14 +232,39 @@ async def _locked_transaction(
 
 
 async def _replace_canonical_ledger(
-    db: AsyncSession, owner: uuid.UUID, txn: FinancialTransaction, data: TransactionCreate
+    db: AsyncSession,
+    owner: uuid.UUID,
+    txn: FinancialTransaction,
+    data: TransactionCreate,
+    *,
+    allows_explicit_dates: bool,
 ) -> None:
     if data.source != "manual":
         raise TransactionEditorError("Edycja nie może zmienić pochodzenia transakcji.")
-    if data.purchase_date is not None or data.booking_date is not None:
+    if not allows_explicit_dates and (
+        data.purchase_date is not None or data.booking_date is not None
+    ):
         raise TransactionEditorError("Edycja dat wymaga dedykowanej korekty dat.")
     if "project_id" in data.model_fields_set and data.project_id != txn.project_id:
         raise TransactionEditorError("Projekt należy zmienić przez oznaczenia transakcji.")
+    if len(data.postings) != 2:
+        raise TransactionEditorError("Edycja wymaga dwóch zapisów księgowych.")
+    if txn.date_metadata is not None and (
+        data.type != "expense" or not allows_explicit_dates or data.is_pending != txn.is_pending
+    ):
+        raise TransactionEditorError("Nie można zmienić znaczenia istniejących dat.")
+    if data.type not in {"expense", "income", "transfer"}:
+        raise TransactionEditorError("Ten typ wymaga osobnej korekty.")
+    if data.type == "transfer" and (
+        any(
+            posting.account_id is None
+            or posting.category_id is not None
+            or posting.source_currency.upper() != "PLN"
+            for posting in data.postings
+        )
+        or data.postings[0].account_id == data.postings[1].account_id
+    ):
+        raise TransactionEditorError("Transfer wymaga dwóch różnych kont PLN.")
     _validate_posting_sum(data.postings, data.type)
     await _validate_transaction_postings(db, owner, data.postings, data.type)
     postings = sorted(txn.postings, key=lambda posting: str(posting.id))
@@ -198,7 +278,8 @@ async def _replace_canonical_ledger(
         posting.fx_rate_source = replacement.fx_rate_source
         posting.direction = replacement.direction
         posting.is_budget_impact = replacement.is_budget_impact
-    txn.date = data.transaction_date or txn.date
+    if not allows_explicit_dates:
+        txn.date = data.transaction_date or txn.date
     txn.description = data.description
     txn.type = data.type
     txn.is_pending = data.is_pending
@@ -242,7 +323,11 @@ async def update_editor(
     if data.ledger is not None:
         if not editability.editable:
             raise TransactionEditorError(editability.reason or "Edycja księgi jest zablokowana.")
-        if data.ledger.kind != "transaction":
+        if data.ledger.kind == "manual_fx" and not _is_canonical_manual_fx(txn):
+            raise TransactionEditorError(
+                "Zapis nie jest rozpoznawalną ręczną operacją walutową z kursem ręcznym."
+            )
+        if data.ledger.kind not in {"transaction", "manual_fx"}:
             raise TransactionEditorError(
                 "Nie można bezpiecznie odtworzyć specjalnego polecenia z zapisanej transakcji."
             )
@@ -258,7 +343,42 @@ async def update_editor(
             idempotency_key=annotation_idempotency_key,
         )
     if data.ledger is not None:
-        assert isinstance(data.ledger.data, TransactionCreate)
-        await _replace_canonical_ledger(db, owner, txn, data.ledger.data)
+        if data.ledger.kind == "manual_fx":
+            assert isinstance(data.ledger.data, ManualFxTransactionCreate)
+            if data.ledger.data.type != txn.type:
+                raise TransactionEditorError("Edycja walutowa nie może zmienić typu transakcji.")
+            if txn.type == "expense" and txn.date_metadata is None:
+                raise TransactionEditorError(
+                    "Ręczny wydatek walutowy wymaga zachowanych dat zakupu i księgowania."
+                )
+            from app.finance.manual_fx import valued_transaction
+
+            replacement = await valued_transaction(data.ledger.data)
+        else:
+            assert isinstance(data.ledger.data, TransactionCreate)
+            replacement = data.ledger.data
+            if any(posting.source_currency.upper() != "PLN" for posting in replacement.postings):
+                raise TransactionEditorError("Waluty obce wymagają polecenia z jawnym kursem.")
+        has_explicit_dates = replacement.booking_date is not None
+        if has_explicit_dates:
+            assert replacement.booking_date is not None
+            if data.expected_date_version is None:
+                raise TransactionEditorError(
+                    "Wersja dat jest wymagana przy zmianie dat zakupu i księgowania."
+                )
+            try:
+                await set_editor_manual_dates(
+                    db,
+                    owner,
+                    txn,
+                    purchase_date=replacement.purchase_date,
+                    booking_date=replacement.booking_date,
+                    expected_version=data.expected_date_version,
+                )
+            except TransactionDateError as error:
+                raise TransactionEditorError(str(error)) from error
+        await _replace_canonical_ledger(
+            db, owner, txn, replacement, allows_explicit_dates=has_explicit_dates
+        )
     await db.refresh(txn, attribute_names=["updated_at", "postings", "date_metadata"])
     return txn, await ledger_editability(db, owner, txn)
