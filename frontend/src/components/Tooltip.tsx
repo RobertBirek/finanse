@@ -5,10 +5,12 @@ export function Tooltip({
   label,
   children,
   revealOnClick = false,
+  dismissOnClick = false,
 }: {
   label: string;
   children: ReactNode;
   revealOnClick?: boolean;
+  dismissOnClick?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLSpanElement>(null);
@@ -85,10 +87,15 @@ export function Tooltip({
       ref={anchor}
       className="ui-tooltip-anchor"
       onClick={
-        revealOnClick
+        revealOnClick || dismissOnClick
           ? () => {
-              dismissed.current = false;
-              setOpen((current) => !current || focusInside.current);
+              if (dismissOnClick) {
+                dismissed.current = true;
+                setOpen(false);
+              } else {
+                dismissed.current = false;
+                setOpen((current) => !current || focusInside.current);
+              }
             }
           : undefined
       }

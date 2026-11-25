@@ -140,6 +140,58 @@ test("podpowiedź dokumentu jest dostępna pod kursorem i znika po jego odsunię
   await expect(tooltip).toBeHidden();
 });
 
+test("mysz otwiera Więcej bez zasłaniania akcji usunięcia", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "Najechanie kursorem");
+  await fixtures(page);
+  await page.goto("/finances/transactions");
+  const more = page.getByRole("button", { name: "Więcej: Zakup kawy" });
+  const tooltip = more.locator("xpath=..").getByText("Więcej", { exact: true });
+  await more.hover();
+  await expect(tooltip).toBeVisible();
+  await more.click();
+  await expect(tooltip).toBeHidden();
+  await page
+    .getByRole("button", { name: "Usuń transakcję", exact: true })
+    .click();
+  const confirmation = page.getByRole("dialog", { name: "Usuń transakcję" });
+  await expect(confirmation).toBeVisible();
+  await expect(
+    confirmation.getByRole("button", { name: "Anuluj" }),
+  ).toBeFocused();
+});
+
+test("dotyk otwiera Więcej i pozwala potwierdzić usunięcie", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "mobile", "Wymaga ekranu dotykowego");
+  await fixtures(page);
+  await page.goto("/finances/transactions");
+  await page.getByRole("button", { name: "Więcej: Zakup kawy" }).tap();
+  await page
+    .getByRole("button", { name: "Usuń transakcję", exact: true })
+    .tap();
+  await expect(
+    page.getByRole("dialog", { name: "Usuń transakcję" }),
+  ).toBeVisible();
+});
+
+test("podpowiedź Więcej zamyka się Escape bez utraty fokusu", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop", "Fokus i wskaźnik desktopowy");
+  await fixtures(page);
+  await page.goto("/finances/transactions");
+  const more = page.getByRole("button", { name: "Więcej: Zakup kawy" });
+  const tooltip = more.locator("xpath=..").getByText("Więcej", { exact: true });
+  await more.focus();
+  await expect(tooltip).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toBeHidden();
+  await expect(more).toBeFocused();
+});
+
 test("szczegóły projektu odróżniają niedostępność od braku projektu i pozwalają ponowić odczyt", async ({
   page,
 }) => {

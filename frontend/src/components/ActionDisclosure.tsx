@@ -39,6 +39,7 @@ export function ActionDisclosure({
         icon="more"
         label={label}
         tooltip="Więcej"
+        dismissTooltipOnClick
         aria-expanded={open}
         aria-controls={id}
         disabled={disabled}

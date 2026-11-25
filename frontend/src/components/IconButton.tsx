@@ -46,6 +46,7 @@ type IconButtonProps = Omit<
   busy?: boolean;
   unavailableReason?: string;
   revealTooltipOnClick?: boolean;
+  dismissTooltipOnClick?: boolean;
 };
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
@@ -59,6 +60,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
       type = "button",
       unavailableReason,
       revealTooltipOnClick = false,
+      dismissTooltipOnClick = false,
       onClick,
       ...props
     },
@@ -68,6 +70,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
       <Tooltip
         label={unavailableReason ?? tooltip}
         revealOnClick={!!unavailableReason || revealTooltipOnClick}
+        dismissOnClick={dismissTooltipOnClick}
       >
         <button
           {...props}
