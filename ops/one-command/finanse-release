@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import subprocess
 import tarfile
 import tempfile
@@ -125,7 +126,10 @@ def assert_scope(config, revision, previous):
 def verify_archive(archive, manifest):
     with tarfile.open(archive, "r|gz") as bundle:
         found = None
-        for member in bundle:
+        size = 0
+        for count, member in enumerate(bundle, start=1):
+            size += member.size
+            require(count <= 50_000 and size <= 3_000_000_000, "Expanded image archive exceeds limits")
             require(not member.issym() and not member.islnk() and not member.name.startswith("/")
                     and ".." not in Path(member.name).parts, "Unsupported archive entry")
             if member.name == "manifest.json":
@@ -213,6 +217,17 @@ def queue_empty(cfg):
                         redis("--scan", "--pattern", "arq:in-progress:*")))
 
 
+def wait_queue_empty(cfg):
+    deadline = time.monotonic() + 45
+    while not queue_empty(cfg):
+        require(time.monotonic() < deadline, "Worker queue still busy")
+        time.sleep(3)
+
+
+def interrupted(signum, _frame):
+    raise InterruptedError(f"Release interrupted by signal {signum}")
+
+
 def smoke(cfg, expected, stable_data=None):
     names = cfg["containers"]
     rows = {x["Name"].lstrip("/"): x for x in inspect(*names.values())}
@@ -284,8 +299,6 @@ def release(cfg, revision, directory):
     candidate, archive, ci = artifact(cfg["github"], revision, directory)
     verify_archive(archive, candidate["images"])
     require(candidate["schema"] == baseline["schema"], "Manual release required for schema change")
-    production_matches(cfg, baseline)
-    require(schema(cfg) == baseline["schema"], "Production schema drift")
     print(json.dumps({"revision": revision, "images": candidate["images"], "ci": ci,
                       "rollback": previous, "scope": "backend, worker, frontend; no migrations"},
                      indent=2), flush=True)
@@ -296,6 +309,7 @@ def release(cfg, revision, directory):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         require(read(active) == baseline, "Release baseline changed")
         production_matches(cfg, baseline)
+        require(schema(cfg) == baseline["schema"], "Production schema drift")
         docker("load", "-i", str(archive), timeout=180)
         images(candidate["images"])
         images(baseline["images"])
@@ -310,6 +324,7 @@ def release(cfg, revision, directory):
         require(DIGEST.fullmatch(backup["snapshot"]) and backup["snapshot"] == backup["restored_snapshot"]
                 and backup["schema"] == baseline["schema"] and backup["ledger_ok"] is True
                 and backup["retention_ok"] is True, "Backup or isolated restore did not pass")
+        wait_queue_empty(cfg)
         require(read(active) == baseline, "Release baseline changed")
         current = production_matches(cfg, baseline)
         require(schema(cfg) == baseline["schema"] and queue_empty(cfg), "Schema drift or busy worker")
@@ -370,6 +385,8 @@ def main():
     parser.add_argument("--config", type=Path, default=Path("/etc/finanse-release/config.json"))
     args = parser.parse_args()
     os.umask(0o077)
+    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGINT, interrupted)
     require(os.geteuid() == 0 and SHA.fullmatch(args.sha), "Use root and a full lowercase commit SHA")
     cfg = read(trusted(args.config, 0o022))
     backup = trusted(cfg["backup_restore"])

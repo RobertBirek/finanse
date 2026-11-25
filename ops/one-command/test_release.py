@@ -48,6 +48,18 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "unapproved tags"):
                 release.verify_archive(path, {"backend": {"tag": "expected:release"}})
 
+    def test_render_rejects_removed_hardening_even_if_images_are_correct(self):
+        images = {s: {"tag": f"{s}:new"} for s in release.SERVICES}
+        before = {"services": {s: {"image": f"{s}:old", "user": "10001:10001",
+                                   "read_only": True, "volumes": []}
+                               for s in release.SERVICES}}
+        after = {"services": {s: {**before["services"][s], "image": images[s]["tag"]}
+                              for s in release.SERVICES}}
+        release.compare_compose(before, after, {"images": images})
+        del after["services"]["worker"]["read_only"]
+        with self.assertRaisesRegex(RuntimeError, "rendered Compose configuration change"):
+            release.compare_compose(before, after, {"images": images})
+
     def test_rollback_uses_only_approved_images_and_checks_runtime(self):
         old = {name: {"tag": name + ":old", "id": "expected"} for name in release.SERVICES}
         stable = {"postgres": ["container", "image", "time"]}
