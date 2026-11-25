@@ -74,6 +74,9 @@ test("the native modal covers the viewport and centers its panel without parent 
   const api = await fixtures(page);
   await page.goto("/finances/transactions");
   await page
+    .getByRole("button", { name: "Więcej: Zakup kawy", exact: true })
+    .click();
+  await page
     .getByRole("button", { name: "Szczegóły: Zakup kawy", exact: true })
     .click();
   const dialog = page.getByRole("dialog", { name: "Szczegóły transakcji" });

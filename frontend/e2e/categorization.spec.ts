@@ -1,6 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { fixtures, account, transaction } from "./fixtures";
+import {
+  openTransactionSplit,
+  protectedEditorFixture,
+} from "./transaction-editor-helpers";
 
 async function categoryFixture(page: Page) {
   const base = await fixtures(page);
@@ -118,6 +122,8 @@ async function categoryFixture(page: Page) {
         return route.fulfill({ json: [current()] });
       if (path === `/api/finance/transactions/${transaction.id}`)
         return route.fulfill({ json: current() });
+      if (path === `/api/finance/transactions/${transaction.id}/editor`)
+        return route.fulfill({ json: protectedEditorFixture(current()) });
       return route.fallback();
     }
     if (path.endsWith("/categorization/preview")) {
@@ -154,13 +160,7 @@ test("category preview and approval retain one payment and let the owner merge i
 }, testInfo) => {
   const api = await categoryFixture(page);
   await page.goto("/finances/transactions");
-  await page
-    .getByRole("button", { name: "Zmień kategorie", exact: true })
-    .click();
-  const dialog = page.getByRole("dialog", {
-    name: "Kategorie wydatku",
-    exact: true,
-  });
+  const dialog = await openTransactionSplit(page);
   await dialog.getByLabel("Kwota PLN 1", { exact: true }).fill("99.99");
   await expect(
     dialog.getByRole("button", { name: "Sprawdź podział" }),
@@ -199,9 +199,7 @@ test("category preview and approval retain one payment and let the owner merge i
   });
   await dialog.getByRole("button", { name: "Zatwierdź podział" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Zmień kategorie", exact: true }),
-  ).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /^Więcej: / })).toHaveCount(1);
   expect(api.writes[1].body).toMatchObject({
     confirmed: true,
     parts: [
@@ -222,9 +220,7 @@ test("category preview and approval retain one payment and let the owner merge i
     page.getByText("80,00 PLN", { exact: true }).first(),
   ).toBeVisible();
   await page.goto("/finances/transactions");
-  await page
-    .getByRole("button", { name: "Zmień kategorie", exact: true })
-    .click();
+  await openTransactionSplit(page);
   await expect(
     dialog.getByText(/Ręcznie zatwierdzony podział, wersja 1/),
   ).toBeVisible();

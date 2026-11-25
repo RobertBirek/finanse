@@ -121,6 +121,7 @@ export async function fixtures(
         display_name: "Tester UI",
         email: "qa@example.invalid",
       };
+    else if (url.pathname === "/api/finance/tags") body = [];
     else if (url.pathname === "/api/finance/categorization/events")
       body = { events: [], poll_after_ms: 2000 };
     else if (

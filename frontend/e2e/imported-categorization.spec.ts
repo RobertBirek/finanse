@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { account, fixtures, transaction } from "./fixtures";
+import {
+  openTransactionSplit,
+  protectedEditorFixture,
+} from "./transaction-editor-helpers";
 
 test("reviewed imported expense category changes without editing payment, while loan stays protected", async ({
   page,
@@ -82,6 +86,10 @@ test("reviewed imported expense category changes without editing payment, while 
     const path = new URL(route.request().url()).pathname,
       method = route.request().method();
     if (method === "GET") {
+      if (path.endsWith("/transactions/loan/editor"))
+        return route.fulfill({ json: protectedEditorFixture(loan) });
+      if (path === `/api/finance/transactions/${transaction.id}/editor`)
+        return route.fulfill({ json: protectedEditorFixture(current()) });
       if (path.endsWith("/transactions/loan/categorization"))
         return route.fulfill({
           json: {
@@ -145,11 +153,7 @@ test("reviewed imported expense category changes without editing payment, while 
     return route.fallback();
   });
   await page.goto("/finances/transactions");
-  await page
-    .getByRole("button", { name: "Zmień kategorie", exact: true })
-    .first()
-    .click();
-  const dialog = page.getByRole("dialog", { name: "Kategorie wydatku" });
+  const dialog = await openTransactionSplit(page);
   await dialog
     .getByLabel("Kategoria 1", { exact: true })
     .selectOption("repairs");
@@ -179,10 +183,12 @@ test("reviewed imported expense category changes without editing payment, while 
     confirmed: true,
   });
   expect(payment.id).toBe("p1");
-  await page
-    .getByRole("button", { name: "Zmień kategorie", exact: true })
-    .nth(1)
-    .click();
+  const editor = page.getByRole("dialog", {
+    name: "Edytuj transakcję",
+    exact: true,
+  });
+  if (await editor.isVisible()) await page.keyboard.press("Escape");
+  await openTransactionSplit(page, 1);
   await expect(
     dialog.getByText("Płatność pożyczki jest chroniona."),
   ).toBeVisible();

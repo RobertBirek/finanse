@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { fixtures, account } from "./fixtures";
+import { openTransactionEditor } from "./transaction-editor-helpers";
 
 async function dateFixture(page: Page) {
   const base = await fixtures(page);
@@ -45,14 +46,13 @@ async function dateFixture(page: Page) {
       return route.fulfill({ status: 201, json: current });
     }
     if (
-      method === "PATCH" &&
-      path === "/api/finance/transactions/synthetic-date-txn/dates"
+      method === "PUT" &&
+      path === "/api/finance/transactions/synthetic-date-txn/editor"
     ) {
       writes.push({ path, data: route.request().postDataJSON() });
       return route.fulfill({
         status: 409,
         json: {
-          code: "date_version_conflict",
           detail:
             "Dane transakcji zmieniły się. Odśwież je i ponownie sprawdź daty.",
         },
@@ -91,6 +91,14 @@ async function dateFixture(page: Page) {
     }
     if (path === "/api/finance/transactions/synthetic-date-txn")
       return route.fulfill({ json: current });
+    if (path === "/api/finance/transactions/synthetic-date-txn/editor")
+      return route.fulfill({
+        json: {
+          transaction: current,
+          ledger_editable: true,
+          ledger_lock_reason: null,
+        },
+      });
     return route.fallback();
   });
   return { base, writes };
@@ -123,22 +131,24 @@ test("purchase and booking dates are explicit, reports explain month basis and c
     booking_date: "2026-02-02",
   });
   expect(api.writes[0].data).not.toHaveProperty("transaction_date");
-  await page.getByRole("button", { name: "Koryguj daty" }).click();
-  const correction = page.getByRole("dialog", {
-    name: "Daty zakupu i księgowania",
-    exact: true,
-  });
+  const correction = await openTransactionEditor(page);
   await correction
     .getByLabel("Data zakupu", { exact: true })
     .fill("2026-01-29");
-  await correction.getByRole("button", { name: "Zapisz daty" }).click();
+  await correction
+    .getByRole("button", { name: "Zapisz zmiany", exact: true })
+    .click();
   await expect(correction.getByRole("alert")).toContainText("Odśwież");
   await expect(
     correction.getByLabel("Data zakupu", { exact: true }),
   ).toHaveValue("2026-01-29");
-  await expect(
-    correction.getByRole("button", { name: "Zapisz daty" }),
-  ).toBeDisabled();
+  expect(api.writes[1].data).toMatchObject({
+    expected_updated_at: "2026-11-03T12:00:00Z",
+    expected_date_version: 1,
+    ledger: {
+      data: { purchase_date: "2026-01-29", booking_date: "2026-02-02" },
+    },
+  });
   expect(
     (
       await new AxeBuilder({ page })
@@ -146,7 +156,7 @@ test("purchase and booking dates are explicit, reports explain month basis and c
         .analyze()
     ).violations,
   ).toEqual([]);
-  await correction.getByRole("button", { name: "Zamknij i odśwież" }).click();
+  await page.keyboard.press("Escape");
   await page.goto("/finances/reports?month=1&year=2026");
   await expect(
     page.getByText(/Wydatki i budżety według daty zakupu/),

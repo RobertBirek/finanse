@@ -1,6 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { fixtures, account, transaction } from "./fixtures";
+import {
+  openTransactionSplit,
+  protectedEditorFixture,
+} from "./transaction-editor-helpers";
 
 async function proposalFixture(
   page: Page,
@@ -137,6 +141,8 @@ async function proposalFixture(
         return route.fulfill({ json: context() });
       if (path === `/api/finance/transactions/${transaction.id}`)
         return route.fulfill({ json: current() });
+      if (path === `/api/finance/transactions/${transaction.id}/editor`)
+        return route.fulfill({ json: protectedEditorFixture(current()) });
       return route.fallback();
     }
     if (
@@ -313,13 +319,7 @@ for (const width of [375, 1440]) {
     await expect(
       page.getByText("Kategoria z propozycji AI — zatwierdzona przez Ciebie"),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "Zmień kategorie", exact: true })
-      .click();
-    const dialog = page.getByRole("dialog", {
-      name: "Kategorie wydatku",
-      exact: true,
-    });
+    const dialog = await openTransactionSplit(page);
     await dialog.getByRole("button", { name: "Sprawdź podział" }).click();
     await dialog.getByRole("button", { name: "Zatwierdź podział" }).click();
     await expect(dialog).toHaveCount(0);

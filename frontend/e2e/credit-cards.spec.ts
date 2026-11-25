@@ -384,7 +384,10 @@ test("creates another card through the account form with one atomic request", as
       credit_card: { limit_pln: 800000, apr: "11.25", expected_version: 0 },
     },
   });
+  const menu = page.getByRole("button", { name: "Otwórz menu aplikacji" });
+  if (await menu.isVisible()) await menu.click();
   await page
+    .getByRole("navigation", { name: "Widoki ustawień" })
     .getByRole("link", { name: "Karty kredytowe", exact: true })
     .click();
   await expect(page.getByRole("article", { name: "Nowa karta" })).toContainText(

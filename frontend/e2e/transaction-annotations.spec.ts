@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { account, fixtures, transaction } from "./fixtures";
+import {
+  openTransactionEditor,
+  openTransactionSplit,
+  protectedEditorFixture,
+} from "./transaction-editor-helpers";
 
 test("descriptive import edits preserve the original and money, allow free tags, and do not unlock loan categories", async ({
   page,
@@ -46,6 +51,10 @@ test("descriptive import edits preserve the original and money, allow free tags,
       path = url.pathname,
       method = route.request().method();
     if (method === "GET") {
+      if (path.endsWith("/transactions/loan/editor"))
+        return route.fulfill({ json: protectedEditorFixture(loan) });
+      if (path === `/api/finance/transactions/${transaction.id}/editor`)
+        return route.fulfill({ json: protectedEditorFixture(current()) });
       if (path.endsWith("/annotations"))
         return route.fulfill({ json: annotations });
       if (path === "/api/finance/tags")
@@ -81,40 +90,31 @@ test("descriptive import edits preserve the original and money, allow free tags,
       body,
       key: route.request().headers()["idempotency-key"],
     });
-    if (method === "PUT" && path.endsWith("/annotations")) {
+    if (method === "PUT" && path.endsWith("/editor")) {
+      const updated = body.annotations;
       annotations = {
         ...annotations,
-        display_description: body.display_description,
-        note: body.note,
-        tags: body.tags.map((name: string, index: number) => ({
+        display_description: updated.display_description,
+        note: updated.note,
+        tags: updated.tags.map((name: string, index: number) => ({
           id: `tag-${index}`,
           name,
         })),
-        project_id: body.project_id,
-        project_name: body.project_id ? "Remont domu" : null,
+        project_id: updated.project_id,
+        project_name: updated.project_id ? "Remont domu" : null,
         version: annotations.version + 1,
       };
-      return route.fulfill({ json: annotations });
+      return route.fulfill({ json: protectedEditorFixture(current()) });
     }
     return route.fallback();
   });
   await page.goto("/finances/transactions");
-  await page
-    .getByRole("button", { name: "Opis i oznaczenia", exact: true })
-    .first()
-    .click();
-  const dialog = page.getByRole("dialog", {
-    name: "Opis i oznaczenia",
-    exact: true,
-  });
+  const dialog = await openTransactionEditor(page);
   await dialog.getByLabel("Nowy tag", { exact: true }).fill("Anulowany");
   await dialog.getByRole("button", { name: "Dodaj tag", exact: true }).click();
   await dialog.getByRole("button", { name: "Anuluj", exact: true }).click();
   expect(writes).toEqual([]);
-  await page
-    .getByRole("button", { name: "Opis i oznaczenia", exact: true })
-    .first()
-    .click();
+  await openTransactionEditor(page);
   await expect(dialog.getByText("Anulowany", { exact: true })).toHaveCount(0);
   await expect(
     dialog.getByText(annotations.original_description, { exact: true }),
@@ -142,7 +142,7 @@ test("descriptive import edits preserve the original and money, allow free tags,
     fullPage: true,
   });
   await dialog
-    .getByRole("button", { name: "Zapisz oznaczenia", exact: true })
+    .getByRole("button", { name: "Zapisz zmiany", exact: true })
     .click();
   await expect(dialog).toHaveCount(0);
   await expect(
@@ -155,30 +155,31 @@ test("descriptive import edits preserve the original and money, allow free tags,
       .first(),
   ).toBeVisible();
   expect(writes[0].body).toEqual({
-    display_description: "Farba do pokoju",
-    note: "Paragon w segregatorze",
-    tags: ["Remont", "Wakacje"],
-    project_id: "project",
-    expected_version: 0,
-    expected_context_snapshot: "a".repeat(64),
+    expected_updated_at: "2026-11-24T12:00:00Z",
+    annotations: {
+      display_description: "Farba do pokoju",
+      note: "Paragon w segregatorze",
+      tags: ["Remont", "Wakacje"],
+      project_id: "project",
+      expected_version: 0,
+      expected_context_snapshot: "a".repeat(64),
+    },
   });
   expect(writes[0].key).toBeTruthy();
   expect(transaction.postings[0].id).toBe("p1");
-  await page
-    .getByRole("button", { name: "Zmień kategorie", exact: true })
-    .nth(1)
-    .click();
+  await openTransactionSplit(page, 1);
   await expect(
     page.getByText("Płatność pożyczki jest chroniona.", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Zamknij", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Opis i oznaczenia", exact: true })
-    .first()
-    .click();
+  if (await dialog.isVisible()) await page.keyboard.press("Escape");
+  await openTransactionEditor(page);
+  await expect(dialog.getByLabel("Własny opis", { exact: true })).toHaveValue(
+    "Farba do pokoju",
+  );
   await dialog.getByLabel("Własny opis", { exact: true }).fill("");
   await dialog
-    .getByRole("button", { name: "Zapisz oznaczenia", exact: true })
+    .getByRole("button", { name: "Zapisz zmiany", exact: true })
     .click();
   await expect(dialog).toHaveCount(0);
   await expect(
