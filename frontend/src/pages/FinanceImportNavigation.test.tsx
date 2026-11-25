@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { DocumentList } from "../components/DocumentList";
 import {
   importTestWrapper,
@@ -10,14 +9,6 @@ import { processingDocument } from "../test/documentFixtures";
 
 let server: ReturnType<typeof installImportServer>;
 afterEach(() => server?.restore());
-
-it("offers the existing-style Import tab", () => {
-  server = installImportServer();
-  render(importTestWrapper(<FinanceTabs />).node);
-  expect(
-    screen.getByRole("link", { name: "Import" }).getAttribute("href"),
-  ).toMatch(/^\/finances\/imports/);
-});
 
 it("uses an existing PDF for import without invoice approval or a financial mutation", async () => {
   const document = processingDocument({

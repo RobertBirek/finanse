@@ -490,11 +490,6 @@ export function AISettings() {
       <PageHeader
         title="Ustawienia AI"
         description="Każda funkcja ma osobny model, klucz, instrukcje i statystyki."
-        context={
-          <Link className="underline" to="/settings">
-            Ustawienia
-          </Link>
-        }
       />
       <div
         role="group"

@@ -6,7 +6,6 @@ import {
 import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
 import { SummaryCard } from "../components/finance/SummaryCard";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { PageHeader } from "../components/PageHeader";
 import { useFinancePeriod } from "../components/finance/useFinancePeriod";
 import { ExpenseDateBasis } from "../components/finance/TransactionDateLabel";
@@ -23,7 +22,6 @@ export function FinanceReports() {
         title="Raporty"
         actions={<MonthPicker period={period} onChange={setPeriod} />}
       />
-      <FinanceTabs />
       <ExpenseDateBasis />
 
       {summary.isLoading || summary.isPlaceholderData ? (

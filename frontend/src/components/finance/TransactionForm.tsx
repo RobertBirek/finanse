@@ -8,6 +8,10 @@ import {
   useCreateExchange,
   useCreateExpenseRefund,
   useCreateTransaction,
+  type Transaction,
+  type TransactionLedgerInput,
+  type ManualFxTransactionInput,
+  useTransactionFxQuote,
 } from "../../api/finance";
 import { localTodayIso } from "../../lib/date";
 import { QueryFeedback } from "../QueryFeedback";
@@ -26,6 +30,10 @@ type TransactionType =
 type TransactionFormProps = {
   onSuccess?: () => void;
   initialType?: TransactionType;
+  /** Canonical PLN ledger loaded by the editor; special commands stay outside this form. */
+  initialLedger?: Transaction;
+  onLedgerSubmit?: (ledger: TransactionLedgerInput, changed: boolean) => void;
+  editBusy?: boolean;
 };
 
 const DEFAULT_TYPE: TransactionType = "expense";
@@ -33,6 +41,9 @@ const DEFAULT_TYPE: TransactionType = "expense";
 export function TransactionForm({
   onSuccess,
   initialType = DEFAULT_TYPE,
+  initialLedger,
+  onLedgerSubmit,
+  editBusy = false,
 }: TransactionFormProps) {
   const accountsQuery = useAccounts();
   const categoriesQuery = useCategories();
@@ -40,16 +51,74 @@ export function TransactionForm({
   const exchange = useCreateExchange();
   const refund = useCreateExpenseRefund();
 
-  const [type, setType] = useState<TransactionType>(initialType);
-  const [accountId, setAccountId] = useState("");
-  const [toAccountId, setToAccountId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [amount, setAmount] = useState("");
+  const initialAccount = initialLedger?.postings.find(
+    (posting) =>
+      posting.account_id &&
+      (initialLedger.type !== "transfer" || posting.direction === "debit"),
+  );
+  const initialCategory = initialLedger?.postings.find(
+    (posting) => posting.category_id,
+  );
+  const initialToAccount = initialLedger?.postings.find(
+    (posting) =>
+      posting.account_id && posting.account_id !== initialAccount?.account_id,
+  );
+  const initialDates = initialLedger?.date_metadata;
+  const initialCanonical = !!initialLedger;
+  const initialFx =
+    initialAccount?.source_currency === "EUR" ||
+    initialAccount?.source_currency === "USD";
+  const minorToInput = (minor: number) => {
+    const absolute = Math.abs(minor);
+    return `${Math.trunc(absolute / 100)},${String(absolute % 100).padStart(2, "0")}`;
+  };
+  const [type, setType] = useState<TransactionType>(
+    initialCanonical ? (initialLedger.type as TransactionType) : initialType,
+  );
+  const hasPurchaseDate =
+    type === "expense" && (!initialLedger || !!initialDates);
+  const [accountId, setAccountId] = useState(
+    initialCanonical ? (initialAccount?.account_id ?? "") : "",
+  );
+  const [toAccountId, setToAccountId] = useState(
+    initialLedger?.type === "transfer"
+      ? (initialToAccount?.account_id ?? "")
+      : "",
+  );
+  const [categoryId, setCategoryId] = useState(
+    initialCanonical ? (initialCategory?.category_id ?? "") : "",
+  );
+  const [amount, setAmount] = useState(
+    initialCanonical && initialAccount
+      ? minorToInput(initialAccount.source_amount)
+      : "",
+  );
   const [fxRate, setFxRate] = useState("");
-  const [date, setDate] = useState(localTodayIso());
-  const [purchaseDate, setPurchaseDate] = useState(localTodayIso());
-  const [sameDate, setSameDate] = useState(true);
-  const [description, setDescription] = useState("");
+  const [manualRate, setManualRate] = useState<string | null>(
+    initialFx ? String(initialAccount.fx_rate) : null,
+  );
+  const [date, setDate] = useState(
+    initialDates?.booking_date ??
+      initialLedger?.transaction_date ??
+      localTodayIso(),
+  );
+  const [purchaseDate, setPurchaseDate] = useState(
+    initialDates
+      ? (initialDates.purchase_date ?? "")
+      : (initialLedger?.transaction_date ?? localTodayIso()),
+  );
+  const [sameDate, setSameDate] = useState(
+    (!initialDates || !!initialDates.purchase_date) &&
+      (initialDates?.purchase_date ??
+        initialLedger?.transaction_date ??
+        localTodayIso()) ===
+        (initialDates?.booking_date ??
+          initialLedger?.transaction_date ??
+          localTodayIso()),
+  );
+  const [description, setDescription] = useState(
+    initialLedger?.description ?? "",
+  );
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const accounts = accountsQuery.data ?? [];
@@ -84,6 +153,12 @@ export function TransactionForm({
         ["PLN", "EUR", "USD"].includes(currency),
       )
     : activePlnAccounts;
+  const rateDay = type === "expense" && sameDate ? purchaseDate : date;
+  const fxQuote = useTransactionFxQuote(
+    onLedgerSubmit ? null : manualFxCurrency,
+    rateDay,
+  );
+  const displayedRate = manualRate ?? fxQuote.data?.rate ?? "";
   const amountCurrency =
     type === "exchange"
       ? (sourceAccount?.currency ?? "PLN")
@@ -95,6 +170,7 @@ export function TransactionForm({
     setToAccountId("");
     setCategoryId("");
     setFxRate("");
+    setManualRate(null);
     setAmount("");
     setDate(localTodayIso());
     setPurchaseDate(localTodayIso());
@@ -108,6 +184,7 @@ export function TransactionForm({
     setCategoryId("");
     setToAccountId("");
     setFxRate("");
+    setManualRate(null);
     setValidationError(null);
     if (
       (nextType === "transfer" || nextType === "expense_refund") &&
@@ -120,6 +197,9 @@ export function TransactionForm({
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (editBusy) return;
+    if (onLedgerSubmit && (type === "exchange" || type === "expense_refund"))
+      return;
 
     const amountGrosze = parsePlnToGrosze(amount);
     if (amountGrosze === null) {
@@ -222,7 +302,7 @@ export function TransactionForm({
     }
 
     if ((type === "expense" || type === "income") && manualFxCurrency) {
-      const rate = fxRate.trim().replace(",", ".");
+      const rate = displayedRate.trim().replace(",", ".");
       if (
         !/^\d+(?:\.\d{1,6})?$/.test(rate) ||
         !(Number(rate) > 0 && Number(rate) < 1_000_000)
@@ -232,21 +312,43 @@ export function TransactionForm({
         );
         return;
       }
+      const payload: ManualFxTransactionInput = {
+        type,
+        description: description.trim(),
+        account_id: accountId,
+        category_id: categoryId,
+        currency: manualFxCurrency,
+        amount_minor: amountGrosze,
+        fx_rate: rate,
+        ...(type === "expense"
+          ? {
+              purchase_date: purchaseDate || undefined,
+              booking_date: sameDate && purchaseDate ? purchaseDate : date,
+            }
+          : { transaction_date: date }),
+      };
+      if (onLedgerSubmit) {
+        onLedgerSubmit(
+          { kind: "manual_fx", data: payload },
+          accountId !== initialAccount?.account_id ||
+            categoryId !== initialCategory?.category_id ||
+            amountGrosze !== initialAccount?.source_amount ||
+            Number(rate) !== initialAccount?.fx_rate ||
+            payload.description !== initialLedger?.description ||
+            (payload.booking_date
+              ? payload.booking_date !== initialDates?.booking_date ||
+                (payload.purchase_date ?? null) !==
+                  (initialDates?.purchase_date ?? null)
+              : date !== initialLedger?.transaction_date),
+        );
+        return;
+      }
       create.mutate(
         {
-          type,
-          description: description.trim(),
-          account_id: accountId,
-          category_id: categoryId,
-          currency: manualFxCurrency,
-          amount_minor: amountGrosze,
-          fx_rate: rate,
-          ...(type === "expense"
-            ? {
-                purchase_date: purchaseDate,
-                booking_date: sameDate ? purchaseDate : date,
-              }
-            : { transaction_date: date }),
+          ...payload,
+          ...(manualRate === null && fxQuote.data
+            ? { fx_rate_source: "nbp" }
+            : {}),
         },
         {
           onSuccess: () => {
@@ -273,25 +375,42 @@ export function TransactionForm({
             amountPlng: amountGrosze,
           });
 
-    create.mutate(
-      {
-        type,
-        description: description.trim(),
-        ...(type === "expense"
-          ? {
-              purchase_date: purchaseDate,
-              booking_date: sameDate ? purchaseDate : date,
-            }
-          : { transaction_date: date }),
-        postings,
-      },
-      {
+    const payload = {
+      type,
+      description: description.trim(),
+      ...(hasPurchaseDate
+        ? {
+            purchase_date: purchaseDate || undefined,
+            booking_date: sameDate && purchaseDate ? purchaseDate : date,
+          }
+        : { transaction_date: date }),
+      postings,
+      ...(initialLedger ? { is_pending: initialLedger.is_pending } : {}),
+    };
+    if (onLedgerSubmit) {
+      const changed =
+        !initialLedger ||
+        type !== initialLedger.type ||
+        description.trim() !== initialLedger.description ||
+        accountId !== initialAccount?.account_id ||
+        categoryId !== (initialCategory?.category_id ?? "") ||
+        amountGrosze !== initialAccount?.source_amount ||
+        (type === "transfer" && toAccountId !== initialToAccount?.account_id) ||
+        (hasPurchaseDate &&
+          (purchaseDate !== (initialDates?.purchase_date ?? "") ||
+            (sameDate && purchaseDate ? purchaseDate : date) !==
+              (initialDates?.booking_date ??
+                initialLedger.transaction_date))) ||
+        (!hasPurchaseDate && date !== initialLedger.transaction_date);
+      onLedgerSubmit({ kind: "transaction", data: payload }, changed);
+    } else {
+      create.mutate(payload, {
         onSuccess: () => {
           resetForm();
           onSuccess?.();
         },
-      },
-    );
+      });
+    }
   }
 
   if (accountsQuery.isLoading || categoriesQuery.isLoading) {
@@ -339,15 +458,20 @@ export function TransactionForm({
             id="tx-type"
             className="input"
             value={type}
+            disabled={initialFx || !!initialDates}
             onChange={(event) =>
               handleTypeChange(event.target.value as TransactionType)
             }
           >
             <option value="expense">Wydatek</option>
-            <option value="expense_refund">Zwrot wydatku</option>
+            {!onLedgerSubmit && (
+              <option value="expense_refund">Zwrot wydatku</option>
+            )}
             <option value="income">Przychód</option>
             <option value="transfer">Transfer</option>
-            <option value="exchange">Przewalutowanie</option>
+            {!onLedgerSubmit && (
+              <option value="exchange">Przewalutowanie</option>
+            )}
           </select>
         </div>
         <div>
@@ -358,12 +482,17 @@ export function TransactionForm({
             id="tx-date"
             type="date"
             className="input"
-            value={type === "expense" && sameDate ? purchaseDate : date}
-            disabled={type === "expense" && sameDate}
-            onChange={(event) => setDate(event.target.value)}
+            value={
+              hasPurchaseDate && sameDate && purchaseDate ? purchaseDate : date
+            }
+            disabled={hasPurchaseDate && sameDate && !!purchaseDate}
+            onChange={(event) => {
+              setDate(event.target.value);
+              if (!onLedgerSubmit) setManualRate(null);
+            }}
           />
         </div>
-        {type === "expense" ? (
+        {hasPurchaseDate ? (
           <>
             <label className="block text-sm text-gray-400">
               Data zakupu
@@ -372,7 +501,10 @@ export function TransactionForm({
                 type="date"
                 required
                 value={purchaseDate}
-                onChange={(event) => setPurchaseDate(event.target.value)}
+                onChange={(event) => {
+                  setPurchaseDate(event.target.value);
+                  if (sameDate && !onLedgerSubmit) setManualRate(null);
+                }}
               />
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-300">
@@ -382,6 +514,7 @@ export function TransactionForm({
                 onChange={(event) => {
                   setSameDate(event.target.checked);
                   if (!event.target.checked) setDate(purchaseDate);
+                  if (!onLedgerSubmit) setManualRate(null);
                 }}
               />
               Księgowanie w dniu zakupu
@@ -520,16 +653,25 @@ export function TransactionForm({
                   ) {
                     setAmount("");
                     setFxRate("");
+                    if (!onLedgerSubmit) setManualRate(null);
                   }
                   setAccountId(event.target.value);
                 }}
               >
                 <option value="">Wybierz konto</option>
-                {manualAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
+                {manualAccounts
+                  .filter(
+                    (account) =>
+                      !onLedgerSubmit ||
+                      (initialFx
+                        ? account.currency === initialAccount?.source_currency
+                        : account.currency === "PLN"),
+                  )
+                  .map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
               </select>
             </div>
             <CategoryPicker
@@ -569,14 +711,29 @@ export function TransactionForm({
               id="tx-manual-fx-rate"
               className="input"
               inputMode="decimal"
-              value={fxRate}
-              onChange={(event) => setFxRate(event.target.value)}
+              value={displayedRate}
+              onChange={(event) => setManualRate(event.target.value)}
               aria-describedby="tx-manual-fx-help"
               placeholder="np. 4,25"
             />
             <p id="tx-manual-fx-help" className="mt-1 text-xs text-gray-400">
-              Ile PLN odpowiada 1 {manualFxCurrency}?
+              {manualRate !== null
+                ? `Kurs ręczny: ile PLN odpowiada 1 ${manualFxCurrency}?`
+                : fxQuote.data
+                  ? `Kurs NBP z ${fxQuote.data.effective_date} (PLN za 1 ${manualFxCurrency}).`
+                  : fxQuote.isPending && rateDay
+                    ? "Pobieram kurs NBP…"
+                    : "Nie ma kursu NBP dla tej daty. Możesz wpisać kurs ręcznie."}
             </p>
+            {manualRate !== null && fxQuote.data ? (
+              <button
+                type="button"
+                className="btn-secondary mt-1"
+                onClick={() => setManualRate(null)}
+              >
+                Użyj kursu NBP
+              </button>
+            ) : null}
           </div>
         ) : null}
         <div className="sm:col-span-2">
@@ -614,9 +771,14 @@ export function TransactionForm({
         <button
           type="submit"
           className="btn-primary"
-          disabled={create.isPending || exchange.isPending || refund.isPending}
+          disabled={
+            editBusy ||
+            create.isPending ||
+            exchange.isPending ||
+            refund.isPending
+          }
         >
-          Zapisz transakcję
+          {onLedgerSubmit ? "Zapisz zmiany" : "Zapisz transakcję"}
         </button>
       </div>
     </form>

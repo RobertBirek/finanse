@@ -5,7 +5,6 @@ import {
   useCategoryProposals,
   useSuggestionActivity,
 } from "../api/categoryProposals";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { ProposalReview } from "../components/finance/ProposalReview";
 import { useAuthStore } from "../stores/authStore";
 
@@ -20,7 +19,6 @@ function Queue() {
   return (
     <div className="page-workspace">
       <PageHeader title="Propozycje kategorii" />
-      <FinanceTabs />
       <p className="mb-5 text-sm text-gray-400">
         Nie filtrujemy tej kolejki według miesiąca. AI tylko proponuje — decyzja
         o kategorii należy do Ciebie.{" "}

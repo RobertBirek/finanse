@@ -156,6 +156,88 @@ async def set_transaction_dates(
     return txn
 
 
+async def set_editor_manual_dates(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    txn: FinancialTransaction,
+    *,
+    purchase_date: date | None,
+    booking_date: date,
+    expected_version: int,
+) -> None:
+    """Change existing manual date evidence inside a broader locked editor command.
+
+    The caller owns the transaction row and has already compared its overall
+    optimistic timestamp.  This helper retains the dedicated date command's
+    link guards and independently compares the metadata version.
+    """
+    await lock_document_mutations(db, user_id)
+    from app.finance.credit_cards import guard_transaction
+
+    try:
+        await guard_transaction(db, user_id, txn.id)
+        from app.finance.person_guards import guard_person_gift_change
+
+        await guard_person_gift_change(db, user_id, txn.id, {"dates"})
+    except ValueError as error:
+        raise TransactionDateError("date_protected", str(error)) from error
+    mapped = await db.scalar(
+        select(ActualImportMapping.id)
+        .where(
+            ActualImportMapping.user_id == user_id,
+            ActualImportMapping.entity_type == "transaction",
+            ActualImportMapping.entity_id == txn.id,
+        )
+        .limit(1)
+    )
+    linked = await db.scalar(
+        select(LoanPaymentLink.id).where(LoanPaymentLink.transaction_id == txn.id).limit(1)
+    )
+    if txn.type != "expense" or txn.source != "manual" or mapped is not None or linked is not None:
+        raise TransactionDateError(
+            "date_protected",
+            "Daty importu lub powiązanej płatności są chronione. Ta korekta obsługuje ręczne wydatki.",
+        )
+    try:
+        await guard_allocated_transaction_change(db, user_id, txn.id, {"explicit_dates": True})
+    except ValueError as error:
+        raise TransactionDateError(
+            "date_protected", "Daty płatności powiązanej z dokumentem są chronione."
+        ) from error
+    meta = await db.scalar(
+        select(TransactionDateMetadata)
+        .where(TransactionDateMetadata.transaction_id == txn.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if meta is None or meta.version != expected_version:
+        raise TransactionDateError(
+            "date_version_conflict",
+            "Dane dat zmieniły się. Odśwież transakcję i sprawdź daty ponownie.",
+        )
+    if meta.purchase_date_source not in {None, "manual"} or meta.booking_date_source != "manual":
+        raise TransactionDateError("date_protected", "Źródło dat transakcji jest chronione.")
+    if meta.purchase_date == purchase_date and meta.booking_date == booking_date:
+        return
+    before = _state(meta)
+    meta.purchase_date = purchase_date
+    meta.purchase_date_source = "manual" if purchase_date else None
+    meta.booking_date = booking_date
+    meta.booking_date_source = "manual"
+    meta.version += 1
+    await log_event(
+        db,
+        user_id,
+        "financial_transaction",
+        str(txn.id),
+        "set_transaction_dates",
+        old_state=before,
+        new_state=_state(meta),
+    )
+    txn.date = booking_date
+    await db.flush()
+
+
 async def add_import_date_metadata(
     db: AsyncSession, txn: FinancialTransaction, purchase: date | None, booking: date
 ) -> None:

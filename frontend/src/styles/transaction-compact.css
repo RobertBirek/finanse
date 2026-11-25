@@ -1,0 +1,34 @@
+.transaction-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, clamp(6rem, 36%, 13rem)) 44px;
+  align-items: start;
+  column-gap: 8px;
+}
+
+.transaction-history-amount {
+  align-self: center;
+  text-align: end;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.transaction-history-actions {
+  display: contents;
+}
+
+.transaction-history-actions > .ui-tooltip-anchor {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.transaction-history-actions > [role="group"] {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+@media (min-width: 1024px) {
+  .transaction-search-list--compact .transaction-history-row {
+    padding-block: 4px;
+  }
+}

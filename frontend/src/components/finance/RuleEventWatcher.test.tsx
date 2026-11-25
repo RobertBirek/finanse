@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import api from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
-import { FinanceTabs } from "./FinanceTabs";
+import { FinanceActivityMonitor } from "./FinanceActivityMonitor";
 
 afterEach(() => {
   cleanup();
@@ -29,7 +29,7 @@ it("refreshes ledger after the event read even if the worker already finished, n
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <FinanceTabs />
+        <FinanceActivityMonitor />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -71,7 +71,7 @@ it("ignores a late event response from the previous session", async () => {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <FinanceTabs />
+        <FinanceActivityMonitor />
       </MemoryRouter>
     </QueryClientProvider>,
   );

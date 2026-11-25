@@ -1,5 +1,4 @@
 import { useAuthStore } from "../stores/authStore";
-import { Link } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 
 export function Settings() {
@@ -8,36 +7,6 @@ export function Settings() {
     <div className="page-workspace">
       <PageHeader title="Ustawienia" />
       <div className="workspace-panels">
-        <section className="card">
-          <h2 className="mb-2 text-lg font-semibold">Finanse</h2>
-          <p className="mb-4 text-sm text-gray-500">
-            Konta, kategorie i plan definiujesz tutaj. Codzienny przegląd
-            pozostaje w Finansach.
-          </p>
-          <nav aria-label="Konfiguracja finansów" className="space-y-1">
-            {(
-              [
-                ["accounts", "Konta i rachunki"],
-                ["categories", "Kategorie"],
-                ["budgets", "Limity budżetu"],
-                ["schedules", "Harmonogramy"],
-                ["forecast", "Prognoza"],
-                ["cards", "Karty kredytowe"],
-              ] as const
-            ).map(([path, label]) => (
-              <Link
-                key={path}
-                to={`/settings/finances/${path}`}
-                className="sidebar-link"
-              >
-                <span>{label}</span>
-                <span className="ml-auto" aria-hidden="true">
-                  →
-                </span>
-              </Link>
-            ))}
-          </nav>
-        </section>
         <section className="card">
           <h2 className="text-lg font-semibold text-white mb-4">Profil</h2>
           <dl className="space-y-4 text-sm">
@@ -82,9 +51,6 @@ export function Settings() {
             Zmiana poziomu autonomii nie jest dostępna w tym widoku. Ten ekran
             nie zmienia uprawnień ani zasad zatwierdzania.
           </p>
-          <Link className="sidebar-link mt-3" to="/settings/ai">
-            Ustawienia AI
-          </Link>
         </section>
         <section className="card">
           <h2 className="text-lg font-semibold text-white mb-4">O aplikacji</h2>

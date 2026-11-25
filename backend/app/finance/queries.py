@@ -14,6 +14,7 @@ from app.finance.models import (
     Account,
     ActualImportMapping,
     Category,
+    DocumentPaymentAllocation,
     FinancialTransaction,
     LoanAgreement,
     Posting,
@@ -144,6 +145,58 @@ async def lock_accounts(
     return {account.id: account for account in result.scalars().all()}
 
 
+async def attach_transaction_history_metadata(
+    db: AsyncSession, user_id: uuid.UUID, transactions: list[FinancialTransaction]
+) -> list[FinancialTransaction]:
+    """Attach editor-consistent locks and verified navigation targets for one history page."""
+    if not transactions:
+        return transactions
+    from app.finance.imports.models import ImportEvidence
+    from app.finance.transaction_editor import ledger_editabilities
+
+    transaction_ids = [transaction.id for transaction in transactions]
+    decisions = await ledger_editabilities(db, user_id, transactions)
+    import_rows = (
+        await db.execute(
+            select(ImportEvidence.transaction_id, ImportEvidence.batch_id)
+            .where(
+                ImportEvidence.user_id == user_id,
+                ImportEvidence.transaction_id.in_(transaction_ids),
+            )
+            .order_by(ImportEvidence.transaction_id, ImportEvidence.batch_id)
+        )
+    ).all()
+    batches_by_transaction: dict[uuid.UUID, set[uuid.UUID]] = {}
+    for transaction_id, batch_id in import_rows:
+        batches_by_transaction.setdefault(transaction_id, set()).add(batch_id)
+    document_rows = (
+        await db.execute(
+            select(Posting.transaction_id, DocumentPaymentAllocation.financial_document_id)
+            .join(DocumentPaymentAllocation, DocumentPaymentAllocation.posting_id == Posting.id)
+            .where(
+                Posting.transaction_id.in_(transaction_ids),
+                DocumentPaymentAllocation.user_id == user_id,
+            )
+            .order_by(Posting.transaction_id, DocumentPaymentAllocation.financial_document_id)
+        )
+    ).all()
+    documents_by_transaction: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for transaction_id, document_id in document_rows:
+        document_ids = documents_by_transaction.setdefault(transaction_id, [])
+        if document_id not in document_ids:
+            document_ids.append(document_id)
+    for transaction in transactions:
+        decision = decisions[transaction.id]
+        batches = batches_by_transaction.get(transaction.id, set())
+        transaction.__dict__["ledger_editable"] = decision.editable
+        transaction.__dict__["ledger_lock_reason"] = decision.reason
+        transaction.__dict__["import_batch_id"] = next(iter(batches)) if len(batches) == 1 else None
+        transaction.__dict__["financial_document_ids"] = documents_by_transaction.get(
+            transaction.id, []
+        )
+    return transactions
+
+
 async def get_transactions(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -162,8 +215,9 @@ async def get_transactions(
 
     stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
+    transactions = list(result.scalars().all())
     return await attach_annotations(
-        db, user_id, await attach_assignment_origins(db, user_id, list(result.scalars().all()))
+        db, user_id, await attach_assignment_origins(db, user_id, transactions)
     )
 
 
@@ -328,10 +382,11 @@ async def search_transactions(
         if category_amount is not None
         else {}
     )
+    transactions = await attach_transaction_history_metadata(db, user_id, [row[0] for row in rows])
     transactions = await attach_annotations(
         db,
         user_id,
-        await attach_assignment_origins(db, user_id, [row[0] for row in rows]),
+        await attach_assignment_origins(db, user_id, transactions),
     )
     return TransactionSearchResponse(
         items=[

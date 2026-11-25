@@ -1,90 +1,104 @@
-import { NavLink } from "react-router-dom";
-import { type NavigationContext } from "./navigation";
+import { Fragment } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { PrimaryNavigation } from "./IconRail";
 import {
-  CogIcon,
-  DocumentIcon,
-  FolderIcon,
-  SparklesIcon,
-  SunIcon,
-  WalletIcon,
-} from "./navigation-icons";
+  contextualMenuLabel,
+  financeNavigationSearch,
+  menuItemCurrent,
+  type NavigationContext,
+} from "./navigation";
+import { LogoutIcon } from "./navigation-icons";
 
 type SidebarUser = { display_name: string; email: string };
 type ContextualSidebarProps = {
   context: NavigationContext;
-  user: SidebarUser | null;
-  onLogout: () => void;
   onNavigate?: () => void;
   showAllContexts?: boolean;
 };
-const items = [
-  { label: "Dzisiaj", to: "/today", icon: SunIcon },
-  { label: "Inbox", to: "/inbox", icon: FolderIcon },
-  { label: "Projekty", to: "/projects", icon: FolderIcon },
-  { label: "Kalendarz", to: "/calendar", icon: SunIcon },
-  { label: "Finanse", to: "/finances", icon: WalletIcon },
-  { label: "Doradca", to: "/advisor", icon: SparklesIcon },
-  { label: "Dokumenty", to: "/documents", icon: DocumentIcon },
-  { label: "Ustawienia", to: "/settings", icon: CogIcon },
-];
 
 export function ContextualSidebar({
-  user,
-  onLogout,
+  context,
   onNavigate,
   showAllContexts = false,
 }: ContextualSidebarProps) {
+  const { pathname, search } = useLocation();
+  const ContextIcon = context.icon;
+  const finance = context.id === "finance";
+  const menuLabel = contextualMenuLabel(context);
+  const suffix = finance ? financeNavigationSearch(search) : "";
   return (
     <aside
-      className={`unified-sidebar ${showAllContexts ? "w-full min-h-0 flex-1" : "w-56 shrink-0 h-full"}`}
+      className={`context-sidebar ${showAllContexts ? "context-sidebar-mobile" : ""}`}
     >
-      <NavLink to="/today" className="advisor-brand" onClick={onNavigate}>
-        <span className="advisor-monogram" aria-hidden="true">
-          pa
-        </span>
-        <span>
-          Personal <strong className="block">Advisor</strong>
-        </span>
-      </NavLink>
-      <p className="sidebar-eyebrow">TWOJA PRZESTRZEŃ</p>
-      <nav
-        className="flex-1 space-y-1 overflow-y-auto"
-        aria-label="Wszystkie obszary aplikacji"
-      >
-        {items.map(({ label, to, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `sidebar-link ${isActive ? "active" : ""}`
-            }
-          >
-            <Icon className="h-5 w-5 shrink-0" />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-      </nav>
-      <div className="mt-6 border-t border-gray-800 pt-4">
-        <div className="flex min-w-0 items-center gap-3 px-3">
-          <span className="profile-initial" aria-hidden="true">
-            {user?.display_name.charAt(0).toUpperCase() || "?"}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">
-              {user?.display_name || "Użytkownik"}
-            </p>
-            <p className="truncate text-xs text-gray-500">{user?.email}</p>
-          </div>
+      {!showAllContexts && (
+        <div className="context-sidebar-title">
+          <ContextIcon className="size-4" />
+          {context.label}
         </div>
-        <button
-          type="button"
-          className="sidebar-link mt-2 w-full text-left"
-          onClick={onLogout}
-        >
-          Wyloguj
-        </button>
+      )}
+      <div className="context-sidebar-scroll">
+        {menuLabel && (
+          <nav className="space-y-1" aria-label={menuLabel}>
+            {showAllContexts && (
+              <p className="context-caption">{context.label}</p>
+            )}
+            {context.items.map((item, index) => (
+              <Fragment key={item.to}>
+                {item.group &&
+                  item.group !== context.items[index - 1]?.group && (
+                    <p className="context-caption">{item.group}</p>
+                  )}
+                <Link
+                  to={item.to + suffix}
+                  onClick={onNavigate}
+                  aria-current={menuItemCurrent(item, pathname)}
+                  className="context-link"
+                >
+                  <span className="context-marker" aria-hidden="true" />
+                  {item.label}
+                </Link>
+              </Fragment>
+            ))}
+          </nav>
+        )}
+        {showAllContexts && (
+          <>
+            <p className="context-caption">Obszary aplikacji</p>
+            <PrimaryNavigation onNavigate={onNavigate} />
+          </>
+        )}
       </div>
     </aside>
+  );
+}
+
+export function NavigationProfile({
+  user,
+  onLogout,
+}: {
+  user: SidebarUser | null;
+  onLogout: () => void;
+}) {
+  return (
+    <div className="context-profile">
+      <span className="profile-initial" aria-hidden="true">
+        {user?.display_name.charAt(0).toUpperCase() || "?"}
+      </span>
+      <div className="navigation-profile-details min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">
+          {user?.display_name || "Użytkownik"}
+        </p>
+        <p className="truncate text-xs text-[var(--ui-muted)]">{user?.email}</p>
+      </div>
+      <button
+        type="button"
+        className="context-logout"
+        aria-label="Wyloguj"
+        title="Wyloguj"
+        onClick={onLogout}
+      >
+        <LogoutIcon className="size-4" />
+      </button>
+    </div>
   );
 }
