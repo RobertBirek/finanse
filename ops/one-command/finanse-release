@@ -1,0 +1,387 @@
+#!/usr/bin/python3
+"""Promote a CI artifact without running code from its checkout on the host."""
+from __future__ import annotations
+
+import argparse
+import copy
+import datetime as dt
+import fcntl
+import hashlib
+import json
+import os
+import re
+import subprocess
+import tarfile
+import tempfile
+import time
+from pathlib import Path
+
+SERVICES = ("backend", "worker", "frontend")
+SHA = re.compile(r"[a-f0-9]{40}\Z")
+DIGEST = re.compile(r"[a-f0-9]{64}\Z")
+ENV = {"PATH": "/usr/bin:/bin", "HOME": "/root", "GH_PROMPT_DISABLED": "1"}
+
+
+def require(ok, reason):
+    if not ok:
+        raise RuntimeError(reason)
+
+
+def run(*args, timeout=60, env=ENV):
+    result = subprocess.run(args, capture_output=True, check=False, env=env, timeout=timeout)
+    require(result.returncode == 0, f"{Path(args[0]).name} {args[1]} failed ({result.returncode})")
+    return result.stdout
+
+
+def docker(*args, **kwargs):
+    return run("/usr/bin/docker", *args, **kwargs)
+
+
+def sha(path):
+    with Path(path).open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def read(path):
+    return json.loads(Path(path).read_bytes())
+
+
+def save(path, value):
+    fd, temp = tempfile.mkstemp(dir=path.parent, prefix=".release-")
+    with os.fdopen(fd, "w") as stream:
+        json.dump(value, stream, indent=2, sort_keys=True)
+        stream.write("\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temp, path)
+
+
+def trusted(path, mode_mask=0o022):
+    p = Path(path)
+    require(p.is_absolute() and p.resolve() == p and p.is_file(), "Untrusted file path")
+    for item in (p, *p.parents):
+        stat = item.stat()
+        require(stat.st_uid == 0 and not stat.st_mode & mode_mask, f"Untrusted owner or mode: {item}")
+    return p
+
+
+def artifact(repository, revision, directory):
+    gh = ("/usr/bin/gh",)
+    rows = json.loads(run(*gh, "run", "list", "-R", repository, "-w", "ci.yml",
+                          "--commit", revision, "--branch", "main", "--event", "push",
+                          "--limit", "20", "--json", "databaseId,headSha,conclusion,status"))
+    ids = [r["databaseId"] for r in rows if r["headSha"] == revision and r["conclusion"] == "success"]
+    require(bool(ids), "No successful push to main for the exact revision")
+    run(*gh, "run", "download", str(ids[0]), "-R", repository, "-n", f"finanse-release-{revision}",
+        "-D", str(directory), timeout=180)
+    manifest, archive = (directory / n for n in ("manifest.json", "images.tar.gz"))
+    require(set(directory.iterdir()) == {manifest, archive} and all(p.is_file() and not p.is_symlink()
+            for p in (manifest, archive)), "Unexpected artifact layout")
+    require(manifest.stat().st_size < 16_384 and archive.stat().st_size < 1_500_000_000,
+            "Artifact exceeds size limit")
+    data = read(manifest)
+    require(data["version"] == 1 and data["revision"] == revision and
+            DIGEST.fullmatch(data["archive_sha256"]) and sha(archive) == data["archive_sha256"],
+            "Artifact hash or revision mismatch")
+    require(re.fullmatch(r"[a-zA-Z0-9_]{1,32}", data["schema"]) and set(data["images"]) == set(SERVICES),
+            "Artifact image or schema manifest invalid")
+    for name, image in data["images"].items():
+        require(image["tag"] == f"local/finanse-{name}:{revision}" and
+                re.fullmatch(r"sha256:[a-f0-9]{64}", image["id"]), "Invalid image pin")
+    return data, archive, ids[0]
+
+
+def application_scope(paths):
+    changes = False
+    for path in paths:
+        if (path.startswith(("docs/", "backend/tests/", "frontend/e2e/", "frontend/release-e2e/"))
+                or re.fullmatch(r"frontend/.*\.test\.[jt]sx?", path)):
+            continue
+        require(path not in {"backend/app/config.py"} and
+                path.startswith(("backend/app/", "frontend/src/", "frontend/public/")),
+                f"Manual release required for {path}")
+        changes = True
+    return changes
+
+
+def assert_scope(config, revision, previous):
+    git = ("/usr/bin/git", "-C", config["repository"])
+    run(*git, "fetch", "--no-tags", config["remote"], "refs/heads/main", timeout=90)
+    run(*git, "merge-base", "--is-ancestor", revision, "FETCH_HEAD")
+    run(*git, "merge-base", "--is-ancestor", previous, revision)
+    workflow = run(*git, "show", f"{revision}:.github/workflows/ci.yml")
+    require(hashlib.sha256(workflow).hexdigest() == config["workflow_sha256"], "Unreviewed CI workflow")
+    base = previous
+    if previous == config.get("bootstrap_previous"):
+        base = config["bootstrap_anchor"]
+        run(*git, "merge-base", "--is-ancestor", previous, base)
+        run(*git, "merge-base", "--is-ancestor", base, revision)
+        run(*git, "diff", "--quiet", previous, base, "--", "backend/app", "backend/migrations",
+            "frontend/src", "frontend/public")
+    paths = run(*git, "diff", "--no-renames", "--name-only", "-z", base, revision).decode().split("\0")[:-1]
+    return application_scope(paths)
+
+
+def verify_archive(archive, manifest):
+    with tarfile.open(archive, "r|gz") as bundle:
+        found = None
+        for member in bundle:
+            require(not member.issym() and not member.islnk() and not member.name.startswith("/")
+                    and ".." not in Path(member.name).parts, "Unsupported archive entry")
+            if member.name == "manifest.json":
+                require(found is None and member.isfile() and member.size < 128_000, "Bad image archive manifest")
+                stream = bundle.extractfile(member)
+                require(stream is not None, "Missing image archive manifest data")
+                tar_manifest = json.load(stream)
+                found = [tag for image in tar_manifest for tag in (image.get("RepoTags") or [])]
+        require(sorted(found or []) == sorted(image["tag"] for image in manifest.values()),
+                "Archive contains unapproved tags")
+
+
+def compose(cfg, override, *args, timeout=60):
+    return docker("compose", "-p", cfg["project"], *[arg for p in cfg["compose"] for arg in ("-f", p)],
+                  "-f", str(override), "--env-file", cfg["env_file"], *args, timeout=timeout)
+
+
+def inspect(*names):
+    return json.loads(docker("inspect", *names))
+
+
+def images(manifest):
+    for image in manifest.values():
+        data = json.loads(docker("image", "inspect", image["tag"]))[0]
+        require(data["Id"] == image["id"], "Loaded or rollback image ID disagrees with manifest")
+
+
+def production_matches(cfg, baseline):
+    require(set(cfg["containers"]) == set(SERVICES) | {"postgres", "redis", "stirling"},
+            "The configured inventory must cover all six production services")
+    require(set(cfg["compose"]) | {cfg["env_file"], baseline["override"]} <= set(baseline["files"]),
+            "Incomplete production file baseline")
+    require(sha(cfg["active_release"]) == baseline["active_sha256"], "Active release metadata drift")
+    for path, expected in baseline["files"].items():
+        require(sha(path) == expected, f"Production file drift: {path}")
+    names = cfg["containers"]
+    project_ids = docker("ps", "-aq", "--no-trunc", "--filter",
+                         f'label=com.docker.compose.project={cfg["project"]}').decode().splitlines()
+    observed = {item["Name"].lstrip("/"): item for item in inspect(*names.values())}
+    require(set(project_ids) == {x["Id"] for x in observed.values()}, "Unexpected Compose project containers")
+    for service, name in names.items():
+        row = observed[name]
+        require([row["Id"], row["Image"]] == baseline["identities"][service]
+                and row["State"]["Running"], f"Production container drift: {service}")
+    return {s: observed[n] for s, n in names.items()}
+
+
+def app_override(old, previous, candidate):
+    for service in SERVICES:
+        old_tag = f"local/finanse-{service}:{previous}"
+        new_tag = candidate["images"][service]["tag"]
+        pattern = rf"(?m)^    image: {re.escape(old_tag)}$"
+        old, count = re.subn(pattern, f"    image: {new_tag}", old)
+        require(count == 1, f"Cannot preserve current Compose for {service}")
+    return old
+
+
+def compare_compose(before, after, candidate):
+    before, after = copy.deepcopy(before), copy.deepcopy(after)
+    for name in SERVICES:
+        require(after["services"][name].pop("image") == candidate["images"][name]["tag"],
+                "Unexpected rendered image")
+        before["services"][name].pop("image")
+        if name in ("backend", "worker"):
+            require(after["services"][name].get("user") == "10001:10001", "Unexpected application UID")
+            require(not any(v.get("target") == "/app" for v in after["services"][name]["volumes"]),
+                    "Host mounted application code")
+    require(before == after, "Unexpected rendered Compose configuration change")
+
+
+def schema(cfg):
+    return docker("exec", "--user", cfg["postgres_os_user"], cfg["containers"]["postgres"],
+                  "/usr/bin/env", "-i", "PATH=/usr/bin:/bin", "HOME=/nonexistent",
+                  "PGPASSFILE=/dev/null", "PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=10000",
+                  cfg["psql"], "-X", "-w", "-h", cfg["pg_socket"], "-p", cfg["pg_port"],
+                  "-d", cfg["pg_database"], "-U", cfg["pg_role"], "-Atc",
+                  "SELECT version_num FROM alembic_version", timeout=15).decode().strip()
+
+
+def queue_empty(cfg):
+    def redis(*args):
+        return docker("exec", cfg["containers"]["redis"], "redis-cli", "--raw", *args).decode().splitlines()
+    return (not any(k and not k.startswith("cron:") for k in redis("ZRANGE", "arq:queue", "0", "-1"))
+            and not any(k and not k.startswith("arq:in-progress:cron:") for k in
+                        redis("--scan", "--pattern", "arq:in-progress:*")))
+
+
+def smoke(cfg, expected, stable_data=None):
+    names = cfg["containers"]
+    rows = {x["Name"].lstrip("/"): x for x in inspect(*names.values())}
+    for service in SERVICES:
+        item = rows[names[service]]
+        require(item["State"]["Running"] and item["Image"] == expected[service]["id"]
+                and not item["RestartCount"], f"Runtime image or restart mismatch: {service}")
+        if service in ("backend", "worker"):
+            require(item["Config"]["User"] == "10001:10001" and
+                    not any(m["Destination"] == "/app" for m in item["Mounts"]),
+                    f"Production runtime hardening mismatch: {service}")
+    for service in set(names) - set(SERVICES):
+        item = rows[names[service]]
+        require(stable_data is None or [item["Id"], item["Image"], item["State"]["StartedAt"]] == stable_data[service],
+                f"Data service changed: {service}")
+    url = cfg["url"]
+    health = json.loads(run("/usr/bin/curl", "-fsS", "--max-time", "10", url + "/api/health"))
+    require(health == {"status": "ok", "environment": "production"}, "API health failed")
+    code = run("/usr/bin/curl", "-sS", "--max-time", "10", "-o", "/dev/null", "-w", "%{http_code}",
+               url + "/api/finance/accounts")
+    require(code == b"401", "Anonymous finance request not rejected")
+    index = run("/usr/bin/curl", "-fsS", "--max-time", "10", url + "/")
+    match = re.search(rb'src="(/assets/[^"]+\.js)"', index)
+    require(match is not None, "No built frontend asset")
+    actual_path = match[1].decode()
+    frontend = docker("exec", names["frontend"], "cat", "/usr/share/nginx/html" + actual_path)
+    require(run("/usr/bin/curl", "-fsS", "--max-time", "10", url + actual_path) == frontend,
+            "Public asset differs from live frontend image")
+    require(docker("exec", names["redis"], "redis-cli", "--raw", "EXISTS",
+                   "arq:queue:health-check").strip() == b"1", "Worker health is missing")
+    log = subprocess.run(["/usr/bin/docker", "logs", "--tail", "200", names["worker"]],
+                         env=ENV, capture_output=True, check=True, timeout=20)
+    require(b"Starting worker for" in log.stdout + log.stderr, "Worker startup not confirmed")
+    return rows
+
+
+def wait_smoke(cfg, target, stable):
+    deadline = time.monotonic() + 75
+    while True:
+        try:
+            return smoke(cfg, target, stable)
+        except (RuntimeError, ValueError, OSError, subprocess.TimeoutExpired):
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(3)
+
+
+def switch(cfg, override):
+    compose(cfg, override, "up", "-d", "--no-deps", "--no-build", *SERVICES, timeout=150)
+
+
+def restore_application(cfg, old_override, old_images, stable):
+    images(old_images)
+    switch(cfg, old_override)
+    wait_smoke(cfg, old_images, stable)
+
+
+def release(cfg, revision, directory):
+    state = Path(cfg["state"])
+    active = state / "active.json"
+    baseline = read(trusted(active))
+    previous = baseline["revision"]
+    if revision == previous:
+        print("Wersja już działa na produkcji.")
+        return
+    if not assert_scope(cfg, revision, previous):
+        print("Brak zmian aplikacji. Wdrożenie pominięte.")
+        return
+    candidate, archive, ci = artifact(cfg["github"], revision, directory)
+    verify_archive(archive, candidate["images"])
+    require(candidate["schema"] == baseline["schema"], "Manual release required for schema change")
+    production_matches(cfg, baseline)
+    require(schema(cfg) == baseline["schema"], "Production schema drift")
+    print(json.dumps({"revision": revision, "images": candidate["images"], "ci": ci,
+                      "rollback": previous, "scope": "backend, worker, frontend; no migrations"},
+                     indent=2), flush=True)
+    require(input("Wpisz pełny SHA, aby zatwierdzić wydanie: ").strip() == revision,
+            "Release not approved")
+
+    with Path(cfg["lock"]).open("r+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        require(read(active) == baseline, "Release baseline changed")
+        production_matches(cfg, baseline)
+        docker("load", "-i", str(archive), timeout=180)
+        images(candidate["images"])
+        images(baseline["images"])
+        undo = Path(baseline["override"])
+        destination = Path(tempfile.mkdtemp(dir=state, prefix=revision + "-"))
+        next_override = destination / "compose.release.yaml"
+        next_override.write_text(app_override(undo.read_text(), previous, candidate))
+        before = json.loads(compose(cfg, undo, "config", "--format", "json"))
+        after = json.loads(compose(cfg, next_override, "config", "--format", "json"))
+        compare_compose(before, after, candidate)
+        backup = json.loads(run(cfg["backup_restore"], revision, baseline["schema"], str(destination), timeout=720))
+        require(DIGEST.fullmatch(backup["snapshot"]) and backup["snapshot"] == backup["restored_snapshot"]
+                and backup["schema"] == baseline["schema"] and backup["ledger_ok"] is True
+                and backup["retention_ok"] is True, "Backup or isolated restore did not pass")
+        require(read(active) == baseline, "Release baseline changed")
+        current = production_matches(cfg, baseline)
+        require(schema(cfg) == baseline["schema"] and queue_empty(cfg), "Schema drift or busy worker")
+        stable = {s: [current[s]["Id"], current[s]["Image"], current[s]["State"]["StartedAt"]]
+                  for s in set(current) - set(SERVICES)}
+        started = dt.datetime.now(dt.UTC).isoformat()
+        live_metadata = Path(cfg["active_release"])
+        try:
+            switch(cfg, next_override)
+            wait_smoke(cfg, candidate["images"], stable)
+            for _ in range(6):
+                time.sleep(15)
+                rows = smoke(cfg, candidate["images"], stable)
+                for service in ("backend", "worker"):
+                    log = subprocess.run(["/usr/bin/docker", "logs", "--since", started,
+                                          cfg["containers"][service]], env=ENV, capture_output=True,
+                                         check=True, timeout=20)
+                    require(not re.search(rb"Traceback \(most recent call last\)|\bCRITICAL\b|\bERROR\b",
+                                          log.stdout + log.stderr), f"Runtime errors in {service}")
+            require(schema(cfg) == baseline["schema"], "Schema changed during rollout")
+            updated = {**baseline, "revision": revision, "images": candidate["images"], "override": str(next_override),
+                       "identities": {s: [rows[n]["Id"], rows[n]["Image"]] for s, n in cfg["containers"].items()},
+                       "files": {**{k: v for k, v in baseline["files"].items() if k != str(undo)},
+                                 str(next_override): sha(next_override)},
+                       "backup": backup, "previous": previous, "ci": ci,
+                       "started": started, "verified": dt.datetime.now(dt.UTC).isoformat()}
+            prior_live = read(live_metadata)
+            save(destination / "previous-active-release.json", prior_live)
+            meta = {
+                "release_status": "verified-live", "revision": revision, "git_tip": revision,
+                "service_revisions": {s: revision for s in SERVICES},
+                "application_images": candidate["images"], "compose_override": str(next_override),
+                "rollback_override": str(undo), "previous_release_revision": previous,
+                "previous_application_images": baseline["images"], "production_url": cfg["url"],
+                "evidence_directory": str(destination), "migration": baseline["schema"],
+                "migration_executed": False, "backup_snapshot": backup["snapshot"],
+                "restore_verified_snapshot": backup["restored_snapshot"], "ci": ci,
+                "rollback_contract": {"revision": previous, "schema": baseline["schema"], "override": str(undo)},
+                "updated_at_utc": updated["verified"],
+            }
+            next_live = live_metadata.parent / f".active-release-{revision}.json"
+            save(next_live, meta)
+            updated["active_sha256"] = sha(next_live)
+            save(destination / "verified-live.json", updated)
+            os.replace(next_live, live_metadata)
+            save(active, updated)
+        except BaseException:
+            if read(live_metadata)["revision"] != revision:
+                restore_application(cfg, undo, baseline["images"], stable)
+                print("Przywrócono poprzednie obrazy. Administrator musi potwierdzić nowe ID kontenerów.")
+            raise
+    print(f"Wdrożono {revision}.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("sha")
+    parser.add_argument("--config", type=Path, default=Path("/etc/finanse-release/config.json"))
+    args = parser.parse_args()
+    os.umask(0o077)
+    require(os.geteuid() == 0 and SHA.fullmatch(args.sha), "Use root and a full lowercase commit SHA")
+    cfg = read(trusted(args.config, 0o022))
+    backup = trusted(cfg["backup_restore"])
+    trusted(backup.parent / "backup-bin/restic")
+    require(cfg["url"] == "https://finanse.birek.online", "Unexpected production URL")
+    with tempfile.TemporaryDirectory(prefix="finanse-package-") as tmp:
+        release(cfg, args.sha, Path(tmp))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (RuntimeError, OSError, ValueError, KeyError, tarfile.TarError, subprocess.SubprocessError) as error:
+        # Subprocess output can carry production environment values.
+        raise SystemExit(f"STOP: {error}") from None

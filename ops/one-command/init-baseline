@@ -1,0 +1,39 @@
+#!/usr/bin/python3
+"""Draft a baseline from an independently approved inventory and release proof."""
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+inventory_path, approved_sha256, active_path, evidence_path = map(str, sys.argv[1:])
+inventory = Path(inventory_path).read_bytes()
+active = Path(active_path).read_bytes()
+assert hashlib.sha256(inventory).hexdigest() == approved_sha256
+inventory = json.loads(inventory)
+assert inventory["version"] == 2
+assert hashlib.sha256(active).hexdigest() == inventory["active_release_sha256"]
+active = json.loads(active)
+proof = json.loads(Path(evidence_path).read_bytes())
+assert active["release_status"] == "verified-live" and active["revision"] == proof["candidate"]
+assert active["compose_override"] == inventory["compose_files"][-1]["path"]
+services = ("backend", "worker", "frontend")
+rev = active["revision"]
+images, identities = {}, {}
+for service in services:
+    record = inventory["services"][service]
+    assert record["revision"] == active["service_revisions"][service] == rev
+    assert record["image_id"] == active["application_images"][service]["id"]
+    assert [record["container_id"], record["image_id"]] == [
+        proof["services"][service]["id"], proof["services"][service]["image"]]
+    images[service] = {"tag": f"local/finanse-{service}:{rev}", "id": record["image_id"]}
+    identities[service] = [record["container_id"], record["image_id"]]
+for service in ("postgres", "redis", "stirling"):
+    record = proof["data_services"][f"/finanse-{service}"]
+    identities[service] = [record["id"], record["image"]]
+assert inventory["postgres"]["container_id"] == identities["postgres"][0]
+assert not inventory.get("retained_backend_migrators")
+files = {r["path"]: r["sha256"] for r in (*inventory["compose_files"], *inventory["compose_dependencies"], inventory["env_file"])}
+print(json.dumps({"revision": rev, "schema": proof["schema"], "images": images,
+                  "active_sha256": inventory["active_release_sha256"],
+                  "override": active["compose_override"], "files": files,
+                  "identities": identities}, sort_keys=True, indent=2))

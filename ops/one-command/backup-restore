@@ -1,0 +1,69 @@
+#!/bin/bash
+# Installed alongside backup-bin and called by finanse-release under the deploy lock.
+set -euo pipefail
+umask 077
+revision=$1
+schema=$2
+evidence=$3
+[[ "$revision" =~ ^[0-9a-f]{40}$ && "$schema" =~ ^[A-Za-z0-9_]+$ && -d "$evidence" ]]
+here=$(dirname "$(realpath "$0")")
+exec 9<>/run/lock/finanse-backup-restore.lock
+flock -x -w 20 9
+export FINANSE_UPLOAD_LOG="$evidence/backup-upload.private.jsonl"
+export FINANSE_RETENTION_LOG="$evidence/retention-dry-run.private.json"
+FINANSE_OPERATION_LOCK_HELD=1 PATH="$here/backup-bin:/usr/bin:/bin" \
+  make -C /docker/finanse backup > "$evidence/backup.private.log" 2>&1
+set -a
+. /docker/finanse/secrets/restic-contabo.env
+. /docker/finanse/secrets/backup.env
+set +a
+export RESTIC_CACHE_DIR=/docker/finanse/data/restic-cache
+snapshot=$(python3 - "$FINANSE_UPLOAD_LOG" "$FINANSE_RETENTION_LOG" <<'PY'
+import json, re, sys
+with open(sys.argv[1]) as f:
+    summaries = [r for line in f if (r := json.loads(line)).get("message_type") == "summary"]
+assert len(summaries) == 1
+snapshot = summaries[0]["snapshot_id"]
+assert re.fullmatch(r"[a-f0-9]{64}", snapshot)
+with open(sys.argv[2]) as f:
+    retention = json.load(f)
+assert any(s["id"] == snapshot for group in retention for s in (group.get("keep") or []))
+print(snapshot)
+PY
+)
+runtime=$(/usr/bin/python3 -I -S -B /usr/local/lib/finanse/restore_runtime_pointer.py)
+test "$(cd "$runtime/backend" && .venv/bin/alembic heads | cut -d ' ' -f 1)" = "$schema"
+# Private disposable PostgreSQL. No production volume or credentials are used.
+scratch=$(mktemp -d "$evidence/restore.XXXXXXXX")
+mkdir "$scratch/output"
+cid=
+cleanup() {
+  if [[ -n "$cid" ]]; then docker stop -t 10 "$cid" >/dev/null; fi
+  rm -rf -- "$scratch"
+}
+trap cleanup EXIT
+password=$(openssl rand -hex 24)
+export POSTGRES_PASSWORD="$password"
+pg_image=$(docker inspect --format '{{.Image}}' finanse-postgres)
+[[ "$pg_image" =~ ^sha256:[a-f0-9]{64}$ ]]
+cid=$(docker run --rm -d --pull never --publish 127.0.0.1::5432 --tmpfs /var/lib/postgresql/data \
+    --env POSTGRES_PASSWORD -e POSTGRES_USER=release_restore -e POSTGRES_DB=finanse_release_restore "$pg_image")
+endpoint=$(docker port "$cid" 5432/tcp)
+[[ "$endpoint" =~ ^127\.0\.0\.1:([0-9]+)$ ]]
+port=${BASH_REMATCH[1]}
+[[ "$port" != 5432 && "$port" != 55431 ]]
+export PGPASSFILE="$scratch/pgpass" RESTORE_DIR="$scratch/output"
+printf '127.0.0.1:%s:finanse_release_restore:release_restore:%s\n' "$port" "$password" > "$PGPASSFILE"
+unset password POSTGRES_PASSWORD
+export RESTORE_DATABASE_URL_SYNC="postgresql://release_restore@127.0.0.1:$port/finanse_release_restore"
+for i in {1..30}; do
+  psql "$RESTORE_DATABASE_URL_SYNC" -XAtc 'SELECT 1' >/dev/null 2>&1 && break
+  sleep 1
+done
+/bin/bash "$runtime/ops/restore-verify.sh" "$snapshot" > "$evidence/restore.private.log" 2>&1
+test "$(psql "$RESTORE_DATABASE_URL_SYNC" -XAtc 'SELECT version_num FROM alembic_version')" = "$schema"
+test -d "$RESTORE_DIR/uploads"
+# Cleanup is required for success.
+cleanup
+trap - EXIT
+printf '{"snapshot":"%s","restored_snapshot":"%s","schema":"%s","ledger_ok":true,"retention_ok":true}\n' "$snapshot" "$snapshot" "$schema"

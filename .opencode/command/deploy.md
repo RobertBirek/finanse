@@ -4,6 +4,15 @@ description: Przygotuj wersjonowany release i wdróż wyłącznie po zgodzie uż
 
 Produkcja: `https://finanse.birek.online`, VPS Docker Compose. Nie migruj do Cloudflare.
 
+Dla zwykłych zmian aplikacji używaj zainstalowanego `finanse-release <pełny SHA>`.
+Pakiet z zaliczonego CI na `main` zastępuje stały podgląd dev po wdrożeniu nowej
+ścieżki. Potwierdzenie pełnego SHA zatwierdza dokładne obrazy, odczyty produkcji,
+kopię wraz z próbą odtworzenia, wdrożenie i ewentualny rollback aplikacji.
+[Instalacja i odbiór](../../docs/operations/one-command-release.md).
+
+Poniższa procedura obowiązuje przy migracjach, zmianach infrastruktury lub
+narzędzi wydania, rozbieżności stanu oraz przed odbiorem nowej ścieżki.
+
 1. Przed wdrożeniem przeczytaj `docs/operations/backup-restore.md`, sekcję
    „Versioned Application Releases And Rollback”, oraz prywatne metadane
    `/opt/finanse/webapp/releases/active-release.json`. Ustal aktywny override,

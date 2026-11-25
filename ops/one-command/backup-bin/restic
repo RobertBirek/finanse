@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+case "${1:-}" in
+  backup) shift; /usr/bin/restic backup --json "$@" | tee "$FINANSE_UPLOAD_LOG" ;;
+  forget)
+    shift
+    [[ "$*" == '--prune --tag personal-advisor --group-by tags --keep-daily 7 --keep-weekly 4 --keep-monthly 6' ]]
+    shift
+    /usr/bin/restic forget --dry-run --json "$@" > "$FINANSE_RETENTION_LOG"
+    ;;
+  *) exit 2 ;;
+esac

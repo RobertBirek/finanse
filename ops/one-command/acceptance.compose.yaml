@@ -1,0 +1,46 @@
+x-app: &app
+  image: ${RELEASE_BACKEND:?}
+  user: "10001:10001"
+  volumes: [uploads:/app/uploads]
+  environment:
+    ENVIRONMENT: test
+    SECRET_KEY: synthetic-ci-release-secret-not-for-production
+    DATABASE_URL: postgresql+asyncpg://synthetic:synthetic@postgres:5432/synthetic
+    REDIS_URL: redis://redis:6379/0
+    REGISTRATION_ENABLED: "true"
+    TRUSTED_ORIGINS: http://127.0.0.1:5178
+    OPENAI_API_KEY: ""
+    LLM_API_KEY: ""
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: synthetic
+      POSTGRES_PASSWORD: synthetic
+      POSTGRES_DB: synthetic
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD, pg_isready, -U, synthetic, -d, synthetic]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+    tmpfs: [/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  backend:
+    <<: *app
+    command: [uvicorn, app.main:app, --host, 0.0.0.0, --port, "8000"]
+  worker:
+    <<: *app
+    image: ${RELEASE_WORKER:?}
+    command: [arq, app.worker.WorkerSettings]
+  frontend:
+    image: ${RELEASE_FRONTEND:?}
+    ports: ["127.0.0.1:5178:80"]
+volumes:
+  uploads:
