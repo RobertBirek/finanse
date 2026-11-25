@@ -8,7 +8,38 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AccountTransactions } from "./AccountTransactions";
+import { AccountTransactions, TransactionList } from "./AccountTransactions";
+
+it("exposes one unified edit action under More and keeps unavailable actions visible", () => {
+  useUpdateTransaction.mockReturnValue({ mutate: vi.fn() });
+  useDeleteTransaction.mockReturnValue({ mutate: vi.fn() });
+  const edit = vi.fn();
+  render(
+    <TransactionList
+      transactions={[incomeTransaction]}
+      loading={false}
+      error={false}
+      onEdit={edit}
+      onDetails={vi.fn()}
+    />,
+  );
+  expect(
+    screen.queryByRole("button", { name: "Szczegóły: Wynagrodzenie" }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Więcej: Wynagrodzenie" }),
+  );
+  const actions = within(
+    screen.getByRole("group", { name: "Więcej: Wynagrodzenie" }),
+  );
+  const openingBalance = actions.getByRole("button", {
+    name: "Bilans otwarcia konta",
+  });
+  expect(openingBalance).toHaveAttribute("aria-disabled", "true");
+  expect(openingBalance).toHaveAttribute("aria-description");
+  fireEvent.click(actions.getByRole("button", { name: "Edytuj transakcję" }));
+  expect(edit).toHaveBeenCalledWith("tx-income");
+});
 
 function render(ui: ReactNode) {
   const client = new QueryClient({
@@ -178,6 +209,83 @@ describe("AccountTransactions", () => {
 
     expect(screen.getByText("+5000,00 PLN")).toHaveClass("text-green-400");
     expect(screen.getByText("−123,00 PLN")).toHaveClass("text-red-400");
+  });
+
+  it("shows batch-projected history locks and only verified provenance links", () => {
+    useAccountTransactions.mockReturnValue({
+      data: [
+        {
+          ...expenseTransaction,
+          id: "tx-protected",
+          source: "bank_import",
+          ledger_editable: false,
+          ledger_lock_reason: "Dowód importu chroni tożsamość księgową.",
+          import_batch_id: "batch-1",
+          financial_document_ids: ["bill-1"],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<AccountTransactions accounts={accounts} />);
+    fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Powód blokady edycji" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Więcej:/ }));
+    const lock = screen.getByRole("button", { name: "Powód blokady edycji" });
+    expect(lock).toHaveAttribute(
+      "aria-description",
+      "Dowód importu chroni tożsamość księgową.",
+    );
+    fireEvent.click(lock);
+    expect(
+      screen.getByText("Dowód importu chroni tożsamość księgową."),
+    ).toHaveAttribute("data-open", "true");
+    expect(
+      screen.getByRole("button", { name: "Import bankowy" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Powiązana z fakturą" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not invent history links when the batch projection has no targets", () => {
+    useAccountTransactions.mockReturnValue({
+      data: [
+        {
+          ...expenseTransaction,
+          id: "tx-locked-no-link",
+          ledger_editable: false,
+          ledger_lock_reason:
+            "Płatność pożyczki jest powiązana z harmonogramem.",
+          import_batch_id: null,
+          financial_document_ids: [],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    render(<AccountTransactions accounts={accounts} />);
+    fireEvent.click(screen.getByRole("button", { name: /Rachunek główny/ }));
+
+    fireEvent.click(screen.getByRole("button", { name: /^Więcej:/ }));
+    expect(
+      screen.getByRole("button", { name: "Powód blokady edycji" }),
+    ).toHaveAttribute(
+      "aria-description",
+      "Płatność pożyczki jest powiązana z harmonogramem.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Import bankowy" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Powiązana z fakturą" }),
+    ).not.toBeInTheDocument();
   });
 
   it("puts date editing and deletion behind the transaction's disclosure", () => {

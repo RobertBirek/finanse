@@ -9,6 +9,9 @@ vi.mock("../components/finance/TransactionSearch", () => ({
 vi.mock("../components/finance/TransactionForm", () => ({
   TransactionForm: () => <p>Formularz transakcji</p>,
 }));
+vi.mock("../components/finance/AccountStrip", () => ({
+  AccountStrip: () => <p>Kafelki kont</p>,
+}));
 
 describe("FinanceTransactions", () => {
   it("prioritizes searchable history while keeping transaction creation available", () => {
@@ -21,6 +24,7 @@ describe("FinanceTransactions", () => {
       screen.getByRole("heading", { name: "Transakcje" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Historia z filtrami")).toBeInTheDocument();
+    expect(screen.getByText("Kafelki kont")).toBeInTheDocument();
     expect(screen.queryByText("Formularz transakcji")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Dodaj transakcję/ }));
     expect(screen.getByText("Formularz transakcji")).toBeInTheDocument();

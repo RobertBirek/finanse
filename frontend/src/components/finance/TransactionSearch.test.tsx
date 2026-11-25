@@ -147,6 +147,7 @@ describe("complete transaction history", () => {
   it("keeps URL filters/page through detail, close and browser Back", () => {
     mount("/finances/transactions?q=Kawa&currency=EUR&page=2");
     expect(screen.getByText("Wyniki 26–26 z 53")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Więcej: Zakup kawy" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Szczegóły: Zakup kawy" }),
     );
@@ -224,6 +225,7 @@ describe("complete transaction history", () => {
       "Szukaj po opisie, koncie lub kategorii",
     );
     fireEvent.change(input, { target: { value: "Robocza fraza" } });
+    fireEvent.click(screen.getByRole("button", { name: "Więcej: Zakup kawy" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Szczegóły: Zakup kawy" }),
     );
@@ -259,6 +261,71 @@ describe("complete transaction history", () => {
     expect(hooks.useTransactionSearch).toHaveBeenLastCalledWith(
       expect.objectContaining({ offset: 0 }),
       true,
+    );
+  });
+  it("switches compact desktop rows without changing the search or available actions", () => {
+    mount("/finances/transactions?q=Kawa");
+
+    const toggle = screen.getByRole("button", {
+      name: "Włącz zwarty widok transakcji",
+    });
+    const list = screen
+      .getByRole("button", { name: "Więcej: Zakup kawy" })
+      .closest(".transaction-search-list");
+
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(toggle).toHaveClass("hidden", "lg:inline-flex");
+    expect(list).not.toHaveClass("transaction-search-list--compact");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(list).toHaveClass("transaction-search-list--compact");
+    expect(screen.getByLabelText("Adres")).toHaveTextContent("?q=Kawa");
+    fireEvent.click(screen.getByRole("button", { name: "Więcej: Zakup kawy" }));
+    expect(
+      screen.getByRole("button", { name: "Szczegóły: Zakup kawy" }),
+    ).toBeInTheDocument();
+    expect(hooks.useTransactionSearch).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: "Kawa" }),
+      true,
+    );
+  });
+  it("explains an unfiltered empty history without offering to clear filters", () => {
+    hooks.useTransactionSearch.mockReturnValue({
+      data: { items: [], total: 0, limit: 25, offset: 0 },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    mount();
+
+    expect(
+      screen.getByText("Nie masz jeszcze żadnych transakcji."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Wyczyść filtry wyszukiwania",
+      }),
+    ).not.toBeInTheDocument();
+  });
+  it("offers to clear filters while preserving the selected period after no results", () => {
+    hooks.useTransactionSearch.mockReturnValue({
+      data: { items: [], total: 0, limit: 25, offset: 0 },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    mount("/finances/transactions?month=11&year=2026&q=Kawa");
+
+    expect(
+      screen.getByText("Brak transakcji spełniających filtry."),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Wyczyść filtry wyszukiwania" }),
+    );
+    expect(screen.getByLabelText("Adres")).toHaveTextContent(
+      "?month=11&year=2026",
     );
   });
 });
