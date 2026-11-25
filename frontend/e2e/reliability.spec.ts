@@ -26,6 +26,7 @@ test("filters, pagination, browser Back and currency details preserve context", 
   ).toBeVisible();
   await page.getByRole("button", { name: "Następna", exact: true }).click();
   await expect(page.getByText("Wyniki 26–50 z 53")).toBeVisible();
+  await page.getByRole("button", { name: "Więcej: Kawa 25" }).click();
   await page
     .getByRole("button", { name: "Szczegóły: Kawa 25", exact: true })
     .click();
@@ -37,7 +38,7 @@ test("filters, pagination, browser Back and currency details preserve context", 
   await expect(detail).toHaveCount(0);
   await expect(page).toHaveURL(/page=2/);
   await expect(
-    page.getByRole("button", { name: "Szczegóły: Kawa 25", exact: true }),
+    page.getByRole("button", { name: "Więcej: Kawa 25", exact: true }),
   ).toBeFocused();
   await page.goBack();
   await expect(page.getByText("Wyniki 1–25 z 53")).toBeVisible();
@@ -184,6 +185,8 @@ test("AI settings isolate the receipt model from the Advisor model", async ({
 }) => {
   const api = await fixtures(page);
   await page.goto("/settings");
+  if (page.viewportSize()!.width < 1024)
+    await page.getByRole("button", { name: "Otwórz menu aplikacji" }).click();
   await page.getByRole("link", { name: "Ustawienia AI" }).click();
   await expect(
     page.getByRole("heading", { name: "Ustawienia AI" }),

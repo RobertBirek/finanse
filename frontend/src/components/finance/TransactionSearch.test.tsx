@@ -109,6 +109,19 @@ describe("search filters and amounts", () => {
 });
 
 describe("complete transaction history", () => {
+  it("keeps dedicated annotation and category corrections available alongside the editor", () => {
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: "Więcej: Zakup kawy" }));
+    expect(
+      screen.getByRole("button", { name: "Opis i oznaczenia" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Zmień kategorie" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Edytuj transakcję" }),
+    ).toBeEnabled();
+  });
   it("submits all filters to the server and resets pagination", () => {
     mount("/finances/transactions?page=3");
     fireEvent.change(

@@ -540,6 +540,9 @@ export function TransactionList({
                 deleting={isDeleting || deleteMutation.isPending}
                 onDetails={onDetails}
                 onEdit={onEdit}
+                onAnnotations={() => setAnnotationTarget(transaction.id)}
+                onCategories={() => setCategoryTarget(transaction.id)}
+                onDates={() => setDateTarget(transaction)}
                 onDelete={() => {
                   if (deleteMutation.isError) deleteMutation.reset();
                   setDeleteTarget(transaction);
@@ -651,6 +654,9 @@ function UnifiedTransactionActions({
   deleting,
   onDetails,
   onEdit,
+  onAnnotations,
+  onCategories,
+  onDates,
   onDelete,
 }: {
   transaction: HistoryTransaction;
@@ -658,6 +664,9 @@ function UnifiedTransactionActions({
   deleting: boolean;
   onDetails?: (id: string) => void;
   onEdit: (id: string) => void;
+  onAnnotations: () => void;
+  onCategories: () => void;
+  onDates: () => void;
   onDelete: () => void;
 }) {
   const navigate = useNavigate();
@@ -672,6 +681,47 @@ function UnifiedTransactionActions({
       {(close) => (
         <>
           <TransactionHistoryActions transaction={transaction} />
+          {!opening && (
+            <button
+              type="button"
+              className="btn-secondary px-3 py-1.5 text-sm"
+              disabled={deleting}
+              onClick={() => {
+                close();
+                onAnnotations();
+              }}
+            >
+              Opis i oznaczenia
+            </button>
+          )}
+          {transaction.type === "expense" && (
+            <button
+              type="button"
+              className="btn-secondary px-3 py-1.5 text-sm"
+              disabled={deleting}
+              onClick={() => {
+                close();
+                onCategories();
+              }}
+            >
+              Zmień kategorie
+            </button>
+          )}
+          {transaction.type === "expense" &&
+            transaction.source === "manual" &&
+            transaction.updated_at && (
+              <button
+                type="button"
+                className="btn-secondary px-3 py-1.5 text-sm"
+                disabled={deleting}
+                onClick={() => {
+                  close();
+                  onDates();
+                }}
+              >
+                Koryguj daty
+              </button>
+            )}
           <IconButton
             icon="details"
             label={`Szczegóły: ${transaction.description}`}

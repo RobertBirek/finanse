@@ -100,6 +100,9 @@ test("descriptive import edits preserve the original and money, allow free tags,
   });
   await page.goto("/finances/transactions");
   await page
+    .getByRole("button", { name: "Więcej: [actual:old] Oryginalny opis banku" })
+    .click();
+  await page
     .getByRole("button", { name: "Opis i oznaczenia", exact: true })
     .first()
     .click();
@@ -111,6 +114,9 @@ test("descriptive import edits preserve the original and money, allow free tags,
   await dialog.getByRole("button", { name: "Dodaj tag", exact: true }).click();
   await dialog.getByRole("button", { name: "Anuluj", exact: true }).click();
   expect(writes).toEqual([]);
+  await page
+    .getByRole("button", { name: "Więcej: [actual:old] Oryginalny opis banku" })
+    .click();
   await page
     .getByRole("button", { name: "Opis i oznaczenia", exact: true })
     .first()
@@ -164,14 +170,18 @@ test("descriptive import edits preserve the original and money, allow free tags,
   });
   expect(writes[0].key).toBeTruthy();
   expect(transaction.postings[0].id).toBe("p1");
+  await page.getByRole("button", { name: "Więcej: Rata pożyczki" }).click();
   await page
     .getByRole("button", { name: "Zmień kategorie", exact: true })
-    .nth(1)
+    .first()
     .click();
   await expect(
     page.getByText("Płatność pożyczki jest chroniona.", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Zamknij", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Więcej: [actual:old] Oryginalny opis banku" })
+    .click();
   await page
     .getByRole("button", { name: "Opis i oznaczenia", exact: true })
     .first()

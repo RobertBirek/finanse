@@ -80,6 +80,7 @@ export function Layout() {
             onNavigate={() => setMobileOpen(false)}
             showAllContexts
           />
+          <NavigationProfile user={user} onLogout={() => logout.mutate()} />
         </Dialog>
       )}
       <div className="hidden lg:flex h-full">

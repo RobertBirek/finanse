@@ -47,7 +47,7 @@ test("compiled styles preserve the palette, form controls and responsive navigat
       page.getByRole("banner").getByRole("button", { name: "Wyloguj" }),
     ).toBeVisible();
     const workspace = await page.locator("#main-content").boundingBox();
-    expect(workspace!.x).toBe(52);
+    expect(workspace!.x).toBe(292);
   }
   expect(
     await page.evaluate(
@@ -78,6 +78,7 @@ test("the native modal covers the viewport and centers its panel without parent 
 }) => {
   const api = await fixtures(page);
   await page.goto("/finances/transactions");
+  await page.getByRole("button", { name: "Więcej: Zakup kawy" }).click();
   await page
     .getByRole("button", { name: "Szczegóły: Zakup kawy", exact: true })
     .click();

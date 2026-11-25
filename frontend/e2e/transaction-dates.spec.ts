@@ -123,6 +123,9 @@ test("purchase and booking dates are explicit, reports explain month basis and c
     booking_date: "2026-02-02",
   });
   expect(api.writes[0].data).not.toHaveProperty("transaction_date");
+  await page
+    .getByRole("button", { name: "Więcej: Synthetic purchase" })
+    .click();
   await page.getByRole("button", { name: "Koryguj daty" }).click();
   const correction = page.getByRole("dialog", {
     name: "Daty zakupu i księgowania",
