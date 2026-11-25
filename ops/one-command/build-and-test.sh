@@ -2,6 +2,7 @@
 set -euo pipefail
 revision=$(git rev-parse HEAD)
 [[ "$revision" == "${GITHUB_SHA:-$revision}" ]]
+[[ -z "$(git status --porcelain)" ]]
 export RELEASE_BACKEND="local/finanse-backend:$revision"
 export RELEASE_WORKER="local/finanse-worker:$revision"
 export RELEASE_FRONTEND="local/finanse-frontend:$revision"

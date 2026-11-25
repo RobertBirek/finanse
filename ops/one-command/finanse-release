@@ -304,6 +304,8 @@ def release(cfg, revision, directory):
                      indent=2), flush=True)
     require(input("Wpisz pełny SHA, aby zatwierdzić wydanie: ").strip() == revision,
             "Release not approved")
+    approved_at = dt.datetime.now(dt.UTC).isoformat()
+    approved_clock = time.monotonic()
 
     with Path(cfg["lock"]).open("r+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -350,6 +352,8 @@ def release(cfg, revision, directory):
                        "files": {**{k: v for k, v in baseline["files"].items() if k != str(undo)},
                                  str(next_override): sha(next_override)},
                        "backup": backup, "previous": previous, "ci": ci,
+                       "approved_at": approved_at,
+                       "approval_to_verification_seconds": round(time.monotonic() - approved_clock),
                        "started": started, "verified": dt.datetime.now(dt.UTC).isoformat()}
             prior_live = read(live_metadata)
             save(destination / "previous-active-release.json", prior_live)
