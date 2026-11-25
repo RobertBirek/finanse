@@ -147,6 +147,7 @@ describe("complete transaction history", () => {
   it("keeps URL filters/page through detail, close and browser Back", () => {
     mount("/finances/transactions?q=Kawa&currency=EUR&page=2");
     expect(screen.getByText("Wyniki 26–26 z 53")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Więcej: Zakup kawy" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Szczegóły: Zakup kawy" }),
     );
@@ -224,6 +225,7 @@ describe("complete transaction history", () => {
       "Szukaj po opisie, koncie lub kategorii",
     );
     fireEvent.change(input, { target: { value: "Robocza fraza" } });
+    fireEvent.click(screen.getByRole("button", { name: "Więcej: Zakup kawy" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Szczegóły: Zakup kawy" }),
     );

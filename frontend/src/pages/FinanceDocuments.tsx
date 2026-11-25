@@ -10,7 +10,6 @@ import {
   useUpdateBillLifecycle,
   type BillFilters,
 } from "../api/bills";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { BillRegister } from "../components/finance/bills/BillRegister";
 import { BillDetail } from "../components/finance/bills/BillDetail";
 import { BillPaymentDialog } from "../components/finance/bills/BillPaymentDialog";
@@ -129,7 +128,6 @@ export function FinanceDocuments() {
   return (
     <div className="page-workspace">
       <PageHeader title="Faktury i paragony" />
-      <FinanceTabs />
       <div className="card mb-5 flex flex-wrap gap-3 p-3">
         <label className="text-sm text-gray-300">
           Typ

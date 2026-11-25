@@ -9,6 +9,9 @@ vi.mock("../components/finance/TransactionSearch", () => ({
 vi.mock("../components/finance/TransactionForm", () => ({
   TransactionForm: () => <p>Formularz transakcji</p>,
 }));
+vi.mock("../components/finance/AccountStrip", () => ({
+  AccountStrip: () => <p>Wybór rachunku</p>,
+}));
 
 describe("FinanceTransactions", () => {
   it("prioritizes searchable history while keeping transaction creation available", () => {

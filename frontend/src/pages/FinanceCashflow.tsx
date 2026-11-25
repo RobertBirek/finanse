@@ -19,7 +19,6 @@ import { ScheduledItemForm } from "../components/finance/ScheduledItemForm";
 import { ScheduledItemsList } from "../components/finance/ScheduledItemsList";
 import { QueryFeedback } from "../components/QueryFeedback";
 import { PageHeader } from "../components/PageHeader";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 
 export function FinanceCashflow({
   configure = true,
@@ -92,7 +91,6 @@ export function FinanceCashflow({
             : "Płynność"
         }
       />
-      {!configure ? <FinanceTabs /> : null}
 
       {!configure || settingsSection === "all" ? (
         <CashflowForecast

@@ -14,15 +14,15 @@ import {
   type BudgetStatusItem,
 } from "../api/finance";
 import { formatPLN, formatPostingAmount } from "../lib/format";
-import { categoryColorMap, colorInk, entityColor } from "../lib/financeColors";
+import { categoryColorMap, entityColor } from "../lib/financeColors";
 import { formatCalendarDate } from "../lib/date";
 import {
   forecastExclusionLabel,
   hasPaydayExclusions,
 } from "../lib/cashflowForecast";
 import { TRANSACTION_TYPES } from "../lib/transactionSearch";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { MonthPicker } from "../components/finance/MonthPicker";
+import { AccountStrip } from "../components/finance/AccountStrip";
 import { QueryFeedback } from "../components/QueryFeedback";
 import { PageHeader } from "../components/PageHeader";
 import {
@@ -47,7 +47,6 @@ export function Finances() {
   const cashflow = useCashflowForecast();
   const latest = useTransactions({ limit: 5 });
   const budgets = useBudgetStatus(period);
-  const active = (accounts.data ?? []).filter((a) => a.is_active !== false);
   const accountsById = new Map(
     accounts.data?.map((account) => [account.id, account]),
   );
@@ -65,7 +64,6 @@ export function Finances() {
   return (
     <div className="finance-overview page-workspace">
       <PageHeader title="Twoje finanse" />
-      <FinanceTabs />
       <div className="finance-primary-grid">
         <section className="card balance-surface" aria-label="Saldo bieżące">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -145,58 +143,7 @@ export function Finances() {
           </QueryFeedback>
         </section>
       </div>
-      <section className="my-6" aria-label="Twoje konta">
-        <QueryFeedback
-          loading={accounts.isLoading}
-          error={accounts.isError}
-          errorMessage="Nie udało się pobrać kont."
-          onRetry={accounts.refetch}
-        >
-          <div className="finance-account-strip">
-            {active.map((a) => (
-              <Link
-                key={a.id}
-                to={`/finances/transactions${periodSearch}&account_id=${encodeURIComponent(a.id)}`}
-                className="finance-account-chip"
-                style={{ borderColor: entityColor(a.id, a.color) }}
-              >
-                <span
-                  className="finance-bank-mark"
-                  aria-hidden="true"
-                  style={{
-                    backgroundColor: entityColor(a.id, a.color),
-                    color: colorInk(entityColor(a.id, a.color)),
-                  }}
-                >
-                  {(a.bank_name || a.name).slice(0, 1).toUpperCase()}
-                </span>
-                <span>
-                  <small>
-                    {a.bank_name ? `${a.bank_name} · ${a.name}` : a.name}
-                  </small>
-                  <strong>{sourceBalance(a)}</strong>
-                  {a.currency !== "PLN" ? (
-                    <small>
-                      Wartość księgowa: {formatPLN(a.balance_pln)} PLN
-                    </small>
-                  ) : null}
-                </span>
-              </Link>
-            ))}
-          </div>
-          {active.length === 0 ? (
-            <div className="space-y-2 text-sm">
-              <p className="text-gray-500">Brak aktywnych kont.</p>
-              <Link
-                className="inline-block underline"
-                to="/settings/finances/accounts#new-account"
-              >
-                Dodaj konto
-              </Link>
-            </div>
-          ) : null}
-        </QueryFeedback>
-      </section>
+      <AccountStrip mode="links" periodSearch={periodSearch} />
       <section className="my-6" aria-labelledby="finance-month-heading">
         <div className="finance-section-heading flex-wrap">
           <h2 id="finance-month-heading">Podsumowanie miesiąca</h2>
@@ -337,12 +284,6 @@ export function Finances() {
       </div>
     </div>
   );
-}
-
-function sourceBalance(a: Account): string {
-  if (a.balance_source !== undefined)
-    return `${formatPLN(a.balance_source)} ${a.currency}`;
-  return `${formatPLN(a.balance_pln)} PLN${a.currency === "PLN" ? "" : " · wartość księgowa"}`;
 }
 
 function compareBudgetPriority(

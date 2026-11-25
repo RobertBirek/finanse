@@ -43,6 +43,11 @@ test("compiled styles preserve the palette, form controls and responsive navigat
     await expect(
       page.getByRole("button", { name: "Otwórz menu aplikacji" }),
     ).not.toBeVisible();
+    await expect(
+      page.getByRole("banner").getByRole("button", { name: "Wyloguj" }),
+    ).toBeVisible();
+    const workspace = await page.locator("#main-content").boundingBox();
+    expect(workspace!.x).toBe(52);
   }
   expect(
     await page.evaluate(

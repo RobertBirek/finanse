@@ -17,7 +17,6 @@ import { formatPLN } from "../lib/format";
 import { categoryColorMap, entityColor } from "../lib/financeColors";
 import { CategorySpendTree } from "../components/finance/CategorySpendTree";
 import { MonthPicker } from "../components/finance/MonthPicker";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { CategoryPicker } from "../components/finance/CategoryPicker";
 import {
   categoryTransactionsHref,
@@ -114,7 +113,6 @@ export function FinanceBudgets({ configure = true }: { configure?: boolean }) {
       />
       {!configure ? (
         <>
-          <FinanceTabs />
           <ExpenseDateBasis />
           <Link
             className="mb-4 inline-block text-sm text-advisor-700"

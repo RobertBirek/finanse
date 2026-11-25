@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { Settings } from "./Settings";
+import { ContextualSidebar } from "../components/ContextualSidebar";
+import { getContextForPathname } from "../components/navigation";
 
 vi.mock("../stores/authStore", () => ({
   useAuthStore: (select: (state: { user: null }) => unknown) =>
@@ -12,6 +14,7 @@ describe("Settings navigation", () => {
     render(
       <MemoryRouter>
         <Settings />
+        <ContextualSidebar context={getContextForPathname("/settings")} />
       </MemoryRouter>,
     );
     expect(screen.getByRole("link", { name: "Ustawienia AI" })).toHaveAttribute(
@@ -24,6 +27,7 @@ describe("Settings navigation", () => {
     render(
       <MemoryRouter>
         <Settings />
+        <ContextualSidebar context={getContextForPathname("/settings")} />
       </MemoryRouter>,
     );
     for (const [name, path] of [

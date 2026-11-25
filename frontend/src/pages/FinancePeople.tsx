@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { usePeople } from "../api/people";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { PersonEditor } from "../components/finance/PersonEditor";
 import { retainFinancePeriod } from "../components/finance/useFinancePeriod";
 import { listPage, setListPage } from "../lib/listPage";
@@ -36,7 +35,6 @@ export function FinancePeople() {
           </button>
         }
       />
-      <FinanceTabs />
       <label className="flex items-center gap-2">
         <input
           type="checkbox"

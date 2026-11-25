@@ -14,6 +14,8 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.finance.annotation_reads import attach_annotations
 from app.finance.annotation_router import router as annotation_router
+from app.finance.annotations import AnnotationError
+from app.finance.balance_reconciliation import reconcile_balance
 from app.finance.bills_router import router as bills_router
 from app.finance.cashflow import ScheduleConfirmationConflict
 from app.finance.categorization_context import digest
@@ -23,13 +25,14 @@ from app.finance.credit_cards import CardConflict
 from app.finance.document_guards import lock_document_mutations
 from app.finance.import_router import router as import_router
 from app.finance.loan_router import router as loan_router
-from app.finance.manual_fx import valued_transaction
+from app.finance.manual_fx import transaction_fx_quote, valued_transaction
 from app.finance.manual_refunds import create_manual_expense_refund
 from app.finance.models import FinanceCommandReceipt, FinancialTransaction, Posting
 from app.finance.opening_balance_schemas import OpeningBalanceUpdate, OpeningBalanceView
 from app.finance.opening_balances import update_opening_balance
 from app.finance.person_router import router as person_router
 from app.finance.proposals_router import router as proposals_router
+from app.finance.queries import attach_transaction_history_metadata
 from app.finance.receipt_read_router import router as receipt_read_router
 from app.finance.receipt_router import router as receipt_router
 from app.finance.rule_origin_reads import attach_assignment_origins
@@ -38,6 +41,8 @@ from app.finance.schemas import (
     AccountCreate,
     AccountResponse,
     AccountUpdate,
+    BalanceReconciliationInput,
+    BalanceReconciliationResponse,
     BudgetStatusResponse,
     CashflowForecastResponse,
     CategoryBudgetCreate,
@@ -60,6 +65,9 @@ from app.finance.schemas import (
     ScheduledFinanceItemUpdate,
     TransactionCreate,
     TransactionDatesUpdate,
+    TransactionEditorResponse,
+    TransactionEditorUpdate,
+    TransactionHistoryItem,
     TransactionResponse,
     TransactionSearch,
     TransactionSearchResponse,
@@ -99,6 +107,7 @@ from app.finance.service import (
     update_transaction,
 )
 from app.finance.transaction_dates import TransactionDateError, set_transaction_dates
+from app.finance.transaction_editor import TransactionEditorError, ledger_editability, update_editor
 from app.identity.models import User
 from app.identity.router import get_current_user
 
@@ -156,6 +165,24 @@ async def get_account_endpoint(
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
     return account
+
+
+@router.post(
+    "/accounts/{account_id}/balance-reconciliation", response_model=BalanceReconciliationResponse
+)
+async def reconcile_balance_endpoint(
+    account_id: uuid.UUID,
+    data: BalanceReconciliationInput,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BalanceReconciliationResponse:
+    amount = int(data.statement_minor)
+    if not -(2**63) <= amount < 2**63:
+        raise HTTPException(status_code=422, detail="Saldo poza obsługiwanym zakresem")
+    result = await reconcile_balance(db, current_user.id, account_id, data.day, amount)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return result
 
 
 @router.put("/accounts/{account_id}/opening-balance", response_model=OpeningBalanceView)
@@ -234,8 +261,9 @@ async def get_account_transactions(
         db, current_user.id, list(result.unique().scalars().all())
     )
     await attach_annotations(db, current_user.id, txns)
+    await attach_transaction_history_metadata(db, current_user.id, txns)
 
-    return [TransactionResponse.model_validate(t) for t in txns]
+    return [TransactionHistoryItem.model_validate(t) for t in txns]
 
 
 @router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
@@ -335,6 +363,24 @@ async def _post_manual_transaction(
         )
         await db.flush()
     return response
+
+
+@router.get("/fx-rates/quote")
+async def manual_fx_quote_endpoint(
+    currency: Literal["EUR", "USD"],
+    day: date,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, str] | None:
+    quote = await transaction_fx_quote(currency, day)
+    return (
+        {
+            "rate": str(quote.rate),
+            "effective_date": quote.effective_date.isoformat(),
+            "source": quote.source,
+        }
+        if quote
+        else None
+    )
 
 
 @router.post(
@@ -483,6 +529,68 @@ async def get_transaction_endpoint(
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
     return txn
+
+
+@router.get("/transactions/{transaction_id}/editor", response_model=TransactionEditorResponse)
+async def get_transaction_editor_endpoint(
+    transaction_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TransactionEditorResponse:
+    txn = await get_transaction(db, current_user.id, transaction_id)
+    if txn is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    editability = await ledger_editability(db, current_user.id, txn)
+    return TransactionEditorResponse(
+        transaction=TransactionResponse.model_validate(txn),
+        ledger_editable=editability.editable,
+        ledger_lock_reason=editability.reason,
+    )
+
+
+@router.put("/transactions/{transaction_id}/editor", response_model=TransactionEditorResponse)
+async def update_transaction_editor_endpoint(
+    transaction_id: uuid.UUID,
+    data: TransactionEditorUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> TransactionEditorResponse | JSONResponse:
+    try:
+        txn, editability = await update_editor(
+            db,
+            current_user.id,
+            transaction_id,
+            data,
+            annotation_idempotency_key=idempotency_key,
+        )
+        if txn is None:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found"
+            )
+        txn = await get_transaction(db, current_user.id, txn.id)
+        assert txn is not None
+        response = TransactionEditorResponse(
+            transaction=TransactionResponse.model_validate(txn),
+            ledger_editable=editability.editable,
+            ledger_lock_reason=editability.reason,
+        )
+        await db.commit()
+        return response
+    except AnnotationError as error:
+        await db.rollback()
+        return JSONResponse(
+            status_code=error.status, content={"code": error.code, "detail": str(error)}
+        )
+    except TransactionEditorError as error:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except ValueError as error:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
 
 
 @router.patch("/transactions/{transaction_id}", response_model=TransactionResponse)

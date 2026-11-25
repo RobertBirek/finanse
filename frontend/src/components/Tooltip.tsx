@@ -4,9 +4,13 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 export function Tooltip({
   label,
   children,
+  revealOnClick = false,
+  dismissOnClick = false,
 }: {
   label: string;
   children: ReactNode;
+  revealOnClick?: boolean;
+  dismissOnClick?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLSpanElement>(null);
@@ -82,6 +86,19 @@ export function Tooltip({
     <span
       ref={anchor}
       className="ui-tooltip-anchor"
+      onClick={
+        revealOnClick || dismissOnClick
+          ? () => {
+              if (dismissOnClick) {
+                dismissed.current = true;
+                setOpen(false);
+              } else {
+                dismissed.current = false;
+                setOpen((current) => !current || focusInside.current);
+              }
+            }
+          : undefined
+      }
       onPointerEnter={(event) => {
         if (event.pointerType === "touch") return;
         pointerInside.current = true;

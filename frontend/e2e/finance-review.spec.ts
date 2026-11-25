@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { account, fixtures, transaction } from "./fixtures";
 
-test("selected month survives reload, drilldown Back and finance tabs", async ({
+test("selected month survives reload, drilldown Back and finance menu navigation", async ({
   page,
 }) => {
   const api = await fixtures(page);
@@ -45,14 +45,15 @@ test("selected month survives reload, drilldown Back and finance tabs", async ({
   await expect(page.getByText(/według daty zakupu/i)).toBeVisible();
   await page.goBack();
   await expect(visibleMonth("sierpień 2026")).toBeVisible();
+  const menuTrigger = page.getByRole("button", {
+    name: "Otwórz menu aplikacji",
+  });
   for (const label of ["Budżet", "Przegląd", "Raporty"]) {
-    const tabs = page.getByRole("navigation", { name: "Widoki finansów" });
-    const link = tabs.getByRole("link", { name: label, exact: true });
-    const more = tabs.getByRole("button", { name: "Więcej" });
-    if (label === "Raporty" && (await more.isVisible())) {
-      await more.click();
-    }
-    await link.click();
+    if (await menuTrigger.isVisible()) await menuTrigger.click();
+    await page
+      .getByRole("navigation", { name: "Widoki finansów" })
+      .getByRole("link", { name: label, exact: true })
+      .click();
     await expect(visibleMonth("sierpień 2026")).toBeVisible();
   }
   expect(api.mutations).toEqual([]);
@@ -204,17 +205,17 @@ test("mobile finance navigation works with the keyboard and keeps long balances 
       (element) => element.scrollWidth <= element.clientWidth,
     ),
   ).toBe(true);
-  const tabs = page.getByRole("navigation", { name: "Widoki finansów" });
-  const more = tabs.getByRole("button", { name: "Więcej" });
-  const people = tabs.getByRole("link", { name: "Osoby" });
+  const menu = page.getByRole("button", { name: "Otwórz menu aplikacji" });
+  const drawer = page.getByRole("dialog", { name: "Menu aplikacji" });
+  const people = drawer.getByRole("link", { name: "Osoby" });
   await expect(people).toBeHidden();
-  await more.focus();
+  await menu.focus();
   await page.keyboard.press("Enter");
-  await expect(more).toHaveAttribute("aria-expanded", "true");
+  await expect(drawer).toBeVisible();
   await expect(people).toBeVisible();
   await people.focus();
   await page.keyboard.press("Escape");
-  await expect(more).toBeFocused();
+  await expect(menu).toBeFocused();
   await expect(people).toBeHidden();
   await page.getByRole("button", { name: "Budżetowe" }).click();
   await expect(page.getByLabel("Saldo kont budżetowych")).toContainText(

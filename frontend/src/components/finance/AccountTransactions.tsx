@@ -1,6 +1,6 @@
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   splitAccounts,
   useAccountTransactions,
@@ -29,6 +29,70 @@ function apiErrorDetail(error: unknown): string | null {
 type AccountTransactionsProps = {
   accounts: Account[];
 };
+
+type TransactionHistoryMetadata = {
+  ledger_editable?: boolean;
+  ledger_lock_reason?: string | null;
+  import_batch_id?: string | null;
+  financial_document_ids?: string[];
+};
+
+type HistoryTransaction = Transaction & TransactionHistoryMetadata;
+
+function TransactionHistoryActions({
+  transaction,
+}: {
+  transaction: HistoryTransaction;
+}) {
+  const documentIds = transaction.financial_document_ids ?? [];
+  const reason =
+    transaction.ledger_lock_reason ?? "Edycja księgowa zablokowana";
+  return (
+    <>
+      {transaction.ledger_editable === false ? (
+        <IconButton
+          icon="lock"
+          label="Powód blokady edycji"
+          tooltip={reason}
+          aria-description={reason}
+          revealTooltipOnClick
+        />
+      ) : null}
+      {transaction.import_batch_id ? (
+        <HistorySourceButton
+          icon="import"
+          label="Import bankowy"
+          to={`/finances/imports/${encodeURIComponent(transaction.import_batch_id)}`}
+        />
+      ) : null}
+      {documentIds.map((documentId, index) => (
+        <HistorySourceButton
+          icon="document"
+          key={documentId}
+          label={
+            documentIds.length === 1
+              ? "Powiązana z fakturą"
+              : `Powiązana z fakturą ${index + 1}`
+          }
+          to={`/finances/documents?bill=${encodeURIComponent(documentId)}`}
+        />
+      ))}
+    </>
+  );
+}
+
+function HistorySourceButton({
+  icon,
+  label,
+  to,
+}: {
+  icon: "import" | "document";
+  label: string;
+  to: string;
+}) {
+  const navigate = useNavigate();
+  return <IconButton icon={icon} label={label} onClick={() => navigate(to)} />;
+}
 
 export function AccountTransactions({ accounts }: AccountTransactionsProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -193,6 +257,7 @@ export function TransactionList({
   currency,
   accounts,
   onDetails,
+  onEdit,
   transactions,
   loading,
   error,
@@ -201,6 +266,7 @@ export function TransactionList({
   currency?: string;
   accounts?: Account[];
   onDetails?: (id: string) => void;
+  onEdit?: (id: string) => void;
   transactions: Transaction[] | undefined;
   loading: boolean;
   error: boolean;
@@ -311,6 +377,7 @@ export function TransactionList({
         />
       ) : null}
       {transactions.map((transaction) => {
+        const historyTransaction = transaction as HistoryTransaction;
         const posting = transaction.postings.find(
           (item) =>
             item.account_id !== null &&
@@ -418,7 +485,7 @@ export function TransactionList({
         return (
           <div
             key={transaction.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-sm bg-gray-800/30 p-2.5 transition-colors hover:bg-gray-800/50"
+            className={`${onEdit ? "transaction-history-row" : "flex flex-wrap items-center justify-between gap-3"} rounded-sm bg-gray-800/30 p-2.5 transition-colors hover:bg-gray-800/50`}
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-gray-200">
@@ -451,7 +518,7 @@ export function TransactionList({
               </p>
             </div>
             <p
-              className={`shrink-0 font-mono text-sm font-medium ${isIncome ? "text-green-400" : "text-red-400"}`}
+              className={`${onEdit ? "transaction-history-amount" : "shrink-0"} font-mono text-sm font-medium ${isIncome ? "text-green-400" : "text-red-400"}`}
             >
               {formattedAmount}
               {transaction.matched_category_amount_pln != null ? (
@@ -466,96 +533,194 @@ export function TransactionList({
                 </span>
               )}
             </p>
-            <div className="flex flex-wrap gap-2">
-              {isOpening && posting?.account_id ? (
-                <Link
-                  className="btn-secondary px-3 py-1.5 text-sm"
-                  to={`/settings/finances/accounts?edit=${encodeURIComponent(posting.account_id)}`}
-                >
-                  BO konta
-                </Link>
-              ) : null}
-              {!isOpening ? (
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-1.5 text-sm"
-                  disabled={isDeleting}
-                  onClick={() => setAnnotationTarget(transaction.id)}
-                >
-                  Opis i oznaczenia
-                </button>
-              ) : null}
-              {transaction.type === "expense" ? (
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-1.5 text-sm"
-                  disabled={isDeleting}
-                  onClick={() => setCategoryTarget(transaction.id)}
-                >
-                  Zmień kategorie
-                </button>
-              ) : null}
-              {transaction.type === "expense" &&
-              transaction.source === "manual" &&
-              transaction.updated_at ? (
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-1.5 text-sm"
-                  onClick={() => setDateTarget(transaction)}
-                  disabled={isDeleting}
-                >
-                  Koryguj daty
-                </button>
-              ) : null}
-              {onDetails && (
-                <IconButton
-                  icon="details"
-                  label={`Szczegóły: ${transaction.description}`}
-                  tooltip="Szczegóły transakcji"
-                  onClick={() => onDetails(transaction.id)}
-                />
-              )}
-              {!isOpening && (
-                <ActionDisclosure
-                  label={`Więcej: ${transaction.description}`}
-                  disabled={isDeleting}
-                >
-                  {(close) => (
-                    <>
-                      <button
-                        type="button"
-                        className="btn-secondary px-3 py-1.5 text-sm"
-                        onClick={() => {
-                          close();
-                          startEdit(transaction);
-                        }}
-                      >
-                        Edytuj datę
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger px-3 py-1.5 text-sm"
-                        disabled={deleteMutation.isPending}
-                        onClick={() => {
-                          close();
-                          if (deleteMutation.isError) deleteMutation.reset();
-                          setDeleteTarget(transaction);
-                        }}
-                      >
-                        Usuń transakcję
-                      </button>
-                    </>
-                  )}
-                </ActionDisclosure>
-              )}
-            </div>
+            {onEdit ? (
+              <UnifiedTransactionActions
+                transaction={historyTransaction}
+                openingAccountId={isOpening ? posting?.account_id : undefined}
+                deleting={isDeleting || deleteMutation.isPending}
+                onDetails={onDetails}
+                onEdit={onEdit}
+                onDelete={() => {
+                  if (deleteMutation.isError) deleteMutation.reset();
+                  setDeleteTarget(transaction);
+                }}
+              />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {isOpening && posting?.account_id ? (
+                  <Link
+                    className="btn-secondary px-3 py-1.5 text-sm"
+                    to={`/settings/finances/accounts?edit=${encodeURIComponent(posting.account_id)}`}
+                  >
+                    BO konta
+                  </Link>
+                ) : null}
+                {!isOpening ? (
+                  <button
+                    type="button"
+                    className="btn-secondary px-3 py-1.5 text-sm"
+                    disabled={isDeleting}
+                    onClick={() => setAnnotationTarget(transaction.id)}
+                  >
+                    Opis i oznaczenia
+                  </button>
+                ) : null}
+                {transaction.type === "expense" ? (
+                  <button
+                    type="button"
+                    className="btn-secondary px-3 py-1.5 text-sm"
+                    disabled={isDeleting}
+                    onClick={() => setCategoryTarget(transaction.id)}
+                  >
+                    Zmień kategorie
+                  </button>
+                ) : null}
+                {transaction.type === "expense" &&
+                transaction.source === "manual" &&
+                transaction.updated_at ? (
+                  <button
+                    type="button"
+                    className="btn-secondary px-3 py-1.5 text-sm"
+                    onClick={() => setDateTarget(transaction)}
+                    disabled={isDeleting}
+                  >
+                    Koryguj daty
+                  </button>
+                ) : null}
+                {onDetails && (
+                  <IconButton
+                    icon="details"
+                    label={`Szczegóły: ${transaction.description}`}
+                    tooltip="Szczegóły transakcji"
+                    onClick={() => onDetails(transaction.id)}
+                  />
+                )}
+                {!isOpening && (
+                  <ActionDisclosure
+                    label={`Więcej: ${transaction.description}`}
+                    disabled={isDeleting}
+                  >
+                    {(close) => (
+                      <>
+                        <TransactionHistoryActions
+                          transaction={historyTransaction}
+                        />
+                        <button
+                          type="button"
+                          className="btn-secondary px-3 py-1.5 text-sm"
+                          onClick={() => {
+                            close();
+                            startEdit(transaction);
+                          }}
+                        >
+                          Edytuj datę
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-danger px-3 py-1.5 text-sm"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => {
+                            close();
+                            if (deleteMutation.isError) deleteMutation.reset();
+                            setDeleteTarget(transaction);
+                          }}
+                        >
+                          Usuń transakcję
+                        </button>
+                      </>
+                    )}
+                  </ActionDisclosure>
+                )}
+              </div>
+            )}
             {rowDeleteError ? (
-              <p className="w-full text-xs text-red-400">{rowDeleteError}</p>
+              <p className="col-span-full w-full text-xs text-red-400">
+                {rowDeleteError}
+              </p>
             ) : null}
           </div>
         );
       })}
     </div>
+  );
+}
+
+function UnifiedTransactionActions({
+  transaction,
+  openingAccountId,
+  deleting,
+  onDetails,
+  onEdit,
+  onDelete,
+}: {
+  transaction: HistoryTransaction;
+  openingAccountId?: string | null;
+  deleting: boolean;
+  onDetails?: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: () => void;
+}) {
+  const navigate = useNavigate();
+  const opening = transaction.type === "opening_balance";
+  const protectedOpening = "Bilans otwarcia zmienisz w ustawieniach konta.";
+  const busy = deleting ? "Trwa usuwanie transakcji." : undefined;
+  return (
+    <ActionDisclosure
+      label={`Więcej: ${transaction.description}`}
+      className="transaction-history-actions"
+    >
+      {(close) => (
+        <>
+          <TransactionHistoryActions transaction={transaction} />
+          <IconButton
+            icon="details"
+            label={`Szczegóły: ${transaction.description}`}
+            tooltip="Szczegóły transakcji"
+            unavailableReason={
+              onDetails ? undefined : "Szczegóły są niedostępne."
+            }
+            onClick={() => {
+              close();
+              onDetails?.(transaction.id);
+            }}
+          />
+          <IconButton
+            icon="edit"
+            label="Edytuj transakcję"
+            unavailableReason={opening ? protectedOpening : busy}
+            onClick={() => {
+              close();
+              onEdit(transaction.id);
+            }}
+          />
+          <IconButton
+            icon="account"
+            label="Bilans otwarcia konta"
+            unavailableReason={
+              openingAccountId
+                ? undefined
+                : "Ta akcja dotyczy tylko bilansu otwarcia przypisanego do konta."
+            }
+            onClick={() => {
+              close();
+              if (openingAccountId)
+                navigate(
+                  `/settings/finances/accounts?edit=${encodeURIComponent(openingAccountId)}`,
+                );
+            }}
+          />
+          <IconButton
+            icon="delete"
+            label="Usuń transakcję"
+            unavailableReason={opening ? protectedOpening : busy}
+            onClick={() => {
+              close();
+              onDelete();
+            }}
+          />
+        </>
+      )}
+    </ActionDisclosure>
   );
 }
 import { AssignmentOriginLabel } from "./AssignmentOriginLabel";

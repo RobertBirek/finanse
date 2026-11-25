@@ -82,6 +82,7 @@ export interface Posting {
   source_currency: string;
   base_amount_pln: number;
   fx_rate: number;
+  fx_rate_source?: string;
   is_budget_impact: boolean;
   direction: "debit" | "credit";
 }
@@ -122,6 +123,43 @@ export interface Transaction {
   postings: Posting[];
   updated_at?: string;
   date_metadata?: TransactionDateMetadata | null;
+}
+
+export type TransactionResponse = Transaction;
+
+export type TransactionLedgerInput =
+  | {
+      kind: "transaction";
+      data:
+        | ManualFxTransactionInput
+        | {
+            transaction_date?: string;
+            purchase_date?: string;
+            booking_date?: string;
+            description: string;
+            type: string;
+            is_pending?: boolean;
+            source?: string;
+            project_id?: string;
+            postings: PostingInput[];
+          };
+    }
+  | { kind: "manual_fx"; data: ManualFxTransactionInput }
+  | { kind: "exchange"; data: ExchangeInput }
+  | { kind: "refund"; data: ExpenseRefundInput };
+
+export interface TransactionEditorResponse {
+  transaction: TransactionResponse;
+  ledger_editable: boolean;
+  ledger_lock_reason: string | null;
+}
+
+export interface TransactionEditorUpdate {
+  id: string;
+  expected_updated_at: string;
+  expected_date_version?: number;
+  ledger?: TransactionLedgerInput;
+  annotations?: import("./transactionAnnotations").TransactionAnnotationsInput;
 }
 
 export interface TransactionDateMetadata {
@@ -468,6 +506,28 @@ function normalizeScheduledFinanceItemInput(
     : item;
 }
 
+export function useBalanceReconciliation() {
+  return useMutation({
+    mutationFn: async ({
+      account,
+      ...data
+    }: {
+      account: string;
+      day: string;
+      statement_minor: string;
+    }) =>
+      (
+        await api.post<{
+          day: string;
+          currency: string;
+          ledger_minor: string;
+          statement_minor: string;
+          difference_minor: string;
+        }>(`/finance/accounts/${account}/balance-reconciliation`, data)
+      ).data,
+  });
+}
+
 export function useAccounts() {
   return useQuery({
     queryKey: ["finance", "accounts"],
@@ -681,6 +741,23 @@ export function useTransaction(id: string | null) {
   });
 }
 
+export function useTransactionEditor(id: string | null) {
+  const session = useAuthStore((state) => state.sessionVersion);
+  const user = useAuthStore((state) => state.user);
+  return useQuery({
+    queryKey: ["finance", "transactions", "editor", session, id],
+    enabled: !!id && !!user,
+    refetchOnMount: "always",
+    queryFn: async ({ signal }) =>
+      (
+        await api.get<TransactionEditorResponse>(
+          `/finance/transactions/${id}/editor`,
+          { signal },
+        )
+      ).data,
+  });
+}
+
 export function useAccountTransactions(
   accountId: string | null,
   params?: { limit?: number },
@@ -733,6 +810,29 @@ function useManualTransactionPost(path: string) {
   };
 }
 
+export function useTransactionFxQuote(
+  currency: "EUR" | "USD" | null,
+  day: string,
+) {
+  return useQuery({
+    queryKey: ["finance", "manual-fx-quote", currency, day],
+    enabled: currency !== null && day !== "",
+    retry: false,
+    staleTime: 60_000,
+    queryFn: async ({ signal }) =>
+      (
+        await api.get<{
+          rate: string;
+          effective_date: string;
+          source: string;
+        } | null>("/finance/fx-rates/quote", {
+          params: { currency, day },
+          signal,
+        })
+      ).data,
+  });
+}
+
 export interface ManualFxTransactionInput {
   type: "expense" | "income";
   description: string;
@@ -741,6 +841,7 @@ export interface ManualFxTransactionInput {
   amount_minor: number;
   currency: "EUR" | "USD";
   fx_rate: string;
+  fx_rate_source?: "nbp";
   transaction_date?: string;
   purchase_date?: string;
   booking_date?: string;
@@ -839,6 +940,54 @@ export function useUpdateTransaction() {
       return data;
     },
     onSuccess: () => invalidateFinanceLedger(queryClient),
+  });
+}
+
+export function useUpdateTransactionEditor() {
+  const queryClient = useQueryClient();
+  const pending = useRef(new Map<string, string>());
+  return useMutation({
+    mutationKey: ["finance", "transaction-editor"],
+    retry: false,
+    onMutate: () => ({ session: useAuthStore.getState().sessionVersion }),
+    mutationFn: async ({ id, ...body }: TransactionEditorUpdate) => {
+      const identity = JSON.stringify([
+        useAuthStore.getState().sessionVersion,
+        id,
+        body,
+      ]);
+      const key = pending.current.get(identity) ?? crypto.randomUUID();
+      pending.current.set(identity, key);
+      try {
+        const { data } = await api.put<TransactionEditorResponse>(
+          `/finance/transactions/${id}/editor`,
+          body,
+          { headers: { "Idempotency-Key": key } },
+        );
+        pending.current.delete(identity);
+        return data;
+      } catch (error) {
+        const status = isAxiosError(error) ? error.response?.status : undefined;
+        if (status && status < 500 && status !== 408)
+          pending.current.delete(identity);
+        throw error;
+      }
+    },
+    onSuccess: (data, variables, context) => {
+      if (context?.session !== useAuthStore.getState().sessionVersion) return;
+      invalidateFinanceLedger(queryClient);
+      queryClient.setQueryData(
+        ["finance", "transactions", "editor", context.session, variables.id],
+        data,
+      );
+      queryClient.invalidateQueries({
+        queryKey: ["finance", "transactions", "editor"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["finance", "annotations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["finance", "annotation-tags"],
+      });
+    },
   });
 }
 
