@@ -1,5 +1,6 @@
 """Read only owner-scoped import state; never infer a ledger mutation."""
 
+import datetime as dt
 import uuid
 from collections import defaultdict
 
@@ -22,6 +23,7 @@ from app.finance.imports.models import (
 )
 from app.finance.imports.schemas import (
     BatchDTO,
+    CardStatementPlanObservation,
     ImportHistoryItem,
     ImportHistoryPage,
     ReviewGroupDTO,
@@ -32,6 +34,63 @@ from app.finance.imports.schemas import (
 from app.finance.imports.velo_card_breakdown import velo_card_breakdown
 from app.finance.loan_schedule_models import LoanScheduleMembership, LoanScheduleRevision
 from app.finance.loan_schedule_sources import source_activations
+
+
+async def card_statement_plans(
+    db: AsyncSession, owner: uuid.UUID
+) -> list[CardStatementPlanObservation]:
+    records = (
+        await db.execute(
+            select(ImportSource, ImportRevision)
+            .join(
+                ImportRevision,
+                (ImportRevision.id == ImportSource.current_revision_id)
+                & (ImportRevision.user_id == owner),
+            )
+            .where(
+                ImportSource.user_id == owner,
+                ImportSource.bank == "velo",
+                ImportSource.layout == "velo_card_v1",
+            )
+        )
+    ).all()
+    latest: dict[str, tuple[dt.date, list[CardStatementPlanObservation]]] = {}
+    invalid_accounts: set[str] = set()
+    for source, revision in records:
+        result = revision.result or {}
+        reference = source.account_reference or result.get("account_reference")
+        if not isinstance(reference, str) or not reference:
+            continue
+        try:
+            period_end = dt.date.fromisoformat(str(result.get("period_end")))
+        except ValueError:
+            invalid_accounts.add(reference)
+            continue
+        breakdown = velo_card_breakdown(result)
+        observations = []
+        if breakdown and (
+            breakdown.installment_original_principal_pln is not None
+            or breakdown.unassigned_installment_charges
+        ):
+            observations.append(
+                CardStatementPlanObservation(
+                    batch_id=source.batch_id,
+                    source_id=source.id,
+                    period_end=period_end,
+                    breakdown=breakdown,
+                )
+            )
+        previous = latest.get(reference)
+        if previous is None or period_end > previous[0]:
+            latest[reference] = (period_end, observations)
+        elif period_end == previous[0]:
+            previous[1].extend(observations)
+    return [
+        item
+        for reference, (_, observations) in latest.items()
+        if reference not in invalid_accounts
+        for item in observations
+    ]
 
 
 def _unresolved_rows(owner: uuid.UUID) -> Select[tuple[int]]:

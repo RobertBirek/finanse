@@ -41,7 +41,7 @@ def _minor_units(value: object, *, minimum: int = 0) -> int | None:
     return None
 
 
-def _future_principal(value: object, period_end: date) -> int | None:
+def _plan_principal(value: object, period_end: date) -> tuple[int, int] | None:
     if not isinstance(value, list) or not all(isinstance(line, str) for line in value):
         return None
     lines = [normalized_label(line) for line in value]
@@ -63,7 +63,7 @@ def _future_principal(value: object, period_end: date) -> int | None:
         remaining = parse_minor_units(plan["remaining"], decimal_separator=",")
     except ImportError:
         return None
-    return remaining if original > 0 and remaining <= original else None
+    return (original, remaining) if original > 0 and remaining <= original else None
 
 
 def _charge(row: StatementRow) -> VeloCardCharge | None:
@@ -107,9 +107,10 @@ def velo_card_breakdown(result: dict[str, object] | None) -> VeloCardBreakdown |
     header = statement.card_header or {}
     due = _statement_date(header.get("due_date"))
     minimum = _minor_units(header.get("minimum_pln"))
-    future_principal = _future_principal(
+    plan_principal = _plan_principal(
         header.get("installment_details_text"), statement.period_end
     )
+    future_principal = plan_principal[1] if plan_principal else None
     installment_charges = []
     cash_interest = []
     for row in statement.rows:
@@ -149,6 +150,7 @@ def velo_card_breakdown(result: dict[str, object] | None) -> VeloCardBreakdown |
         due_date=due if due is not None and due > statement.period_end else None,
         cycle_debt_pln=_minor_units(header.get("cycle_debt_pln"), minimum=-MAX_MINOR_UNITS),
         minimum_pln=minimum,
+        installment_original_principal_pln=plan_principal[0] if plan_principal else None,
         future_installment_principal_pln=future_principal,
         komfort_installment=installment,
         unassigned_installment_charges=(

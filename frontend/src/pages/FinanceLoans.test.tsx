@@ -2,14 +2,21 @@ import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FinanceLoans } from "./FinanceLoans";
 
 const render = (element: ReactElement) =>
-  rtlRender(<MemoryRouter>{element}</MemoryRouter>);
+  rtlRender(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>{element}</MemoryRouter>
+    </QueryClientProvider>,
+  );
 
 const hooks = vi.hoisted(() => ({
   useAccounts: vi.fn(),
   useLoans: vi.fn(),
+  useCardStatementPlans: vi.fn(),
+  useCreditCards: vi.fn(),
   useLoan: vi.fn(),
   useCreateLoan: vi.fn(),
   useCreateLoanInstallment: vi.fn(),
@@ -21,6 +28,10 @@ const hooks = vi.hoisted(() => ({
   useUnlinkLoanPayment: vi.fn(),
 }));
 
+vi.mock("../api/creditCards", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/creditCards")>()),
+  useCreditCards: hooks.useCreditCards,
+}));
 vi.mock("../api/finance", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/finance")>()),
   useAccounts: hooks.useAccounts,
@@ -50,6 +61,18 @@ const agreement = {
 describe("FinanceLoans", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    hooks.useCardStatementPlans.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    hooks.useCreditCards.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
     hooks.useAccounts.mockReturnValue({
       data: [
         {

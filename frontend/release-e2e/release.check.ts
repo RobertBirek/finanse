@@ -90,4 +90,14 @@ test("installed images serve authenticated ledger and Velo card breakdown", asyn
   await expect(breakdown.getByText("769,73 PLN", { exact: true })).toBeVisible();
   await expect(breakdown.getByText("24,66 PLN", { exact: true })).toBeVisible();
   await expect(breakdown.getByText(/Rata jest już ujęta/)).toBeVisible();
+  await page.goto("/finances/loans");
+  const statementPlan = page.getByRole("article").filter({
+    hasText: "Plan „Komfort” z wyciągu Velo",
+  });
+  await expect(statementPlan).toContainText(/12\s000,00 PLN/);
+  await expect(statementPlan).toContainText("769,73 PLN");
+  await expect(statementPlan.getByRole("link", { name: "Otwórz wyciąg" })).toHaveAttribute(
+    "href",
+    `/finances/imports/${batchId}`,
+  );
 });
