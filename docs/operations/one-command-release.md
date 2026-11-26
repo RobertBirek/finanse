@@ -17,8 +17,10 @@ odtworzonego stanu oraz nowych ID kontenerów.
 2. Z zatwierdzonego checkoutu zainstaluj jako root `finanse-release` w
    `/usr/local/sbin` oraz `backup-restore` i katalog `backup-bin` razem w
    `/usr/local/lib/finanse-release`. Pliki i katalogi muszą należeć do root i nie
-   być zapisywalne przez grupę ani innych. Na VPS nadaj administracyjnemu
-   `gh` wyłącznie odczyt repo i wyników Actions. Repozytorium użyte przez
+   być zapisywalne przez grupę ani innych. Zapisz na VPS osobne poświadczenie
+   GitHub (fine-grained token ograniczony do repozytorium Finanse z Actions
+   i Contents tylko do odczytu) w pliku root 0600. Polecenie nie używa
+   domyślnego logowania administratora GitHub. Repozytorium użyte przez
    kontroler jest osobnym checkoutem Git z odczytem zdalnego `main`; kontroler
    nie uruchamia żadnego skryptu z pobranego commitu.
 3. Przygotuj prywatny katalog stanu obok istniejących wydań produkcyjnych, np.
@@ -32,6 +34,7 @@ odtworzonego stanu oraz nowych ID kontenerów.
 ```json
 {
   "github": "RobertBirek/finanse",
+  "github_token_file": "/etc/finanse-release/github-actions-read.token",
   "remote": "https://github.com/RobertBirek/finanse.git",
   "repository": "/var/lib/finanse-release/git",
   "state": "/opt/finanse/webapp/releases/one-command",
