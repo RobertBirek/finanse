@@ -53,6 +53,35 @@ test("installed images serve authenticated ledger and Velo card breakdown", asyn
   expect(response.status()).toBe(200);
   expect(await response.json()).toEqual([]);
 
+  const debt = await page.request.post("/api/finance/accounts", {
+    data: { name: "Syntetyczny kredyt", type: "credit", currency: "PLN" },
+  });
+  const payer = await page.request.post("/api/finance/accounts", {
+    data: { name: "Syntetyczny rachunek", type: "checking", currency: "PLN" },
+  });
+  expect(debt.status()).toBe(201);
+  expect(payer.status()).toBe(201);
+  const loan = await page.request.post("/api/finance/loans", {
+    data: {
+      name: "Kredyt testowy",
+      account_id: (await debt.json()).id,
+      payment_account_id: (await payer.json()).id,
+    },
+  });
+  expect(loan.status()).toBe(201);
+  const installment = await page.request.post(
+    `/api/finance/loans/${(await loan.json()).id}/installments`,
+    { data: { number: 1, due_date: "2027-01-15", principal_pln: 90000, interest_pln: 9000, fees_pln: 1000 } },
+  );
+  expect(installment.status()).toBe(201);
+  await page.goto("/finances");
+  await page.getByRole("link", { name: "Kredyty i pożyczki" }).click();
+  await expect(page.getByRole("heading", { name: "Kredyt testowy" })).toBeVisible();
+  const totals = page.locator("dl").filter({ hasText: "Kapitał w harmonogramie" });
+  await expect(totals).toContainText("900,00 PLN");
+  await expect(totals).toContainText("90,00 PLN");
+  await expect(totals).toContainText("10,00 PLN");
+
   await importStatement(page.request, "revolut_pln.csv", "text/csv");
   const batchId = await importStatement(page.request, "velo_card_komfort.pdf", "application/pdf");
   await page.goto(`/finances/imports/${batchId}`);
