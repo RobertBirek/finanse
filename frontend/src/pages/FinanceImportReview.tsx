@@ -27,6 +27,7 @@ import {
 import { ImportUpload } from "../components/finance/imports/ImportUpload";
 import { ImportSources } from "../components/finance/imports/ImportSources";
 import { StatementSettlementReview } from "../components/finance/imports/StatementSettlementReview";
+import { VeloCardStatementBreakdown } from "../components/finance/imports/VeloCardStatementBreakdown";
 import { isSourceBlocked } from "../components/finance/imports/importPresentation";
 import { ImportRows } from "../components/finance/imports/ImportRows";
 import { ImportGroupEditor } from "../components/finance/imports/ImportGroupEditor";
@@ -388,7 +389,20 @@ function Workspace({ batch }: { batch: ImportBatch }) {
                 Wróć do bieżącego odczytu
               </button>
             </section>
-          ) : null}
+          ) : (
+            batch.sources.map((source) =>
+              (!sourceId || source.id === sourceId) &&
+              source.velo_card_breakdown ? (
+                <VeloCardStatementBreakdown
+                  key={source.id}
+                  breakdown={source.velo_card_breakdown}
+                  sourceName={
+                    batch.sources.length > 1 ? source.original_name : undefined
+                  }
+                />
+              ) : null,
+            )
+          )}
           {rows.isError ? (
             <p role="alert" className="card">
               Nie udało się pobrać wierszy.{" "}

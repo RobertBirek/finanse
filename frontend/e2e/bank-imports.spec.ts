@@ -19,10 +19,11 @@ async function importFixtures(
     lostReply?: boolean;
     sourceBlocked?: boolean;
     delayedReceipt?: boolean;
+    initialBatch?: ImportBatch;
   } = {},
 ) {
   const base = await fixtures(page);
-  let batch: ImportBatch = batchFixture({
+  let batch: ImportBatch = options.initialBatch ?? batchFixture({
     sources: [],
     groups: [],
     unresolved_count: 0,
@@ -216,6 +217,93 @@ async function importFixtures(
     getBatch: () => batch,
   };
 }
+
+test("shows Velo card installment costs only for the active statement", async ({
+  page,
+}) => {
+  const { mutations } = await importFixtures(page, {
+    initialBatch: batchFixture({
+      sources: [
+        {
+          ...source,
+          checks: [...source.checks],
+          warnings: [],
+          layout: "velo_card_v1",
+          candidate_revision_id: "candidate-a",
+          candidate_parser_version: "v2",
+          velo_card_breakdown: {
+            due_date: "2026-04-14",
+            cycle_debt_pln: 81059,
+            minimum_pln: 79439,
+            future_installment_principal_pln: 1125781,
+            komfort_installment: {
+              principal_pln: 74219,
+              interest_pln: 2754,
+              total_pln: 76973,
+              included_in_minimum: true,
+            },
+            cash_interest_charges: [
+              {
+                row_key: "cash-interest",
+                kind: "cash_interest",
+                booking_date: "2026-03-17",
+                amount_pln: 2466,
+              },
+            ],
+            unassigned_installment_charges: [],
+          },
+        },
+        {
+          ...source,
+          id: "incomplete-source",
+          original_name: "Niepełny wyciąg.pdf",
+          checks: [],
+          warnings: [],
+          layout: "velo_card_v1",
+          velo_card_breakdown: {
+            due_date: null,
+            cycle_debt_pln: null,
+            minimum_pln: null,
+            future_installment_principal_pln: null,
+            komfort_installment: null,
+            cash_interest_charges: [],
+            unassigned_installment_charges: [
+              {
+                row_key: "principal",
+                kind: "principal",
+                booking_date: "2026-03-17",
+                amount_pln: 74219,
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  });
+  await page.goto("/finances/imports/batch-a");
+  await page.getByRole("button", { name: "statement.pdf", exact: true }).click();
+  const breakdown = page.getByRole("region", {
+    name: "Co składa się na spłatę karty",
+  });
+  await expect(breakdown.getByText("794,39 PLN", { exact: true })).toBeVisible();
+  await expect(breakdown.getByText("14.04.2026")).toBeVisible();
+  await expect(breakdown.getByText("810,59 PLN", { exact: true })).toBeVisible();
+  await expect(breakdown.getByText(/11\s257,81 PLN/)).toBeVisible();
+  await expect(breakdown.getByText("742,19 PLN", { exact: true })).toBeVisible();
+  await expect(breakdown.getByText("27,54 PLN", { exact: true })).toBeVisible();
+  await expect(breakdown.getByText("769,73 PLN", { exact: true })).toBeVisible();
+  await expect(breakdown.getByText("24,66 PLN", { exact: true })).toBeVisible();
+  await expect(breakdown.getByText(/Rata jest już ujęta/)).toBeVisible();
+  await page.getByRole("button", { name: /Porównaj ponowny odczyt/ }).click();
+  await expect(breakdown).toHaveCount(0);
+  await page.getByRole("button", { name: "Wróć do bieżącego odczytu" }).click();
+  await expect(breakdown).toBeVisible();
+  await page.getByRole("button", { name: "Niepełny wyciąg.pdf", exact: true }).click();
+  await expect(breakdown.getByText(/Brak jednoznacznego powiązania/)).toBeVisible();
+  await expect(breakdown.getByText("Brak danych w odczycie").first()).toBeVisible();
+  await expect(breakdown.getByText("Razem rata")).toHaveCount(0);
+  expect(mutations).toEqual([]);
+});
 
 async function upload(page: Page) {
   await page.getByLabel("Pliki wyciągów").setInputFiles({

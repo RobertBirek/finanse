@@ -12,6 +12,8 @@ from app.finance.imports.contracts import (
     Bank,
     Check,
     ImportKind,
+    MinorUnits,
+    NonnegativeMinorUnits,
     ScheduleRow,
     SourcePosition,
     StatementRow,
@@ -43,6 +45,30 @@ class AutoPostSummary(ImportDTO):
     manual: bool = False
 
 
+class VeloCardCharge(ImportDTO):
+    row_key: str
+    kind: Literal["principal", "plan_interest", "cash_interest"]
+    booking_date: dt.date
+    amount_pln: NonnegativeMinorUnits
+
+
+class VeloCardInstallment(ImportDTO):
+    principal_pln: NonnegativeMinorUnits
+    interest_pln: NonnegativeMinorUnits
+    total_pln: NonnegativeMinorUnits
+    included_in_minimum: bool
+
+
+class VeloCardBreakdown(ImportDTO):
+    due_date: dt.date | None
+    cycle_debt_pln: MinorUnits | None
+    minimum_pln: NonnegativeMinorUnits | None
+    future_installment_principal_pln: NonnegativeMinorUnits | None
+    komfort_installment: VeloCardInstallment | None
+    unassigned_installment_charges: list[VeloCardCharge]
+    cash_interest_charges: list[VeloCardCharge]
+
+
 class SourceDTO(ImportDTO):
     id: uuid.UUID
     batch_id: uuid.UUID
@@ -62,6 +88,7 @@ class SourceDTO(ImportDTO):
     checks: list[Check] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     auto_post: AutoPostSummary | None = None
+    velo_card_breakdown: VeloCardBreakdown | None = None
     has_account_reference: bool = False
 
 

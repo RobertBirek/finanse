@@ -39,6 +39,8 @@ def text_pdf_bytes(*pages: str, encrypted: bool = False) -> bytes:
     """Synthetic text PDF with real extractable content, never a mocked parser result."""
     writer = PdfWriter()
     glyph_names = {
+        "„": "quotedblbase",
+        "”": "quotedblright",
         "Ą": "Aogonek",
         "ą": "aogonek",
         "Ć": "Cacute",
