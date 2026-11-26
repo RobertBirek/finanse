@@ -2,6 +2,24 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { loanFixtures, loanId, installmentId } from "./loan-fixtures";
 
+test("finance navigation opens the loan overview with schedule totals", async ({ page }) => {
+  const api = await loanFixtures(page);
+  await page.goto("/finances");
+  const menu = page.getByRole("button", { name: "Otwórz menu aplikacji" });
+  if (await menu.isVisible()) await menu.click();
+  await page.getByRole("link", { name: "Kredyty i pożyczki" }).click();
+  await expect(page).toHaveURL(/\/finances\/loans/);
+  await expect(page.getByRole("heading", { name: "Kredyty i pożyczki" })).toBeVisible();
+  const values = page.locator("dl").filter({ hasText: "Kapitał w harmonogramie" });
+  await expect(values).toContainText("900,00 PLN");
+  await expect(values).toContainText("90,00 PLN");
+  await expect(values).toContainText("10,00 PLN");
+  await expect(values).toContainText("Powiązane spłaty");
+  await expect(page.getByText("Rata 1", { exact: false }).first()).toBeVisible();
+  expect(api.loanMutations).toEqual([]);
+  api.assertLoanClean();
+});
+
 for (const theme of ["light", "dark"]) {
   test(`loan partial/full coverage and unlink preserve ledger in ${theme}`, async ({
     page,

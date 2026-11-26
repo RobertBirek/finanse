@@ -84,7 +84,10 @@ describe("contextual navigation components", () => {
     );
 
     const submenu = screen.getByRole("navigation", { name: "Widoki finansów" });
-    expect(within(submenu).getAllByRole("link")).toHaveLength(9);
+    expect(within(submenu).getAllByRole("link")).toHaveLength(10);
+    expect(
+      within(submenu).getByRole("link", { name: "Kredyty i pożyczki" }),
+    ).toHaveAttribute("href", "/finances/loans?month=2&year=2026");
     expect(
       within(submenu).getByRole("link", { name: "Import" }),
     ).toHaveAttribute("aria-current", "location");

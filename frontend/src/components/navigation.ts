@@ -38,6 +38,7 @@ const financeItems = [
   { label: "Transakcje", to: "/finances/transactions" },
   { label: "Budżet", to: "/finances/budgets" },
   { label: "Płynność", to: "/finances/cashflow" },
+  { label: "Kredyty i pożyczki", to: "/finances/loans" },
   { label: "Faktury i paragony", to: "/finances/documents" },
   { label: "Import", to: "/finances/imports" },
   { label: "Propozycje", to: "/finances/proposals" },

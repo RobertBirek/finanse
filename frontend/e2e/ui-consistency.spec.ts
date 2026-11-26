@@ -46,7 +46,7 @@ for (const theme of ["dark", "light"] as const) {
     const submenu = (desktop ? page : dialog).getByRole("navigation", {
       name: "Widoki finansów",
     });
-    await expect(submenu.getByRole("link")).toHaveCount(9);
+    await expect(submenu.getByRole("link")).toHaveCount(10);
     await expect(
       submenu.getByRole("link", { name: "Transakcje" }),
     ).toHaveAttribute("aria-current", "page");

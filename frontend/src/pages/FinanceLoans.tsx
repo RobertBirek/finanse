@@ -414,13 +414,45 @@ export function FinanceLoans() {
                           </button>
                         </div>
                       </div>
-                      <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         <div>
                           <dt className="text-sm text-gray-500">
                             Saldo księgowe
                           </dt>
                           <dd className="font-mono text-white">
                             {formatPLN(detail.data.ledger_balance_pln)} PLN
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-500">
+                            Kapitał w harmonogramie
+                          </dt>
+                          <dd className="font-mono text-white">
+                            {formatPLN(detail.data.planned_principal_pln)} PLN
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-500">
+                            Odsetki w harmonogramie
+                          </dt>
+                          <dd className="font-mono text-white">
+                            {formatPLN(detail.data.planned_interest_pln)} PLN
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-500">
+                            Opłaty w harmonogramie
+                          </dt>
+                          <dd className="font-mono text-white">
+                            {formatPLN(detail.data.planned_fees_pln)} PLN
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-500">
+                            Powiązane spłaty
+                          </dt>
+                          <dd className="font-mono text-white">
+                            {formatPLN(detail.data.paid_pln)} PLN
                           </dd>
                         </div>
                         <div>
