@@ -87,6 +87,11 @@ const FinanceLoans = lazy(() =>
     default: module.FinanceLoans,
   })),
 );
+const FinanceAllegroPay = lazy(() =>
+  import("./pages/FinanceAllegroPay").then((module) => ({
+    default: module.FinanceAllegroPay,
+  })),
+);
 const FinanceCreditCards = lazy(() =>
   import("./pages/FinanceCreditCards").then((module) => ({
     default: module.FinanceCreditCards,
@@ -160,6 +165,7 @@ export default function App() {
         />
         <Route path="/finances/reports" element={<FinanceReports />} />
         <Route path="/finances/loans" element={<FinanceLoans />} />
+        <Route path="/finances/allegro-pay" element={<FinanceAllegroPay />} />
         <Route path="/finances/people" element={<FinancePeople />} />
         <Route
           path="/finances/people/:personId"

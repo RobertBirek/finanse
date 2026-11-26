@@ -171,6 +171,7 @@ export async function fixtures(
       body = { items: [], total: 0, offset: 0, limit: 25 };
     else if (url.pathname === "/api/finance/accounts") body = [account];
     else if (url.pathname === "/api/finance/credit-cards") body = [];
+    else if (url.pathname === "/api/finance/allegro-pay") body = [];
     else if (url.pathname === "/api/finance/categories") body = [];
     else if (url.pathname === "/api/finance/transactions") body = [transaction];
     else if (url.pathname === "/api/finance/budgets") body = [];

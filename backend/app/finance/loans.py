@@ -276,6 +276,14 @@ async def link_loan_payment(
     if transaction is None:
         raise LookupError("Transaction not found")
     await db.refresh(transaction, attribute_names=["postings"])
+    from app.finance.allegro_pay_models import AllegroPayAllocation
+
+    if await db.scalar(
+        select(AllegroPayAllocation.id)
+        .where(AllegroPayAllocation.transaction_id == transaction_id)
+        .limit(1)
+    ):
+        raise ValueError("Transaction is already linked to Allegro Pay")
     existing = await db.scalar(
         select(LoanPaymentLink)
         .where(LoanPaymentLink.transaction_id == transaction_id)

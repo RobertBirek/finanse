@@ -4,6 +4,9 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FinanceLoans } from "./FinanceLoans";
+vi.mock("../components/finance/AllegroPaySummary", () => ({
+  AllegroPaySummary: () => null,
+}));
 
 const render = (element: ReactElement) =>
   rtlRender(

@@ -19,6 +19,7 @@ import {
 } from "../api/loans";
 import { QueryFeedback } from "../components/QueryFeedback";
 import { PageHeader } from "../components/PageHeader";
+import { AllegroPaySummary } from "../components/finance/AllegroPaySummary";
 import { LoanAgreementForm } from "../components/finance/loans/LoanAgreementForm";
 import { LoanInstallmentForm } from "../components/finance/loans/LoanInstallmentForm";
 import { ScheduleHistory } from "../components/finance/loans/ScheduleHistory";
@@ -477,6 +478,12 @@ export function FinanceLoans() {
         title="Kredyty i pożyczki"
         description="Harmonogram jest planem. Powiązania wskazują istniejące przelewy i nie zmieniają księgi."
       />
+      <p className="mb-4">
+        <Link className="underline" to="/finances/allegro-pay">
+          Allegro Pay — zakupy i spłaty
+        </Link>
+      </p>
+      <AllegroPaySummary />
       <CardPlans />
       <QueryFeedback
         loading={accounts.isLoading || loans.isLoading}

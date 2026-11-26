@@ -21,6 +21,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.finance import allegro_pay_models as _allegro_pay_models  # noqa: F401
 from app.finance import credit_card_models as _credit_card_models
 from app.finance import loan_schedule_models as _loan_schedule_models  # noqa: F401
 from app.finance import opening_balance_models as _opening_balance_models  # noqa: F401

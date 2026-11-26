@@ -3,6 +3,10 @@ import { Link, MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { FinanceAccounts } from "./FinanceAccounts";
 
+vi.mock("../components/finance/AllegroPaySummary", () => ({
+  AllegroPaySummary: () => null,
+}));
+
 const hooks = vi.hoisted(() => ({
   useAccounts: vi.fn(),
   useCategories: vi.fn(),

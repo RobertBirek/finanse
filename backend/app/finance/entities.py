@@ -65,6 +65,15 @@ async def _update_account(
     from app.finance.person_guards import guard_person_reference_account_change
 
     await guard_person_reference_account_change(db, user_id, account_id, update_data)
+    if data.credit_card is not None or data.type == "credit_card":
+        from app.finance.allegro_pay_models import AllegroPayProfile
+
+        if await db.scalar(
+            select(AllegroPayProfile.id).where(
+                AllegroPayProfile.user_id == user_id, AllegroPayProfile.account_id == account_id
+            )
+        ):
+            raise ValueError("Konto jest powiązane z Allegro Pay")
     if "currency" in update_data:
         existing = await get_account(db, user_id, account_id)
         if existing is not None and update_data["currency"] != existing.currency:
