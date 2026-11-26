@@ -66,15 +66,21 @@ def trusted(path, mode_mask=0o022):
     return p
 
 
-def artifact(repository, revision, directory):
+def artifact(repository, revision, directory, token_file):
+    token_path = trusted(token_file)
+    require(token_path.stat().st_mode & 0o777 == 0o600, "GitHub token must have mode 0600")
+    token = token_path.read_text().strip()
+    require(bool(re.fullmatch(r"[A-Za-z0-9_]{16,512}", token)), "Invalid GitHub token")
+    gh_env = {**ENV, "GH_TOKEN": token}
     gh = ("/usr/bin/gh",)
     rows = json.loads(run(*gh, "run", "list", "-R", repository, "-w", "ci.yml",
                           "--commit", revision, "--branch", "main", "--event", "push",
-                          "--limit", "20", "--json", "databaseId,headSha,conclusion,status"))
+                          "--limit", "20", "--json", "databaseId,headSha,conclusion,status",
+                          env=gh_env))
     ids = [r["databaseId"] for r in rows if r["headSha"] == revision and r["conclusion"] == "success"]
     require(bool(ids), "No successful push to main for the exact revision")
     run(*gh, "run", "download", str(ids[0]), "-R", repository, "-n", f"finanse-release-{revision}",
-        "-D", str(directory), timeout=180)
+        "-D", str(directory), timeout=180, env=gh_env)
     manifest, archive = (directory / n for n in ("manifest.json", "images.tar.gz"))
     require(set(directory.iterdir()) == {manifest, archive} and all(p.is_file() and not p.is_symlink()
             for p in (manifest, archive)), "Unexpected artifact layout")
@@ -296,7 +302,7 @@ def release(cfg, revision, directory):
     if not assert_scope(cfg, revision, previous):
         print("Brak zmian aplikacji. Wdrożenie pominięte.")
         return
-    candidate, archive, ci = artifact(cfg["github"], revision, directory)
+    candidate, archive, ci = artifact(cfg["github"], revision, directory, cfg["github_token_file"])
     verify_archive(archive, candidate["images"])
     require(candidate["schema"] == baseline["schema"], "Manual release required for schema change")
     print(json.dumps({"revision": revision, "images": candidate["images"], "ci": ci,
