@@ -43,6 +43,7 @@ export interface VeloCardBreakdown {
   due_date: string | null;
   cycle_debt_pln: number | null;
   minimum_pln: number | null;
+  installment_original_principal_pln?: number | null;
   future_installment_principal_pln: number | null;
   komfort_installment: {
     principal_pln: number;

@@ -1,9 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import api from "../lib/api";
+import type { VeloCardBreakdown } from "./bankImports";
 import { parsePlnToGrosze, type Account } from "./finance";
 
 export type LoanPaymentStatus = "unpaid" | "partial" | "paid";
+export type CardStatementPlanObservation = {
+  batch_id: string;
+  source_id: string;
+  period_end: string;
+  breakdown: VeloCardBreakdown;
+};
+
+export function useCardStatementPlans() {
+  return useQuery({
+    queryKey: ["finance", "loans", "card-statement-plans"],
+    queryFn: async () =>
+      (
+        await api.get<CardStatementPlanObservation[]>(
+          "/finance/loans/card-statement-plans",
+        )
+      ).data,
+  });
+}
 export type LoanPayment = {
   id: string;
   transaction_id: string;

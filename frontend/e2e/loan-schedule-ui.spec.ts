@@ -44,6 +44,8 @@ for (const theme of ["light", "dark"]) {
     );
     await page.route("https://ui.test.invalid/api/finance/loans**", (route) => {
       const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/card-statement-plans"))
+        return route.fulfill({ json: [] });
       if (path.endsWith("/schedule-revisions"))
         return route.fulfill({ json: historyVersions });
       if (path.includes("/schedule-revisions/")) {

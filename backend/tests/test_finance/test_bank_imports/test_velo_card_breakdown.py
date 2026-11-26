@@ -68,6 +68,7 @@ def test_breakdown_uses_legacy_saved_text_and_statement_rows() -> None:
     assert breakdown is not None
     assert breakdown.due_date.isoformat() == "2026-04-14"
     assert (breakdown.cycle_debt_pln, breakdown.minimum_pln) == (81059, 79439)
+    assert breakdown.installment_original_principal_pln == 1200000
     assert breakdown.future_installment_principal_pln == 1125781
     assert breakdown.komfort_installment.model_dump() == {
         "principal_pln": 74219,
@@ -162,4 +163,41 @@ async def test_batch_reads_only_the_owners_active_revision_without_writes(
     assert response.status_code == 404
     await db_session.refresh(current_source)
     assert current_source.current_revision_id == current.id
+    assert await ledger_snapshot(db_session) == before
+
+
+@pytest.mark.integration
+async def test_card_plan_observation_is_owner_scoped_read_only_and_uses_current_revision(
+    db_session, owner, other_owner
+) -> None:
+    statement = synthetic_statement()
+    batch_id = await ready_statement(db_session, owner.id, statement)
+    source_entry = await db_session.scalar(
+        select(ImportSource).where(ImportSource.batch_id == batch_id)
+    )
+    assert source_entry is not None
+    current = await db_session.get(ImportRevision, source_entry.current_revision_id)
+    assert current is not None and current.result is not None
+    candidate_result = deepcopy(current.result)
+    candidate_result["card_header"]["installment_details_text"] = []
+    db_session.add(
+        ImportRevision(
+            user_id=owner.id, source_id=source_entry.id, batch_id=batch_id,
+            number=2, source_sha256=current.source_sha256, result=candidate_result,
+            checks=current.checks, warnings=["reparse_requires_comparison"],
+        )
+    )
+    await db_session.flush()
+    before = await ledger_snapshot(db_session)
+    async with client_for(db_session, owner.id) as client:
+        response = await client.get("/api/finance/loans/card-statement-plans")
+    assert response.status_code == 200
+    observed = response.json()
+    assert len(observed) == 1 and observed[0]["batch_id"] == str(batch_id)
+    assert observed[0]["breakdown"]["installment_original_principal_pln"] == 1200000
+    assert observed[0]["breakdown"]["komfort_installment"]["total_pln"] == 76973
+    assert "account_reference" not in str(observed)
+    async with client_for(db_session, other_owner.id) as client:
+        response = await client.get("/api/finance/loans/card-statement-plans")
+    assert response.json() == []
     assert await ledger_snapshot(db_session) == before

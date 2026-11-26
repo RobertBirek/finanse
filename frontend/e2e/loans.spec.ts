@@ -2,20 +2,68 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { loanFixtures, loanId, installmentId } from "./loan-fixtures";
 
-test("finance navigation opens the loan overview with schedule totals", async ({ page }) => {
+test("shows a card plan recognized from a saved statement", async ({
+  page,
+}) => {
+  const api = await loanFixtures(page);
+  await page.route("**/api/finance/loans/card-statement-plans", (route) =>
+    route.fulfill({
+      json: [
+        {
+          batch_id: "batch-card",
+          source_id: "source-card",
+          period_end: "2026-03-17",
+          breakdown: {
+            installment_original_principal_pln: 1200000,
+            future_installment_principal_pln: 1125781,
+            komfort_installment: {
+              principal_pln: 74219,
+              interest_pln: 2754,
+              total_pln: 76973,
+              included_in_minimum: true,
+            },
+          },
+        },
+      ],
+    }),
+  );
+  await page.goto("/finances/loans");
+  const plan = page
+    .getByRole("article")
+    .filter({ hasText: "Plan „Komfort” z wyciągu Velo" });
+  await expect(plan).toContainText(/12\s000,00 PLN/);
+  await expect(plan).toContainText(/11\s257,81 PLN/);
+  await expect(plan).toContainText("769,73 PLN");
+  await expect(plan).toContainText("27,54 PLN");
+  await expect(
+    plan.getByRole("link", { name: "Otwórz wyciąg" }),
+  ).toHaveAttribute("href", "/finances/imports/batch-card");
+  expect(api.loanMutations).toEqual([]);
+  api.assertLoanClean();
+});
+
+test("finance navigation opens the loan overview with schedule totals", async ({
+  page,
+}) => {
   const api = await loanFixtures(page);
   await page.goto("/finances");
   const menu = page.getByRole("button", { name: "Otwórz menu aplikacji" });
   if (await menu.isVisible()) await menu.click();
   await page.getByRole("link", { name: "Kredyty i pożyczki" }).click();
   await expect(page).toHaveURL(/\/finances\/loans/);
-  await expect(page.getByRole("heading", { name: "Kredyty i pożyczki" })).toBeVisible();
-  const values = page.locator("dl").filter({ hasText: "Kapitał w harmonogramie" });
+  await expect(
+    page.getByRole("heading", { name: "Kredyty i pożyczki" }),
+  ).toBeVisible();
+  const values = page
+    .locator("dl")
+    .filter({ hasText: "Kapitał w harmonogramie" });
   await expect(values).toContainText("900,00 PLN");
   await expect(values).toContainText("90,00 PLN");
   await expect(values).toContainText("10,00 PLN");
   await expect(values).toContainText("Powiązane spłaty");
-  await expect(page.getByText("Rata 1", { exact: false }).first()).toBeVisible();
+  await expect(
+    page.getByText("Rata 1", { exact: false }).first(),
+  ).toBeVisible();
   expect(api.loanMutations).toEqual([]);
   api.assertLoanClean();
 });

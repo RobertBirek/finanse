@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useQueries } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAccounts } from "../api/finance";
+import api from "../lib/api";
+import { useCreditCards, type CreditCard } from "../api/creditCards";
 import {
   loanApiErrorMessage,
   useDeleteLoanInstallment,
@@ -8,6 +11,7 @@ import {
   useLoan,
   useLoanPaymentCandidates,
   useLoans,
+  useCardStatementPlans,
   useUnlinkLoanPayment,
   useUpdateLoan,
   type LoanInstallment,
@@ -19,6 +23,166 @@ import { LoanAgreementForm } from "../components/finance/loans/LoanAgreementForm
 import { LoanInstallmentForm } from "../components/finance/loans/LoanInstallmentForm";
 import { ScheduleHistory } from "../components/finance/loans/ScheduleHistory";
 import { formatPLN } from "../lib/format";
+import { formatCalendarDate } from "../lib/date";
+
+function CardPlans() {
+  const cards = useCreditCards();
+  const statements = useCardStatementPlans();
+  const configured = (cards.data ?? []).filter((card) => card.configured);
+  const details = useQueries({
+    queries: configured.map((card) => ({
+      queryKey: ["finance", "credit-card", card.account_id],
+      queryFn: async () =>
+        (
+          await api.get<CreditCard>(
+            `/finance/accounts/${card.account_id}/credit-card`,
+          )
+        ).data,
+    })),
+  });
+  const failed =
+    cards.isError || statements.isError || details.some((item) => item.isError);
+  const loading =
+    cards.isLoading ||
+    statements.isLoading ||
+    details.some((item) => item.isLoading);
+  return (
+    <section
+      className="card mb-5 space-y-4"
+      aria-labelledby="card-plans-heading"
+    >
+      <h2 id="card-plans-heading" className="text-xl font-semibold">
+        Plany ratalne kart kredytowych
+      </h2>
+      <QueryFeedback
+        loading={loading}
+        error={failed}
+        errorMessage="Nie udało się pobrać planów kart lub wyciągów."
+        onRetry={() => {
+          void cards.refetch();
+          void statements.refetch();
+          details.forEach((item) => void item.refetch());
+        }}
+      >
+        {statements.data?.map((item) => (
+          <article
+            key={item.source_id}
+            className="rounded-lg border border-gray-700 p-4 space-y-2"
+          >
+            <h3 className="font-semibold">
+              {item.breakdown.installment_original_principal_pln == null
+                ? "Pozycje rat z wyciągu Velo"
+                : "Plan „Komfort” z wyciągu Velo"}
+            </h3>
+            <p className="text-sm">
+              Wyciąg na dzień {formatCalendarDate(item.period_end)}
+            </p>
+            <p>
+              Kwota planu{" "}
+              {item.breakdown.installment_original_principal_pln == null
+                ? "brak danych"
+                : `${formatPLN(item.breakdown.installment_original_principal_pln)} PLN`}{" "}
+              · Kapitał przyszłych rat{" "}
+              {item.breakdown.future_installment_principal_pln == null
+                ? "brak danych"
+                : `${formatPLN(item.breakdown.future_installment_principal_pln)} PLN`}
+            </p>
+            {item.breakdown.komfort_installment ? (
+              <>
+                <p>
+                  Rata {formatPLN(item.breakdown.komfort_installment.total_pln)}{" "}
+                  PLN · kapitał{" "}
+                  {formatPLN(item.breakdown.komfort_installment.principal_pln)}{" "}
+                  PLN · odsetki{" "}
+                  {formatPLN(item.breakdown.komfort_installment.interest_pln)}{" "}
+                  PLN
+                </p>
+                {item.breakdown.komfort_installment.included_in_minimum ? (
+                  <p className="text-sm">
+                    Rata jest ujęta w kwocie minimalnej wyciągu.
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <div>
+                <p>Brak jednoznacznego powiązania pozycji z jedną ratą.</p>
+                <ul>
+                  {item.breakdown.unassigned_installment_charges.map(
+                    (charge) => (
+                      <li key={charge.row_key}>
+                        {charge.kind === "principal" ? "Kapitał" : "Odsetki"} ·{" "}
+                        {formatCalendarDate(charge.booking_date)} ·{" "}
+                        {formatPLN(charge.amount_pln)} PLN
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </div>
+            )}
+            <p>
+              Minimalna kwota do spłaty{" "}
+              {item.breakdown.minimum_pln == null
+                ? "brak danych"
+                : `${formatPLN(item.breakdown.minimum_pln)} PLN`}{" "}
+              · Termin{" "}
+              {item.breakdown.due_date
+                ? formatCalendarDate(item.breakdown.due_date)
+                : "brak danych"}
+            </p>
+            <Link
+              className="underline"
+              to={`/finances/imports/${encodeURIComponent(item.batch_id)}`}
+            >
+              Otwórz wyciąg
+            </Link>
+          </article>
+        ))}
+        {details.flatMap((result, index) =>
+          (result.data?.plans ?? []).map((plan) => (
+            <article
+              key={plan.id}
+              className="rounded-lg border border-gray-700 p-4 space-y-2"
+            >
+              <h3 className="font-semibold">
+                {plan.name} · {configured[index].name}
+              </h3>
+              <p>
+                {plan.status === "active" ? "Aktywny" : "Zamknięty"} · Kwota
+                planu {formatPLN(plan.principal_pln)} PLN · Pozostały kapitał{" "}
+                {formatPLN(plan.remaining_principal_pln)} PLN
+              </p>
+              <p>
+                Oprocentowanie {plan.apr}% ·{" "}
+                {plan.schedule_kind === "bank"
+                  ? "Harmonogram bankowy"
+                  : "Harmonogram szacunkowy"}
+              </p>
+              <Link
+                className="underline"
+                to={`/settings/finances/cards/${encodeURIComponent(configured[index].account_id)}`}
+              >
+                Otwórz kartę i harmonogram
+              </Link>
+            </article>
+          )),
+        )}
+        {!statements.data?.length &&
+        !details.some((item) => item.data?.plans.length) ? (
+          <p className="text-sm text-gray-400">
+            Brak rozpoznanych planów ratalnych kart.
+          </p>
+        ) : null}
+        {!!statements.data?.length &&
+        details.some((item) => item.data?.plans.length) ? (
+          <p className="text-sm text-gray-400">
+            Wyciąg i zapisane plany mogą dotyczyć tego samego zobowiązania.
+            Porównaj je przed sumowaniem.
+          </p>
+        ) : null}
+      </QueryFeedback>
+    </section>
+  );
+}
 
 const statusLabels: Record<LoanPaymentStatus, string> = {
   unpaid: "Niepokryta",
@@ -313,6 +477,7 @@ export function FinanceLoans() {
         title="Kredyty i pożyczki"
         description="Harmonogram jest planem. Powiązania wskazują istniejące przelewy i nie zmieniają księgi."
       />
+      <CardPlans />
       <QueryFeedback
         loading={accounts.isLoading || loans.isLoading}
         error={accounts.isError || loans.isError}

@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.finance import loans
+from app.finance.imports.queries import card_statement_plans
+from app.finance.imports.schemas import CardStatementPlanObservation
 from app.finance.loan_schedule_projection import ScheduleMutationConflict
 from app.finance.loan_schedule_router import history_routes as schedule_history_routes
 from app.finance.loan_schemas import (
@@ -25,6 +27,14 @@ from app.identity.router import get_current_user
 
 router = APIRouter(prefix="/loans")
 router.include_router(schedule_history_routes)
+
+
+@router.get("/card-statement-plans", response_model=list[CardStatementPlanObservation])
+async def list_card_statement_plans(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[CardStatementPlanObservation]:
+    return await card_statement_plans(db, current_user.id)
 
 
 def _error(error: Exception) -> HTTPException:

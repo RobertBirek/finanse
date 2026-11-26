@@ -123,6 +123,8 @@ export async function loanFixtures(
       url = new URL(request.url()),
       path = url.pathname;
     const method = request.method();
+    if (path === "/api/finance/loans/card-statement-plans" && method === "GET")
+      return route.fulfill({ json: [] });
     if (method !== "GET")
       mutations.push({ method, path, body: request.postDataJSON() });
     if (path === "/api/finance/loans" && method === "GET") {

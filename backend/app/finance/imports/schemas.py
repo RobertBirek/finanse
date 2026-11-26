@@ -63,10 +63,18 @@ class VeloCardBreakdown(ImportDTO):
     due_date: dt.date | None
     cycle_debt_pln: MinorUnits | None
     minimum_pln: NonnegativeMinorUnits | None
+    installment_original_principal_pln: NonnegativeMinorUnits | None = None
     future_installment_principal_pln: NonnegativeMinorUnits | None
     komfort_installment: VeloCardInstallment | None
     unassigned_installment_charges: list[VeloCardCharge]
     cash_interest_charges: list[VeloCardCharge]
+
+
+class CardStatementPlanObservation(ImportDTO):
+    batch_id: uuid.UUID
+    source_id: uuid.UUID
+    period_end: dt.date
+    breakdown: VeloCardBreakdown
 
 
 class SourceDTO(ImportDTO):
