@@ -159,6 +159,7 @@ export default function App() {
           element={<FinanceBudgets configure={false} />}
         />
         <Route path="/finances/reports" element={<FinanceReports />} />
+        <Route path="/finances/loans" element={<FinanceLoans />} />
         <Route path="/finances/people" element={<FinancePeople />} />
         <Route
           path="/finances/people/:personId"
