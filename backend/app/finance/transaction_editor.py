@@ -49,21 +49,13 @@ class LedgerEditability:
 
 def _is_canonical_manual_fx(txn: FinancialTransaction) -> bool:
     """Recognise only the exact persisted shape produced by the manual-rate builder."""
-    if (
-        txn.source != "manual"
-        or txn.type not in {"expense", "income"}
-        or len(txn.postings) != 2
-    ):
+    if txn.source != "manual" or txn.type not in {"expense", "income"} or len(txn.postings) != 2:
         return False
     accounts = [
-        posting
-        for posting in txn.postings
-        if posting.account_id and not posting.category_id
+        posting for posting in txn.postings if posting.account_id and not posting.category_id
     ]
     categories = [
-        posting
-        for posting in txn.postings
-        if posting.category_id and not posting.account_id
+        posting for posting in txn.postings if posting.category_id and not posting.account_id
     ]
     if len(accounts) != 1 or len(categories) != 1:
         return False
@@ -143,6 +135,22 @@ async def ledger_editabilities(
             LoanPaymentLink.transaction_id.in_(transaction_ids),
         )
     )
+    from app.finance.allegro_pay_models import AllegroPayAllocation, AllegroPayPurchase
+
+    allegro_ids = await linked_ids(
+        select(AllegroPayPurchase.transaction_id).where(
+            AllegroPayPurchase.user_id == owner,
+            AllegroPayPurchase.transaction_id.in_(transaction_ids),
+        )
+    )
+    allegro_ids.update(
+        await linked_ids(
+            select(AllegroPayAllocation.transaction_id).where(
+                AllegroPayAllocation.user_id == owner,
+                AllegroPayAllocation.transaction_id.in_(transaction_ids),
+            )
+        )
+    )
     person_ids = await linked_ids(
         select(PersonTransactionLink.transaction_id).where(
             PersonTransactionLink.user_id == owner,
@@ -203,26 +211,20 @@ async def ledger_editabilities(
     decisions: dict[uuid.UUID, LedgerEditability] = {}
     for txn in transactions:
         if txn.id in opening_ids:
-            decisions[txn.id] = LedgerEditability(
-                False, "Bilans otwarcia jest chroniony."
-            )
+            decisions[txn.id] = LedgerEditability(False, "Bilans otwarcia jest chroniony.")
             continue
         if txn.source == "bank_import":
             decisions[txn.id] = LedgerEditability(False, "Import bankowy")
             continue
         if txn.source != "manual" or txn.created_by != "human":
-            decisions[txn.id] = LedgerEditability(
-                False, "Pochodzenie transakcji jest chronione."
-            )
+            decisions[txn.id] = LedgerEditability(False, "Pochodzenie transakcji jest chronione.")
             continue
         if txn.date_metadata is not None and (
             txn.type != "expense"
             or txn.date_metadata.purchase_date_source not in {None, "manual"}
             or txn.date_metadata.booking_date_source != "manual"
         ):
-            decisions[txn.id] = LedgerEditability(
-                False, "Transakcja ma chronione znaczenie dat."
-            )
+            decisions[txn.id] = LedgerEditability(False, "Transakcja ma chronione znaczenie dat.")
             continue
         if len(txn.postings) != 2:
             decisions[txn.id] = LedgerEditability(
@@ -243,15 +245,12 @@ async def ledger_editabilities(
                 False, "Ten typ transakcji wymaga osobnej korekty."
             )
             continue
-        account_legs = [
-            posting for posting in txn.postings if posting.account_id is not None
-        ]
+        account_legs = [posting for posting in txn.postings if posting.account_id is not None]
         if txn.type == "transfer":
             if (
                 len(account_legs) != 2
                 or account_legs[0].account_id == account_legs[1].account_id
-                or {posting.direction for posting in account_legs}
-                != {"debit", "credit"}
+                or {posting.direction for posting in account_legs} != {"debit", "credit"}
             ):
                 decisions[txn.id] = LedgerEditability(
                     False, "Niestandardowy transfer jest chroniony."
@@ -272,29 +271,24 @@ async def ledger_editabilities(
             )
             continue
         if txn.id in actual_import_ids or txn.id in bank_import_ids:
-            decisions[txn.id] = LedgerEditability(
-                False, "Dowód importu chroni tożsamość księgową."
-            )
+            decisions[txn.id] = LedgerEditability(False, "Dowód importu chroni tożsamość księgową.")
             continue
         if txn.id in document_ids:
-            decisions[txn.id] = LedgerEditability(
-                False, "Płatność jest powiązana z dokumentem."
-            )
+            decisions[txn.id] = LedgerEditability(False, "Płatność jest powiązana z dokumentem.")
             continue
         if txn.id in loan_ids:
             decisions[txn.id] = LedgerEditability(
                 False, "Płatność pożyczki jest powiązana z harmonogramem."
             )
             continue
+        if txn.id in allegro_ids:
+            decisions[txn.id] = LedgerEditability(False, "Transakcja jest powiązana z Allegro Pay.")
+            continue
         if txn.id in person_ids:
-            decisions[txn.id] = LedgerEditability(
-                False, "Darowizna jest powiązana z osobą."
-            )
+            decisions[txn.id] = LedgerEditability(False, "Darowizna jest powiązana z osobą.")
             continue
         if txn.id in card_ids:
-            decisions[txn.id] = LedgerEditability(
-                False, "Transakcja jest powiązana z kartą."
-            )
+            decisions[txn.id] = LedgerEditability(False, "Transakcja jest powiązana z kartą.")
             continue
         if txn.id in categorization_ids:
             decisions[txn.id] = LedgerEditability(
@@ -350,15 +344,11 @@ async def _replace_canonical_ledger(
     ):
         raise TransactionEditorError("Edycja dat wymaga dedykowanej korekty dat.")
     if "project_id" in data.model_fields_set and data.project_id != txn.project_id:
-        raise TransactionEditorError(
-            "Projekt należy zmienić przez oznaczenia transakcji."
-        )
+        raise TransactionEditorError("Projekt należy zmienić przez oznaczenia transakcji.")
     if len(data.postings) != 2:
         raise TransactionEditorError("Edycja wymaga dwóch zapisów księgowych.")
     if txn.date_metadata is not None and (
-        data.type != "expense"
-        or not allows_explicit_dates
-        or data.is_pending != txn.is_pending
+        data.type != "expense" or not allows_explicit_dates or data.is_pending != txn.is_pending
     ):
         raise TransactionEditorError("Nie można zmienić znaczenia istniejących dat.")
     if data.type not in {"expense", "income", "transfer"}:
@@ -406,9 +396,7 @@ async def _guard_ledger_replacement(
     try:
         await guard_opening_balance_transaction(db, owner, transaction_id)
         await guard_person_gift_change(db, owner, transaction_id, {"ledger"})
-        await guard_allocated_transaction_change(
-            db, owner, transaction_id, {"ledger": True}
-        )
+        await guard_allocated_transaction_change(db, owner, transaction_id, {"ledger": True})
         await guard_transaction(db, owner, transaction_id)
     except ValueError as error:
         raise TransactionEditorError(str(error)) from error
@@ -428,15 +416,11 @@ async def update_editor(
     if txn is None:
         return None, LedgerEditability(False)
     if txn.updated_at != data.expected_updated_at:
-        raise TransactionEditorError(
-            "Transakcja zmieniła się. Odśwież dane przed zapisem."
-        )
+        raise TransactionEditorError("Transakcja zmieniła się. Odśwież dane przed zapisem.")
     editability = await ledger_editability(db, owner, txn)
     if data.ledger is not None:
         if not editability.editable:
-            raise TransactionEditorError(
-                editability.reason or "Edycja księgi jest zablokowana."
-            )
+            raise TransactionEditorError(editability.reason or "Edycja księgi jest zablokowana.")
         if data.ledger.kind == "manual_fx" and not _is_canonical_manual_fx(txn):
             raise TransactionEditorError(
                 "Zapis nie jest rozpoznawalną ręczną operacją walutową z kursem ręcznym."
@@ -448,9 +432,7 @@ async def update_editor(
         await _guard_ledger_replacement(db, owner, transaction_id)
     if data.annotations is not None:
         if annotation_idempotency_key is None:
-            raise TransactionEditorError(
-                "Nagłówek Idempotency-Key jest wymagany dla oznaczeń."
-            )
+            raise TransactionEditorError("Nagłówek Idempotency-Key jest wymagany dla oznaczeń.")
         await update_annotations(
             db,
             owner,
@@ -462,13 +444,9 @@ async def update_editor(
         if data.ledger.kind == "manual_fx":
             assert isinstance(data.ledger.data, ManualFxTransactionCreate)
             if data.ledger.data.fx_rate_source != "manual":
-                raise TransactionEditorError(
-                    "Edycja walutowa wymaga jawnego kursu ręcznego."
-                )
+                raise TransactionEditorError("Edycja walutowa wymaga jawnego kursu ręcznego.")
             if data.ledger.data.type != txn.type:
-                raise TransactionEditorError(
-                    "Edycja walutowa nie może zmienić typu transakcji."
-                )
+                raise TransactionEditorError("Edycja walutowa nie może zmienić typu transakcji.")
             if txn.type == "expense" and txn.date_metadata is None:
                 raise TransactionEditorError(
                     "Ręczny wydatek walutowy wymaga zachowanych dat zakupu i księgowania."
@@ -479,13 +457,8 @@ async def update_editor(
         else:
             assert isinstance(data.ledger.data, TransactionCreate)
             replacement = data.ledger.data
-            if any(
-                posting.source_currency.upper() != "PLN"
-                for posting in replacement.postings
-            ):
-                raise TransactionEditorError(
-                    "Waluty obce wymagają polecenia z jawnym kursem."
-                )
+            if any(posting.source_currency.upper() != "PLN" for posting in replacement.postings):
+                raise TransactionEditorError("Waluty obce wymagają polecenia z jawnym kursem.")
         has_explicit_dates = replacement.booking_date is not None
         if has_explicit_dates:
             assert replacement.booking_date is not None

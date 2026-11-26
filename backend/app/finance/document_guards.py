@@ -46,6 +46,26 @@ async def guard_allocated_transaction_change(
     )
     if not identity_change:
         return
+    from app.finance.allegro_pay_models import AllegroPayAllocation, AllegroPayPurchase
+
+    purchase = await db.scalar(
+        select(AllegroPayPurchase.id)
+        .where(
+            AllegroPayPurchase.user_id == user_id,
+            AllegroPayPurchase.transaction_id == transaction_id,
+        )
+        .limit(1)
+    )
+    payment = await db.scalar(
+        select(AllegroPayAllocation.id)
+        .where(
+            AllegroPayAllocation.user_id == user_id,
+            AllegroPayAllocation.transaction_id == transaction_id,
+        )
+        .limit(1)
+    )
+    if purchase is not None or payment is not None:
+        raise ValueError("Transakcja jest powiązana z Allegro Pay")
     allocated = await db.scalar(
         select(DocumentPaymentAllocation.id)
         .join(Posting, Posting.id == DocumentPaymentAllocation.posting_id)
@@ -65,6 +85,15 @@ async def guard_bill_account_change(
 
     if not changes:
         return
+    from app.finance.allegro_pay_models import AllegroPayProfile
+
+    profile = await db.scalar(
+        select(AllegroPayProfile.id)
+        .where(AllegroPayProfile.user_id == user_id, AllegroPayProfile.account_id == account_id)
+        .limit(1)
+    )
+    if profile is not None:
+        raise ValueError("Konto jest powiązane z Allegro Pay")
     referenced = await db.scalar(
         select(FinancialDocument.id)
         .where(

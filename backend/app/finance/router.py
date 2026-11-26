@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.finance.allegro_pay_router import router as allegro_pay_router
 from app.finance.annotation_reads import attach_annotations
 from app.finance.annotation_router import router as annotation_router
 from app.finance.annotations import AnnotationError
@@ -117,6 +118,7 @@ router.include_router(person_router)
 router.include_router(import_router)
 router.include_router(credit_card_router)
 router.include_router(loan_router)
+router.include_router(allegro_pay_router)
 router.include_router(bills_router)
 router.include_router(categorization_router)
 router.include_router(rule_router)

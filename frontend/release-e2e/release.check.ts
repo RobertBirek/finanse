@@ -100,4 +100,50 @@ test("installed images serve authenticated ledger and Velo card breakdown", asyn
     "href",
     `/finances/imports/${batchId}`,
   );
+
+  const allegroAccount = await page.request.post("/api/finance/accounts", {
+    data: { name: "Allegro testowe", type: "credit", currency: "PLN" },
+  });
+  expect(allegroAccount.status()).toBe(201);
+  const category = await page.request.post("/api/finance/categories", {
+    data: { name: "Zakupy testowe", type: "expense" },
+  });
+  expect(category.status()).toBe(201);
+  const accountId = (await allegroAccount.json()).id;
+  await page.goto("/finances/allegro-pay");
+  const configuration = page.getByRole("form", { name: "Konto i limit" });
+  await configuration.getByRole("combobox", { name: "Konto", exact: true }).selectOption(accountId);
+  await configuration.getByLabel("Limit PLN").fill("1000");
+  await configuration.getByRole("button", { name: "Zapisz konto" }).click();
+  const form = page.getByRole("form", { name: "Dodaj zakup" });
+  await form.getByLabel("Nazwa").fill("Zakup testowy");
+  await form.getByLabel("Data zakupu").fill("2026-01-01");
+  await form.getByLabel("Kwota zakupu PLN").fill("200");
+  await form.getByRole("combobox", { name: "Wydatek", exact: true }).selectOption("new");
+  await form.getByLabel("Kategoria").selectOption((await category.json()).id);
+  await form.getByRole("button", { name: "Dodaj ratę" }).click();
+  await form.getByLabel("Termin").nth(0).fill("2027-02-01");
+  await form.getByLabel("Termin").nth(1).fill("2027-03-01");
+  await form.getByLabel("Kapitał PLN").nth(0).fill("100");
+  await form.getByLabel("Kapitał PLN").nth(1).fill("100");
+  await form.getByRole("button", { name: "Zapisz zakup" }).click();
+  await expect(page.getByText("Zakup testowy", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/Do pokrycia według harmonogramów/)).toContainText("200,00 PLN");
+  const transfer = await page.request.post("/api/finance/transactions", {
+    data: {
+      description: "Spłata testowa", type: "transfer", transaction_date: "2026-01-15",
+      postings: [
+        { account_id: (await payer.json()).id, source_amount: 15000, base_amount_pln: 15000, direction: "debit" },
+        { account_id: accountId, source_amount: 15000, base_amount_pln: 15000, direction: "credit" },
+      ],
+    },
+  });
+  expect(transfer.status()).toBe(201);
+  await page.reload();
+  const repayments = page.getByRole("form", { name: "Zakupy i spłaty" });
+  await repayments.getByLabel("Istniejący przelew").selectOption((await transfer.json()).id);
+  await repayments.getByLabel("Przypisz do raty PLN").nth(0).fill("100");
+  await repayments.getByLabel("Przypisz do raty PLN").nth(1).fill("50");
+  await repayments.getByRole("button", { name: "Przypisz spłatę" }).click();
+  await expect(page.getByText(/Do pokrycia według harmonogramów/)).toContainText("50,00 PLN");
 });

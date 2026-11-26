@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
+import { AllegroPaySummary } from "../components/finance/AllegroPaySummary";
 import {
   useAccounts,
   useCategories,
@@ -192,6 +193,7 @@ export function FinanceAccounts({
 
       {section !== "categories" ? (
         <>
+          <AllegroPaySummary />
           <section className="card mb-4">
             <h2 className="mb-4 text-lg font-semibold text-white">Konta</h2>
             {accountsQuery.isLoading ? (

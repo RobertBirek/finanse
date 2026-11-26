@@ -9,6 +9,9 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FinanceAccounts } from "./FinanceAccounts";
 import { categorySelectFixture } from "../test/categoryFixtures";
+vi.mock("../components/finance/AllegroPaySummary", () => ({
+  AllegroPaySummary: () => null,
+}));
 
 function render(ui: React.ReactNode) {
   return baseRender(ui, { wrapper: MemoryRouter });
