@@ -1,6 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useImportActor, useImportHistory } from "../api/bankImports";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { listPage, setListPage } from "../lib/listPage";
 import { ImportUpload } from "../components/finance/imports/ImportUpload";
 import { PageHeader } from "../components/PageHeader";
@@ -34,7 +33,6 @@ export function FinanceImports() {
             : "Źródło → Decyzja → Księga. Ty wybierasz, co zostanie zapisane."
         }
       />
-      <FinanceTabs />
       <label className="mb-4 block">
         Rodzaj importu
         <select
@@ -69,7 +67,8 @@ export function FinanceImports() {
           <p role="status">Ładowanie importów…</p>
         ) : imports.isError ? (
           <p role="alert">
-            Nie udało się pobrać importów.{" "}
+            Nie udało się pobrać zapisanych importów. Sprawdź połączenie i
+            spróbuj ponownie.{" "}
             <button
               type="button"
               onClick={() => imports.refetch()}
@@ -111,14 +110,30 @@ export function FinanceImports() {
                   );
                 })}
               </ul>
+            ) : offset ? (
+              <div role="status">
+                <p>Brak importów na tej stronie.</p>
+                <button
+                  type="button"
+                  className="btn-secondary mt-3"
+                  onClick={() => changePage(1)}
+                >
+                  Wróć do pierwszej strony
+                </button>
+              </div>
             ) : (
-              <p>
-                {offset
-                  ? "Brak importów na tej stronie."
-                  : kind === "loan_schedule"
-                    ? "Brak zapisanych importów harmonogramów."
-                    : "Brak zapisanych importów wyciągów."}
-              </p>
+              <div role="status">
+                <p>
+                  {kind === "loan_schedule"
+                    ? "Nie masz jeszcze zapisanych importów harmonogramów."
+                    : "Nie masz jeszcze zapisanych importów wyciągów."}
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {kind === "loan_schedule"
+                    ? "Dodaj plik harmonogramu powyżej, aby rozpocząć."
+                    : "Dodaj plik wyciągu powyżej, aby rozpocząć."}
+                </p>
+              </div>
             )}
             {offset || (imports.data?.total ?? 0) > 25 ? (
               <div className="mt-4 flex flex-wrap items-center gap-2">

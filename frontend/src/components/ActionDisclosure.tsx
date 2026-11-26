@@ -4,10 +4,12 @@ import { IconButton } from "./IconButton";
 export function ActionDisclosure({
   label,
   disabled,
+  className,
   children,
 }: {
   label: string;
   disabled?: boolean;
+  className?: string;
   children: (close: () => void) => ReactNode;
 }) {
   const id = useId();
@@ -21,7 +23,7 @@ export function ActionDisclosure({
 
   return (
     <div
-      className="flex min-w-0 flex-wrap items-center gap-1"
+      className={className ?? "flex min-w-0 flex-wrap items-center gap-1"}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
@@ -37,6 +39,7 @@ export function ActionDisclosure({
         icon="more"
         label={label}
         tooltip="Więcej"
+        dismissTooltipOnClick
         aria-expanded={open}
         aria-controls={id}
         disabled={disabled}

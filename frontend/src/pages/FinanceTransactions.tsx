@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { BalanceReconciliation } from "../components/finance/BalanceReconciliation";
+import { AccountStrip } from "../components/finance/AccountStrip";
 import { TransactionSearch } from "../components/finance/TransactionSearch";
 import { TransactionForm } from "../components/finance/TransactionForm";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { Dialog } from "../components/Dialog";
 import { PageHeader } from "../components/PageHeader";
 import { IconButton } from "../components/IconButton";
 
 export function FinanceTransactions() {
   const [search, setSearch] = useSearchParams();
+  const [reconciling, setReconciling] = useState(false);
   const create = search.get("create");
   const open =
     create === "expense" ||
@@ -25,20 +28,38 @@ export function FinanceTransactions() {
         title="Transakcje"
         description="Historia, szczegóły i szybkie wyszukiwanie."
         actions={
-          <button
-            className="btn-primary"
-            onClick={() => {
-              const next = new URLSearchParams(search);
-              next.set("create", "expense");
-              setSearch(next);
-            }}
-          >
-            + Dodaj transakcję
-          </button>
+          <>
+            <button
+              className="btn-secondary"
+              onClick={() => setReconciling(true)}
+            >
+              Uzgodnij saldo
+            </button>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                const next = new URLSearchParams(search);
+                next.set("create", "expense");
+                setSearch(next);
+              }}
+            >
+              + Dodaj transakcję
+            </button>
+          </>
         }
       />
-      <FinanceTabs />
+      <AccountStrip mode="filter" />
       <TransactionSearch />
+      {reconciling && !open ? (
+        <Dialog
+          label="Uzgodnij saldo"
+          onClose={() => setReconciling(false)}
+          panelClassName="card w-full max-w-lg"
+        >
+          <h2>Uzgodnij saldo</h2>
+          <BalanceReconciliation onHistory={() => setReconciling(false)} />
+        </Dialog>
+      ) : null}
       {open ? (
         <Dialog
           label="Dodaj transakcję"

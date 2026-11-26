@@ -1,5 +1,6 @@
 import { TransactionDetail } from "./TransactionDetail";
 import { TransactionFilters } from "./TransactionFilters";
+import { TransactionEditorDialog } from "./TransactionEditorDialog";
 import type { TransactionSearchParams } from "../../api/finance";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -7,6 +8,7 @@ import {
   useCategories,
   useTransactionSearch,
 } from "../../api/finance";
+import { useState } from "react";
 import {
   SEARCH_FIELDS,
   transactionSearchParams,
@@ -15,9 +17,12 @@ import { QueryFeedback } from "../QueryFeedback";
 import { IconButton } from "../IconButton";
 import { TransactionList } from "./AccountTransactions";
 import { retainFinancePeriod } from "./useFinancePeriod";
+import "../../styles/transaction-compact.css";
 
 export function TransactionSearch() {
   const [search, setSearch] = useSearchParams();
+  const [compactList, setCompactList] = useState(false);
+  const [editorId, setEditorId] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const accounts = useAccounts();
@@ -33,6 +38,20 @@ export function TransactionSearch() {
   const results = useTransactionSearch(params, !validation);
   const page = results.data;
   const pageNumber = params.offset / params.limit + 1;
+  const hasActiveFilters = Boolean(
+    params.q ||
+    params.account_id ||
+    params.category_id ||
+    params.date_from ||
+    params.date_to ||
+    params.date_basis === "purchase" ||
+    params.currency ||
+    params.type ||
+    params.min_amount_pln !== undefined ||
+    params.max_amount_pln !== undefined ||
+    params.include_descendants ||
+    params.budget_accounts_only,
+  );
   const formKey = JSON.stringify(
     SEARCH_FIELDS.map((field) => search.get(field) ?? ""),
   );
@@ -101,33 +120,65 @@ export function TransactionSearch() {
               className="card space-y-4"
               aria-label="Wyniki wyszukiwania"
             >
-              <p role="status" className="text-sm text-gray-300">
-                {page.items.length
-                  ? `Wyniki ${page.offset + 1}–${page.offset + page.items.length} z ${page.total}`
-                  : `Wyniki: 0 z ${page.total}`}
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p role="status" className="text-sm text-gray-300">
+                  {page.items.length
+                    ? `Wyniki ${page.offset + 1}–${page.offset + page.items.length} z ${page.total}`
+                    : `Wyniki: 0 z ${page.total}`}
+                </p>
+                {page.items.length ? (
+                  <button
+                    type="button"
+                    className="btn-secondary hidden px-3 py-1.5 text-sm lg:inline-flex"
+                    aria-pressed={compactList}
+                    onClick={() => setCompactList((current) => !current)}
+                  >
+                    {compactList
+                      ? "Wyłącz zwarty widok transakcji"
+                      : "Włącz zwarty widok transakcji"}
+                  </button>
+                ) : null}
+              </div>
               <p className="text-sm text-gray-400">
                 {params.date_basis === "purchase"
                   ? "Według daty zakupu. Gdy jej brakuje, według daty księgowania lub daty historycznej."
                   : "Według daty księgowania lub daty historycznej."}
               </p>
               {page.items.length ? (
-                <TransactionList
-                  key={JSON.stringify(params)}
-                  accounts={accounts.data}
-                  accountId={params.account_id}
-                  currency={params.currency}
-                  transactions={page.items}
-                  loading={false}
-                  error={false}
-                  onDetails={openDetail}
-                />
+                <div
+                  className={`transaction-search-list${compactList ? " transaction-search-list--compact" : ""}`}
+                >
+                  <TransactionList
+                    key={JSON.stringify(params)}
+                    accounts={accounts.data}
+                    accountId={params.account_id}
+                    currency={params.currency}
+                    transactions={page.items}
+                    loading={false}
+                    error={false}
+                    onDetails={openDetail}
+                    onEdit={setEditorId}
+                  />
+                </div>
               ) : (
-                <p className="text-gray-400">
-                  {page.total
-                    ? "Ta strona jest już pusta. Wróć na pierwszą stronę."
-                    : "Brak transakcji spełniających filtry. Zmień lub wyczyść filtry."}
-                </p>
+                <>
+                  <p className="text-gray-400">
+                    {page.total
+                      ? "Ta strona jest już pusta. Wróć na pierwszą stronę."
+                      : hasActiveFilters
+                        ? "Brak transakcji spełniających filtry."
+                        : "Nie masz jeszcze żadnych transakcji."}
+                  </p>
+                  {!page.total && hasActiveFilters && (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setSearch(retainFinancePeriod(search))}
+                    >
+                      Wyczyść filtry wyszukiwania
+                    </button>
+                  )}
+                </>
               )}
               <nav
                 aria-label="Strony transakcji"
@@ -174,6 +225,13 @@ export function TransactionSearch() {
           accounts={accounts.data ?? []}
           categories={categories.data ?? []}
           onClose={closeDetail}
+        />
+      )}
+      {editorId && (
+        <TransactionEditorDialog
+          key={editorId}
+          id={editorId}
+          onClose={() => setEditorId(null)}
         />
       )}
     </section>

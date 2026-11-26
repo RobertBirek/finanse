@@ -9,7 +9,6 @@ import {
 } from "../api/people";
 import { useAccounts } from "../api/finance";
 import { PersonEditor } from "../components/finance/PersonEditor";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { retainFinancePeriod } from "../components/finance/useFinancePeriod";
 import { PersonGiftDialog } from "../components/finance/PersonGiftDialog";
 import { TransactionDateLabel } from "../components/finance/TransactionDateLabel";
@@ -46,7 +45,6 @@ function PersonDetails({ personId }: { personId: string }) {
   const update = useUpdatePerson();
   return (
     <div className="page-workspace space-y-6">
-      <FinanceTabs />
       <Link
         className="text-advisor-700 dark:text-advisor-400 underline"
         to={{

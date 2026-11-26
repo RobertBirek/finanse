@@ -146,6 +146,9 @@ test("reviewed imported expense category changes without editing payment, while 
   });
   await page.goto("/finances/transactions");
   await page
+    .getByRole("button", { name: "Więcej: [actual:old] Historyczny zakup" })
+    .click();
+  await page
     .getByRole("button", { name: "Zmień kategorie", exact: true })
     .first()
     .click();
@@ -179,9 +182,10 @@ test("reviewed imported expense category changes without editing payment, while 
     confirmed: true,
   });
   expect(payment.id).toBe("p1");
+  await page.getByRole("button", { name: "Więcej: Płatność pożyczki" }).click();
   await page
     .getByRole("button", { name: "Zmień kategorie", exact: true })
-    .nth(1)
+    .first()
     .click();
   await expect(
     dialog.getByText("Płatność pożyczki jest chroniona."),

@@ -2,6 +2,15 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## Podgląd — kursy NBP
+
+- Formularz pobiera kurs na żądanie; backend trzyma krótką pamięć
+  podręczną i potwierdza automatyczny kurs przy zapisie. Bramka podglądu
+  przekazuje tylko walutę i datę do NBP, bez danych księgi.
+- Lokalnie: 19 testów formularza, 7 testów backendu bez DB i TypeScript.
+  API dev sprawdzone z prawdziwym NBP dla dnia roboczego, weekendu i święta.
+  Nie wykonywano zapisów transakcji w kopii w ramach odbioru.
+
 ## 2026-11-23 — Zbiorcze rozliczanie wyciągu 1:1
 
 - Dodano podgląd w istniejącym ekranie importu i zatwierdzenie wybranych

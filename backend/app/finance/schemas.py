@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.finance.account_validation import normalize_bic, normalize_iban
-from app.finance.annotation_schemas import AnnotationResponse
+from app.finance.annotation_schemas import AnnotationResponse, AnnotationUpdate
 from app.finance.credit_card_schemas import CardConfig, CardSettings
 from app.finance.opening_balance_schemas import OpeningBalanceInput, OpeningBalanceView
 from app.finance.rule_schemas import AssignmentOrigin
@@ -228,6 +228,7 @@ class ManualFxTransactionCreate(BaseModel):
     category_id: uuid.UUID
     amount_minor: int = Field(strict=True, gt=0, le=9007199254740991)
     fx_rate: Decimal = Field(gt=0, lt=1000000, decimal_places=6)
+    fx_rate_source: Literal["manual", "nbp"] = "manual"
     description: str = Field(min_length=1)
     transaction_date: dt.date | None = None
     purchase_date: dt.date | None = None
@@ -276,6 +277,58 @@ class TransactionUpdate(BaseModel):
     description: str | None = Field(default=None, min_length=1)
     is_pending: bool | None = None
     project_id: uuid.UUID | None = None
+
+
+class TransactionEditorLedger(BaseModel):
+    """Client-selected creation shape for a ledger replacement.
+
+    The service accepts only shapes that can be identified from persisted
+    evidence.  Keeping all existing command schemas in the transport contract
+    lets the client use one editor without inventing a second posting format.
+    """
+
+    model_config = {"extra": "forbid"}
+    kind: Literal["transaction", "manual_fx", "exchange", "refund"]
+    data: TransactionCreate | ManualFxTransactionCreate | ExchangeCreate | ExpenseRefundCreate
+
+    @model_validator(mode="after")
+    def match_kind_to_command(self) -> "TransactionEditorLedger":
+        expected = {
+            "transaction": TransactionCreate,
+            "manual_fx": ManualFxTransactionCreate,
+            "exchange": ExchangeCreate,
+            "refund": ExpenseRefundCreate,
+        }[self.kind]
+        if not isinstance(self.data, expected):
+            raise ValueError("Rodzaj edycji nie odpowiada danym polecenia.")  # noqa: TRY004
+        return self
+
+
+class TransactionEditorUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+    expected_updated_at: dt.datetime
+    expected_date_version: int | None = Field(default=None, ge=0, strict=True)
+    ledger: TransactionEditorLedger | None = None
+    annotations: AnnotationUpdate | None = None
+
+    @field_validator("expected_updated_at")
+    @classmethod
+    def require_timezone(cls, value: dt.datetime) -> dt.datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("Expected timestamp requires a timezone")
+        return value
+
+    @model_validator(mode="after")
+    def require_change(self) -> "TransactionEditorUpdate":
+        if self.ledger is None and self.annotations is None:
+            raise ValueError("Podaj zmianę księgi lub oznaczeń.")
+        return self
+
+
+class TransactionEditorResponse(BaseModel):
+    transaction: "TransactionResponse"
+    ledger_editable: bool
+    ledger_lock_reason: str | None
 
 
 class TransactionDateMetadataResponse(BaseModel):
@@ -329,6 +382,9 @@ class TransactionResponse(BaseModel):
         return self
 
 
+TransactionEditorResponse.model_rebuild()
+
+
 TransactionDateBasis = Literal["booking", "purchase"]
 
 
@@ -362,8 +418,28 @@ class TransactionSearch(BaseModel):
         return self
 
 
-class TransactionSearchItem(TransactionResponse):
+class TransactionHistoryItem(TransactionResponse):
+    ledger_editable: bool | None = None
+    ledger_lock_reason: str | None = None
+    import_batch_id: uuid.UUID | None = None
+    financial_document_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class TransactionSearchItem(TransactionHistoryItem):
     matched_category_amount_pln: int | None = None
+
+
+class BalanceReconciliationInput(BaseModel):
+    day: dt.date
+    statement_minor: str = Field(pattern=r"^-?[0-9]{1,19}$")
+
+
+class BalanceReconciliationResponse(BaseModel):
+    day: dt.date
+    currency: str
+    ledger_minor: str
+    statement_minor: str
+    difference_minor: str
 
 
 class TransactionSearchResponse(BaseModel):

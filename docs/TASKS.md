@@ -2,6 +2,9 @@
 
 Backlog zadań ze statusami.
 
+- [x] Pokazać kurs NBP i jego datę w formularzu EUR/USD na dev.
+- [ ] Odebrać zachowanie na dev; produkcja bez zmian.
+
 ## Zbiorcze rozliczanie wyciągu — 2026-11-23
 
 - [x] Dodać odczytowy podgląd i jawne zbiorcze zatwierdzenie 1:1 dla

@@ -10,6 +10,7 @@ const hooks = vi.hoisted(() => ({
   useCreateTransaction: vi.fn(),
   useCreateExchange: vi.fn(),
   useCreateExpenseRefund: vi.fn(),
+  useTransactionFxQuote: vi.fn(),
 }));
 
 vi.mock("../../api/finance", async (importOriginal) => {
@@ -132,6 +133,10 @@ describe("TransactionForm", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    hooks.useTransactionFxQuote.mockReturnValue({
+      data: undefined,
+      isPending: false,
+    });
     mutate = vi.fn();
     exchangeMutate = vi.fn();
     refundMutate = vi.fn();
@@ -160,6 +165,23 @@ describe("TransactionForm", () => {
       isPending: false,
       error: null,
     });
+  });
+
+  it("prefills an NBP rate, shows its date and allows a manual override", () => {
+    hooks.useTransactionFxQuote.mockReturnValue({
+      data: { rate: "4.25", effective_date: "2026-01-02" },
+      isPending: false,
+    });
+    render(<TransactionForm />);
+    fireEvent.change(screen.getByLabelText("Konto"), {
+      target: { value: "eur" },
+    });
+    expect(screen.getByLabelText("Kurs do PLN")).toHaveValue("4.25");
+    expect(screen.getByText(/NBP.*2026-01-02/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Kurs do PLN"), {
+      target: { value: "4,3" },
+    });
+    expect(screen.getByLabelText("Kurs do PLN")).toHaveValue("4,3");
   });
 
   it("defaults to expense and adjusts fields when switching type", () => {

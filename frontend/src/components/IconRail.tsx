@@ -1,43 +1,62 @@
-import { NavLink } from "react-router-dom";
-import { navigationContexts, type NavigationContext } from "./navigation";
+import { Link, useLocation } from "react-router-dom";
+import {
+  financeNavigationSearch,
+  menuItemCurrent,
+  primaryNavigationItems,
+} from "./navigation";
+import { Tooltip } from "./Tooltip";
 
-type IconRailProps = {
-  activeContext: NavigationContext;
-};
-
-export function IconRail({ activeContext }: IconRailProps) {
+export function PrimaryNavigation({
+  compact = false,
+  onNavigate,
+}: {
+  compact?: boolean;
+  onNavigate?: () => void;
+}) {
+  const { pathname, search } = useLocation();
+  const financeSearch =
+    pathname === "/finances" || pathname.startsWith("/finances/")
+      ? financeNavigationSearch(search)
+      : "";
   return (
-    <aside className="w-[52px] shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col">
-      <nav className="p-2 space-y-2" aria-label="Obszary aplikacji">
-        {navigationContexts.map((context) => {
-          const className = `flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
-            context.id === activeContext.id
-              ? "bg-gray-800 text-white"
-              : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
-          }`;
+    <nav
+      aria-label="Wszystkie obszary aplikacji"
+      className={compact ? "icon-rail-nav" : "space-y-1"}
+    >
+      {primaryNavigationItems.map(({ label, icon: Icon, ...item }) => {
+        const current = menuItemCurrent({ label, ...item }, pathname);
+        const link = (
+          <Link
+            key={item.to}
+            to={item.to === "/finances" ? item.to + financeSearch : item.to}
+            onClick={onNavigate}
+            aria-current={current}
+            aria-label={compact ? label : undefined}
+            className={compact ? "icon-rail-link" : "context-link"}
+          >
+            {Icon && <Icon className="size-5 shrink-0" />}
+            {!compact && label}
+          </Link>
+        );
+        return compact ? (
+          <Tooltip key={item.to} label={label}>
+            {link}
+          </Tooltip>
+        ) : (
+          link
+        );
+      })}
+    </nav>
+  );
+}
 
-          return context.to ? (
-            <NavLink
-              key={context.id}
-              to={context.to}
-              title={context.label}
-              aria-label={context.label}
-              className={className}
-            >
-              <context.icon className="w-5 h-5" />
-            </NavLink>
-          ) : (
-            <span
-              key={context.id}
-              title={`${context.label} - Wkrótce`}
-              aria-disabled="true"
-              className={`${className} cursor-not-allowed opacity-50`}
-            >
-              <context.icon className="w-5 h-5" />
-            </span>
-          );
-        })}
-      </nav>
-    </aside>
+export function IconRail() {
+  return (
+    <div className="icon-rail">
+      <span className="nav-monogram" aria-label="Personal Advisor" role="img">
+        PA
+      </span>
+      <PrimaryNavigation compact />
+    </div>
   );
 }

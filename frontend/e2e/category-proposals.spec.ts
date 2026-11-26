@@ -314,6 +314,10 @@ for (const width of [375, 1440]) {
       page.getByText("Kategoria z propozycji AI — zatwierdzona przez Ciebie"),
     ).toBeVisible();
     await page
+      .getByRole("button", { name: /^Więcej:/ })
+      .first()
+      .click();
+    await page
       .getByRole("button", { name: "Zmień kategorie", exact: true })
       .click();
     const dialog = page.getByRole("dialog", {

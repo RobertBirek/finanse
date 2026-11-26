@@ -1,19 +1,17 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
-import { ContextualSidebar } from "./ContextualSidebar";
-import { getContextForPathname } from "./navigation";
+import { describe, expect, it } from "vitest";
+import { IconRail } from "./IconRail";
 
-describe("Unified sidebar", () => {
-  it("keeps every real module reachable without the removed icon rail", () => {
+describe("Primary icon rail", () => {
+  it("keeps all eight modules reachable and highlights Inbox independently", () => {
     render(
-      <MemoryRouter initialEntries={["/finances"]}>
-        <ContextualSidebar
-          context={getContextForPathname("/finances")}
-          user={null}
-          onLogout={vi.fn()}
-        />
+      <MemoryRouter initialEntries={["/inbox"]}>
+        <IconRail />
       </MemoryRouter>,
+    );
+    const nav = within(
+      screen.getByRole("navigation", { name: "Wszystkie obszary aplikacji" }),
     );
     for (const [name, href] of [
       ["Dzisiaj", "/today"],
@@ -21,13 +19,19 @@ describe("Unified sidebar", () => {
       ["Kalendarz", "/calendar"],
       ["Projekty", "/projects"],
       ["Finanse", "/finances"],
+      ["Doradca", "/advisor"],
       ["Dokumenty", "/documents"],
       ["Ustawienia", "/settings"],
     ]) {
-      expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+      expect(nav.getByRole("link", { name })).toHaveAttribute("href", href);
     }
-    expect(
-      screen.queryByRole("link", { name: "Konta" }),
-    ).not.toBeInTheDocument();
+    expect(nav.getAllByRole("link")).toHaveLength(8);
+    expect(nav.getByRole("link", { name: "Inbox" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(nav.getByRole("link", { name: "Dzisiaj" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 });

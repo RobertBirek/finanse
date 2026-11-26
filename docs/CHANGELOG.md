@@ -2,6 +2,14 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Podgląd dev] — Kursy NBP w ręcznych transakcjach walutowych
+
+### Added
+
+- Formularz EUR/USD uzupełnia kurs NBP na dzień księgowania wydatku lub
+  datę operacji przychodu. Pokazuje datę publikacji, używa wcześniejszego
+  kursu w dni bez tabeli i pozwala wpisać własny kurs.
+
 ## [Nie wydano] — 2026-11-23 — Zbiorcze rozliczanie wyciągu
 
 ### Added

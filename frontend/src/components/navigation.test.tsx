@@ -74,48 +74,82 @@ describe("contextual navigation components", () => {
     const finance = getContextForPathname("/finances");
 
     render(
-      <MemoryRouter>
-        <ContextualSidebar
-          context={finance}
-          user={{ display_name: "Anna", email: "anna@example.com" }}
-          onLogout={() => undefined}
-        />
+      <MemoryRouter
+        initialEntries={[
+          "/finances/imports/batch-42?month=2&year=2026&document=pdf",
+        ]}
+      >
+        <ContextualSidebar context={finance} />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: "Finanse" })).toHaveAttribute(
-      "href",
-      "/finances",
-    );
-    expect(screen.getByRole("link", { name: "Ustawienia" })).toHaveAttribute(
-      "href",
-      "/settings",
-    );
-    expect(screen.getByRole("link", { name: "Projekty" })).toHaveAttribute(
-      "href",
-      "/projects",
-    );
+    const submenu = screen.getByRole("navigation", { name: "Widoki finansów" });
+    expect(within(submenu).getAllByRole("link")).toHaveLength(9);
+    expect(
+      within(submenu).getByRole("link", { name: "Import" }),
+    ).toHaveAttribute("aria-current", "location");
+    expect(
+      within(submenu).getByRole("link", { name: "Przegląd" }),
+    ).not.toHaveAttribute("aria-current");
+    expect(
+      within(submenu).getByRole("link", { name: "Raporty" }),
+    ).toHaveAttribute("href", "/finances/reports?month=2&year=2026");
   });
 });
 
 describe("Layout", () => {
-  it("uses one contextual sidebar and a fixed mobile bottom navigation", () => {
+  it("does not duplicate primary destinations in a contextual panel outside Finance", () => {
     render(
-      <MemoryRouter initialEntries={["/finances"]}>
+      <MemoryRouter initialEntries={["/projects/project-42"]}>
+        <Layout />
+      </MemoryRouter>,
+    );
+    const rail = screen.getByRole("navigation", {
+      name: "Wszystkie obszary aplikacji",
+    });
+    expect(
+      within(rail).getByRole("link", { name: "Projekty" }),
+    ).toHaveAttribute("aria-current", "location");
+    expect(
+      screen.queryByRole("navigation", { name: "Widoki sekcji Projekty" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("banner")).getByRole("button", {
+        name: "Wyloguj",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("uses the finance rail and submenu with a section breadcrumb", () => {
+    render(
+      <MemoryRouter
+        initialEntries={["/finances/transactions?month=2&year=2026"]}
+      >
         <Routes>
           <Route element={<Layout />}>
-            <Route path="/finances" element={<Outlet />} />
+            <Route path="/finances/transactions" element={<Outlet />} />
           </Route>
         </Routes>
       </MemoryRouter>,
     );
 
+    const rail = screen.getByRole("navigation", {
+      name: "Wszystkie obszary aplikacji",
+    });
+    expect(within(rail).getByRole("link", { name: "Finanse" })).toHaveAttribute(
+      "aria-current",
+      "location",
+    );
+    const breadcrumb = screen.getByRole("navigation", {
+      name: "Ścieżka nawigacji",
+    });
     expect(
-      screen.queryByRole("navigation", { name: "Obszary aplikacji" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("navigation", { name: "Wszystkie obszary aplikacji" }),
-    ).toBeInTheDocument();
+      within(breadcrumb).getByRole("link", { name: "Finanse" }),
+    ).toHaveAttribute("href", "/finances?month=2&year=2026");
+    expect(within(breadcrumb).getByText("Transakcje")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     const mobile = screen.getByRole("navigation", {
       name: "Nawigacja mobilna",
     });
@@ -129,6 +163,29 @@ describe("Layout", () => {
 });
 
 describe("mobile navigation lifecycle", () => {
+  it("shows finance views first in the drawer and closes when a view is chosen", () => {
+    render(
+      <MemoryRouter initialEntries={["/finances?month=2&year=2026"]}>
+        <Layout />
+      </MemoryRouter>,
+    );
+    const trigger = screen.getByRole("button", {
+      name: "Otwórz menu aplikacji",
+    });
+    fireEvent.click(trigger);
+    const drawer = within(
+      screen.getByRole("dialog", { name: "Menu aplikacji" }),
+    );
+    const views = drawer.getByRole("navigation", { name: "Widoki finansów" });
+    expect(drawer.getAllByRole("navigation")[0]).toBe(views);
+    fireEvent.click(within(views).getByRole("link", { name: "Budżet" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("navigation", { name: "Ścieżka nawigacji" }),
+      ).getByText("Budżet"),
+    ).toBeInTheDocument();
+  });
   it("only mounts the mobile menu when open and provides all application areas", () => {
     render(
       <MemoryRouter initialEntries={["/today"]}>

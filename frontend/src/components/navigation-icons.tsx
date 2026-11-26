@@ -2,6 +2,25 @@ type IconProps = {
   className?: string;
 };
 
+export function InboxIcon({ className }: IconProps) {
+  return (
+    <Icon
+      className={className}
+      d="M4 5h16l2 10v4H2v-4L4 5zm-2 9h6l2 3h4l2-3h6"
+    />
+  );
+}
+
+export function CalendarIcon({ className }: IconProps) {
+  return <Icon className={className} d="M4 6h16v14H4zM8 3v6m8-6v6M4 11h16" />;
+}
+
+export function LogoutIcon({ className }: IconProps) {
+  return (
+    <Icon className={className} d="M10 17v3H4V4h6v3m-2 5h13m-4-4 4 4-4 4" />
+  );
+}
+
 export function SunIcon({ className }: IconProps) {
   return (
     <Icon

@@ -155,6 +155,10 @@ test("category preview and approval retain one payment and let the owner merge i
   const api = await categoryFixture(page);
   await page.goto("/finances/transactions");
   await page
+    .getByRole("button", { name: /^Więcej:/ })
+    .first()
+    .click();
+  await page
     .getByRole("button", { name: "Zmień kategorie", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
@@ -199,6 +203,10 @@ test("category preview and approval retain one payment and let the owner merge i
   });
   await dialog.getByRole("button", { name: "Zatwierdź podział" }).click();
   await expect(dialog).toHaveCount(0);
+  await page
+    .getByRole("button", { name: /^Więcej:/ })
+    .first()
+    .click();
   await expect(
     page.getByRole("button", { name: "Zmień kategorie", exact: true }),
   ).toHaveCount(1);
@@ -222,6 +230,10 @@ test("category preview and approval retain one payment and let the owner merge i
     page.getByText("80,00 PLN", { exact: true }).first(),
   ).toBeVisible();
   await page.goto("/finances/transactions");
+  await page
+    .getByRole("button", { name: /^Więcej:/ })
+    .first()
+    .click();
   await page
     .getByRole("button", { name: "Zmień kategorie", exact: true })
     .click();

@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_HALF_EVEN, Decimal
@@ -9,7 +10,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
-NBP_API_BASE = "https://api.nbp.pl/api/exchangerates/rates/A"
+NBP_API_BASE = os.environ.get("NBP_API_BASE_URL", "https://api.nbp.pl/api/exchangerates/rates/A")
 
 
 @dataclass(frozen=True)
@@ -29,7 +30,9 @@ class NbpRateProvider:
             self._client = httpx.AsyncClient(timeout=10.0)
         return self._client
 
-    async def get_rate(self, currency: str, rate_date: date) -> NbpRate | None:
+    async def get_rate(
+        self, currency: str, rate_date: date, *, allow_previous_day: bool = False
+    ) -> NbpRate | None:
         currency = currency.upper()
         if currency == "PLN":
             return NbpRate(rate=1.0, effective_date=rate_date, source="manual")
@@ -42,7 +45,9 @@ class NbpRateProvider:
             response = await self._get_response(f"{NBP_API_BASE}/{currency}/{rate_date}/")
             quote = self._parse_rate(response, "nbp", expected_date=rate_date)
         except httpx.HTTPStatusError as error:
-            if error.response.status_code != 404 or rate_date.weekday() not in (5, 6):
+            if error.response.status_code != 404 or (
+                not allow_previous_day and rate_date.weekday() not in (5, 6)
+            ):
                 logger.warning("NBP rate unavailable: %s on %s: %s", currency, rate_date, error)
                 return None
             fallback_quote = await self._get_previous_business_day_rate(currency, rate_date)
@@ -124,9 +129,11 @@ class NbpRateProvider:
             raise ValueError("FX rate must be finite and positive")
         # Keep half-even rounding identical to the ledger; binary float
         # multiplication can turn an exact half minor unit into a smaller value.
-        return int((Decimal(source_amount) * Decimal(str(fx_rate))).quantize(
-            Decimal(1), rounding=ROUND_HALF_EVEN
-        ))
+        return int(
+            (Decimal(source_amount) * Decimal(str(fx_rate))).quantize(
+                Decimal(1), rounding=ROUND_HALF_EVEN
+            )
+        )
 
     async def close(self) -> None:
         if self._client:

@@ -2,6 +2,72 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { fixtures } from "./fixtures";
 
+for (const theme of ["dark", "light"] as const) {
+  test(`finance navigation stays outside the workspace in ${theme}`, async ({
+    page,
+  }, info) => {
+    const api = await fixtures(page);
+    const desktop = info.project.name === "desktop";
+    if (desktop) await page.setViewportSize({ width: 1920, height: 1067 });
+    await page.addInitScript(
+      (value) => localStorage.setItem("advisor-theme", value),
+      theme,
+    );
+    await page.goto("/finances/transactions?month=9&year=2026");
+    const header = page.getByRole("navigation", { name: "Ścieżka nawigacji" });
+    await expect(header.getByText("Transakcje")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    const desktopRail = page.getByRole("navigation", {
+      name: "Wszystkie obszary aplikacji",
+    });
+    const trigger = page.getByRole("button", { name: "Otwórz menu aplikacji" });
+    const dialog = page.getByRole("dialog", { name: "Menu aplikacji" });
+    if (desktop) {
+      await expect(
+        desktopRail.getByRole("link", { name: "Finanse" }),
+      ).toHaveAttribute("aria-current", "location");
+      const content = await page.locator("#main-content").boundingBox();
+      expect(content!.x).toBe(292);
+    } else {
+      await expect(desktopRail).toBeHidden();
+      await trigger.focus();
+      await page.keyboard.press("Enter");
+      await expect(
+        dialog.getByRole("button", { name: "Wyloguj" }),
+      ).toBeAttached();
+      await dialog.getByRole("link", { name: "Raporty" }).focus();
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(trigger).toBeFocused();
+      await trigger.click();
+    }
+    const submenu = (desktop ? page : dialog).getByRole("navigation", {
+      name: "Widoki finansów",
+    });
+    await expect(submenu.getByRole("link")).toHaveCount(9);
+    await expect(
+      submenu.getByRole("link", { name: "Transakcje" }),
+    ).toHaveAttribute("aria-current", "page");
+    await page.screenshot({ path: info.outputPath(`${theme}-navigation.png`) });
+    await submenu.getByRole("link", { name: "Raporty" }).click();
+    await expect(page).toHaveURL(/\/finances\/reports\?month=9&year=2026$/);
+    await expect(dialog).toBeHidden();
+    await page.reload();
+    await expect(header.getByText("Raporty")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(
+      page
+        .locator("#main-content")
+        .getByRole("navigation", { name: "Widoki finansów" }),
+    ).toHaveCount(0);
+    api.assertClean();
+  });
+}
+
 for (const [path, title] of [
   ["/finances/transactions", "Transakcje"],
   ["/documents", "Dokumenty"],

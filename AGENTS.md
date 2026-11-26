@@ -38,6 +38,19 @@ Domena produkcyjna: `https://finanse.birek.online`
 
 Usługi na sieci `proxy` (external) dostępne przez npmplus. Postgres, Redis, Stirling PDF na sieci `internal`, nie wystawione.
 
+## Workflow wydania
+
+- Pracuj w izolowanej gałęzi lub worktree. GitHub Actions na `main` buduje obrazy,
+  sprawdza je na syntetycznej bazie i kolejce, w tym po zalogowaniu w przeglądarce,
+  a następnie publikuje pakiet dla dokładnej rewizji. Stały podgląd dev nie jest
+  częścią bramki wydania po uruchomieniu tej ścieżki.
+- Zwykłe wydanie aplikacji przeprowadza zaufane polecenie `finanse-release`
+  na hoście produkcji, po jednej zgodzie na dokładną rewizję i obrazy.
+  Migracje, zmiany infrastruktury, narzędzi wydania i niezgodność z zatwierdzonym
+  spisem przechodzą osobną procedurę `/deploy`. Sam merge nie uruchamia produkcji.
+- Do czasu odbioru nowej ścieżki obowiązuje bieżący proces produkcji.
+  Przełączenie stałego dev następuje po zaliczonym pierwszym wydaniu i nie usuwa danych.
+
 ## Finanse — zasady nienaruszalne
 
 - **Uproszczona księga podwójnego zapisu** — każda transakcja ma min. 2 postings, suma = 0.

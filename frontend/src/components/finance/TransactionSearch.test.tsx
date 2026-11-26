@@ -109,6 +109,19 @@ describe("search filters and amounts", () => {
 });
 
 describe("complete transaction history", () => {
+  it("keeps dedicated annotation and category corrections available alongside the editor", () => {
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: "Więcej: Zakup kawy" }));
+    expect(
+      screen.getByRole("button", { name: "Opis i oznaczenia" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Zmień kategorie" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Edytuj transakcję" }),
+    ).toBeEnabled();
+  });
   it("submits all filters to the server and resets pagination", () => {
     mount("/finances/transactions?page=3");
     fireEvent.change(
@@ -147,6 +160,7 @@ describe("complete transaction history", () => {
   it("keeps URL filters/page through detail, close and browser Back", () => {
     mount("/finances/transactions?q=Kawa&currency=EUR&page=2");
     expect(screen.getByText("Wyniki 26–26 z 53")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Więcej: Zakup kawy" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Szczegóły: Zakup kawy" }),
     );
@@ -224,6 +238,7 @@ describe("complete transaction history", () => {
       "Szukaj po opisie, koncie lub kategorii",
     );
     fireEvent.change(input, { target: { value: "Robocza fraza" } });
+    fireEvent.click(screen.getByRole("button", { name: "Więcej: Zakup kawy" }));
     fireEvent.click(
       screen.getByRole("button", { name: "Szczegóły: Zakup kawy" }),
     );

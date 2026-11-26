@@ -2,11 +2,13 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
+import httpx
 import pytest
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.finance.manual_fx import valued_transaction
+from app.finance.manual_fx import transaction_fx_quote, valued_transaction
+from app.finance.nbp_rates import NbpRateProvider
 from app.finance.schemas import (
     AccountCreate,
     CategoryCreate,
@@ -16,6 +18,47 @@ from app.finance.schemas import (
 from app.finance.service import create_account, create_category
 from tests.test_finance.test_account_currency import client_for
 from tests.test_finance.test_bill_payments import create_owner
+
+
+async def test_nbp_holiday_uses_previous_quote_and_caches_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[str] = []
+    day = date(2025, 12, 25)
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request.url.path)
+        if len(requests) == 1:
+            return httpx.Response(404)
+        return httpx.Response(
+            200,
+            json={
+                "rates": [
+                    {"mid": 4.25, "effectiveDate": "2025-12-23"},
+                    {"mid": 4.30, "effectiveDate": "2025-12-24"},
+                    {"mid": 9, "effectiveDate": "2025-12-25"},
+                ]
+            },
+        )
+
+    async def client(self: NbpRateProvider) -> httpx.AsyncClient:
+        assert self._client is None
+        self._client = httpx.AsyncClient(transport=httpx.MockTransport(respond))
+        return self._client
+
+    async def reused_client(self: NbpRateProvider) -> httpx.AsyncClient:
+        return self._client or await client(self)
+
+    monkeypatch.setattr(NbpRateProvider, "_get_client", reused_client)
+    quote = await transaction_fx_quote("EUR", day)
+    assert quote is not None
+    assert (quote.rate, quote.effective_date, quote.source) == (
+        4.30,
+        date(2025, 12, 24),
+        "nbp_previous_business_day",
+    )
+    assert await transaction_fx_quote("EUR", day) == quote
+    assert len(requests) == 2
 
 
 def fx_payload(account_id: uuid.UUID, category_id: uuid.UUID) -> dict[str, object]:

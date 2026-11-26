@@ -24,7 +24,6 @@ import {
   type ImportPreview as PreviewData,
   type CommitResult,
 } from "../api/bankImports";
-import { FinanceTabs } from "../components/finance/FinanceTabs";
 import { ImportUpload } from "../components/finance/imports/ImportUpload";
 import { ImportSources } from "../components/finance/imports/ImportSources";
 import { StatementSettlementReview } from "../components/finance/imports/StatementSettlementReview";
@@ -579,7 +578,6 @@ export function FinanceImportReview() {
         }
         description="Oryginał pozostaje bez zmian. Decyzje i podgląd nie księgują operacji."
       />
-      <FinanceTabs />
       <Link
         className="mb-4 inline-block underline"
         to={{ pathname: "/finances/imports", search: historySearch.toString() }}
