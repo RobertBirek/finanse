@@ -33,6 +33,26 @@ export interface ImportCheck {
   expected: number | null;
   actual: number | null;
 }
+export interface VeloCardCharge {
+  row_key: string;
+  kind: "principal" | "plan_interest" | "cash_interest";
+  booking_date: string;
+  amount_pln: number;
+}
+export interface VeloCardBreakdown {
+  due_date: string | null;
+  cycle_debt_pln: number | null;
+  minimum_pln: number | null;
+  future_installment_principal_pln: number | null;
+  komfort_installment: {
+    principal_pln: number;
+    interest_pln: number;
+    total_pln: number;
+    included_in_minimum: boolean;
+  } | null;
+  unassigned_installment_charges: VeloCardCharge[];
+  cash_interest_charges: VeloCardCharge[];
+}
 export interface ImportSource {
   id: string;
   batch_id: string;
@@ -56,6 +76,7 @@ export interface ImportSource {
   warnings: string[];
   has_account_reference?: boolean;
   auto_post?: AutoPostSummary | null;
+  velo_card_breakdown?: VeloCardBreakdown | null;
 }
 export interface AutoPostSummary {
   id: string;

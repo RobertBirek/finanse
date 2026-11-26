@@ -29,6 +29,7 @@ from app.finance.imports.schemas import (
     RowPage,
     SourceDTO,
 )
+from app.finance.imports.velo_card_breakdown import velo_card_breakdown
 from app.finance.loan_schedule_models import LoanScheduleMembership, LoanScheduleRevision
 from app.finance.loan_schedule_sources import source_activations
 
@@ -188,6 +189,7 @@ async def get_batch(db: AsyncSession, owner: uuid.UUID, batch_id: uuid.UUID) -> 
                     "candidate_checks": candidate.checks if candidate else [],
                     "schedule_activations": activations.get(source.id, []),
                     "checks": revision.checks if revision else [],
+                    "velo_card_breakdown": velo_card_breakdown(revision.result) if revision else None,
                     "has_account_reference": bool(source.account_reference),
                     "auto_post": {
                         "id": auto_post.id,
