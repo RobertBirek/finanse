@@ -29,6 +29,8 @@ export async function loanFixtures(
     paginated?: boolean;
     pauseLink?: boolean;
     unlinkConflict?: boolean;
+    detailError?: boolean;
+    dueDate?: string;
   } = {},
 ) {
   const api = await fixtures(page);
@@ -81,7 +83,7 @@ export async function loanFixtures(
             {
               id: installmentId,
               number: 1,
-              due_date: "2026-10-15",
+              due_date: options.dueDate ?? "2026-10-15",
               principal_pln: 90000,
               interest_pln: 9000,
               fees_pln: 1000,
@@ -135,7 +137,11 @@ export async function loanFixtures(
       );
     }
     if (path === `/api/finance/loans/${loanId}` && method === "GET")
-      return route.fulfill({ json: detail() });
+      return route.fulfill(
+        options.detailError
+          ? { status: 503, json: { detail: "Fixture unavailable" } }
+          : { json: detail() },
+      );
     if (
       path === `/api/finance/loans/${loanId}/installments` &&
       method === "POST" &&

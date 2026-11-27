@@ -9,6 +9,7 @@ export function ScheduleDiff({
   diff: ScheduleDifference;
   installments?: LoanInstallment[];
 }) {
+  const newTotal = diff.new_rows.reduce((total, row) => total + row.total, 0);
   return (
     <section className="card space-y-4" aria-label="Porównanie harmonogramów">
       <h2 className="text-xl">Zakres zmiany od {diff.cutover_date}</h2>
@@ -27,6 +28,11 @@ export function ScheduleDiff({
           </div>
         ))}
       </dl>
+      <p className="text-sm text-gray-400">
+        Suma nowych rat w zakresie zmiany:{" "}
+        <strong>{formatPLN(newTotal)} PLN</strong>. To plan, nie płatność ani
+        zmiana salda księgowego.
+      </p>
       <p className="text-sm">
         Nie oznaczamy rat jako zapłaconych. Przeszłe niepokryte raty i
         istniejące powiązania pozostają zachowane; wycofana przyszłość nie

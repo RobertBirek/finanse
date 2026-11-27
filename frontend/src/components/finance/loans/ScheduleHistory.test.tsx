@@ -14,7 +14,7 @@ it("reads bank originals and manual baseline snapshots separately from active su
   );
   expect(
     await screen.findByRole("link", {
-      name: "Pobierz oryginał wersji: schedule.pdf",
+      name: "Źródło harmonogramu: schedule.pdf (pobierz oryginał)",
     }),
   ).toHaveAttribute("href", "/api/documents/document-a/original");
   fireEvent.change(screen.getByLabelText("Wersja harmonogramu"), {

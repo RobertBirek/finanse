@@ -1,6 +1,59 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { loanFixtures, loanId, installmentId } from "./loan-fixtures";
+
+function installmentStatus(page: Page, status: string) {
+  return page
+    .getByRole("article")
+    .filter({ hasText: "Rata 1" })
+    .getByText(status, { exact: true });
+}
+
+function tomorrow(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+test("operational overview shows an upcoming active installment and retains the loan deep link", async ({
+  page,
+}) => {
+  const api = await loanFixtures(page, { dueDate: tomorrow() });
+  await page.goto(`/finances/loans?loan=${loanId}`);
+  const overview = page.getByRole("region", { name: "Nadchodzące raty" });
+  await expect(overview.getByText(/Kredyt testowy Q7.*rata 1/)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Ustawienia kredytów i pożyczek" }),
+  ).toHaveAttribute("href", `/settings/finances/loans?loan=${loanId}`);
+  await page
+    .getByRole("link", { name: "Ustawienia kredytów i pożyczek" })
+    .click();
+  await expect(
+    page.getByRole("link", { name: "Przejdź do kredytów i pożyczek" }),
+  ).toHaveAttribute("href", `/finances/loans?loan=${loanId}`);
+  expect(api.loanMutations).toEqual([]);
+  api.assertLoanClean();
+});
+
+test("operational overview reports a partial active-schedule error without an empty-state claim", async ({
+  page,
+}) => {
+  const api = await loanFixtures(page, { detailError: true });
+  await page.goto("/finances/loans");
+  const overview = page.getByRole("region", { name: "Nadchodzące raty" });
+  await expect(overview.getByRole("alert")).toContainText(
+    "Widoczne pozycje mogą być niepełne",
+  );
+  await expect(
+    overview.getByText(/Brak niepokrytych rat z terminem/),
+  ).toHaveCount(0);
+  expect(api.loanMutations).toEqual([]);
+  api.assertLoanClean();
+});
 
 test("shows a card plan recognized from a saved statement", async ({
   page,
@@ -57,20 +110,17 @@ test("finance navigation opens the loan overview with schedule totals", async ({
   await expect(
     page.getByRole("heading", { name: "Kredyty i pożyczki" }),
   ).toBeVisible();
-  await expect(page.getByText("Wybierz kredyt lub pożyczkę.")).toBeVisible();
-  await expect(page.getByText("Kapitał w harmonogramie")).toHaveCount(0);
+  await expect(page.getByText("Kapitał w harmonogramie")).toBeVisible();
   const tile = page
     .getByRole("region", { name: "Wybór zobowiązania" })
     .getByRole("button")
     .first();
-  await tile.focus();
-  await page.keyboard.press("Enter");
+  await tile.click();
   await expect(page).toHaveURL(new RegExp(`loan=${loanId}`));
   await page.reload();
   await expect(tile).toHaveAttribute("aria-pressed", "true");
   await page.goBack();
-  await expect(page.getByText("Wybierz kredyt lub pożyczkę.")).toBeVisible();
-  await tile.click();
+  await expect(page.getByText("Kapitał w harmonogramie")).toBeVisible();
   const values = page
     .locator("dl")
     .filter({ hasText: "Kapitał w harmonogramie" });
@@ -98,7 +148,7 @@ for (const theme of ["light", "dark"]) {
     await expect(
       page.getByRole("heading", { name: "Kredyty i pożyczki" }),
     ).toBeVisible();
-    await expect(page.getByText("Niepokryta", { exact: true })).toBeVisible();
+    await expect(installmentStatus(page, "Niepokryta")).toBeVisible();
     await expect(page.getByText(/Saldo księgowe nie jest/)).toBeVisible();
     await page
       .getByRole("button", { name: "Powiąż płatność", exact: true })
@@ -108,16 +158,14 @@ for (const theme of ["light", "dark"]) {
     await candidate("Pierwsza część raty")
       .getByRole("button", { name: "Wybierz" })
       .click();
-    await expect(
-      page.getByText("Częściowo pokryta", { exact: true }),
-    ).toBeVisible();
+    await expect(installmentStatus(page, "Częściowo pokryta")).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Edytuj ratę", exact: true }),
     ).toHaveCount(0);
     await candidate("Druga część raty")
       .getByRole("button", { name: "Wybierz" })
       .click();
-    await expect(page.getByText("Pokryta", { exact: true })).toBeVisible();
+    await expect(installmentStatus(page, "Pokryta")).toBeVisible();
     await expect(page.getByText(/Brak kwalifikujących się/)).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Odepnij", exact: true }),
@@ -140,9 +188,7 @@ for (const theme of ["light", "dark"]) {
       .getByRole("button", { name: "Odepnij", exact: true })
       .first()
       .click();
-    await expect(
-      page.getByText("Częściowo pokryta", { exact: true }),
-    ).toBeVisible();
+    await expect(installmentStatus(page, "Częściowo pokryta")).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Odepnij", exact: true }),
     ).toHaveCount(1);
@@ -182,7 +228,7 @@ test("loan conflict retains manual transfer selection without ledger writes", as
     page.getByText("Płatność jest już powiązana.", { exact: true }),
   ).toBeVisible();
   await expect(input).toHaveValue("74000000-0000-0000-0000-000000000001");
-  await expect(page.getByText("Niepokryta", { exact: true })).toBeVisible();
+  await expect(installmentStatus(page, "Niepokryta")).toBeVisible();
   expect(api.loanMutations).toHaveLength(1);
   api.assertLoanClean();
 });
@@ -191,7 +237,7 @@ test("loan list failure is not an empty agreement list", async ({ page }) => {
   const api = await loanFixtures(page, { listError: true });
   await page.goto("/settings/finances/loans");
   await expect(page.getByRole("alert")).toContainText(
-    "Nie udało się pobrać umów lub kont.",
+    "Nie udało się pobrać umów.",
   );
   await expect(page.getByText(/Brak umów/)).toHaveCount(0);
   await expect(
@@ -223,9 +269,7 @@ test("candidate link blocks repeated selection and resets the page; unlink confl
     page.getByRole("button", { name: "Powiąż ID", exact: true }),
   ).toBeDisabled();
   api.releaseLink();
-  await expect(
-    page.getByText("Częściowo pokryta", { exact: true }),
-  ).toBeVisible();
+  await expect(installmentStatus(page, "Częściowo pokryta")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Poprzednie", exact: true }),
   ).toBeDisabled();
@@ -235,9 +279,7 @@ test("candidate link blocks repeated selection and resets the page; unlink confl
   await expect(page.getByRole("alert")).toContainText(
     "Nie udało się odpiąć płatności.",
   );
-  await expect(
-    page.getByText("Częściowo pokryta", { exact: true }),
-  ).toBeVisible();
+  await expect(installmentStatus(page, "Częściowo pokryta")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Odepnij", exact: true }),
   ).toBeVisible();
@@ -251,6 +293,7 @@ test("installment form sends exact components and resets after metadata-only cre
   const api = await loanFixtures(page, { emptySchedule: true });
   await page.goto("/settings/finances/loans");
   await expect(page.getByText(/Brak rat. To nie oznacza/)).toBeVisible();
+  await page.getByText("Dodaj ratę ręcznie", { exact: true }).click();
   const form = page.getByRole("form", { name: "Nowa rata" });
   const submit = form.getByRole("button", { name: "Dodaj ratę", exact: true });
   await form.getByLabel("Numer", { exact: true }).fill("1");
@@ -264,7 +307,7 @@ test("installment form sends exact components and resets after metadata-only cre
     form.getByText("Suma planu: 1000.00 PLN", { exact: true }),
   ).toBeVisible();
   await submit.click();
-  await expect(page.getByText("Niepokryta", { exact: true })).toBeVisible();
+  await expect(installmentStatus(page, "Niepokryta")).toBeVisible();
   await expect(form.getByLabel("Numer", { exact: true })).toHaveValue("");
   await expect(submit).toBeDisabled();
   expect(api.loanMutations).toEqual([
@@ -333,7 +376,7 @@ test("switches between a card plan and Allegro Pay when agreements cannot load",
   );
   await page.goto("/finances/loans?month=2");
   const strip = page.getByRole("region", { name: "Wybór zobowiązania" });
-  await expect(page.getByRole("alert")).toContainText("umów");
+  await expect(strip.getByRole("alert")).toContainText("umów");
   await strip.getByRole("button", { name: /Plan karty A/ }).click();
   await expect(page.getByText("Spłata planu: 50,00 PLN")).toBeVisible();
   await expect(page.getByText("Spłata planu: 60,00 PLN")).toHaveCount(0);

@@ -12,6 +12,15 @@ it("shows a cutover and preserved unpaid history separately from retired future 
   expect(screen.getByText(/Nie oznaczamy.*zapłacon/i)).toBeVisible();
 });
 
+it("shows a reliable total for the new planned rows without presenting it as a payment", () => {
+  render(<ScheduleDiff diff={schedulePreview.diff} />);
+  expect(
+    screen.getByText(
+      /Suma nowych rat w zakresie zmiany:.*To plan, nie płatność/i,
+    ),
+  ).toBeVisible();
+});
+
 it("requires explicit confirmation and never activates a linked conflict", () => {
   const activate = vi.fn();
   const preview = {

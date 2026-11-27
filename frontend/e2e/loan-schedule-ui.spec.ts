@@ -174,7 +174,9 @@ for (const theme of ["light", "dark"]) {
       .getByRole("button", { name: "Historia wersji harmonogramu" })
       .click();
     await expect(
-      page.getByRole("link", { name: /Pobierz oryginał wersji/ }),
+      page.getByRole("link", {
+        name: /Źródło harmonogramu:.*pobierz oryginał/,
+      }),
     ).toHaveAttribute("href", "/api/documents/document-a/original");
     await page
       .getByRole("combobox", { name: "Wersja harmonogramu", exact: true })

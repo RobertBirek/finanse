@@ -5,6 +5,26 @@ Backlog zadań ze statusami.
 - [x] Pokazać kurs NBP i jego datę w formularzu EUR/USD na dev.
 - [ ] Odebrać zachowanie na dev; produkcja bez zmian.
 
+## Kredyty i pożyczki — 2026-11-27
+
+- [x] Rozdzielić widok operacyjny `/finances/loans` od ustawień
+  `/settings/finances/loans`, zachowując kafelki oraz odnośniki `?loan`.
+- [x] Dodać przegląd rat na 30 dni, obsługę częściowego błędu, filtry i
+  grupowanie rat oraz zwinięte formularze ustawień; bez zmian API, migracji
+  lub produkcji.
+- [x] Pokryć operacyjny widok syntetycznymi testami desktop/mobile, w tym
+  głębokie linki, raty 30 dni, powiązania płatności oraz stany ładowania i
+  błędów bez fałszywego komunikatu o braku rat.
+- [x] Zachować wybór domyślnej i archiwalnej umowy w `?loan` oraz rozróżnić
+  pusty harmonogram od pustego wyniku filtra statusu.
+- [x] Zachować zamknięcie kafelków niebędących umową i zapewnić bezpieczne
+  odzyskanie po nieprawidłowym `?loan`, bez blokowania ładowania, błędu lub
+  prawidłowego głębokiego linku do umowy archiwalnej.
+- [x] Zapisać celowo zamknięty kafelek w URL, aby domyślna umowa nie wracała
+  po odświeżeniu ani nawigacji historią.
+- [ ] Odebrać UX w przeglądarce na desktopie i telefonie przed osobną decyzją
+  o integracji lub wydaniu.
+
 ## Zbiorcze rozliczanie wyciągu — 2026-11-23
 
 - [x] Dodać odczytowy podgląd i jawne zbiorcze zatwierdzenie 1:1 dla
