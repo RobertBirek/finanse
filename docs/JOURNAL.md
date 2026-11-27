@@ -2,6 +2,76 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-27 — Regresje widoku kredytów i pokrycie E2E
+
+- Końcowa weryfikacja po ostatniej poprawce: Vitest `769/769` przy
+  `--maxWorkers=2`, lint, kontrola typów, build i ukierunkowany Playwright
+  `26/26` na desktopie i telefonie. Przy domyślnej równoległości dwa testy
+  poza zakresem kredytów nie przeszły (timeout dokumentów i kategoryzacja).
+- Odłożono przypadek ręcznie utworzonego adresu z kilkoma sprzecznymi
+  identyfikatorami: nieaktualny parametr `loan` ma pierwszeństwo nad innym
+  prawidłowym wyborem. Interfejs nie generuje takich adresów.
+- Stan zamkniętego kafelka nie jest już lokalnym stanem Reacta:
+  `selected=none` jest jednoznaczną, walidowaną reprezentacją w URL.
+  Zachowuje niezwiązane parametry, przetrwa remount/odświeżenie oraz wraca do
+  zwykłego wyboru po kliknięciu kafelka. Brak znacznika nadal wybiera aktywną
+  umowę, a nieznana wartość jest normalizowana.
+- Regresje dla remountu zamkniętego Allegro, selekcji umowy po zamknięciu i
+  nieznanego znacznika najpierw były czerwone. Ukierunkowany Vitest `27/27`,
+  ESLint zmienionych plików, TypeScript i `git diff --check` przeszły; pełnej
+  kolekcji ani E2E nie uruchamiano.
+- Rozróżniono pierwszy domyślny wybór umowy od świadomego zamknięcia kafelka
+  Allegro Pay/planu karty: po zamknięciu aplikacja nie otwiera umowy w tle.
+  Ustawienia nie przekazują nieprawidłowego `?loan` do szczegółów ani linku
+  powrotnego, pokazują wybór z listy; ładowanie i błąd nie są traktowane jak
+  rozstrzygnięta niedostępność. Archiwalny ID pozostaje prawidłowym linkiem.
+- Regresje dla zamknięcia Allegro, niedostępnego ID z odzyskaniem, stanu
+  ładowania/błędu oraz archiwalnego linku były czerwone przed poprawką.
+  Ukierunkowany Vitest: `25/25`; ukierunkowany ESLint, TypeScript i
+  `git diff --check` przeszły. Pełnej kolekcji ani E2E nie uruchamiano,
+  ponieważ użytkownik uruchamia pełną kolekcję.
+- Domyślna aktywna umowa jest kanonizowana do `?loan`, a kliknięcie już
+  wybranej umowy, także archiwalnej, zachowuje jej wybór. Przełączanie
+  pozostałych typów kafelków nadal ma dotychczasową niezależną semantykę.
+  Filtr statusu rat odróżnia teraz raty nieistniejące od istniejących rat,
+  które nie pasują do filtra.
+- Dwie regresje wyboru URL i regresja pustego wyniku filtra były najpierw
+  czerwone; ukierunkowany Vitest po poprawce: `21/21`. Ukierunkowany ESLint
+  dla trzech zmienionych plików, TypeScript oraz `git diff --check` przeszły.
+  Nie uruchamiano pełnej kolekcji frontendowych testów ani E2E, ponieważ
+  równoległa pełna kolekcja użytkownika jest aktywna.
+- Karta rat na 30 dni nie interpretuje już niegotowej lub błędnej listy umów
+  jako pustego harmonogramu. Gdy nie można odczytać jednego z aktywnych
+  harmonogramów, pokazuje ostrzeżenie o niepełnych danych zamiast pustego
+  stanu. Horyzont dat korzysta z lokalnej arytmetyki kalendarzowej
+  (`localTodayIso` / `localDateIso`), więc nie przesuwa się przy lokalnej
+  północy.
+- Dodano syntetyczne scenariusze Playwright dla desktopu i telefonu:
+  nadchodzącej raty, zachowania `?loan` w obu kierunkach, częściowego błędu
+  harmonogramu oraz istniejących powiązań płatności. Zaktualizowano stare
+  selektory i oczekiwania wyłącznie dla zatwierdzonych zmian UX (domyślnie
+  aktywna umowa, zwinięte formularze, nowe etykiety).
+- Weryfikacja: ukierunkowany Vitest `19/19`, lint i TypeScript przeszły;
+  ukierunkowany Playwright `26/26`, pełny Playwright `298 passed`, `8 skipped`.
+  Pełny Vitest ma niezwiązaną awarię `FinanceCategorizationSettings.test.tsx`
+  (brak nagłówka „Kategoryzacja” w jednym teście): `760/761` testów.
+  Nie zmieniano backendu, migracji, danych, konfiguracji ani produkcji.
+
+## 2026-11-27 — UX kredytów i pożyczek
+
+- `/finances/loans` pozostaje widokiem operacyjnym z kafelkami: wybiera
+  aktywną umowę, respektuje głęboki link `?loan` i odsyła do dokładnie tej
+  umowy w ustawieniach. Niezależne odczyty aktywnych harmonogramów pokazują
+  raty na 30 dni; błąd jednego harmonogramu sygnalizuje niepełne dane, lecz
+  nie usuwa pozostałych pozycji.
+- `/settings/finances/loans` skupia tworzenie i zarządzanie umową,
+  import/historię oraz ręczne raty. Formularze dodawania są początkowo
+  zwinięte, a błąd kont nie blokuje odczytu istniejących umów. Raty można
+  filtrować po statusie i przeglądać rocznikami; powiązanie płatności nadal
+  korzysta wyłącznie z istniejącej księgi.
+- Lokalnie: 755 testów Vitest, lint, TypeScript i build Vite przeszły. Nie
+  zmieniano backendu, migracji, danych, konfiguracji ani produkcji.
+
 ## Podgląd — kursy NBP
 
 - Formularz pobiera kurs na żądanie; backend trzyma krótką pamięć

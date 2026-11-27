@@ -2,6 +2,37 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Nie wydano] — 2026-11-27 — Kredyty i pożyczki
+
+### Added
+
+- Operacyjny widok `/finances/loans` wybiera domyślnie aktywną umowę,
+  zachowuje wybór w `?loan` i pokazuje niepokryte raty aktywnych umów na
+  najbliższe 30 dni. Błąd pojedynczego harmonogramu nie ukrywa pozostałych.
+- Ustawienia umów mają zwinięte formularze dodawania umowy i ręcznej raty,
+  statusowy filtr rat oraz grupowanie według roku. Historia harmonogramu
+  opisuje źródłowy dokument, a podgląd importu pokazuje sumę nowych rat jako
+  plan, nie płatność.
+- Testy Playwright z syntetycznymi danymi obejmują wybór i głębokie linki,
+  ratę w horyzoncie 30 dni, przejście między widokiem operacyjnym a
+  ustawieniami oraz częściowy błąd harmonogramu na desktopie i telefonie.
+
+### Fixed
+
+- Karta nadchodzących rat nie komunikuje braku rat podczas ładowania lub
+  błędu listy umów ani po błędzie aktywnego harmonogramu. Daty horyzontu są
+  wyliczane w lokalnym kalendarzu, a nie przez UTC.
+- Domyślnie wybrana umowa jest zapisywana w `?loan`; ponowne wybranie
+  archiwalnej umowy nie usuwa jej z adresu. Filtr statusu rat pokazuje
+  odrębny komunikat, gdy żadna istniejąca rata nie spełnia kryterium.
+- Zamknięcie wybranego kafelka Allegro Pay lub planu karty nie otwiera
+  automatycznie domyślnej umowy. Nieprawidłowy `?loan` w ustawieniach jest
+  rozpoznawany jako niedostępny wybór i pozwala wybrać istniejącą umowę.
+- Celowe zamknięcie kafelka jest zapisywane jako `?selected=none`, więc
+  zachowuje się po odświeżeniu i w historii przeglądarki. Tylko dokładna
+  wartość `none` jest rozpoznawana; pozostałe znaczniki są kanonizowane do
+  prawidłowego domyślnego wyboru.
+
 ## [Podgląd dev] — Kursy NBP w ręcznych transakcjach walutowych
 
 ### Added

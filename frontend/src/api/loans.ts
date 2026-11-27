@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import api from "../lib/api";
 import type { VeloCardBreakdown } from "./bankImports";
@@ -117,6 +122,17 @@ export function useLoan(id: string | null) {
     enabled: !!id,
     queryFn: async () =>
       (await api.get<LoanDetail>(`/finance/loans/${id}`)).data,
+  });
+}
+export function useActiveLoanDetails(loans: Loan[] | undefined) {
+  return useQueries({
+    queries: (loans ?? [])
+      .filter((loan) => loan.is_active)
+      .map((loan) => ({
+        queryKey: ["finance", "loans", loan.id],
+        queryFn: async () =>
+          (await api.get<LoanDetail>(`/finance/loans/${loan.id}`)).data,
+      })),
   });
 }
 export function useCreateLoan() {

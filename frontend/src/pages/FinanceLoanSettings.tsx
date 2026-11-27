@@ -310,6 +310,24 @@ export function LoanDetails({
 }) {
   const detail = useLoan(loanId);
   const updateLoan = useUpdateLoan();
+  const [paymentFilter, setPaymentFilter] = useState<LoanPaymentStatus | "all">(
+    "all",
+  );
+  const visibleInstallments =
+    detail.data?.installments
+      .filter(
+        (installment) =>
+          paymentFilter === "all" ||
+          installment.payment_status === paymentFilter,
+      )
+      .sort((a, b) => a.due_date.localeCompare(b.due_date)) ?? [];
+  const installmentsByYear = visibleInstallments.reduce<
+    Record<string, LoanInstallment[]>
+  >((groups, installment) => {
+    const year = installment.due_date.slice(0, 4);
+    (groups[year] ??= []).push(installment);
+    return groups;
+  }, {});
   return (
     <QueryFeedback
       loading={detail.isLoading}
@@ -451,11 +469,16 @@ export function LoanDetails({
                   pozostają dostępne.
                 </p>
               ) : (
-                <LoanInstallmentForm
-                  key={detail.data.id}
-                  loanId={detail.data.id}
-                  onSuccess={() => {}}
-                />
+                <details className="card mb-4">
+                  <summary className="cursor-pointer font-semibold text-white">
+                    Dodaj ratę ręcznie
+                  </summary>
+                  <LoanInstallmentForm
+                    key={detail.data.id}
+                    loanId={detail.data.id}
+                    onSuccess={() => {}}
+                  />
+                </details>
               )
             ) : null}
             {loanApiErrorMessage(updateLoan.error) ? (
@@ -464,21 +487,55 @@ export function LoanDetails({
               </p>
             ) : null}
             <section className="card">
-              <h2 className="text-lg font-semibold text-white">Raty</h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold text-white">Raty</h2>
+                <label className="text-sm text-gray-400">
+                  Status
+                  <select
+                    className="input ml-2"
+                    value={paymentFilter}
+                    onChange={(event) =>
+                      setPaymentFilter(
+                        event.target.value as LoanPaymentStatus | "all",
+                      )
+                    }
+                  >
+                    <option value="all">Wszystkie</option>
+                    {Object.entries(statusLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               {detail.data.installments.length === 0 ? (
                 <p className="mt-3 text-sm text-gray-400">
                   Brak rat. To nie oznacza, że kredyt został spłacony.
                 </p>
+              ) : visibleInstallments.length === 0 ? (
+                <p className="mt-3 text-sm text-gray-400">
+                  Brak rat o wybranym statusie.
+                </p>
               ) : (
-                detail.data.installments.map((installment) => (
-                  <InstallmentRow
-                    key={installment.id}
-                    loanId={detail.data!.id}
-                    installment={installment}
-                    configure={configure}
-                    managed={!!detail.data!.active_schedule_revision_id}
-                  />
-                ))
+                Object.entries(installmentsByYear).map(
+                  ([year, installments]) => (
+                    <section key={year} aria-label={`Raty ${year}`}>
+                      <h3 className="mt-4 text-sm font-semibold text-gray-300">
+                        {year}
+                      </h3>
+                      {installments.map((installment) => (
+                        <InstallmentRow
+                          key={installment.id}
+                          loanId={detail.data!.id}
+                          installment={installment}
+                          configure={configure}
+                          managed={!!detail.data!.active_schedule_revision_id}
+                        />
+                      ))}
+                    </section>
+                  ),
+                )
               )}
             </section>
             <ScheduleHistory
@@ -498,10 +555,30 @@ export function LoanDetails({
 
 export function FinanceLoanSettings() {
   const [params, setParams] = useSearchParams();
+  const [locallySelectedLoanId, setLocallySelectedLoanId] = useState<
+    string | undefined
+  >();
   const accounts = useAccounts();
   const loans = useLoans();
-  const loanId = params.get("loan") ?? loans.data?.[0]?.id;
+  const requestedLoanId = params.get("loan");
+  const selectedLoan = loans.data?.find((loan) => loan.id === requestedLoanId);
+  const isLocallySelected = requestedLoanId === locallySelectedLoanId;
+  const loanId =
+    selectedLoan?.id ??
+    (isLocallySelected
+      ? requestedLoanId
+      : requestedLoanId === null
+        ? loans.data?.[0]?.id
+        : undefined);
+  const unavailableSelection =
+    requestedLoanId !== null &&
+    loans.data !== undefined &&
+    !loans.isLoading &&
+    !loans.isError &&
+    !selectedLoan &&
+    !isLocallySelected;
   function select(id: string) {
+    setLocallySelectedLoanId(id);
     setParams((current) => {
       const next = new URLSearchParams(current);
       next.set("loan", id);
@@ -514,7 +591,10 @@ export function FinanceLoanSettings() {
       <PageHeader
         title="Ustawienia kredytów i pożyczek"
         actions={
-          <Link className="btn-secondary" to="/finances/loans">
+          <Link
+            className="btn-secondary"
+            to={`/finances/loans${loanId ? `?loan=${encodeURIComponent(loanId)}` : ""}`}
+          >
             Przejdź do kredytów i pożyczek
           </Link>
         }
@@ -528,31 +608,55 @@ export function FinanceLoanSettings() {
         </Link>
       </div>
       <QueryFeedback
-        loading={accounts.isLoading || loans.isLoading}
-        error={accounts.isError || loans.isError}
-        errorMessage="Nie udało się pobrać umów lub kont."
-        onRetry={() => {
-          void accounts.refetch();
-          void loans.refetch();
-        }}
+        loading={loans.isLoading}
+        error={loans.isError}
+        errorMessage="Nie udało się pobrać umów."
+        onRetry={loans.refetch}
       >
-        <LoanAgreementForm accounts={accounts.data ?? []} onSuccess={select} />
+        <details className="card">
+          <summary className="cursor-pointer font-semibold text-white">
+            Dodaj umowę
+          </summary>
+          <QueryFeedback
+            loading={accounts.isLoading}
+            error={accounts.isError}
+            errorMessage="Nie udało się pobrać kont. Istniejące umowy pozostają dostępne."
+            onRetry={accounts.refetch}
+          >
+            <LoanAgreementForm
+              accounts={accounts.data ?? []}
+              onSuccess={select}
+            />
+          </QueryFeedback>
+        </details>
         {loans.data?.length ? (
-          <label className="block">
-            Umowa
-            <select
-              className="input"
-              value={loanId ?? ""}
-              onChange={(event) => select(event.target.value)}
-            >
-              {loans.data.map((loan) => (
-                <option key={loan.id} value={loan.id}>
-                  {loan.name}
-                  {loan.is_active ? "" : " · Archiwalna"}
-                </option>
-              ))}
-            </select>
-          </label>
+          <>
+            {unavailableSelection ? (
+              <p role="alert" className="text-sm text-amber-200">
+                Wybrana umowa nie jest dostępna. Wybierz umowę z listy.
+              </p>
+            ) : null}
+            <label className="block">
+              Umowa
+              <select
+                className="input"
+                value={loanId ?? ""}
+                onChange={(event) => select(event.target.value)}
+              >
+                {unavailableSelection ? (
+                  <option value="" disabled>
+                    Wybierz dostępną umowę
+                  </option>
+                ) : null}
+                {loans.data.map((loan) => (
+                  <option key={loan.id} value={loan.id}>
+                    {loan.name}
+                    {loan.is_active ? "" : " · Archiwalna"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
         ) : (
           <p>Brak umów.</p>
         )}

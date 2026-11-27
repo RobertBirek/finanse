@@ -64,7 +64,8 @@ function HistoryContent({ loanId }: { loanId: string }) {
               target="_blank"
               rel="noreferrer"
             >
-              Pobierz oryginał wersji: {detail.data.original_name}
+              Źródło harmonogramu: {detail.data.original_name} (pobierz
+              oryginał)
             </a>
           ) : (
             <p className="text-sm">
