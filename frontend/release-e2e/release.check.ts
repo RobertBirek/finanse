@@ -76,6 +76,7 @@ test("installed images serve authenticated ledger and Velo card breakdown", asyn
   expect(installment.status()).toBe(201);
   await page.goto("/finances");
   await page.getByRole("link", { name: "Kredyty i pożyczki" }).click();
+  await page.getByRole("button", { name: /Kredyt testowy/ }).click();
   await expect(page.getByRole("heading", { name: "Kredyt testowy" })).toBeVisible();
   const totals = page.locator("dl").filter({ hasText: "Kapitał w harmonogramie" });
   await expect(totals).toContainText("900,00 PLN");
@@ -91,6 +92,7 @@ test("installed images serve authenticated ledger and Velo card breakdown", asyn
   await expect(breakdown.getByText("24,66 PLN", { exact: true })).toBeVisible();
   await expect(breakdown.getByText(/Rata jest już ujęta/)).toBeVisible();
   await page.goto("/finances/loans");
+  await page.getByRole("button", { name: /Plan „Komfort” z wyciągu Velo/ }).first().click();
   const statementPlan = page.getByRole("article").filter({
     hasText: "Plan „Komfort” z wyciągu Velo",
   });
@@ -110,7 +112,7 @@ test("installed images serve authenticated ledger and Velo card breakdown", asyn
   });
   expect(category.status()).toBe(201);
   const accountId = (await allegroAccount.json()).id;
-  await page.goto("/finances/allegro-pay");
+  await page.goto("/settings/finances/loans/allegro-pay");
   const configuration = page.getByRole("form", { name: "Konto i limit" });
   await configuration.getByRole("combobox", { name: "Konto", exact: true }).selectOption(accountId);
   await configuration.getByLabel("Limit PLN").fill("1000");
@@ -127,6 +129,7 @@ test("installed images serve authenticated ledger and Velo card breakdown", asyn
   await form.getByLabel("Kapitał PLN").nth(0).fill("100");
   await form.getByLabel("Kapitał PLN").nth(1).fill("100");
   await form.getByRole("button", { name: "Zapisz zakup" }).click();
+  await page.getByRole("link", { name: /Otwórz spłaty · Allegro testowe/ }).click();
   await expect(page.getByText("Zakup testowy", { exact: true }).first()).toBeVisible();
   await expect(page.getByText(/Do pokrycia według harmonogramów/)).toContainText("200,00 PLN");
   const transfer = await page.request.post("/api/finance/transactions", {

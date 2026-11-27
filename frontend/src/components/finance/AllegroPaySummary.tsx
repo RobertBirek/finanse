@@ -52,12 +52,15 @@ export function AllegroPaySummary() {
                 {formatPLN(due.remaining_pln)} PLN
               </p>
             ) : null}
+            <Link
+              className="underline"
+              to={`/finances/loans?allegro=${encodeURIComponent(profile.id)}`}
+            >
+              Otwórz zakupy i spłaty · {profile.account_name}
+            </Link>
           </article>
         );
       })}
-      <Link className="underline" to="/finances/allegro-pay">
-        Otwórz zakupy i spłaty
-      </Link>
     </section>
   );
 }

@@ -115,7 +115,7 @@ it("activates only the frozen preview and shows a receipt without changing ledge
   expect(await screen.findByText("Harmonogram aktywowany")).toBeVisible();
   expect(
     screen.getByRole("link", { name: "Otwórz kredyt i historię wersji" }),
-  ).toHaveAttribute("href", "/settings/finances/loans?loan=loan-a");
+  ).toHaveAttribute("href", "/finances/loans?loan=loan-a");
   expect(screen.getByText(/Księga pozostaje bez zmian/)).toBeVisible();
   const request = server.requests.find((r) =>
     r.url.endsWith("/activate-schedule"),

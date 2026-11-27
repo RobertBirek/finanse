@@ -4,14 +4,17 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FinanceLoans } from "./FinanceLoans";
-vi.mock("../components/finance/AllegroPaySummary", () => ({
-  AllegroPaySummary: () => null,
+import { FinanceLoanSettings } from "./FinanceLoanSettings";
+vi.mock("../api/allegroPay", () => ({
+  useAllegroPay: () => ({ data: [], isLoading: false, isError: false }),
 }));
 
-const render = (element: ReactElement) =>
+const render = (element: ReactElement, search = "?loan=loan-1") =>
   rtlRender(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter>{element}</MemoryRouter>
+      <MemoryRouter initialEntries={[`/finances/loans${search}`]}>
+        {element}
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 
@@ -148,6 +151,24 @@ describe("FinanceLoans", () => {
     });
   });
 
+  it("loads an agreement only after selecting its tile and collapses on second click", () => {
+    render(<FinanceLoans />, "?month=2");
+    const tile = screen.getByRole("button", { name: /Q7/ });
+    expect(hooks.useLoan).not.toHaveBeenCalled();
+    expect(screen.queryByText("Saldo księgowe")).not.toBeInTheDocument();
+    fireEvent.click(tile);
+    expect(tile).toHaveAttribute("aria-pressed", "true");
+    expect(hooks.useLoan).toHaveBeenCalledWith("loan-1");
+    expect(
+      screen.getByRole("button", { name: "Powiąż płatność" }),
+    ).toBeEnabled();
+    expect(
+      screen.queryByRole("form", { name: "Nowa rata" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(tile);
+    expect(screen.queryByText("Saldo księgowe")).not.toBeInTheDocument();
+  });
+
   it("shows partial status and never treats raw ledger balance as remaining principal", () => {
     render(<FinanceLoans />);
     expect(screen.getByText("Częściowo pokryta")).toBeInTheDocument();
@@ -175,7 +196,7 @@ describe("FinanceLoans", () => {
       isError: false,
       refetch: vi.fn(),
     });
-    render(<FinanceLoans />);
+    render(<FinanceLoanSettings />);
     expect(
       screen.getByRole("link", { name: "Importuj harmonogram" }),
     ).toHaveAttribute(
@@ -190,8 +211,35 @@ describe("FinanceLoans", () => {
       screen.queryByRole("button", { name: "Edytuj ratę" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Powiąż płatność" }),
-    ).toBeEnabled();
+      screen.queryByRole("button", { name: "Powiąż płatność" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("creates an agreement in settings and opens its details", () => {
+    const mutate = vi.fn((_payload, options) =>
+      options.onSuccess({ id: "new-loan" }),
+    );
+    hooks.useCreateLoan.mockReturnValue({
+      mutate,
+      isPending: false,
+      error: null,
+    });
+    render(<FinanceLoanSettings />);
+    fireEvent.change(screen.getByLabelText("Nazwa"), {
+      target: { value: "Nowy kredyt" },
+    });
+    fireEvent.change(screen.getByLabelText("Konto zadłużenia"), {
+      target: { value: "debt" },
+    });
+    fireEvent.change(screen.getByLabelText("Rachunek spłaty"), {
+      target: { value: "bank" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Dodaj umowę" }));
+    expect(mutate).toHaveBeenCalledWith(
+      { name: "Nowy kredyt", account_id: "debt", payment_account_id: "bank" },
+      expect.anything(),
+    );
+    expect(hooks.useLoan).toHaveBeenLastCalledWith("new-loan");
   });
 
   it("keeps the installment form open after a 409 conflict", () => {
@@ -200,7 +248,7 @@ describe("FinanceLoans", () => {
       error: { response: { status: 409, data: { detail: "Konflikt" } } },
       mutate: vi.fn(),
     });
-    render(<FinanceLoans />);
+    render(<FinanceLoanSettings />);
     fireEvent.click(screen.getByRole("button", { name: "Dodaj ratę" }));
     expect(
       screen.getByRole("heading", { name: "Nowa rata" }),
@@ -231,7 +279,7 @@ describe("FinanceLoans", () => {
         }),
       ),
     });
-    render(<FinanceLoans />);
+    render(<FinanceLoanSettings />);
     fireEvent.change(screen.getByLabelText("Numer"), {
       target: { value: "2" },
     });
@@ -259,7 +307,7 @@ describe("FinanceLoans", () => {
       error: null,
       mutate: vi.fn((_payload, options) => options.onSuccess()),
     });
-    render(<FinanceLoans />);
+    render(<FinanceLoanSettings />);
     fireEvent.change(screen.getByLabelText("Numer"), {
       target: { value: "2" },
     });
@@ -274,7 +322,9 @@ describe("FinanceLoans", () => {
     fireEvent.change(screen.getByLabelText("Kapitał (PLN)"), {
       target: { value: "800" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Druga umowa/ }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Umowa" }), {
+      target: { value: "loan-2" },
+    });
     expect(screen.getByLabelText("Kapitał (PLN)")).toHaveValue("0.00");
   });
 
@@ -294,7 +344,7 @@ describe("FinanceLoans", () => {
       isPending: false,
       error: { response: { data: { detail: "Błąd odpinania" } } },
     });
-    render(<FinanceLoans />);
+    render(<FinanceLoanSettings />);
     expect(screen.getByText("Błąd umowy")).toHaveAttribute("role", "alert");
     expect(screen.getByText("Błąd usuwania")).toHaveAttribute("role", "alert");
   });

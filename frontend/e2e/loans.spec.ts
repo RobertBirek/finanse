@@ -28,6 +28,9 @@ test("shows a card plan recognized from a saved statement", async ({
     }),
   );
   await page.goto("/finances/loans");
+  await page
+    .getByRole("button", { name: /Plan „Komfort” z wyciągu Velo/ })
+    .click();
   const plan = page
     .getByRole("article")
     .filter({ hasText: "Plan „Komfort” z wyciągu Velo" });
@@ -54,6 +57,20 @@ test("finance navigation opens the loan overview with schedule totals", async ({
   await expect(
     page.getByRole("heading", { name: "Kredyty i pożyczki" }),
   ).toBeVisible();
+  await expect(page.getByText("Wybierz kredyt lub pożyczkę.")).toBeVisible();
+  await expect(page.getByText("Kapitał w harmonogramie")).toHaveCount(0);
+  const tile = page
+    .getByRole("region", { name: "Wybór zobowiązania" })
+    .getByRole("button")
+    .first();
+  await tile.focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(new RegExp(`loan=${loanId}`));
+  await page.reload();
+  await expect(tile).toHaveAttribute("aria-pressed", "true");
+  await page.goBack();
+  await expect(page.getByText("Wybierz kredyt lub pożyczkę.")).toBeVisible();
+  await tile.click();
   const values = page
     .locator("dl")
     .filter({ hasText: "Kapitał w harmonogramie" });
@@ -77,7 +94,7 @@ for (const theme of ["light", "dark"]) {
       (value) => localStorage.setItem("advisor-theme", value),
       theme,
     );
-    await page.goto("/settings/finances/loans");
+    await page.goto(`/finances/loans?loan=${loanId}`);
     await expect(
       page.getByRole("heading", { name: "Kredyty i pożyczki" }),
     ).toBeVisible();
@@ -154,7 +171,7 @@ test("loan conflict retains manual transfer selection without ledger writes", as
   page,
 }) => {
   const api = await loanFixtures(page, { conflict: true });
-  await page.goto("/settings/finances/loans");
+  await page.goto(`/finances/loans?loan=${loanId}`);
   await page
     .getByRole("button", { name: "Powiąż płatność", exact: true })
     .click();
@@ -192,7 +209,7 @@ test("candidate link blocks repeated selection and resets the page; unlink confl
     pauseLink: true,
     unlinkConflict: true,
   });
-  await page.goto("/settings/finances/loans");
+  await page.goto(`/finances/loans?loan=${loanId}`);
   await page
     .getByRole("button", { name: "Powiąż płatność", exact: true })
     .click();
@@ -264,4 +281,70 @@ test("installment form sends exact components and resets after metadata-only cre
     },
   ]);
   api.assertLoanClean();
+});
+
+test("switches between a card plan and Allegro Pay when agreements cannot load", async ({
+  page,
+}) => {
+  await loanFixtures(page, { listError: true });
+  await page.route("**/api/finance/credit-cards", (route) =>
+    route.fulfill({
+      json: [{ account_id: "card-a", name: "Karta testowa", configured: true }],
+    }),
+  );
+  await page.route("**/api/finance/accounts/card-a/credit-card", (route) =>
+    route.fulfill({
+      json: {
+        plans: [
+          {
+            id: "plan-a",
+            name: "Plan karty A",
+            status: "active",
+            apr: "0",
+            version: 1,
+            principal_pln: 20000,
+            remaining_principal_pln: 15000,
+            schedule_kind: "bank",
+            installments: [],
+          },
+        ],
+        allocations: [
+          { id: "allocation-a", plan_id: "plan-a", amount_pln: 5000 },
+          { id: "allocation-b", plan_id: "plan-b", amount_pln: 6000 },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/finance/allegro-pay", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: "allegro-a",
+          account_name: "Allegro testowe",
+          ledger_balance_pln: 0,
+          limit_pln: null,
+          available_pln: null,
+          scheduled_remaining_pln: 0,
+          scheduled_costs_pln: 0,
+          purchases: [],
+        },
+      ],
+    }),
+  );
+  await page.goto("/finances/loans?month=2");
+  const strip = page.getByRole("region", { name: "Wybór zobowiązania" });
+  await expect(page.getByRole("alert")).toContainText("umów");
+  await strip.getByRole("button", { name: /Plan karty A/ }).click();
+  await expect(page.getByText("Spłata planu: 50,00 PLN")).toBeVisible();
+  await expect(page.getByText("Spłata planu: 60,00 PLN")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Uzgodnij harmonogram z bankiem" }),
+  ).toHaveCount(0);
+  await strip.getByRole("button", { name: /Allegro testowe/ }).click();
+  await expect(page).toHaveURL(/month=2&allegro=allegro-a/);
+  await expect(
+    page.getByRole("form", { name: "Zakupy i spłaty" }),
+  ).toBeVisible();
+  await expect(page.getByRole("form", { name: "Dodaj zakup" })).toHaveCount(0);
+  await expect(page.getByText("Spłata planu: 50,00 PLN")).toHaveCount(0);
 });
