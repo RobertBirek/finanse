@@ -15,7 +15,7 @@ export function ScheduleReceipt({ result }: { result: ScheduleResult }) {
       </p>
       <Link
         className="underline"
-        to={`/settings/finances/loans?loan=${encodeURIComponent(result.loan_id)}`}
+        to={`/finances/loans?loan=${encodeURIComponent(result.loan_id)}`}
       >
         Otwórz kredyt i historię wersji
       </Link>

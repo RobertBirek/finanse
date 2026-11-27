@@ -333,7 +333,7 @@ function PurchaseForm({ profile }: { profile: AllegroProfile }) {
   );
 }
 
-function Profile({ profile }: { profile: AllegroProfile }) {
+export function AllegroPayDetails({ profile }: { profile: AllegroProfile }) {
   const payment = useAllegroPayCommand(`/${profile.id}/payments`, "post");
   const unlink = useUnlinkAllegroPayment(profile.id);
   const [transaction, setTransaction] = useState("");
@@ -414,7 +414,9 @@ function Profile({ profile }: { profile: AllegroProfile }) {
           na tym koncie, w odpowiednich kategoriach.
         </p>
       </section>
-      <PurchaseForm profile={profile} />
+      <Link className="btn-secondary" to="/settings/finances/loans/allegro-pay">
+        Ustawienia Allegro Pay
+      </Link>
       <form
         aria-label="Zakupy i spłaty"
         className="card space-y-3"
@@ -592,7 +594,15 @@ export function FinanceAllegroPay() {
         {error ? <p role="alert">{error}</p> : null}
       </form>
       {(profiles.data ?? []).map((profile) => (
-        <Profile key={profile.id} profile={profile} />
+        <section key={profile.id} className="space-y-2">
+          <Link
+            className="underline"
+            to={`/finances/loans?allegro=${encodeURIComponent(profile.id)}`}
+          >
+            Otwórz spłaty · {profile.account_name}
+          </Link>
+          <PurchaseForm profile={profile} />
+        </section>
       ))}
     </div>
   );

@@ -8,9 +8,11 @@ import { CardRemoveRecord } from "./CardRemoveRecord";
 export function CardPlanDetails({
   accountId,
   plan,
+  configure = true,
 }: {
   accountId: string;
   plan: CardPlan;
+  configure?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [rows, setRows] = useState(() =>
@@ -117,7 +119,7 @@ export function CardPlanDetails({
           </table>
         </div>
       </details>
-      {plan.status === "active" ? (
+      {configure && plan.status === "active" ? (
         <button
           type="button"
           className="btn-secondary"

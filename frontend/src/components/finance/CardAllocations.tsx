@@ -52,12 +52,15 @@ export function CardAllocations({
   accountId,
   card,
   targets,
+  fixedPlanId,
 }: {
   accountId: string;
-  card: CreditCard;
+  card: Pick<CreditCard, "allocations">;
+  fixedPlanId?: string;
   targets: { value: string; label: string }[];
 }) {
-  const [target, setTarget] = useState("");
+  const [chosenTarget, setTarget] = useState("");
+  const target = fixedPlanId ? `plan:${fixedPlanId}` : chosenTarget;
   const [kind, id] = target.split(":");
   const fields: CardField[] = [
     { name: "transaction_id", label: "Przelew spłaty", candidates: "payment" },
@@ -97,23 +100,25 @@ export function CardAllocations({
         wcześniejszej spłacie podaj rzeczywisty kapitał i koszty bankowe, nie
         sumę przyszłych szacowanych odsetek.
       </p>
-      <label className="block text-sm text-gray-300">
-        Spłacany wyciąg lub plan
-        <select
-          aria-label="Spłacany wyciąg lub plan"
-          className="input mt-1 w-full"
-          value={target}
-          onChange={(event) => setTarget(event.target.value)}
-        >
-          <option value="">Wybierz rozliczenie</option>
-          {targets.map((item) => (
-            <option key={item.value} value={item.value}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      {id ? (
+      {!fixedPlanId ? (
+        <label className="block text-sm text-gray-300">
+          Spłacany wyciąg lub plan
+          <select
+            aria-label="Spłacany wyciąg lub plan"
+            className="input mt-1 w-full"
+            value={target}
+            onChange={(event) => setTarget(event.target.value)}
+          >
+            <option value="">Wybierz rozliczenie</option>
+            {targets.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {id && (!fixedPlanId || targets.some((item) => item.value === target)) ? (
         <CardForm
           key={target}
           accountId={accountId}
@@ -124,9 +129,11 @@ export function CardAllocations({
         />
       ) : null}
       <ul className="space-y-2">
-        {card.allocations.map((item) => (
-          <AllocationRow key={item.id} accountId={accountId} item={item} />
-        ))}
+        {card.allocations
+          .filter((item) => !fixedPlanId || item.plan_id === fixedPlanId)
+          .map((item) => (
+            <AllocationRow key={item.id} accountId={accountId} item={item} />
+          ))}
       </ul>
     </section>
   );
