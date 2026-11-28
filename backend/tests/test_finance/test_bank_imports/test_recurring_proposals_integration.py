@@ -36,9 +36,19 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 async def _counts(db: AsyncSession) -> tuple[int, int, int, int]:
     """The proposal read must not create ledger, evidence, or schedule records."""
-    return tuple(
-        (await db.scalar(select(func.count()).select_from(model))) or 0
-        for model in (FinancialTransaction, Posting, ImportEvidence, ScheduledFinanceItem)
+    transaction_count = (
+        await db.scalar(select(func.count()).select_from(FinancialTransaction))
+    ) or 0
+    posting_count = (await db.scalar(select(func.count()).select_from(Posting))) or 0
+    evidence_count = (await db.scalar(select(func.count()).select_from(ImportEvidence))) or 0
+    scheduled_item_count = (
+        await db.scalar(select(func.count()).select_from(ScheduledFinanceItem))
+    ) or 0
+    return (
+        transaction_count,
+        posting_count,
+        evidence_count,
+        scheduled_item_count,
     )
 
 

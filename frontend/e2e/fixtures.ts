@@ -187,6 +187,8 @@ export async function fixtures(
     else if (url.pathname === "/api/finance/category-summary")
       body = { month: 10, year: 2026, groups: [], categories: [], tree: [] };
     else if (url.pathname === "/api/finance/cashflow/items") body = [];
+    else if (url.pathname === "/api/finance/cashflow/conditional-obligations")
+      body = [];
     else if (url.pathname === "/api/finance/cashflow/settings")
       body = {
         payday_day: 10,

@@ -89,6 +89,7 @@ async def test_annual_pln_schedule_occurs_once_in_90_day_boundary_and_not_in_lea
     db_session,
 ) -> None:
     owner = uuid.uuid4()
+    db_session.add(FinanceSettings(user_id=owner, forecast_horizon_days=90))
     account = await create_account(db_session, owner, AccountCreate(name="Konto", type="checking"))
     category = await create_category(
         db_session, owner, CategoryCreate(name="Amazon", type="expense")

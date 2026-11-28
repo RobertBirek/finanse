@@ -4,6 +4,11 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ## 2026-11-28 — Weryfikacja propozycji cyklicznych
 
+- CI `46155014361` nie przeszło: test roczny zakładał horyzont 90 dni bez
+  jego ustawienia; pomocniczy licznik testu importu używał generatora async;
+  atrapa E2E nie znała nowego odczytowego endpointu. Poprawiono testy i atrapę,
+  bez zmiany zachowania produkcyjnego. Lokalnie 48/48 scenariuszy Playwright
+  przechodzi; poprawki PostgreSQL czekają na osobno zatwierdzony przebieg CI.
 - Po przeglądzie oddzielono formularz pozycji od formularza decyzji importu
   oraz dodano sprawdzenie rachunku i referencji źródłowej. Niepewne źródła
   pozostają bez automatycznego zapisu; detektor jest zachowawczy i może
