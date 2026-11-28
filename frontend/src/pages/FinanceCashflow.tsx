@@ -6,6 +6,7 @@ import {
   useAccounts,
   useCategories,
   useCashflowForecast,
+  useConditionalRecurringObligations,
   useScheduledFinanceItems,
   type CashflowSuggestion,
   type ScheduledFinanceItem,
@@ -17,6 +18,7 @@ import { CashflowSettingsForm } from "../components/finance/CashflowSettingsForm
 import { ConfirmScheduledItemDialog } from "../components/finance/ConfirmScheduledItemDialog";
 import { ScheduledItemForm } from "../components/finance/ScheduledItemForm";
 import { ScheduledItemsList } from "../components/finance/ScheduledItemsList";
+import { ConditionalRecurringObligations } from "../components/finance/ConditionalRecurringObligations";
 import { QueryFeedback } from "../components/QueryFeedback";
 import { PageHeader } from "../components/PageHeader";
 
@@ -31,6 +33,7 @@ export function FinanceCashflow({
   const categories = useCategories();
   const items = useScheduledFinanceItems();
   const forecast = useCashflowForecast();
+  const conditionalObligations = useConditionalRecurringObligations();
 
   const [editingItem, setEditingItem] = useState<ScheduledFinanceItem | null>(
     null,
@@ -128,6 +131,13 @@ export function FinanceCashflow({
             onEdit={configure ? setEditingItem : undefined}
           />
         </section>
+      ) : null}
+      {configure && settingsSection !== "forecast" ? (
+        <ConditionalRecurringObligations
+          accounts={accounts.data ?? []}
+          items={conditionalObligations.data ?? []}
+          loading={conditionalObligations.isLoading}
+        />
       ) : null}
 
       {!configure || settingsSection === "all" ? (
@@ -240,7 +250,9 @@ function ForecastSuggestionDetails({
         {cashflowStatusLabel(suggestion.status)}
         {suggestion.amount_pln != null
           ? ` · ${formatPLN(suggestion.amount_pln)} PLN`
-          : ""}
+          : suggestion.amount_minor != null
+            ? ` · ${(suggestion.amount_minor / 100).toFixed(2)} ${suggestion.currency}`
+            : ""}
       </p>
     </div>
   );

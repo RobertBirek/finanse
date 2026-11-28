@@ -33,6 +33,10 @@ from app.finance.imports.matching import get_candidates
 from app.finance.imports.models import ImportBatch, ImportRow, ImportSource
 from app.finance.imports.preview import prepare_preview
 from app.finance.imports.queries import get_batch, list_import_history, list_rows
+from app.finance.imports.recurring_proposals import (
+    RecurringProposalResponse,
+    propose_recurring_expense,
+)
 from app.finance.imports.schemas import (
     AutoPostRequest,
     AutoPostSettings,
@@ -341,6 +345,20 @@ async def candidates(
         return await get_candidates(db, current_user.id, row_id)
 
     return await _handle(process())
+
+
+@router.get(
+    "/{batch_id}/rows/{row_id}/recurring-expense-proposal",
+    response_model=RecurringProposalResponse,
+)
+async def recurring_expense_proposal(
+    batch_id: uuid.UUID,
+    row_id: uuid.UUID,
+    account_id: uuid.UUID,
+    current_user: Owner,
+    db: Database,
+) -> RecurringProposalResponse:
+    return await propose_recurring_expense(db, current_user.id, batch_id, row_id, account_id)
 
 
 @router.put("/{batch_id}/decisions", response_model=BatchDTO)

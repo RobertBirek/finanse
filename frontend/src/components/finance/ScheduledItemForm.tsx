@@ -23,6 +23,14 @@ type ScheduledItemFormProps = {
   accounts: Account[];
   categories: Category[];
   initialItem?: ScheduledFinanceItem;
+  initialDraft?: {
+    name: string;
+    account_id: string;
+    cadence: "monthly" | "annual";
+    due_day: number | "";
+    amount_method: "fixed" | "last_actual";
+    fixed_amount_pln: number | null;
+  };
   onCancel?: () => void;
   onSuccess?: () => void;
 };
@@ -32,25 +40,42 @@ export function ScheduledItemForm({
   accounts,
   categories,
   initialItem,
+  initialDraft,
   onCancel,
   onSuccess,
 }: ScheduledItemFormProps) {
   const createMutation = useCreateScheduledFinanceItem();
   const updateMutation = useUpdateScheduledFinanceItem();
 
-  const [name, setName] = useState(initialItem?.name ?? "");
+  const [name, setName] = useState(
+    initialItem?.name ?? initialDraft?.name ?? "",
+  );
   const [type, setType] = useState<"income" | "expense">(
     initialItem?.type ?? "expense",
   );
-  const [accountId, setAccountId] = useState(initialItem?.account_id ?? "");
+  const [accountId, setAccountId] = useState(
+    initialItem?.account_id ?? initialDraft?.account_id ?? "",
+  );
   const [categoryId, setCategoryId] = useState(initialItem?.category_id ?? "");
-  const [dueDay, setDueDay] = useState<number | "">(initialItem?.due_day ?? 1);
+  const [cadence, setCadence] = useState<"monthly" | "annual">(
+    initialItem?.cadence ?? initialDraft?.cadence ?? "monthly",
+  );
+  const [dueMonth, setDueMonth] = useState<number | "">(
+    initialItem?.due_month ?? "",
+  );
+  const [dueDay, setDueDay] = useState<number | "">(
+    initialItem?.due_day ?? initialDraft?.due_day ?? 1,
+  );
   const [amountMethod, setAmountMethod] = useState<"fixed" | "last_actual">(
-    initialItem?.amount_method ?? "fixed",
+    initialItem?.amount_method ?? initialDraft?.amount_method ?? "fixed",
   );
   const [amount, setAmount] = useState(
-    initialItem?.fixed_amount_pln != null
-      ? (initialItem.fixed_amount_pln / 100).toFixed(2)
+    (initialItem?.fixed_amount_pln ?? initialDraft?.fixed_amount_pln) != null
+      ? (
+          (initialItem?.fixed_amount_pln ??
+            initialDraft?.fixed_amount_pln ??
+            0) / 100
+        ).toFixed(2)
       : "",
   );
 
@@ -76,6 +101,7 @@ export function ScheduledItemForm({
     !!accountId &&
     !!categoryId &&
     dueDay !== "" &&
+    (cadence === "monthly" || dueMonth !== "") &&
     amountValid;
 
   function handleTypeChange(nextType: "income" | "expense") {
@@ -94,6 +120,8 @@ export function ScheduledItemForm({
       account_id: accountId,
       category_id: categoryId,
       currency: "PLN",
+      cadence,
+      due_month: cadence === "annual" && dueMonth !== "" ? dueMonth : null,
       due_day: dueDay,
       amount_method: amountMethod,
       fixed_amount_pln:
@@ -190,6 +218,65 @@ export function ScheduledItemForm({
           onChange={setCategoryId}
           type={type}
         />
+        <div>
+          <label
+            htmlFor="item-cadence"
+            className="mb-1 block text-sm text-gray-400"
+          >
+            Częstotliwość
+          </label>
+          <select
+            id="item-cadence"
+            className="input"
+            value={cadence}
+            onChange={(event) =>
+              setCadence(event.target.value as "monthly" | "annual")
+            }
+          >
+            <option value="monthly">Co miesiąc</option>
+            <option value="annual">Co rok</option>
+          </select>
+        </div>
+        {cadence === "annual" ? (
+          <div>
+            <label
+              htmlFor="item-due-month"
+              className="mb-1 block text-sm text-gray-400"
+            >
+              Miesiąc
+            </label>
+            <select
+              id="item-due-month"
+              className="input"
+              value={dueMonth}
+              onChange={(event) =>
+                setDueMonth(
+                  event.target.value === "" ? "" : Number(event.target.value),
+                )
+              }
+            >
+              <option value="">Wybierz miesiąc</option>
+              {[
+                "styczeń",
+                "luty",
+                "marzec",
+                "kwiecień",
+                "maj",
+                "czerwiec",
+                "lipiec",
+                "sierpień",
+                "wrzesień",
+                "październik",
+                "listopad",
+                "grudzień",
+              ].map((month, index) => (
+                <option key={month} value={index + 1}>
+                  {month}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         <div>
           <label
             htmlFor="item-due-day"

@@ -21,6 +21,18 @@ from app.finance.bills_router import router as bills_router
 from app.finance.cashflow import ScheduleConfirmationConflict
 from app.finance.categorization_context import digest
 from app.finance.categorization_router import router as categorization_router
+from app.finance.conditional_recurring_obligations import (
+    create as create_conditional_recurring_obligation,
+)
+from app.finance.conditional_recurring_obligations import (
+    delete as delete_conditional_recurring_obligation,
+)
+from app.finance.conditional_recurring_obligations import (
+    list_for_owner as list_conditional_recurring_obligations,
+)
+from app.finance.conditional_recurring_obligations import (
+    update as update_conditional_recurring_obligation,
+)
 from app.finance.credit_card_router import router as credit_card_router
 from app.finance.credit_cards import CardConflict
 from app.finance.document_guards import lock_document_mutations
@@ -53,6 +65,9 @@ from app.finance.schemas import (
     CategoryResponse,
     CategorySummaryResponse,
     CategoryUpdate,
+    ConditionalRecurringObligationCreate,
+    ConditionalRecurringObligationResponse,
+    ConditionalRecurringObligationUpdate,
     ExchangeCreate,
     ExpenseRefundCreate,
     FinanceSettingsResponse,
@@ -694,6 +709,77 @@ async def list_scheduled_finance_items(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     return await get_scheduled_items(db, current_user.id)
+
+
+@router.get(
+    "/cashflow/conditional-obligations",
+    response_model=list[ConditionalRecurringObligationResponse],
+)
+async def list_conditional_recurring_obligations_endpoint(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[ConditionalRecurringObligationResponse]:
+    records = await list_conditional_recurring_obligations(db, current_user.id)
+    return [ConditionalRecurringObligationResponse.model_validate(record) for record in records]
+
+
+@router.post(
+    "/cashflow/conditional-obligations",
+    response_model=ConditionalRecurringObligationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_conditional_recurring_obligation_endpoint(
+    data: ConditionalRecurringObligationCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ConditionalRecurringObligationResponse:
+    try:
+        record = await create_conditional_recurring_obligation(db, current_user.id, data)
+        return ConditionalRecurringObligationResponse.model_validate(record)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
+
+
+@router.patch(
+    "/cashflow/conditional-obligations/{obligation_id}",
+    response_model=ConditionalRecurringObligationResponse,
+)
+async def update_conditional_recurring_obligation_endpoint(
+    obligation_id: uuid.UUID,
+    data: ConditionalRecurringObligationUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ConditionalRecurringObligationResponse:
+    try:
+        obligation = await update_conditional_recurring_obligation(
+            db, current_user.id, obligation_id, data
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
+    if obligation is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Conditional obligation not found"
+        )
+    return ConditionalRecurringObligationResponse.model_validate(obligation)
+
+
+@router.delete(
+    "/cashflow/conditional-obligations/{obligation_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_conditional_recurring_obligation_endpoint(
+    obligation_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    if not await delete_conditional_recurring_obligation(db, current_user.id, obligation_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Conditional obligation not found"
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

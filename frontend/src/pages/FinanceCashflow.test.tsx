@@ -9,6 +9,10 @@ const hooks = vi.hoisted(() => ({
   useCashflowSettings: vi.fn(),
   useScheduledFinanceItems: vi.fn(),
   useCashflowForecast: vi.fn(),
+  useConditionalRecurringObligations: vi.fn(),
+  useCreateConditionalRecurringObligation: vi.fn(),
+  useUpdateConditionalRecurringObligation: vi.fn(),
+  useDeleteConditionalRecurringObligation: vi.fn(),
   useUpdateCashflowSettings: vi.fn(),
   useCreateScheduledFinanceItem: vi.fn(),
   useUpdateScheduledFinanceItem: vi.fn(),
@@ -79,6 +83,7 @@ const items = [
     category_id: "c-expense",
     currency: "PLN",
     cadence: "monthly",
+    due_month: null,
     due_day: 5,
     amount_method: "fixed",
     fixed_amount_pln: 250000,
@@ -136,6 +141,26 @@ describe("FinanceCashflow", () => {
       data: forecast,
       isLoading: false,
       isError: false,
+    });
+    hooks.useConditionalRecurringObligations.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    });
+    hooks.useCreateConditionalRecurringObligation.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      error: null,
+    });
+    hooks.useUpdateConditionalRecurringObligation.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      error: null,
+    });
+    hooks.useDeleteConditionalRecurringObligation.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      error: null,
     });
     hooks.useUpdateCashflowSettings.mockReturnValue({
       mutate: vi.fn(),

@@ -2,6 +2,98 @@
 
 Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
+## 2026-11-28 — Weryfikacja propozycji cyklicznych
+
+- Po przeglądzie migracji dodano własność rachunków w kluczach obcych,
+  ochronę zmiany waluty i statusu kont powiązanych z deklaracjami oraz
+  blokady współbieżnych zapisów. Detektor zachowuje niepewność duplikatów,
+  ogranicza historię do sprzedawcy i uwzględnia tolerancję dat rocznych.
+  Sprawdzono składnię NORMALIZE PostgreSQL na etapie kompilacji SQL.
+  Lokalnie 45 testów backendu, Ruff i mypy oraz 775 testów frontendu,
+  lint, typy i build. Testy PostgreSQL wymagają ponownego CI; rollback
+  starszej aplikacji przy zapisanych pozycjach rocznych pozostaje zagrożeniem
+  wymagającym osobnej procedury wydania i dowodu odtworzenia.
+- Drugi przebieg CI `46156938770` ujawnił regresję prognozy: generator
+  pomijał zaległości bieżącego miesiąca po upływie okresu tolerancji.
+  Przywrócono granicę od początku bieżącego miesiąca lub wcześniejszego
+  okresu tolerancji, również dla zobowiązań warunkowych. Lokalnie 42 testy
+  offline, Ruff i mypy przeszły; test integracyjny wymaga ponownego CI.
+- CI `46155014361` nie przeszło: test roczny zakładał horyzont 90 dni bez
+  jego ustawienia; pomocniczy licznik testu importu używał generatora async;
+  atrapa E2E nie znała nowego odczytowego endpointu. Poprawiono testy i atrapę,
+  bez zmiany zachowania produkcyjnego. Lokalnie 48/48 scenariuszy Playwright
+  przechodzi; poprawki PostgreSQL czekają na osobno zatwierdzony przebieg CI.
+- Po przeglądzie oddzielono formularz pozycji od formularza decyzji importu
+  oraz dodano sprawdzenie rachunku i referencji źródłowej. Niepewne źródła
+  pozostają bez automatycznego zapisu; detektor jest zachowawczy i może
+  pomijać kandydatów, gdy historia lub tożsamość są niejednoznaczne.
+- Pozycja walutowa pozwala pozostawić kwotę wariantu rezerwowego nieznaną;
+  niezdecydowana wycena nie daje fałszywego limitu dziennego. Cofanie
+  migracji odmawia usunięcia zapisanych deklaracji.
+- Offline: 39 ukierunkowanych testów backendu, Ruff i mypy dla zmienionych
+  modułów; frontend 775 testów, lint, typy i build. Testy PostgreSQL dodano,
+  lecz wymagają syntetycznej bazy GitHub Actions. Bez migracji produkcyjnej,
+  bez dodawania pozycji i bez wdrożenia.
+
+## 2026-11-28 — Warunkowe zobowiązania walutowe
+
+- Dodano po migracji rocznych pozycji osobną, addytywną migrację
+  `c3d4e5f6a7b8`. Deklaracja ma dwa jawne warianty: konto, kwotę w jednostce
+  minor i walutę źródłową, plus jawny dzień terminu. Nie jest pozycją księgi,
+  nie ma kategorii ani akcji potwierdzenia, więc nie powstają fikcyjne
+  transakcje/postings.
+- Serwis i endpointy mają owner scoping; oba rachunki muszą być różne, aktywne,
+  budżetowe, własnością użytkownika i zgodne z walutą wariantu. Interfejs
+  pozwala dodać i usunąć deklarację, lecz nie wprowadza wartości sprzedawcy lub
+  kwoty jako danych domyślnych.
+- Prognoza tworzy odczytową sugestię bez PLN: nieznany warunek otrzymuje
+  `conditional_obligation_unresolved`, a znany wariant native-currency
+  `conditional_obligation_native_currency_unresolved`. Każdy z nich blokuje
+  bezpieczny limit przed wypłatą, jeśli termin jest w tym okresie.
+- Weryfikacja lokalna: `15` testów czystych kontraktów backendu, Ruff,
+  `alembic heads`, `22` ukierunkowane Vitest oraz frontend lint/typecheck
+  przeszły. Testów PostgreSQL nie uruchamiano bez zatwierdzonego permitu
+  izolowanej bazy; potrzebna jest też kontrola migracji i owner-scopingu na
+  syntetycznej bazie.
+- Review doprecyzował wariant zapasowy: jego konto i waluta pozostają jawne,
+  ale `fallback_amount_minor` może być `NULL` jako brak wiedzy, a nie zero ani
+  wymyślona cena. PATCH odróżnia pominięcie pola od jawnego `null`. Rozstrzygnięty
+  wariant zapasowy bez kwoty ma własny powód wyłączenia i nadal blokuje bezpieczny
+  limit. UI pozwala wyłącznie ustawić stan warunku; nie potwierdza płatności i
+  nie zmienia księgi. Downgrade blokuje tabelę i odmawia przed jakimkolwiek DDL,
+  gdy istnieje choć jeden wiersz.
+
+## 2026-11-28 — Roczne pozycje planowane PLN
+
+- Dodano addytywny model/migrację `due_month` i kadencję `annual`, przy
+  zachowaniu istniejącego miesięcznego API oraz limitu dnia 1–28. Generator
+  wystąpień jest wspólny dla prognozy, konfliktów płatności i pokrycia dokumentu;
+  roczne wystąpienie jest zakotwiczone w miesiącu i dniu danego roku.
+- Formularz PLN ma wybór „Co rok” i miesiąca; lista opisuje miesięczny lub roczny
+  termin. Potwierdzenie nadal tworzy wyłącznie jawnie wybraną transakcję w PLN;
+  nie zmieniono FX ani nie wykonano migracji lub zapisu danych.
+- Weryfikacja: 16 ukierunkowanych testów Vitest, frontend lint/typecheck/build,
+  backendowy smoke generatora/schematu i Ruff/compileall przeszły. Pełny
+  ukierunkowany pytest nie wystartował: wskazany `/opt/finanse/backend/.venv`
+  nie ma `openai.types.responses`, a poprzednia próba integracyjna została
+  zatrzymana przez guard permitu testowej bazy przed I/O. Potrzebna zatwierdzona
+  izolowana baza/zgodny venv dla testów PostgreSQL.
+- W worktree są zastane, niezmieniane untracked pliki `recurring_detection.py`
+  i odpowiadający mu test; nie są częścią tego przyrostu.
+- Poprawka po niezależnym review: downgrade najpierw zakłada `ACCESS EXCLUSIVE`
+  lock i odmawia przy istniejących danych rocznych, przed zmianą constraintów
+  lub kolumn. `bill_forecast` sprawdza miesiąc pozycji rocznej tak samo jak
+  decyzja coverage; roczne pozycje poza PLN są odrzucane w schemacie i przez
+  serwis create/update. Trzy testy bez bazy oraz Ruff przeszły na
+  `/opt/finanse/.venv`; ukierunkowany test PostgreSQL został zatrzymany przez
+  brak permitu guarda przed jakimkolwiek I/O.
+- Re-review dodał regresje oczekujące na CI: przejście rocznej pozycji PLN na
+  miesięczną EUR tylko z jawnym wyczyszczeniem `due_month` oraz fakturę bez
+  terminu przy pasującej pozycji rocznej. Testy są poprawnie zbierane, ale nie
+  uruchamiano ich bez zatwierdzonego permitu izolowanej bazy. Przegląd migracji:
+  lock `ACCESS EXCLUSIVE` poprzedza `EXISTS` i odmowę, a test kontroluje kolejność
+  obu zapytań oraz brak DDL po odmowie.
+
 ## 2026-11-27 — Regresje widoku kredytów i pokrycie E2E
 
 - Końcowa weryfikacja po ostatniej poprawce: Vitest `769/769` przy

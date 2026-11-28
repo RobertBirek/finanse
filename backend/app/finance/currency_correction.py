@@ -23,6 +23,7 @@ from app.finance.ledger_validation import _validate_posting_sum
 from app.finance.models import (
     Account,
     Category,
+    ConditionalRecurringObligation,
     FinancialTransaction,
     LoanAgreement,
     LoanPaymentLink,
@@ -90,6 +91,15 @@ async def _load(
         .limit(1)
     ):
         raise ValueError("Account has schedule dependencies")
+    if await db.scalar(
+        select(ConditionalRecurringObligation.id)
+        .where(
+            (ConditionalRecurringObligation.primary_account_id == account.id)
+            | (ConditionalRecurringObligation.fallback_account_id == account.id)
+        )
+        .limit(1)
+    ):
+        raise ValueError("Account has conditional obligation dependencies")
     if await db.scalar(
         select(LoanAgreement.id)
         .where(

@@ -5,6 +5,26 @@ Backlog zadań ze statusami.
 - [x] Pokazać kurs NBP i jego datę w formularzu EUR/USD na dev.
 - [ ] Odebrać zachowanie na dev; produkcja bez zmian.
 
+## Warunkowe zobowiązania walutowe — 2026-11-28
+
+- [x] Dodać deklarację cyklicznej kwoty native-currency z podstawowym i
+  zapasowym rachunkiem oraz właścicielem/walidacją domenową; bez postings.
+- [x] Pominąć nierozstrzygnięte lub niewycenione zobowiązanie w arytmetyce
+  PLN i ukryć limit bezpieczny do wypłaty.
+- [ ] Uruchomić testy integracyjne PostgreSQL w zatwierdzonym środowisku:
+  owner-scoping, zgodność konta/waluty, migrację oraz blokadę limitu dziennego.
+- [ ] Odbiór UX i osobna decyzja o integracji/migracji; nie wprowadzać
+  przykładowego sprzedawcy lub kwoty jako danych użytkownika.
+
+## Roczne pozycje planowane PLN — 2026-11-28
+
+- [x] Dodać cykl roczny z bezpiecznym dniem 1–28, generowaniem wystąpień,
+  prognozą, potwierdzeniem i pokryciem dokumentem; zachować miesięczny kontrakt.
+- [ ] Uruchomić integracyjne testy PostgreSQL na nowej syntetycznej bazie
+  zatwierdzonej przez guard, obejmujące granice roczne, potwierdzenie,
+  owner-scoping oraz pokrycie dokumentem. Bez migracji produkcyjnej.
+- [ ] Osobno odebrać UX i zdecydować o integracji/migracji; bez wdrożenia.
+
 ## Kredyty i pożyczki — 2026-11-27
 
 - [x] Rozdzielić widok operacyjny `/finances/loans` od ustawień

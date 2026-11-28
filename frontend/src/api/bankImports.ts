@@ -168,6 +168,32 @@ export interface ImportRowPage {
   limit: number;
 }
 
+export interface RecurringExpenseProposal {
+  target: "new_schedule";
+  merchant: string;
+  frequency: "monthly" | "annual";
+  amount_kind: "stable" | "variable";
+  amount_minor: number | null;
+  currency: ImportCurrency;
+  formal_deadline: null;
+}
+
+export interface RecurrenceEvidence {
+  strong_identity: string;
+  economic_identity: string | null;
+  source: "actual" | "bank_import";
+  occurred_on: string;
+  amount_minor: number;
+  currency: ImportCurrency;
+}
+
+export interface RecurringExpenseProposalResponse {
+  status: "proposed" | "blocked" | "uncertain";
+  reason: string | null;
+  proposal: RecurringExpenseProposal | null;
+  evidence: RecurrenceEvidence[];
+}
+
 export interface SettlementRow {
   id: string;
   description: string;
@@ -540,6 +566,27 @@ export function useImportRows(
               params: filters,
               signal,
             })
+          ).data,
+      ),
+  });
+}
+export function useRecurringExpenseProposal() {
+  const actor = useImportActor();
+  return useMutation({
+    retry: false,
+    mutationFn: (input: {
+      batchId: string;
+      rowId: string;
+      accountId: string;
+    }) =>
+      guarded(
+        actor,
+        async () =>
+          (
+            await api.get<RecurringExpenseProposalResponse>(
+              `${path(input.batchId)}/rows/${encodeURIComponent(input.rowId)}/recurring-expense-proposal`,
+              { params: { account_id: input.accountId } },
+            )
           ).data,
       ),
   });

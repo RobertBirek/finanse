@@ -33,6 +33,7 @@ import { ImportRows } from "../components/finance/imports/ImportRows";
 import { ImportGroupEditor } from "../components/finance/imports/ImportGroupEditor";
 import { ImportPreview } from "../components/finance/imports/ImportPreview";
 import { ImportReceipt } from "../components/finance/imports/ImportReceipt";
+import { RecurringExpenseProposal } from "../components/finance/imports/RecurringExpenseProposal";
 import { ScheduleImportWorkspace } from "../components/finance/imports/ScheduleImportWorkspace";
 import {
   importConfirmationKey,
@@ -71,6 +72,10 @@ function Workspace({ batch }: { batch: ImportBatch }) {
     publication,
   );
   const [selectedRows, setRows] = useState<Map<string, ImportRow>>(new Map());
+  const [recurringCandidate, setRecurringCandidate] = useState<{
+    rowId: string;
+    accountId: string;
+  } | null>(null);
   const [selection, setSelection] = useState<{
     version: number;
     ids: string[];
@@ -469,6 +474,16 @@ function Workspace({ batch }: { batch: ImportBatch }) {
               accountSuggestion={params.get("account")}
               pending={busy || uncertain}
               onSave={saveDecision}
+              onRecurringCandidateChange={setRecurringCandidate}
+            />
+          ) : null}
+          {recurringCandidate ? (
+            <RecurringExpenseProposal
+              batchId={batch.id}
+              rowId={recurringCandidate.rowId}
+              accountId={recurringCandidate.accountId}
+              accounts={accounts.data ?? []}
+              categories={categories.data ?? []}
             />
           ) : null}
           <section className="card space-y-3" aria-label="Wybrane grupy">

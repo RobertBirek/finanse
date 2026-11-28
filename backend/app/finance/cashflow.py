@@ -15,6 +15,7 @@ from app.finance.dates import _add_month, _local_today, _payday_bounds
 from app.finance.models import (
     Account,
     Category,
+    ConditionalRecurringObligation,
     DocumentPaymentAllocation,
     FinanceCommandReceipt,
     FinanceSettings,
@@ -47,6 +48,26 @@ class ScheduleConfirmationConflict(ValueError):
 
 def _occurrence_key(item_id: uuid.UUID, due_date: date) -> str:
     return f"recurring:{item_id}:{due_date.isoformat()}"
+
+
+def _scheduled_occurrences(item: ScheduledFinanceItem, *, start: date, end: date) -> list[date]:
+    """Generate only the calendar occurrences that can affect this forecast."""
+    if item.cadence == "annual":
+        if item.due_month is None:
+            raise ValueError("Annual scheduled item is missing due_month")
+        return [
+            date(year, item.due_month, item.due_day)
+            for year in range(start.year, end.year + 1)
+            if start <= date(year, item.due_month, item.due_day) <= end
+        ]
+    occurrences: list[date] = []
+    month = start.replace(day=1)
+    while month <= end:
+        due_date = month.replace(day=item.due_day)
+        if due_date >= start and due_date <= end:
+            occurrences.append(due_date)
+        month = _add_month(month)
+    return occurrences
 
 
 async def get_or_create_finance_settings(db: AsyncSession, user_id: uuid.UUID) -> FinanceSettings:
@@ -111,6 +132,8 @@ async def _validate_scheduled_item_links(
 async def create_scheduled_item(
     db: AsyncSession, user_id: uuid.UUID, data: ScheduledFinanceItemCreate
 ) -> ScheduledFinanceItem:
+    if data.cadence == "annual" and data.currency != "PLN":
+        raise ValueError("annual scheduled items support PLN only")
     await _validate_scheduled_item_links(
         db,
         user_id,
@@ -119,7 +142,7 @@ async def create_scheduled_item(
         currency=data.currency,
         item_type=data.type,
     )
-    item = ScheduledFinanceItem(user_id=user_id, cadence="monthly", **data.model_dump())
+    item = ScheduledFinanceItem(user_id=user_id, **data.model_dump())
     db.add(item)
     await db.flush()
     return item
@@ -129,7 +152,12 @@ async def get_scheduled_items(db: AsyncSession, user_id: uuid.UUID) -> list[Sche
     result = await db.execute(
         select(ScheduledFinanceItem)
         .where(ScheduledFinanceItem.user_id == user_id)
-        .order_by(ScheduledFinanceItem.due_day, ScheduledFinanceItem.name)
+        .order_by(
+            ScheduledFinanceItem.cadence,
+            ScheduledFinanceItem.due_month,
+            ScheduledFinanceItem.due_day,
+            ScheduledFinanceItem.name,
+        )
     )
     return list(result.scalars().all())
 
@@ -161,6 +189,15 @@ async def update_scheduled_item(
     ):
         raise ValueError("Scheduled item with coverage cannot be changed; unlink coverage first")
     update_data = data.model_dump(exclude_unset=True)
+    cadence = update_data.get("cadence", item.cadence)
+    due_month = update_data.get("due_month", item.due_month)
+    if cadence == "annual" and due_month is None:
+        raise ValueError("due_month is required for annual cadence")
+    if cadence == "monthly" and due_month is not None:
+        raise ValueError("due_month must be omitted for monthly cadence")
+    currency = update_data.get("currency", item.currency).upper()
+    if cadence == "annual" and currency != "PLN":
+        raise ValueError("annual scheduled items support PLN only")
     amount_method = update_data.get("amount_method", item.amount_method)
     fixed_amount = update_data.get("fixed_amount_pln", item.fixed_amount_pln)
     if amount_method == "fixed" and fixed_amount is None:
@@ -172,7 +209,7 @@ async def update_scheduled_item(
         user_id,
         account_id=update_data.get("account_id", item.account_id),
         category_id=update_data.get("category_id", item.category_id),
-        currency=update_data.get("currency", item.currency).upper(),
+        currency=currency,
         item_type=item.type,
     )
     for key, value in update_data.items():
@@ -391,21 +428,29 @@ async def get_cashflow_forecast(
     last_payday, next_payday = _payday_bounds(today, settings.payday_day)
     grace = timedelta(days=settings.overdue_grace_days)
     items = [item for item in await get_scheduled_items(db, user_id) if item.is_active]
+    conditional_obligations = list(
+        (
+            await db.execute(
+                select(ConditionalRecurringObligation).where(
+                    ConditionalRecurringObligation.user_id == user_id,
+                    ConditionalRecurringObligation.is_active.is_(True),
+                )
+            )
+        ).scalars()
+    )
     from app.finance.bill_forecast import project_bill_cashflows
 
     bill_projection = await project_bill_cashflows(
         db, user_id, today=today, horizon_end=horizon_end
     )
-    current_month = today.replace(day=1)
     grace_start = today - grace
-    month = grace_start.replace(day=1)
+    occurrence_start = min(today.replace(day=1), grace_start)
     occurrences: list[tuple[ScheduledFinanceItem, date]] = []
-    while month <= horizon_end:
-        for item in items:
-            due_date = month.replace(day=item.due_day)
-            if due_date <= horizon_end and (month >= current_month or due_date >= grace_start):
-                occurrences.append((item, due_date))
-        month = _add_month(month)
+    for item in items:
+        occurrences.extend(
+            (item, due_date)
+            for due_date in _scheduled_occurrences(item, start=occurrence_start, end=horizon_end)
+        )
 
     confirmed: dict[str, uuid.UUID] = {}
     if occurrences:
@@ -433,7 +478,7 @@ async def get_cashflow_forecast(
         today=today,
         horizon_end=horizon_end,
         grace=grace,
-        earliest_due=min((due for _, due in occurrences), default=current_month),
+        earliest_due=min((due for _, due in occurrences), default=today.replace(day=1)),
     )
     day_changes = {
         today + timedelta(days=offset): 0 for offset in range(settings.forecast_horizon_days)
@@ -524,6 +569,52 @@ async def get_cashflow_forecast(
         if projected_day in day_changes:
             day_changes[projected_day] += change
     suggestions.extend(bill_projection.entries)
+    # Conditional foreign-currency obligations are persisted declarations, not
+    # transactions.  Their native amounts are intentionally excluded from PLN
+    # arithmetic until an explicit FX/condition policy exists.
+    from app.finance.conditional_recurring_obligations import occurrences as conditional_occurrences
+
+    for obligation in conditional_obligations:
+        for due_date in conditional_occurrences(
+            obligation, start=occurrence_start, end=horizon_end
+        ):
+            condition_unresolved = obligation.condition_state == "unknown"
+            variant = "primary" if obligation.condition_state == "satisfied" else "fallback"
+            amount = getattr(obligation, f"{variant}_amount_minor", None)
+            currency = getattr(obligation, f"{variant}_currency", "PLN")
+            fallback_amount_unknown = not condition_unresolved and amount is None
+            suggestions.append(
+                CashflowSuggestion(
+                    source="conditional_recurring_obligation",
+                    source_key=f"conditional-recurring:{obligation.id}:{due_date.isoformat()}",
+                    conditional_recurring_obligation_id=obligation.id,
+                    name=obligation.name,
+                    type="expense",
+                    due_date=due_date,
+                    amount_minor=None if condition_unresolved else amount,
+                    currency=currency,
+                    amount_pln=None,
+                    status=(
+                        "condition_unresolved"
+                        if condition_unresolved
+                        else (
+                            "fallback_amount_unknown"
+                            if fallback_amount_unknown
+                            else "native_currency_forecast_unsupported"
+                        )
+                    ),
+                    included_in_forecast=False,
+                    exclusion_reasons=(
+                        ["conditional_obligation_unresolved"]
+                        if condition_unresolved
+                        else (
+                            ["conditional_obligation_fallback_amount_unknown"]
+                            if fallback_amount_unknown
+                            else ["conditional_obligation_native_currency_unresolved"]
+                        )
+                    ),
+                )
+            )
     opening_balance = await _budget_balance(db, user_id)
     balance = opening_balance
     days = []

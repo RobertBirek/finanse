@@ -96,6 +96,8 @@ export function ScheduledItemsList({
             account_id: item.account_id,
             category_id: item.category_id,
             currency: item.currency,
+            cadence: item.cadence,
+            due_month: item.due_month,
             due_day: item.due_day,
             amount_method: item.amount_method,
             fixed_amount_pln: item.fixed_amount_pln,
@@ -126,8 +128,11 @@ export function ScheduledItemsList({
                 ) : null}
               </div>
               <p className="mt-0.5 text-xs text-gray-500">
-                {typeLabel[item.type]} · dzień {item.due_day} ·{" "}
-                {methodLabel[item.amount_method]}
+                {typeLabel[item.type]} ·{" "}
+                {item.cadence === "annual"
+                  ? `co rok: miesiąc ${item.due_month}, dzień ${item.due_day}`
+                  : `co miesiąc: dzień ${item.due_day}`}{" "}
+                · {methodLabel[item.amount_method]}
               </p>
             </div>
             <div className="shrink-0 text-right">

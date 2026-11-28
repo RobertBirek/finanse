@@ -19,7 +19,7 @@ from app.finance.bills_schemas import (
     BillResponse,
     MutationContext,
 )
-from app.finance.dates import _add_month, _local_today
+from app.finance.dates import _local_today
 from app.finance.document_guards import lock_document_mutations
 from app.finance.models import (
     Account,
@@ -554,12 +554,16 @@ async def _recurring_conflict_effects(
     conflicts: list[str] = []
     before = 0
     after = 0
-    month = date(today.year, today.month, 1)
-    from app.finance.cashflow import _matching_actuals, _resolve_scheduled_amount
+    from app.finance.cashflow import (
+        _matching_actuals,
+        _resolve_scheduled_amount,
+        _scheduled_occurrences,
+    )
 
-    while month <= horizon_end:
-        for item in rows:
-            due_date = date(month.year, month.month, item.due_day)
+    for item in rows:
+        for due_date in _scheduled_occurrences(
+            item, start=today - timedelta(days=grace_days), end=horizon_end
+        ):
             if (
                 due_date > horizon_end
                 or due_date < today - timedelta(days=grace_days)
@@ -605,5 +609,4 @@ async def _recurring_conflict_effects(
                 amount == amount_after for _, amount in after_matches
             ):
                 after += amount_after
-        month = _add_month(month)
     return conflicts, before, after

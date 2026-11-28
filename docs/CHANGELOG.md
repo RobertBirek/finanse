@@ -2,6 +2,51 @@
 
 Wszystkie istotne zmiany w projekcie.
 
+## [Lokalnie, bez wdrożenia] — 2026-11-28 — Warunkowe zobowiązania walutowe
+
+### Added
+
+- Osobny, addytywny model deklaracji cyklicznego zobowiązania w walucie
+  źródłowej, z jawnym dniem 1–28, wariantem podstawowym i zapasowym oraz
+  kontami o zgodnej walucie należącymi do tego samego użytkownika.
+- Formularz i lista deklaracji w płynności; nie wpisują transakcji ani
+  postings do księgi.
+
+### Changed
+
+- Prognoza pokazuje warunkowe zobowiązania jako pominięte; bez automatycznego
+  FX lub rozstrzygnięcia warunku nie liczy kwoty PLN i nie wyznacza fałszywego
+  bezpiecznego limitu dziennego.
+- Wariant zapasowy może mieć znane konto i walutę, lecz jawną nieznaną kwotę;
+  również wtedy prognoza pozostaje wyłączona. Użytkownik może jawnie oznaczyć
+  stan warunku, bez deklarowania lub księgowania płatności.
+
+### Fixed
+
+- Downgrade odmawia przed DDL po `ACCESS EXCLUSIVE` locku, jeśli tabela
+  warunkowych zobowiązań zawiera dane.
+
+## [Lokalnie, bez wdrożenia] — 2026-11-28 — Roczne pozycje planowane PLN
+
+### Added
+
+- Planowana pozycja finansowa może mieć cykl miesięczny albo roczny z jawnym
+  miesiącem i dniem 1–28. Prognoza 90 dni, potwierdzenia i pokrycie dokumentem
+  używają tej samej daty wystąpienia; pozycja roczna nie jest mnożona miesięcznie.
+- Addytywna migracja dodaje nullable `due_month`; dotychczasowe pozycje miesięczne
+  zachowują wartości i działanie.
+
+### Changed
+
+- Formularz i lista planowanych pozycji umożliwiają wskazanie częstotliwości
+  rocznej oraz miesiąca. Bez zmian w FX, księdze ani danych użytkownika.
+
+### Fixed
+
+- Downgrade odmawia przed DDL, jeśli istnieje pozycja roczna. Prognoza faktur
+  uznaje niepokryte wystąpienie roczne wyłącznie w jego miesiącu kotwiczącym,
+  a cykl roczny odmawia walut innych niż PLN.
+
 ## [Nie wydano] — 2026-11-27 — Kredyty i pożyczki
 
 ### Added
