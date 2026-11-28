@@ -4,6 +4,11 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ## 2026-11-28 — Weryfikacja propozycji cyklicznych
 
+- Drugi przebieg CI `46156938770` ujawnił regresję prognozy: generator
+  pomijał zaległości bieżącego miesiąca po upływie okresu tolerancji.
+  Przywrócono granicę od początku bieżącego miesiąca lub wcześniejszego
+  okresu tolerancji, również dla zobowiązań warunkowych. Lokalnie 42 testy
+  offline, Ruff i mypy przeszły; test integracyjny wymaga ponownego CI.
 - CI `46155014361` nie przeszło: test roczny zakładał horyzont 90 dni bez
   jego ustawienia; pomocniczy licznik testu importu używał generatora async;
   atrapa E2E nie znała nowego odczytowego endpointu. Poprawiono testy i atrapę,

@@ -444,11 +444,12 @@ async def get_cashflow_forecast(
         db, user_id, today=today, horizon_end=horizon_end
     )
     grace_start = today - grace
+    occurrence_start = min(today.replace(day=1), grace_start)
     occurrences: list[tuple[ScheduledFinanceItem, date]] = []
     for item in items:
         occurrences.extend(
             (item, due_date)
-            for due_date in _scheduled_occurrences(item, start=grace_start, end=horizon_end)
+            for due_date in _scheduled_occurrences(item, start=occurrence_start, end=horizon_end)
         )
 
     confirmed: dict[str, uuid.UUID] = {}
@@ -574,7 +575,9 @@ async def get_cashflow_forecast(
     from app.finance.conditional_recurring_obligations import occurrences as conditional_occurrences
 
     for obligation in conditional_obligations:
-        for due_date in conditional_occurrences(obligation, start=grace_start, end=horizon_end):
+        for due_date in conditional_occurrences(
+            obligation, start=occurrence_start, end=horizon_end
+        ):
             condition_unresolved = obligation.condition_state == "unknown"
             variant = "primary" if obligation.condition_state == "satisfied" else "fallback"
             amount = getattr(obligation, f"{variant}_amount_minor", None)
