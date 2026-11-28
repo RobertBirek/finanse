@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Account, Category } from "../../../api/finance";
 import {
   useImportCandidates,
@@ -23,6 +23,7 @@ export function ImportGroupEditor({
   accountSuggestion,
   pending,
   onSave,
+  onRecurringCandidateChange,
 }: {
   batchId: string;
   rows: ImportRow[];
@@ -32,6 +33,9 @@ export function ImportGroupEditor({
   accountSuggestion?: string | null;
   pending: boolean;
   onSave: (decision: ImportDecision) => void;
+  onRecurringCandidateChange?: (
+    candidate: { rowId: string; accountId: string } | null,
+  ) => void;
 }) {
   const saved = rows[0]?.decision;
   const [groupId] = useState(() => saved?.group_id ?? crypto.randomUUID());
@@ -134,6 +138,21 @@ export function ImportGroupEditor({
       (action === "create" &&
         rows.some((row) => row.bank_fields?.fee) &&
         !feeCategory));
+  const recurringRowId =
+    rows.length === 1 &&
+    account &&
+    rows[0]?.bank_fields?.state === "posted" &&
+    rows[0].bank_fields.amount < 0 &&
+    rows[0].bank_fields.fee === 0 &&
+    rows[0].bank_fields.bank_reference
+      ? rows[0].id
+      : null;
+  useEffect(() => {
+    onRecurringCandidateChange?.(
+      recurringRowId ? { rowId: recurringRowId, accountId: account } : null,
+    );
+    return () => onRecurringCandidateChange?.(null);
+  }, [account, onRecurringCandidateChange, recurringRowId]);
   return (
     <form
       className="card space-y-3"

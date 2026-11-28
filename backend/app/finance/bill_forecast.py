@@ -83,6 +83,10 @@ async def bill_forecast_eligibility(
                 ScheduledFinanceItem.type == "expense",
                 ScheduledFinanceItem.account_id == bill.payment_account_id,
                 ScheduledFinanceItem.category_id == bill.category_id,
+                (
+                    (ScheduledFinanceItem.cadence == "monthly")
+                    | (ScheduledFinanceItem.due_month == bill.due_date.month)
+                ),
             )
             .limit(1)
         )

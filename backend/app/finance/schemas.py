@@ -516,12 +516,20 @@ class ScheduledFinanceItemCreate(BaseModel):
     account_id: uuid.UUID
     category_id: uuid.UUID
     currency: str = Field(min_length=3, max_length=3)
+    cadence: Literal["monthly", "annual"] = "monthly"
+    due_month: int | None = Field(default=None, ge=1, le=12)
     due_day: int = Field(ge=1, le=28)
     amount_method: Literal["fixed", "last_actual"]
     fixed_amount_pln: int | None = Field(default=None, gt=0)
 
     @model_validator(mode="after")
     def validate_amount_method(self) -> "ScheduledFinanceItemCreate":
+        if self.cadence == "annual" and self.due_month is None:
+            raise ValueError("due_month is required for annual cadence")
+        if self.cadence == "monthly" and self.due_month is not None:
+            raise ValueError("due_month must be omitted for monthly cadence")
+        if self.cadence == "annual" and self.currency.upper() != "PLN":
+            raise ValueError("annual scheduled items support PLN only")
         if self.amount_method == "fixed" and self.fixed_amount_pln is None:
             raise ValueError("fixed_amount_pln is required for fixed amount_method")
         if self.amount_method == "last_actual" and self.fixed_amount_pln is not None:
@@ -535,6 +543,8 @@ class ScheduledFinanceItemUpdate(BaseModel):
     account_id: uuid.UUID | None = None
     category_id: uuid.UUID | None = None
     currency: str | None = Field(default=None, min_length=3, max_length=3)
+    cadence: Literal["monthly", "annual"] | None = None
+    due_month: int | None = Field(default=None, ge=1, le=12)
     due_day: int | None = Field(default=None, ge=1, le=28)
     amount_method: Literal["fixed", "last_actual"] | None = None
     fixed_amount_pln: int | None = Field(default=None, gt=0)
@@ -548,10 +558,104 @@ class ScheduledFinanceItemResponse(BaseModel):
     account_id: uuid.UUID
     category_id: uuid.UUID
     currency: str
-    cadence: Literal["monthly"]
+    cadence: Literal["monthly", "annual"]
+    due_month: int | None
     due_day: int
     amount_method: Literal["fixed", "last_actual"]
     fixed_amount_pln: int | None
+    is_active: bool
+
+    model_config = {"from_attributes": True}
+
+
+class ConditionalRecurringObligationCreate(BaseModel):
+    """A recurring expense whose payment path is selected by an explicit condition.
+
+    Amounts remain in their native currency.  This declaration never creates a
+    transaction and cannot be converted into a PLN forecast implicitly.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    name: str = Field(min_length=1, max_length=200)
+    condition_key: str = Field(min_length=1, max_length=100)
+    condition_state: Literal["unknown", "satisfied", "not_satisfied"] = "unknown"
+    cadence: Literal["monthly", "annual"] = "monthly"
+    due_month: int | None = Field(default=None, ge=1, le=12)
+    due_day: int = Field(ge=1, le=28)
+    primary_account_id: uuid.UUID
+    primary_amount_minor: int = Field(gt=0, le=9007199254740991)
+    primary_currency: Literal["PLN", "EUR", "USD"]
+    fallback_account_id: uuid.UUID
+    fallback_amount_minor: int | None = Field(default=None, gt=0, le=9007199254740991)
+    fallback_currency: Literal["PLN", "EUR", "USD"]
+
+    @field_validator("name", "condition_key")
+    @classmethod
+    def require_nonblank(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Field must not be blank")
+        return value
+
+    @model_validator(mode="after")
+    def validate_recurrence(self) -> "ConditionalRecurringObligationCreate":
+        if self.cadence == "annual" and self.due_month is None:
+            raise ValueError("due_month is required for annual cadence")
+        if self.cadence == "monthly" and self.due_month is not None:
+            raise ValueError("due_month must be omitted for monthly cadence")
+        return self
+
+
+class ConditionalRecurringObligationUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    condition_key: str | None = Field(default=None, min_length=1, max_length=100)
+    condition_state: Literal["unknown", "satisfied", "not_satisfied"] | None = None
+    cadence: Literal["monthly", "annual"] | None = None
+    due_month: int | None = Field(default=None, ge=1, le=12)
+    due_day: int | None = Field(default=None, ge=1, le=28)
+    primary_account_id: uuid.UUID | None = None
+    primary_amount_minor: int | None = Field(default=None, gt=0, le=9007199254740991)
+    primary_currency: Literal["PLN", "EUR", "USD"] | None = None
+    fallback_account_id: uuid.UUID | None = None
+    fallback_amount_minor: int | None = Field(default=None, gt=0, le=9007199254740991)
+    fallback_currency: Literal["PLN", "EUR", "USD"] | None = None
+    is_active: bool | None = None
+
+    @field_validator("name", "condition_key")
+    @classmethod
+    def require_nonblank(cls, value: str | None) -> str | None:
+        if value is not None:
+            value = value.strip()
+            if not value:
+                raise ValueError("Field must not be blank")
+        return value
+
+    @model_validator(mode="after")
+    def reject_null_required_fields(self) -> "ConditionalRecurringObligationUpdate":
+        nullable = {"due_month", "fallback_amount_minor"}
+        for name in self.model_fields_set - nullable:
+            if getattr(self, name) is None:
+                raise ValueError(f"{name} cannot be null")
+        return self
+
+
+class ConditionalRecurringObligationResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    condition_key: str
+    condition_state: Literal["unknown", "satisfied", "not_satisfied"]
+    cadence: Literal["monthly", "annual"]
+    due_month: int | None
+    due_day: int
+    primary_account_id: uuid.UUID
+    primary_amount_minor: int
+    primary_currency: Literal["PLN", "EUR", "USD"]
+    fallback_account_id: uuid.UUID
+    fallback_amount_minor: int | None
+    fallback_currency: Literal["PLN", "EUR", "USD"]
     is_active: bool
 
     model_config = {"from_attributes": True}
@@ -563,10 +667,13 @@ class CashflowDay(BaseModel):
 
 
 class CashflowSuggestion(BaseModel):
-    source: Literal["recurring", "financial_document"] = "recurring"
+    source: Literal["recurring", "financial_document", "conditional_recurring_obligation"] = (
+        "recurring"
+    )
     source_key: str | None = None
     scheduled_item_id: uuid.UUID | None = None
     financial_document_id: uuid.UUID | None = None
+    conditional_recurring_obligation_id: uuid.UUID | None = None
     name: str
     type: Literal["income", "expense"]
     due_date: dt.date | None
@@ -574,7 +681,15 @@ class CashflowSuggestion(BaseModel):
     currency: str = "PLN"
     amount_pln: int | None
     status: Literal[
-        "due", "overdue", "overdue_uncertain", "matched_actual", "amount_unknown", "match_uncertain"
+        "due",
+        "overdue",
+        "overdue_uncertain",
+        "matched_actual",
+        "amount_unknown",
+        "match_uncertain",
+        "condition_unresolved",
+        "native_currency_forecast_unsupported",
+        "fallback_amount_unknown",
     ]
     included_in_forecast: bool
     actual_transaction_id: uuid.UUID | None = None
@@ -585,10 +700,25 @@ class CashflowSuggestion(BaseModel):
         if not self.source_key:
             raise ValueError("source_key is required")
         if self.source == "recurring":
-            if self.scheduled_item_id is None or self.financial_document_id is not None:
+            if (
+                self.scheduled_item_id is None
+                or self.financial_document_id is not None
+                or self.conditional_recurring_obligation_id is not None
+            ):
                 raise ValueError("recurring source requires only scheduled_item_id")
-        elif self.financial_document_id is None or self.scheduled_item_id is not None:
-            raise ValueError("financial_document source requires only financial_document_id")
+        elif self.source == "financial_document":
+            if (
+                self.financial_document_id is None
+                or self.scheduled_item_id is not None
+                or self.conditional_recurring_obligation_id is not None
+            ):
+                raise ValueError("financial_document source requires only financial_document_id")
+        elif (
+            self.conditional_recurring_obligation_id is None
+            or self.scheduled_item_id is not None
+            or self.financial_document_id is not None
+        ):
+            raise ValueError("conditional source requires only conditional_recurring_obligation_id")
         return self
 
 

@@ -167,6 +167,86 @@ async def test_detail_explains_declaration_lifecycle_account_and_unresolved_cove
     assert reasons[4] == []
 
 
+async def test_annual_schedule_marks_only_matching_bill_month_as_coverage_unresolved(
+    db_session,
+) -> None:
+    owner = await create_owner(db_session)
+    account = await create_account(db_session, owner, AccountCreate(name="Konto", type="checking"))
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Amazon", type="expense")
+    )
+    await create_scheduled_item(
+        db_session,
+        owner,
+        ScheduledFinanceItemCreate(
+            name="Amazon",
+            type="expense",
+            account_id=account.id,
+            category_id=category.id,
+            currency="PLN",
+            cadence="annual",
+            due_month=11,
+            due_day=28,
+            amount_method="fixed",
+            fixed_amount_pln=6_900,
+        ),
+    )
+    november, october = await setup_bill(db_session, owner), await setup_bill(db_session, owner)
+    for bill, due_date in ((november, date(2026, 11, 28)), (october, date(2026, 10, 28))):
+        bill.due_date = due_date
+        bill.payment_account_id = account.id
+        bill.category_id = category.id
+        bill.declaration = "payable"
+    await db_session.flush()
+
+    projection = await project_bill_cashflows(
+        db_session, owner, today=date(2026, 10, 28), horizon_end=date(2026, 11, 27)
+    )
+    entries = {entry.financial_document_id: entry for entry in projection.entries}
+    assert "coverage_unresolved" in entries[november.id].exclusion_reasons
+    assert "coverage_unresolved" not in entries[october.id].exclusion_reasons
+
+
+async def test_bill_without_due_date_is_not_coverage_unresolved_for_matching_annual_schedule(
+    db_session,
+) -> None:
+    owner = await create_owner(db_session)
+    account = await create_account(db_session, owner, AccountCreate(name="Konto", type="checking"))
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Amazon", type="expense")
+    )
+    await create_scheduled_item(
+        db_session,
+        owner,
+        ScheduledFinanceItemCreate(
+            name="Amazon",
+            type="expense",
+            account_id=account.id,
+            category_id=category.id,
+            currency="PLN",
+            cadence="annual",
+            due_month=11,
+            due_day=28,
+            amount_method="fixed",
+            fixed_amount_pln=6_900,
+        ),
+    )
+    bill = await setup_bill(db_session, owner)
+    bill.due_date = None
+    bill.payment_account_id = account.id
+    bill.category_id = category.id
+    bill.declaration = "payable"
+    await db_session.flush()
+
+    projection = await project_bill_cashflows(
+        db_session, owner, today=date(2026, 10, 28), horizon_end=date(2026, 11, 27)
+    )
+
+    entry = next(item for item in projection.entries if item.financial_document_id == bill.id)
+    assert "missing_due_date" in entry.exclusion_reasons
+    assert "coverage_unresolved" not in entry.exclusion_reasons
+
+
 async def test_invoice12000_replaces_estimate10000_only_this_occurrence(db_session) -> None:
     owner = await create_owner(db_session)
     account = await create_account(db_session, owner, AccountCreate(name="Konto", type="checking"))

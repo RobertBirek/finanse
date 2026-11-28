@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ScheduledItemForm } from "./ScheduledItemForm";
 import { categorySelectFixture } from "../../test/categoryFixtures";
@@ -133,6 +133,55 @@ describe("ScheduledItemForm", () => {
     );
 
     expect(screen.getByLabelText("Waluta")).toHaveValue("PLN");
+  });
+
+  it("collects an annual anchor month and safe due day", () => {
+    const mutate = vi.fn();
+    hooks.useCreateScheduledFinanceItem.mockReturnValue({
+      mutate,
+      isPending: false,
+      error: null,
+    });
+    render(
+      <ScheduledItemForm
+        mode="create"
+        accounts={accounts}
+        categories={categories}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Nazwa"), {
+      target: { value: "Amazon" },
+    });
+    fireEvent.change(screen.getByLabelText("Konto"), {
+      target: { value: "pln-budget" },
+    });
+    fireEvent.change(screen.getByLabelText("Kategoria"), {
+      target: { value: "c-expense" },
+    });
+    fireEvent.change(screen.getByLabelText("Częstotliwość"), {
+      target: { value: "annual" },
+    });
+    fireEvent.change(screen.getByLabelText("Miesiąc"), {
+      target: { value: "11" },
+    });
+    fireEvent.change(screen.getByLabelText("Dzień (1-28)"), {
+      target: { value: "28" },
+    });
+    fireEvent.change(screen.getByLabelText("Kwota (PLN)"), {
+      target: { value: "69" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Dodaj pozycję" }));
+
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cadence: "annual",
+        due_month: 11,
+        due_day: 28,
+        fixed_amount_pln: 6900,
+      }),
+      expect.any(Object),
+    );
   });
 
   it("hides inactive categories while keeping the type filter", () => {

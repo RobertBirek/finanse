@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database import get_db
 from app.finance import cashflow
+from app.finance.cashflow import _scheduled_occurrences
 from app.finance.models import FinanceSettings, FinancialTransaction, Posting
 from app.finance.schemas import (
     AccountCreate,
@@ -17,6 +18,7 @@ from app.finance.schemas import (
     CategoryCreate,
     PostingCreate,
     ScheduledFinanceItemCreate,
+    ScheduledFinanceItemUpdate,
     TransactionCreate,
 )
 from app.finance.service import (
@@ -52,6 +54,194 @@ def scheduled_item_data(account_id: uuid.UUID, category_id: uuid.UUID, **overrid
 def test_fixed_schedule_requires_an_amount() -> None:
     with pytest.raises(ValueError, match="fixed_amount_pln"):
         scheduled_item_data(uuid.uuid4(), uuid.uuid4(), fixed_amount_pln=None)
+
+
+def test_annual_schedule_requires_month_and_monthly_payload_remains_compatible() -> None:
+    account_id, category_id = uuid.uuid4(), uuid.uuid4()
+
+    monthly = scheduled_item_data(account_id, category_id)
+    assert monthly.cadence == "monthly"
+    assert monthly.due_month is None
+    with pytest.raises(ValueError, match="due_month"):
+        scheduled_item_data(account_id, category_id, cadence="annual")
+    with pytest.raises(ValueError, match="annual scheduled items support PLN only"):
+        scheduled_item_data(account_id, category_id, cadence="annual", due_month=11, currency="EUR")
+
+
+def test_annual_occurrences_use_anchor_month_day_once_and_skip_non_due_leap_months() -> None:
+    annual = SimpleNamespace(cadence="annual", due_month=2, due_day=28)
+
+    assert _scheduled_occurrences(annual, start=date(2028, 1, 1), end=date(2028, 3, 30)) == [
+        date(2028, 2, 28)
+    ]
+    assert _scheduled_occurrences(annual, start=date(2028, 2, 29), end=date(2028, 5, 28)) == []
+    monthly = SimpleNamespace(cadence="monthly", due_month=None, due_day=5)
+    assert _scheduled_occurrences(monthly, start=date(2026, 1, 1), end=date(2026, 3, 31)) == [
+        date(2026, 1, 5),
+        date(2026, 2, 5),
+        date(2026, 3, 5),
+    ]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_annual_pln_schedule_occurs_once_in_90_day_boundary_and_not_in_leap_february(
+    db_session,
+) -> None:
+    owner = uuid.uuid4()
+    account = await create_account(db_session, owner, AccountCreate(name="Konto", type="checking"))
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Amazon", type="expense")
+    )
+    annual = await create_scheduled_item(
+        db_session,
+        owner,
+        scheduled_item_data(
+            account.id,
+            category.id,
+            name="Amazon",
+            cadence="annual",
+            due_month=2,
+            due_day=28,
+            fixed_amount_pln=6_900,
+        ),
+    )
+
+    forecast = await get_cashflow_forecast(db_session, owner, today=date(2028, 1, 1))
+
+    assert [
+        (entry.scheduled_item_id, entry.due_date, entry.amount_pln)
+        for entry in forecast.suggestions
+    ] == [(annual.id, date(2028, 2, 28), 6_900)]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_service_rejects_annual_foreign_currency_on_create_and_update(db_session) -> None:
+    owner = uuid.uuid4()
+    account = await create_account(
+        db_session, owner, AccountCreate(name="Konto EUR", type="checking", currency="EUR")
+    )
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Amazon", type="expense")
+    )
+    unsafe_annual = ScheduledFinanceItemCreate.model_construct(
+        name="Amazon",
+        type="expense",
+        account_id=account.id,
+        category_id=category.id,
+        currency="EUR",
+        cadence="annual",
+        due_month=11,
+        due_day=28,
+        amount_method="fixed",
+        fixed_amount_pln=6_900,
+    )
+    with pytest.raises(ValueError, match="annual scheduled items support PLN only"):
+        await create_scheduled_item(db_session, owner, unsafe_annual)
+    monthly = await create_scheduled_item(
+        db_session,
+        owner,
+        scheduled_item_data(account.id, category.id, currency="EUR"),
+    )
+
+    with pytest.raises(ValueError, match="annual scheduled items support PLN only"):
+        await cashflow.update_scheduled_item(
+            db_session,
+            owner,
+            monthly.id,
+            ScheduledFinanceItemUpdate(cadence="annual", due_month=11),
+        )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_update_allows_annual_pln_to_monthly_eur_when_anchor_month_is_cleared(
+    db_session,
+) -> None:
+    owner = uuid.uuid4()
+    pln_account = await create_account(
+        db_session, owner, AccountCreate(name="Konto PLN", type="checking", currency="PLN")
+    )
+    eur_account = await create_account(
+        db_session, owner, AccountCreate(name="Konto EUR", type="checking", currency="EUR")
+    )
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Amazon", type="expense")
+    )
+    annual = await create_scheduled_item(
+        db_session,
+        owner,
+        scheduled_item_data(
+            pln_account.id,
+            category.id,
+            name="Amazon",
+            cadence="annual",
+            due_month=11,
+            due_day=28,
+            fixed_amount_pln=6_900,
+        ),
+    )
+
+    updated = await cashflow.update_scheduled_item(
+        db_session,
+        owner,
+        annual.id,
+        ScheduledFinanceItemUpdate(
+            account_id=eur_account.id,
+            currency="EUR",
+            cadence="monthly",
+            due_month=None,
+        ),
+    )
+
+    assert updated is not None
+    assert (updated.cadence, updated.due_month, updated.currency, updated.account_id) == (
+        "monthly",
+        None,
+        "EUR",
+        eur_account.id,
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_annual_schedule_next_occurrence_and_confirmation_do_not_double_count(
+    db_session,
+) -> None:
+    owner = uuid.uuid4()
+    account = await create_account(db_session, owner, AccountCreate(name="Konto", type="checking"))
+    category = await create_category(
+        db_session, owner, CategoryCreate(name="Amazon", type="expense")
+    )
+    annual = await create_scheduled_item(
+        db_session,
+        owner,
+        scheduled_item_data(
+            account.id,
+            category.id,
+            name="Amazon",
+            cadence="annual",
+            due_month=11,
+            due_day=28,
+            fixed_amount_pln=6_900,
+        ),
+    )
+
+    before_due = await get_cashflow_forecast(db_session, owner, today=date(2026, 11, 27))
+    assert [(entry.due_date, entry.included_in_forecast) for entry in before_due.suggestions] == [
+        (date(2026, 11, 28), True)
+    ]
+    transaction = await confirm_scheduled_item(
+        db_session, owner, annual.id, today=date(2026, 11, 28)
+    )
+    assert transaction is not None
+
+    after_confirmation = await get_cashflow_forecast(db_session, owner, today=date(2026, 11, 28))
+    assert [
+        (entry.due_date, entry.status, entry.included_in_forecast)
+        for entry in after_confirmation.suggestions
+    ] == [(date(2026, 11, 28), "matched_actual", False)]
 
 
 @pytest.mark.integration

@@ -255,7 +255,8 @@ export interface ScheduledFinanceItem {
   account_id: string;
   category_id: string;
   currency: string;
-  cadence: "monthly";
+  cadence: "monthly" | "annual";
+  due_month: number | null;
   due_day: number;
   amount_method: "fixed" | "last_actual";
   fixed_amount_pln: number | null;
@@ -282,10 +283,34 @@ export interface ScheduledFinanceItemInput {
   account_id: string;
   category_id: string;
   currency: string;
+  cadence: "monthly" | "annual";
+  due_month: number | null;
   due_day: number;
   amount_method: "fixed" | "last_actual";
   fixed_amount_pln: number | null;
 }
+
+export interface ConditionalRecurringObligation {
+  id: string;
+  name: string;
+  condition_key: string;
+  condition_state: "unknown" | "satisfied" | "not_satisfied";
+  cadence: "monthly" | "annual";
+  due_month: number | null;
+  due_day: number;
+  primary_account_id: string;
+  primary_amount_minor: number;
+  primary_currency: "PLN" | "EUR" | "USD";
+  fallback_account_id: string;
+  fallback_amount_minor: number | null;
+  fallback_currency: "PLN" | "EUR" | "USD";
+  is_active: boolean;
+}
+
+export type ConditionalRecurringObligationInput = Omit<
+  ConditionalRecurringObligation,
+  "id" | "is_active"
+>;
 
 export interface ScheduledFinanceConfirmation {
   transaction: Transaction;
@@ -297,13 +322,18 @@ export type CashflowStatus =
   | "overdue_uncertain"
   | "matched_actual"
   | "amount_unknown"
-  | "match_uncertain";
+  | "match_uncertain"
+  | "condition_unresolved"
+  | "native_currency_forecast_unsupported"
+  | "fallback_amount_unknown";
 
 type CashflowSuggestionCommon = {
   name: string;
   type: "income" | "expense";
   due_date: string | null;
   amount_pln: number | null;
+  amount_minor?: number | null;
+  currency?: string;
   status: CashflowStatus;
   included_in_forecast: boolean;
   actual_transaction_id: string | null;
@@ -320,6 +350,12 @@ export type CashflowSuggestion =
       source: "financial_document";
       scheduled_item_id: null;
       financial_document_id: string;
+    })
+  | (CashflowSuggestionCommon & {
+      source: "conditional_recurring_obligation";
+      scheduled_item_id: null;
+      financial_document_id: null;
+      conditional_recurring_obligation_id: string;
     });
 
 export interface CashflowBudgetSummary {
@@ -354,6 +390,10 @@ export function cashflowStatusLabel(status: CashflowStatus) {
     matched_actual: "Zaksięgowane",
     amount_unknown: "Brak ostatniej kwoty",
     match_uncertain: "Niejednoznaczne dopasowanie płatności",
+    condition_unresolved: "Warunek płatności nie jest rozstrzygnięty",
+    native_currency_forecast_unsupported:
+      "Kwota w walucie obcej poza prognozą PLN",
+    fallback_amount_unknown: "Kwota zapasowa jest nieznana",
   };
   return labels[status];
 }
@@ -1178,6 +1218,59 @@ export function useScheduledFinanceItems() {
   });
 }
 
+export function useConditionalRecurringObligations() {
+  return useQuery({
+    queryKey: ["finance", "cashflow", "conditional-obligations"],
+    queryFn: async () =>
+      (
+        await api.get<ConditionalRecurringObligation[]>(
+          "/finance/cashflow/conditional-obligations",
+        )
+      ).data,
+  });
+}
+
+export function useCreateConditionalRecurringObligation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: ConditionalRecurringObligationInput) =>
+      (
+        await api.post<ConditionalRecurringObligation>(
+          "/finance/cashflow/conditional-obligations",
+          input,
+        )
+      ).data,
+    onSuccess: () => invalidateCashflowMutationQueries(queryClient),
+  });
+}
+
+export function useUpdateConditionalRecurringObligation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...input
+    }: Partial<ConditionalRecurringObligationInput> & { id: string }) =>
+      (
+        await api.patch<ConditionalRecurringObligation>(
+          `/finance/cashflow/conditional-obligations/${id}`,
+          input,
+        )
+      ).data,
+    onSuccess: () => invalidateCashflowMutationQueries(queryClient),
+  });
+}
+
+export function useDeleteConditionalRecurringObligation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/finance/cashflow/conditional-obligations/${id}`);
+    },
+    onSuccess: () => invalidateCashflowMutationQueries(queryClient),
+  });
+}
+
 export function useCreateScheduledFinanceItem() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1206,6 +1299,9 @@ export function useUpdateScheduledFinanceItem() {
         account_id: normalizedItem.account_id,
         category_id: normalizedItem.category_id,
         currency: normalizedItem.currency,
+        cadence: normalizedItem.cadence,
+        due_month:
+          normalizedItem.cadence === "annual" ? normalizedItem.due_month : null,
         due_day: normalizedItem.due_day,
         amount_method: normalizedItem.amount_method,
         fixed_amount_pln: normalizedItem.fixed_amount_pln,

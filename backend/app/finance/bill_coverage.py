@@ -53,6 +53,7 @@ async def get_coverage_candidates(
             estimate_amount_pln=await _resolve_scheduled_amount(db, user_id, item, _local_today()),
         )
         for item in items
+        if item.cadence == "monthly" or item.due_month == bill.due_date.month
     ]
 
 
@@ -100,6 +101,7 @@ async def decide_coverage(
                 and bill.due_date is not None
                 and bill.due_date.year == data.occurrence_date.year
                 and bill.due_date.month == data.occurrence_date.month
+                and (item.cadence == "monthly" or item.due_month == bill.due_date.month)
                 and item.due_day == data.occurrence_date.day
                 and item.account_id == bill.payment_account_id
                 and item.category_id == bill.category_id

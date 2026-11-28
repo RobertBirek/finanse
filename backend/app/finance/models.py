@@ -160,6 +160,7 @@ class ScheduledFinanceItem(Base):
     )
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     cadence: Mapped[str] = mapped_column(String(20), nullable=False, default="monthly")
+    due_month: Mapped[int | None] = mapped_column(nullable=True)
     due_day: Mapped[int] = mapped_column(nullable=False)
     amount_method: Mapped[str] = mapped_column(String(20), nullable=False)
     fixed_amount_pln: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
@@ -167,6 +168,60 @@ class ScheduledFinanceItem(Base):
 
     account: Mapped["Account"] = relationship("Account")
     category: Mapped["Category"] = relationship("Category")
+
+
+class ConditionalRecurringObligation(Base):
+    """A declared native-currency obligation, deliberately outside the ledger."""
+
+    __tablename__ = "conditional_recurring_obligations"
+    __table_args__ = (
+        CheckConstraint(
+            "cadence IN ('monthly', 'annual')", name="ck_conditional_obligation_cadence"
+        ),
+        CheckConstraint(
+            "(cadence = 'monthly' AND due_month IS NULL) "
+            "OR (cadence = 'annual' AND due_month BETWEEN 1 AND 12)",
+            name="ck_conditional_obligation_due_month",
+        ),
+        CheckConstraint("due_day BETWEEN 1 AND 28", name="ck_conditional_obligation_due_day"),
+        CheckConstraint(
+            "condition_state IN ('unknown', 'satisfied', 'not_satisfied')",
+            name="ck_conditional_obligation_condition_state",
+        ),
+        CheckConstraint(
+            "primary_currency IN ('PLN', 'EUR', 'USD') "
+            "AND fallback_currency IN ('PLN', 'EUR', 'USD')",
+            name="ck_conditional_obligation_currency",
+        ),
+        CheckConstraint(
+            "primary_amount_minor > 0 AND (fallback_amount_minor IS NULL OR fallback_amount_minor > 0)",
+            name="ck_conditional_obligation_amount",
+        ),
+        CheckConstraint(
+            "primary_account_id <> fallback_account_id",
+            name="ck_conditional_obligation_distinct_accounts",
+        ),
+        Index("ix_conditional_obligation_owner_active", "user_id", "is_active"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    condition_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    condition_state: Mapped[str] = mapped_column(String(20), nullable=False, default="unknown")
+    cadence: Mapped[str] = mapped_column(String(20), nullable=False, default="monthly")
+    due_month: Mapped[int | None] = mapped_column(nullable=True)
+    due_day: Mapped[int] = mapped_column(nullable=False)
+    primary_account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="RESTRICT"), nullable=False
+    )
+    primary_amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    primary_currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    fallback_account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="RESTRICT"), nullable=False
+    )
+    fallback_amount_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    fallback_currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class CategoryBudget(Base):
