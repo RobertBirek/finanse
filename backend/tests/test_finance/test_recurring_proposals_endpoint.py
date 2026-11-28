@@ -3,6 +3,8 @@
 from datetime import date
 from types import SimpleNamespace
 
+from sqlalchemy.dialects import postgresql
+
 from app.finance.imports.recurring_detection import (
     NewScheduleProposal,
     RecurrenceAnalysis,
@@ -10,10 +12,19 @@ from app.finance.imports.recurring_detection import (
 )
 from app.finance.imports.recurring_proposals import (
     _historical_reference_matches_identity,
+    _history_start,
+    _normalized_description_expression,
     _source_binds_account,
     proposal_response,
 )
 from tests.test_finance.test_bank_imports.test_contracts import statement_row
+
+
+def test_postgres_normalization_form_is_keyword_not_bound_parameter() -> None:
+    expression = _normalized_description_expression()
+    compiled = str(expression.compile(dialect=postgresql.dialect()))
+    assert "NFKC" in compiled
+    assert "normalize_1" not in compiled
 
 
 def test_endpoint_response_keeps_observed_dates_separate_from_formal_deadline() -> None:
@@ -98,3 +109,8 @@ def test_historical_row_requires_its_exact_canonical_bank_reference() -> None:
         )
         is False
     )
+
+
+def test_candidate_history_window_includes_annual_day_tolerance_across_leap_years() -> None:
+    """A three-day annual tolerance must not be discarded at the two-year boundary."""
+    assert _history_start(date(2028, 3, 1)) == date(2026, 2, 26)

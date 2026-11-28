@@ -90,6 +90,28 @@ def test_annual_verified_expenses_never_become_monthly() -> None:
     assert result.proposal.amount_minor == -4900
 
 
+def test_annual_cadence_allows_day_tolerance_across_a_leap_month_boundary() -> None:
+    result = analyze_new_recurring_schedule(
+        observation("bank:2028", date(2028, 3, 1), description="DOMAIN HOSTING"),
+        [
+            observation(
+                "bank:2026",
+                date(2026, 2, 27),
+                description="DOMAIN HOSTING",
+            ),
+            observation(
+                "bank:2027",
+                date(2027, 2, 28),
+                description="DOMAIN HOSTING",
+            ),
+        ],
+    )
+
+    assert result.status == "proposed"
+    assert result.proposal is not None
+    assert result.proposal.frequency == "annual"
+
+
 def test_variable_amounts_are_explicitly_marked_not_silently_stabilized() -> None:
     current = observation("bank:3", date(2026, 3, 3), amount_minor=-5300)
     result = analyze_new_recurring_schedule(
@@ -124,6 +146,21 @@ def test_missing_or_reused_strong_identity_is_uncertain_not_deduplicated() -> No
     result = analyze_new_recurring_schedule(
         current,
         [missing_identity, observation("bank:overlap", date(2026, 2, 2))],
+    )
+
+    assert result.status == "uncertain"
+    assert result.proposal is None
+    assert result.reason == "identity_uncertain"
+
+
+def test_nfkc_equivalent_canonical_duplicate_is_uncertain_not_dropped() -> None:
+    """A byte-distinct merchant spelling cannot hide a reused canonical identity."""
+    result = analyze_new_recurring_schedule(
+        observation("bank:current", date(2026, 3, 3), description="NETFLIX"),
+        [
+            observation("bank:duplicate", date(2026, 1, 3), description="ＮＥＴＦＬＩＸ"),
+            observation("bank:duplicate", date(2026, 2, 3), description="NETFLIX"),
+        ],
     )
 
     assert result.status == "uncertain"

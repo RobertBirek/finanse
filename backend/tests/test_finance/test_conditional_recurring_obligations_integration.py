@@ -10,14 +10,17 @@ from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select, text
+from sqlalchemy.exc import DBAPIError, IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database import get_db
-from app.finance.entities import create_account
-from app.finance.models import FinancialTransaction, Posting
-from app.finance.schemas import AccountCreate
+from app.finance.conditional_recurring_obligations import create as create_conditional_obligation
+from app.finance.entities import create_account, delete_account, update_account
+from app.finance.models import ConditionalRecurringObligation, FinancialTransaction, Posting
+from app.finance.schemas import AccountCreate, AccountUpdate, ConditionalRecurringObligationCreate
 from app.finance.service import get_cashflow_forecast
+from app.identity.models import User
 from app.identity.router import get_current_user
 from app.main import app
 
@@ -46,6 +49,16 @@ async def authenticated_client(db: AsyncSession, owner_id: uuid.UUID) -> AsyncIt
 async def accounts_for(
     db: AsyncSession, owner_id: uuid.UUID, *, fallback_currency: str = "PLN"
 ) -> tuple[uuid.UUID, uuid.UUID]:
+    if await db.get(User, owner_id) is None:
+        db.add(
+            User(
+                id=owner_id,
+                email=f"{owner_id}@example.invalid",
+                password_hash="unused",
+                display_name="Synthetic",
+            )
+        )
+        await db.flush()
     primary = await create_account(
         db,
         owner_id,
@@ -57,6 +70,32 @@ async def accounts_for(
         AccountCreate(name="Synthetic fallback", type="checking", currency=fallback_currency),
     )
     return primary.id, fallback.id
+
+
+async def direct_obligation(
+    db: AsyncSession,
+    owner_id: uuid.UUID,
+    primary_account_id: uuid.UUID,
+    fallback_account_id: uuid.UUID,
+    *,
+    is_active: bool = True,
+) -> ConditionalRecurringObligation:
+    record = ConditionalRecurringObligation(
+        user_id=owner_id,
+        name="Direct conditional obligation",
+        condition_key="direct_constraint",
+        due_day=15,
+        primary_account_id=primary_account_id,
+        primary_amount_minor=2_000,
+        primary_currency="EUR",
+        fallback_account_id=fallback_account_id,
+        fallback_amount_minor=8_000,
+        fallback_currency="PLN",
+        is_active=is_active,
+    )
+    db.add(record)
+    await db.flush()
+    return record
 
 
 def payload(
@@ -208,6 +247,146 @@ async def test_unknown_conditional_obligation_is_excluded_from_forecast_and_hide
         )
     ]
     assert await ledger_counts(db_session) == before
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_database_rejects_a_direct_cross_owner_account_reference(
+    db_session: AsyncSession,
+) -> None:
+    """Fails if a direct insert can bind an owner's obligation to another owner's account."""
+
+    owner_id, other_owner_id = uuid.uuid4(), uuid.uuid4()
+    primary, fallback = await accounts_for(db_session, owner_id)
+    foreign_primary, _foreign_fallback = await accounts_for(db_session, other_owner_id)
+
+    with pytest.raises(IntegrityError):
+        async with db_session.begin_nested():
+            await direct_obligation(db_session, owner_id, foreign_primary, fallback)
+
+    await direct_obligation(db_session, owner_id, primary, fallback)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("account_role", "is_active"),
+    [("primary", True), ("fallback", True), ("primary", False), ("fallback", False)],
+)
+async def test_conditional_obligation_blocks_account_currency_changes_and_deletion(
+    db_session: AsyncSession, account_role: str, is_active: bool
+) -> None:
+    """Fails if any conditional declaration stops protecting either account transition."""
+
+    owner_id = uuid.uuid4()
+    primary, fallback = await accounts_for(db_session, owner_id)
+    await direct_obligation(db_session, owner_id, primary, fallback, is_active=is_active)
+    account_id = primary if account_role == "primary" else fallback
+
+    with pytest.raises(ValueError, match="currency"):
+        await update_account(db_session, owner_id, account_id, AccountUpdate(currency="USD"))
+    with pytest.raises(ValueError, match="records"):
+        await delete_account(db_session, owner_id, account_id)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+@pytest.mark.parametrize("first", ["account", "obligation"])
+@pytest.mark.parametrize(
+    ("account_update", "creation_error", "account_error"),
+    [
+        (AccountUpdate(currency="USD"), "currency", "currency"),
+        (AccountUpdate(is_active=False), "active budget", "conditional obligation"),
+        (
+            AccountUpdate(is_budget_account=False),
+            "active budget",
+            "conditional obligation",
+        ),
+    ],
+)
+async def test_conditional_obligation_creation_and_account_dependency_changes_are_serialized(
+    db_session: AsyncSession,
+    first: str,
+    account_update: AccountUpdate,
+    creation_error: str,
+    account_error: str,
+) -> None:
+    """Fails if creation can race currency, active-state, or budget-state transitions."""
+
+    owner_id = uuid.uuid4()
+    primary, fallback = await accounts_for(db_session, owner_id)
+    data = ConditionalRecurringObligationCreate(
+        name="Serialized conditional obligation",
+        condition_key="serialized_currency",
+        due_day=15,
+        primary_account_id=primary,
+        primary_amount_minor=2_000,
+        primary_currency="EUR",
+        fallback_account_id=fallback,
+        fallback_amount_minor=8_000,
+        fallback_currency="PLN",
+    )
+    await db_session.commit()
+    sessions = async_sessionmaker(db_session.bind, expire_on_commit=False)
+
+    async with sessions() as one, sessions() as two:
+        if first == "account":
+            await update_account(one, owner_id, primary, account_update)
+        else:
+            await create_conditional_obligation(one, owner_id, data)
+
+        await two.execute(text("SET LOCAL lock_timeout = '200ms'"))
+        with pytest.raises(DBAPIError, match="lock timeout"):
+            if first == "account":
+                await create_conditional_obligation(two, owner_id, data)
+            else:
+                await update_account(two, owner_id, primary, account_update)
+        await two.rollback()
+        await one.commit()
+
+        if first == "account":
+            with pytest.raises(ValueError, match=creation_error):
+                await create_conditional_obligation(two, owner_id, data)
+        else:
+            with pytest.raises(ValueError, match=account_error):
+                await update_account(two, owner_id, primary, account_update)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+@pytest.mark.parametrize("account_role", ["primary", "fallback"])
+@pytest.mark.parametrize("obligation_is_active", [True, False])
+@pytest.mark.parametrize(
+    ("account_update", "field_name", "account_field"),
+    [
+        (AccountUpdate(is_active=False), "active", "is_active"),
+        (AccountUpdate(is_budget_account=False), "budget", "is_budget_account"),
+    ],
+)
+async def test_conditional_obligation_blocks_disabling_or_unbudgeting_either_account(
+    db_session: AsyncSession,
+    account_role: str,
+    obligation_is_active: bool,
+    account_update: AccountUpdate,
+    field_name: str,
+    account_field: str,
+) -> None:
+    """Fails if either variant can lose required account eligibility after declaration."""
+
+    owner_id = uuid.uuid4()
+    primary, fallback = await accounts_for(db_session, owner_id)
+    await direct_obligation(db_session, owner_id, primary, fallback, is_active=obligation_is_active)
+    account_id = primary if account_role == "primary" else fallback
+
+    with pytest.raises(ValueError, match="conditional obligation"):
+        await update_account(db_session, owner_id, account_id, account_update)
+
+    account = await create_account(
+        db_session, owner_id, AccountCreate(name=f"Unrelated {field_name}", type="cash")
+    )
+    updated = await update_account(db_session, owner_id, account.id, account_update)
+    assert updated is not None
+    assert getattr(updated, account_field) is False
 
 
 def test_conditional_obligation_migration_downgrade_refuses_populated_table_before_ddl(

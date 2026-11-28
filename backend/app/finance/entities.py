@@ -10,6 +10,7 @@ from app.finance.models import (
     Account,
     Category,
     CategoryBudget,
+    ConditionalRecurringObligation,
     LoanAgreement,
     Posting,
     ScheduledFinanceItem,
@@ -80,11 +81,31 @@ async def _update_account(
             await guard_bill_account_change(
                 db, user_id, account_id, {"currency": update_data["currency"]}
             )
-    if data.currency is not None or data.credit_card is not None or data.type == "credit_card":
+    if (
+        "currency" in update_data
+        or "is_active" in update_data
+        or "is_budget_account" in update_data
+        or data.credit_card is not None
+        or data.type == "credit_card"
+    ):
         await lock_accounts(db, user_id, {account_id}, exclusive=True)
     account = await get_account(db, user_id, account_id)
     if account is None:
         return None
+    if (
+        ("is_active" in update_data and update_data["is_active"] is False)
+        or ("is_budget_account" in update_data and update_data["is_budget_account"] is False)
+    ) and await db.scalar(
+        select(ConditionalRecurringObligation.id)
+        .where(
+            (ConditionalRecurringObligation.primary_account_id == account_id)
+            | (ConditionalRecurringObligation.fallback_account_id == account_id)
+        )
+        .limit(1)
+    ):
+        raise ValueError(
+            "Account is referenced by a conditional obligation; remove the obligation first"
+        )
     from app.finance.credit_card_models import CreditCard
 
     configured = await db.scalar(select(CreditCard.id).where(CreditCard.account_id == account_id))
@@ -133,6 +154,14 @@ async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.
         .where(ScheduledFinanceItem.account_id == account_id)
         .limit(1)
     )
+    conditional_obligation = await db.execute(
+        select(ConditionalRecurringObligation.id)
+        .where(
+            (ConditionalRecurringObligation.primary_account_id == account_id)
+            | (ConditionalRecurringObligation.fallback_account_id == account_id)
+        )
+        .limit(1)
+    )
     loan = await db.execute(
         select(LoanAgreement.id)
         .where(
@@ -141,7 +170,12 @@ async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.
         )
         .limit(1)
     )
-    if posting.first() is not None or scheduled.first() is not None or loan.first() is not None:
+    if (
+        posting.first() is not None
+        or scheduled.first() is not None
+        or conditional_obligation.first() is not None
+        or loan.first() is not None
+    ):
         raise ValueError("Account has records; deactivate it instead of deleting")
     await db.delete(account)
     await db.flush()

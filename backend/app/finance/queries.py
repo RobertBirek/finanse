@@ -14,6 +14,7 @@ from app.finance.models import (
     Account,
     ActualImportMapping,
     Category,
+    ConditionalRecurringObligation,
     DocumentPaymentAllocation,
     FinancialTransaction,
     LoanAgreement,
@@ -59,6 +60,12 @@ def _account_rows(user_id: uuid.UUID):
             & ~select(Posting.id).where(Posting.account_id == Account.id).exists()
             & ~select(ScheduledFinanceItem.id)
             .where(ScheduledFinanceItem.account_id == Account.id)
+            .exists()
+            & ~select(ConditionalRecurringObligation.id)
+            .where(
+                (ConditionalRecurringObligation.primary_account_id == Account.id)
+                | (ConditionalRecurringObligation.fallback_account_id == Account.id)
+            )
             .exists()
             & ~select(LoanAgreement.id)
             .where(

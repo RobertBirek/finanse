@@ -201,6 +201,17 @@ class ConditionalRecurringObligation(Base):
             "primary_account_id <> fallback_account_id",
             name="ck_conditional_obligation_distinct_accounts",
         ),
+        ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(
+            ["primary_account_id", "user_id"],
+            ["accounts.id", "accounts.user_id"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["fallback_account_id", "user_id"],
+            ["accounts.id", "accounts.user_id"],
+            ondelete="RESTRICT",
+        ),
         Index("ix_conditional_obligation_owner_active", "user_id", "is_active"),
     )
 
@@ -211,14 +222,10 @@ class ConditionalRecurringObligation(Base):
     cadence: Mapped[str] = mapped_column(String(20), nullable=False, default="monthly")
     due_month: Mapped[int | None] = mapped_column(nullable=True)
     due_day: Mapped[int] = mapped_column(nullable=False)
-    primary_account_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="RESTRICT"), nullable=False
-    )
+    primary_account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     primary_amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     primary_currency: Mapped[str] = mapped_column(String(3), nullable=False)
-    fallback_account_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="RESTRICT"), nullable=False
-    )
+    fallback_account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     fallback_amount_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     fallback_currency: Mapped[str] = mapped_column(String(3), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import re
 import uuid
+from calendar import monthrange
+from datetime import date, timedelta
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.finance.imports.contracts import StatementRow
 from app.finance.imports.decisions import normalized_reference
@@ -19,15 +22,25 @@ from app.finance.imports.models import (
     ImportSource,
 )
 from app.finance.imports.recurring_detection import (
+    DAY_TOLERANCE,
     NewScheduleProposal,
     RecurrenceAnalysis,
     RecurrenceEvidence,
     VerifiedExpenseObservation,
+    _merchant_key,
     analyze_new_recurring_schedule,
 )
 from app.finance.models import Account, FinancialTransaction, Posting, ScheduledFinanceItem
 
-MAX_HISTORY_OBSERVATIONS = 30
+MAX_CANDIDATE_HISTORY_OBSERVATIONS = 26
+HISTORY_LOOKBACK_YEARS = 2
+
+
+def _normalized_description_expression() -> ColumnElement[str]:
+    # PostgreSQL NORMALIZE takes a grammar keyword rather than a bound string.
+    return func.lower(
+        func.normalize(ImportRow.fields["description"].as_string(), literal_column("NFKC"))
+    )
 
 
 class RecurringProposalResponse(BaseModel):
@@ -94,6 +107,20 @@ def _historical_reference_matches_identity(
     return bool(
         value.bank_reference and strong_reference and value.bank_reference == strong_reference
     )
+
+
+def _history_start(observed_on: date) -> date:
+    """Keep candidate history finite while retaining evidence for annual cadence."""
+    year = observed_on.year - HISTORY_LOOKBACK_YEARS
+    anniversary = date(
+        year, observed_on.month, min(observed_on.day, monthrange(year, observed_on.month)[1])
+    )
+    return anniversary - timedelta(days=DAY_TOLERANCE)
+
+
+def _history_end(observed_on: date) -> date:
+    """Include the same bounded tolerance after the current observation."""
+    return observed_on + timedelta(days=DAY_TOLERANCE)
 
 
 async def _current_observation(
@@ -205,23 +232,37 @@ async def propose_recurring_expense(
     if overlapping is not None:
         return proposal_response(_uncertain("statement_overlap_uncertain", current))
 
-    schedule_exists = await db.scalar(
-        select(ScheduledFinanceItem.id).where(
-            ScheduledFinanceItem.user_id == owner,
-            ScheduledFinanceItem.account_id == account_id,
-            ScheduledFinanceItem.currency == current.currency,
-            ScheduledFinanceItem.is_active.is_(True),
+    # A schedule name has no immutable source identity.  Keep its label for
+    # review, but never use a different label as proof that there is no duplicate.
+    active_schedule_names = (
+        (
+            await db.execute(
+                select(ScheduledFinanceItem.name).where(
+                    ScheduledFinanceItem.user_id == owner,
+                    ScheduledFinanceItem.account_id == account_id,
+                    ScheduledFinanceItem.currency == current.currency,
+                    ScheduledFinanceItem.is_active.is_(True),
+                )
+            )
         )
+        .scalars()
+        .all()
     )
-    if schedule_exists is not None:
-        return proposal_response(_uncertain("existing_schedule_overlap_uncertain", current))
 
+    merchant = _merchant_key(current.description)
+    # PostgreSQL's normalize/lower expression below is only relied on for an
+    # ASCII canonical key. For any other key we cannot prove parity with Python
+    # Unicode casing, so do not risk hiding historical occurrences.
+    if not merchant or not merchant.isascii():
+        return proposal_response(_uncertain("merchant_normalization_uncertain", current))
+
+    history_start = _history_start(current.occurred_on)
+    history_end = _history_end(current.occurred_on)
+    normalized_description = _normalized_description_expression()
     verified_rows = (
         await db.execute(
             select(
                 ImportEvidence,
-                FinancialTransaction,
-                Posting,
                 ImportRow,
                 ImportSource,
                 ImportBankIdentity,
@@ -243,17 +284,23 @@ async def propose_recurring_expense(
                 FinancialTransaction.is_pending.is_(False),
                 Posting.account_id == account_id,
                 ImportRow.kind == "statement",
+                ImportSource.kind == "statement",
+                ImportSource.current_revision_id == ImportRow.revision_id,
+                ImportSource.processing_state == "ready",
+                ImportSource.validation_state == "passed",
+                normalized_description == merchant,
+                ImportRow.fields["booking_date"].as_string() >= history_start.isoformat(),
+                ImportRow.fields["booking_date"].as_string() <= history_end.isoformat(),
             )
-            .order_by(FinancialTransaction.date.desc(), FinancialTransaction.id)
-            .limit(MAX_HISTORY_OBSERVATIONS + 1)
+            .order_by(ImportRow.fields["booking_date"].as_string().desc(), FinancialTransaction.id)
+            .limit(MAX_CANDIDATE_HISTORY_OBSERVATIONS + 1)
         )
     ).all()
-    if len(verified_rows) > MAX_HISTORY_OBSERVATIONS:
-        return proposal_response(_uncertain("history_limit_reached", current))
+    if len(verified_rows) > MAX_CANDIDATE_HISTORY_OBSERVATIONS:
+        return proposal_response(_uncertain("candidate_history_limit_reached", current))
 
     historical: list[VerifiedExpenseObservation] = []
-    verified_transaction_ids: set[uuid.UUID] = set()
-    for evidence, transaction, posting, row, source, identity in verified_rows:
+    for evidence, row, source, identity in verified_rows:
         try:
             value = StatementRow.model_validate(row.fields)
         except ValueError:
@@ -269,6 +316,10 @@ async def propose_recurring_expense(
             or not _historical_reference_matches_identity(value, identity.strong_reference)
         ):
             return proposal_response(_uncertain("historical_identity_uncertain", current))
+        if _merchant_key(value.description) != merchant:
+            return proposal_response(
+                _uncertain("historical_merchant_normalization_uncertain", current)
+            )
         external_identity = (
             f"{identity.bank}:{account_id}:{value.currency}:{identity.strong_reference}"
         )
@@ -286,30 +337,15 @@ async def propose_recurring_expense(
                 amount_minor=value.amount,
             )
         )
-        verified_transaction_ids.add(transaction.id)
 
-    all_expenses = (
-        (
-            await db.execute(
-                select(FinancialTransaction.id)
-                .join(Posting, Posting.transaction_id == FinancialTransaction.id)
-                .where(
-                    FinancialTransaction.user_id == owner,
-                    FinancialTransaction.type == "expense",
-                    FinancialTransaction.is_pending.is_(False),
-                    Posting.account_id == account_id,
-                )
-                .distinct()
-                .order_by(FinancialTransaction.id)
-                .limit(MAX_HISTORY_OBSERVATIONS + 1)
-            )
+    analysis = analyze_new_recurring_schedule(current, historical)
+    if active_schedule_names:
+        reason = (
+            "existing_schedule_same_merchant"
+            if current.description in active_schedule_names
+            else "existing_schedule_identity_uncertain"
         )
-        .scalars()
-        .all()
-    )
-    if len(all_expenses) > MAX_HISTORY_OBSERVATIONS:
-        return proposal_response(_uncertain("history_limit_reached", current))
-    if any(transaction_id not in verified_transaction_ids for transaction_id in all_expenses):
-        return proposal_response(_uncertain("historical_identity_uncertain", current))
-
-    return proposal_response(analyze_new_recurring_schedule(current, historical))
+        return proposal_response(
+            RecurrenceAnalysis(status="uncertain", reason=reason, evidence=analysis.evidence)
+        )
+    return proposal_response(analysis)

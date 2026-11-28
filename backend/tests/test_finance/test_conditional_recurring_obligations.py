@@ -1,5 +1,6 @@
 """Pure-domain contract for conditional recurring obligations."""
 
+import uuid
 from datetime import date
 from types import SimpleNamespace
 
@@ -34,6 +35,42 @@ def test_create_contract_requires_explicit_due_day_and_preserves_native_account_
     assert obligation.primary_currency == "USD"
     assert obligation.fallback_account_id.hex == fallback_account_id.replace("-", "")
     assert obligation.fallback_currency == "PLN"
+
+
+@pytest.mark.asyncio
+async def test_account_validation_uses_shared_locks_for_both_owned_variants(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fails if validation can read currencies while an exclusive account edit is in flight."""
+
+    import app.finance.conditional_recurring_obligations as obligations
+
+    owner_id, primary_id, fallback_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    captured: list[tuple[uuid.UUID, set[uuid.UUID]]] = []
+
+    async def lock_accounts(_db: object, user_id: uuid.UUID, account_ids: set[uuid.UUID]) -> dict:
+        captured.append((user_id, account_ids))
+        return {
+            primary_id: SimpleNamespace(
+                id=primary_id, is_active=True, is_budget_account=True, currency="EUR"
+            ),
+            fallback_id: SimpleNamespace(
+                id=fallback_id, is_active=True, is_budget_account=True, currency="PLN"
+            ),
+        }
+
+    monkeypatch.setattr(obligations, "lock_accounts", lock_accounts)
+
+    await obligations._validate_accounts(
+        object(),
+        owner_id,
+        primary_account_id=primary_id,
+        primary_currency="EUR",
+        fallback_account_id=fallback_id,
+        fallback_currency="PLN",
+    )
+
+    assert captured == [(owner_id, {primary_id, fallback_id})]
 
 
 def test_create_contract_rejects_missing_or_inferred_due_day() -> None:

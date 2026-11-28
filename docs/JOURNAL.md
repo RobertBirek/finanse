@@ -4,6 +4,15 @@ Techniczny dziennik sesji. Kontekst dla agentów w nowych sesjach.
 
 ## 2026-11-28 — Weryfikacja propozycji cyklicznych
 
+- Po przeglądzie migracji dodano własność rachunków w kluczach obcych,
+  ochronę zmiany waluty i statusu kont powiązanych z deklaracjami oraz
+  blokady współbieżnych zapisów. Detektor zachowuje niepewność duplikatów,
+  ogranicza historię do sprzedawcy i uwzględnia tolerancję dat rocznych.
+  Sprawdzono składnię NORMALIZE PostgreSQL na etapie kompilacji SQL.
+  Lokalnie 45 testów backendu, Ruff i mypy oraz 775 testów frontendu,
+  lint, typy i build. Testy PostgreSQL wymagają ponownego CI; rollback
+  starszej aplikacji przy zapisanych pozycjach rocznych pozostaje zagrożeniem
+  wymagającym osobnej procedury wydania i dowodu odtworzenia.
 - Drugi przebieg CI `46156938770` ujawnił regresję prognozy: generator
   pomijał zaległości bieżącego miesiąca po upływie okresu tolerancji.
   Przywrócono granicę od początku bieżącego miesiąca lub wcześniejszego

@@ -8,8 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, m
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.finance.models import Account
 from app.finance.models import ConditionalRecurringObligation as ObligationRecord
+from app.finance.queries import lock_accounts
 from app.finance.schemas import (
     ConditionalRecurringObligationCreate,
     ConditionalRecurringObligationUpdate,
@@ -133,17 +133,7 @@ async def _validate_accounts(
 ) -> None:
     if primary_account_id == fallback_account_id:
         raise ValueError("Primary and fallback accounts must be different")
-    accounts = {
-        account.id: account
-        for account in (
-            await db.execute(
-                select(Account).where(
-                    Account.user_id == user_id,
-                    Account.id.in_({primary_account_id, fallback_account_id}),
-                )
-            )
-        ).scalars()
-    }
+    accounts = await lock_accounts(db, user_id, {primary_account_id, fallback_account_id})
     for role, account_id, currency in (
         ("Primary", primary_account_id, primary_currency),
         ("Fallback", fallback_account_id, fallback_currency),

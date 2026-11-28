@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import unicodedata
 import uuid
+from calendar import monthrange
 from datetime import date
 from itertools import pairwise
 from typing import Literal
@@ -87,7 +88,7 @@ class RecurrenceAnalysis(BaseModel):
 
 def _merchant_key(description: str) -> str:
     """Normalize presentation only; variable tokens are intentionally retained."""
-    return " ".join(unicodedata.normalize("NFKC", description).casefold().split())
+    return " ".join(unicodedata.normalize("NFKC", description).lower().split())
 
 
 def _evidence(observations: list[VerifiedExpenseObservation]) -> tuple[RecurrenceEvidence, ...]:
@@ -125,9 +126,23 @@ def _consecutive_months(ordered: list[VerifiedExpenseObservation]) -> bool:
 
 def _consecutive_years_same_month(ordered: list[VerifiedExpenseObservation]) -> bool:
     return all(
-        later.occurred_on.year == earlier.occurred_on.year + 1
-        and later.occurred_on.month == earlier.occurred_on.month
-        and abs(later.occurred_on.day - earlier.occurred_on.day) <= DAY_TOLERANCE
+        abs(
+            (
+                later.occurred_on
+                - date(
+                    earlier.occurred_on.year + 1,
+                    earlier.occurred_on.month,
+                    min(
+                        earlier.occurred_on.day,
+                        monthrange(
+                            earlier.occurred_on.year + 1,
+                            earlier.occurred_on.month,
+                        )[1],
+                    ),
+                )
+            ).days
+        )
+        <= DAY_TOLERANCE
         for earlier, later in pairwise(ordered)
     )
 

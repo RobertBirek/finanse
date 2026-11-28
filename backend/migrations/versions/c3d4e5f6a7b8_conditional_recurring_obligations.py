@@ -32,8 +32,17 @@ def upgrade() -> None:
         sa.Column("fallback_amount_minor", sa.BigInteger(), nullable=True),
         sa.Column("fallback_currency", sa.String(length=3), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.ForeignKeyConstraint(["primary_account_id"], ["accounts.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["fallback_account_id"], ["accounts.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["primary_account_id", "user_id"],
+            ["accounts.id", "accounts.user_id"],
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["fallback_account_id", "user_id"],
+            ["accounts.id", "accounts.user_id"],
+            ondelete="RESTRICT",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.CheckConstraint(
             "cadence IN ('monthly', 'annual')", name="ck_conditional_obligation_cadence"

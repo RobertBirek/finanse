@@ -62,6 +62,7 @@ async def _statement_source(
     booking_date: date,
     reference: str,
     ordinal: int,
+    description: str = "Synthetic streaming subscription",
 ) -> tuple[ImportSource, ImportRow]:
     """Persist a complete, current synthetic statement source and its posted expense row."""
     raw = f"synthetic-recurring-{reference}".encode()
@@ -86,7 +87,7 @@ async def _statement_source(
             "operation_date": None,
             "started_at": None,
             "completed_at": None,
-            "description": "Synthetic streaming subscription",
+            "description": description,
             "amount": -4900,
             "fee": 0,
             "currency": "PLN",
@@ -143,7 +144,13 @@ async def _statement_source(
 
 
 async def _recurring_case(
-    db: AsyncSession, owner: uuid.UUID, *, history_reference: str = "stream-2026-02"
+    db: AsyncSession,
+    owner: uuid.UUID,
+    *,
+    history_reference: str = "stream-2026-02",
+    first_history_description: str = "Synthetic streaming subscription",
+    history_observations: tuple[tuple[date, str], ...] | None = None,
+    current_booking_date: date = date(2026, 3, 5),
 ) -> tuple[ImportBatch, uuid.UUID, ImportRow]:
     """Seed three complete monthly observations, with two committed history rows."""
     account = await create_account(
@@ -157,9 +164,11 @@ async def _recurring_case(
     batch = ImportBatch(user_id=owner, kind="statement", version=1, commit_state="committed")
     db.add(batch)
     await db.flush()
-    for ordinal, (observed_on, reference) in enumerate(
-        ((date(2026, 1, 5), "stream-2026-01"), (date(2026, 2, 5), history_reference)), 1
-    ):
+    observations = history_observations or (
+        (date(2026, 1, 5), "stream-2026-01"),
+        (date(2026, 2, 5), history_reference),
+    )
+    for ordinal, (observed_on, reference) in enumerate(observations, 1):
         _, row = await _statement_source(
             db,
             owner,
@@ -167,6 +176,9 @@ async def _recurring_case(
             booking_date=observed_on,
             reference=reference,
             ordinal=ordinal,
+            description=(
+                first_history_description if ordinal == 1 else "Synthetic streaming subscription"
+            ),
         )
         transaction = await create_transaction(
             db,
@@ -231,9 +243,9 @@ async def _recurring_case(
         db,
         owner,
         batch,
-        booking_date=date(2026, 3, 5),
+        booking_date=current_booking_date,
         reference="stream-2026-03",
-        ordinal=3,
+        ordinal=len(observations) + 1,
     )
     await db.flush()
     return batch, account.id, current
@@ -258,6 +270,111 @@ async def test_recurring_suggestion_returns_candidate_without_mutating_persisted
     assert response.proposal.amount_minor == -4900
     assert len(response.evidence) == 3
     assert await _counts(db_session) == before
+
+
+async def test_recurring_suggestion_keeps_read_only_evidence_when_unrelated_schedule_identity_is_unknown(
+    db_session: AsyncSession, owner
+) -> None:
+    """A free-form equivalent schedule prevents a safe-new claim but keeps evidence reviewable."""
+    batch, account_id, current = await _recurring_case(db_session, owner.id)
+    category = await create_category(
+        db_session, owner.id, CategoryCreate(name="Synthetic unrelated", type="expense")
+    )
+    for number in range(31):
+        await create_transaction(
+            db_session,
+            owner.id,
+            TransactionCreate(
+                transaction_date=date(2023, 1, 1),
+                description=f"Unrelated expense {number}",
+                type="expense",
+                source="manual",
+                postings=[
+                    PostingCreate(
+                        account_id=account_id,
+                        source_amount=100,
+                        base_amount_pln=100,
+                        direction="debit",
+                    ),
+                    PostingCreate(
+                        category_id=category.id,
+                        source_amount=100,
+                        base_amount_pln=100,
+                        direction="credit",
+                    ),
+                ],
+            ),
+        )
+    db_session.add(
+        ScheduledFinanceItem(
+            user_id=owner.id,
+            name="SYNTHETIC STREAMING SUBSCRIPTION",
+            type="expense",
+            account_id=account_id,
+            category_id=category.id,
+            currency="PLN",
+            cadence="monthly",
+            due_day=1,
+            amount_method="fixed",
+            fixed_amount_pln=100,
+            is_active=True,
+        )
+    )
+    await db_session.flush()
+    before = await _counts(db_session)
+
+    response = await propose_recurring_expense(
+        db_session, owner.id, batch.id, current.id, account_id
+    )
+
+    assert response.status == "uncertain"
+    assert response.reason == "existing_schedule_identity_uncertain"
+    assert response.proposal is None
+    assert len(response.evidence) == 3
+    assert await _counts(db_session) == before
+
+
+async def test_recurring_suggestion_matches_nfkc_equivalent_historical_merchant_descriptions(
+    db_session: AsyncSession, owner
+) -> None:
+    """Byte-distinct NFKC forms are inspected rather than silently omitted from history."""
+    batch, account_id, current = await _recurring_case(
+        db_session,
+        owner.id,
+        first_history_description="Ｓｙｎｔｈｅｔｉｃ streaming subscription",
+    )
+
+    response = await propose_recurring_expense(
+        db_session, owner.id, batch.id, current.id, account_id
+    )
+
+    assert response.status == "proposed"
+    assert response.proposal is not None
+    assert len(response.evidence) == 3
+
+
+async def test_recurring_suggestion_keeps_annual_observation_at_two_year_tolerance_boundary(
+    db_session: AsyncSession, owner
+) -> None:
+    """The bounded query retains an annual observation three days before its anniversary."""
+    batch, account_id, current = await _recurring_case(
+        db_session,
+        owner.id,
+        history_observations=(
+            (date(2026, 2, 27), "stream-2026-02"),
+            (date(2027, 2, 28), "stream-2027-02"),
+        ),
+        current_booking_date=date(2028, 3, 1),
+    )
+
+    response = await propose_recurring_expense(
+        db_session, owner.id, batch.id, current.id, account_id
+    )
+
+    assert response.status == "proposed"
+    assert response.proposal is not None
+    assert response.proposal.frequency == "annual"
+    assert len(response.evidence) == 3
 
 
 @pytest.mark.parametrize(

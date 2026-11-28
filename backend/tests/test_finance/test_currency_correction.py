@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit.models import AuditEvent
 from app.finance import service
 from app.finance.currency_correction import apply_correction, preview_correction
-from app.finance.models import Posting
+from app.finance.models import ConditionalRecurringObligation, Posting
 from app.finance.nbp_rates import NbpRate, NbpRateProvider
 from app.finance.schemas import AccountCreate, CategoryCreate, PostingCreate, TransactionCreate
 from app.identity.models import User
@@ -208,6 +208,37 @@ async def test_account_dependencies_block_operator_correction(db_session, depend
             ),
         )
     with pytest.raises(ValueError, match="dependencies"):
+        await preview_correction(db_session, owner, account.id, Rates())
+
+
+@pytest.mark.parametrize("is_active", [True, False])
+async def test_conditional_obligation_blocks_operator_correction_even_when_inactive(
+    db_session, is_active: bool
+):
+    """Fails if correction can desynchronize either variant's declared native currency."""
+
+    owner, account, _transaction = await setup(db_session)
+    primary = await service.create_account(
+        db_session, owner, AccountCreate(name="EUR alternative", type="checking", currency="EUR")
+    )
+    db_session.add(
+        ConditionalRecurringObligation(
+            user_id=owner,
+            name="Conditional fallback",
+            condition_key="correction_guard",
+            due_day=15,
+            primary_account_id=primary.id,
+            primary_amount_minor=2_000,
+            primary_currency="EUR",
+            fallback_account_id=account.id,
+            fallback_amount_minor=8_000,
+            fallback_currency="PLN",
+            is_active=is_active,
+        )
+    )
+    await db_session.flush()
+
+    with pytest.raises(ValueError, match="conditional obligation"):
         await preview_correction(db_session, owner, account.id, Rates())
 
 
